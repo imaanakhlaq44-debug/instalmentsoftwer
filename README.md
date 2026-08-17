@@ -18,7 +18,7 @@ This codebase is **not yet a production system**, and the README should not pret
 | Device locking | ⚠️ **Server side ready, no phone app.** The DPC API (enroll, check-in, command, acknowledge) is built and tested; `MockDeviceManagementService` stands in for the handset. **No real phone is locked until the Android DPC exists.** See [Device Policy Controller API](#-device-policy-controller-api) |
 | SMS / WhatsApp delivery | ❌ Not connected. Messages are queued in the database and marked `QUEUED`, never `SENT` |
 | Payment gateways (JazzCash / Easypaisa / Raast) | ❌ Not integrated. All payments are recorded manually at the counter |
-| Automated tests | ⚠️ **Backend only.** 210 Vitest/Supertest tests run against a real PostgreSQL instance, on every push via GitHub Actions. The React client has none. See [Testing](#-testing) |
+| Automated tests | ✅ **292 tests** — 210 backend against a real PostgreSQL instance, 82 on the React client. Both run on every push via GitHub Actions. See [Testing](#-testing) |
 
 The one thing standing between this and a real product is **the Android DPC application itself**. The server it will talk to is finished and tested; the handset app is not written.
 
@@ -246,13 +246,21 @@ in one step rather than the two round trips a real DPC makes.
 ## 🧪 Testing
 
 ```bash
-npm --prefix server test        # one run
-npm --prefix server run test:watch
+npm --prefix server test        # backend, against a real PostgreSQL
+npm --prefix client test        # React, in jsdom
 ```
+
+### Backend
 
 Each run starts its own throwaway PostgreSQL cluster on port 5434 in the OS temp
 directory (`server/tests/globalSetup.ts`) and applies the migrations to it, so it
 never touches your development database. Nothing needs to be running first.
+
+### Client
+
+Vitest in jsdom, with Testing Library. The tests stub `fetch` rather than the
+context or the API module, so the real provider logic — token restore, the 401
+teardown, role derivation — stays under test rather than being mocked away.
 
 The same command runs in CI on every push and pull request
 (`.github/workflows/ci.yml`) — a real PostgreSQL there too, not a stub. The
@@ -270,6 +278,16 @@ committed, then typechecks, tests and builds both halves of the app.
 | `tests/db/base-repository.test.ts` | CRUD, date-only columns, transaction rollback, database constraints |
 | `tests/db/queries.test.ts` | Dealer scoping, relation searches, SQL aggregates, receipt numbering |
 | `tests/api/dpc.test.ts` | Device credentials, rotation, revocation, the offline lock round trip |
+
+**Client** (`client/src/**/*.test.ts(x)`)
+
+| File | Covers |
+|---|---|
+| `components/auth/RouteGuards.test.tsx` | Session gate, the change-password redirect, per-role page and button access |
+| `context/AuthContext.test.tsx` | Token restore, login, logout, dealer switching, the 401 teardown |
+| `services/api.test.ts` | Auth header, query building, error mapping, why a failed sign-in is not an expired session |
+| `utils/csv.test.ts` | Quoting, the UTF-8 BOM, spreadsheet formula injection |
+| `hooks/usePagination.test.ts` | Page reset on filter and page-size change |
 
 These made the PostgreSQL cutover safe. The storage engine was replaced entirely
 and the behavioural assertions did not change — the same tests that passed against
@@ -333,6 +351,6 @@ Two operations deliberately run *after* their transaction commits, because they 
 1. **Android DPC application** — the server contract it talks to is done; the handset app itself is not. Until it exists, "locking" is a database field.
 2. **SMS gateway** (Twilio / Jazz / Telenor) so reminders actually reach customers.
 3. **Payment gateway** integration for JazzCash, Easypaisa and Raast.
-4. **Client tests** — the backend suite runs in CI on every push; the React app has no tests at all.
+4. **Deeper client coverage** — guards, auth, the API client, CSV export and pagination are tested; the page components and modals are not.
 5. **Contract PDF with digital signature** — device restriction needs recorded customer consent.
 6. Urdu localisation and RTL, PWA offline mode.

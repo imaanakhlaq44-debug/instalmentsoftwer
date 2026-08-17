@@ -61,7 +61,7 @@ jobs:
         run: npm run build
 
   client:
-    name: Client — typecheck and build
+    name: Client — tests and build
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -78,7 +78,12 @@ jobs:
         working-directory: client
         run: npm ci
 
-      # `vite build` runs `tsc -b` first, so this covers typechecking too.
+      - name: Test
+        working-directory: client
+        run: npm test
+
+      # `vite build` runs `tsc -b` first, so this covers typechecking too —
+      # including the test files, which share the app's tsconfig.
       - name: Build
         working-directory: client
         run: npm run build
