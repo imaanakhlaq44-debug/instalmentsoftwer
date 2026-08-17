@@ -15,12 +15,12 @@ This codebase is **not yet a production system**, and the README should not pret
 | Authentication, RBAC, tenant isolation | ✅ Implemented and tested |
 | Installment / payment / late-fee engine | ✅ Implemented |
 | Data store | ✅ **PostgreSQL.** Schema, migrations, repository layer, services and routes are all on it. The JSON store is gone. |
-| Device locking | ⚠️ **Mock only.** `MockDeviceManagementService` changes a status field in the database. **No real phone is locked.** |
+| Device locking | ⚠️ **Server side ready, no phone app.** The DPC API (enroll, check-in, command, acknowledge) is built and tested; `MockDeviceManagementService` stands in for the handset. **No real phone is locked until the Android DPC exists.** See [Device Policy Controller API](#-device-policy-controller-api) |
 | SMS / WhatsApp delivery | ❌ Not connected. Messages are queued in the database and marked `QUEUED`, never `SENT` |
 | Payment gateways (JazzCash / Easypaisa / Raast) | ❌ Not integrated. All payments are recorded manually at the counter |
-| Automated tests | ⚠️ **Backend only.** 183 Vitest/Supertest tests run against a real PostgreSQL instance, on every push via GitHub Actions. The React client has none. See [Testing](#-testing) |
+| Automated tests | ⚠️ **Backend only.** 210 Vitest/Supertest tests run against a real PostgreSQL instance, on every push via GitHub Actions. The React client has none. See [Testing](#-testing) |
 
-The one thing standing between this and a real product is **an actual Android DPC application**. Until it exists, "locking" is a status column.
+The one thing standing between this and a real product is **the Android DPC application itself**. The server it will talk to is finished and tested; the handset app is not written.
 
 ---
 
@@ -143,8 +143,9 @@ All seeded accounts share the password from `SEED_DEFAULT_PASSWORD` in `server/.
 
 ## 📋 API overview
 
-All routes require `Authorization: Bearer <token>` except `/api/health`, `/api/auth/login` and `/api/auth/register-dealer`.
-List endpoints return `{ data, pagination }`.
+All routes require `Authorization: Bearer <token>` except `/api/health`, `/api/auth/login`, `/api/auth/register-dealer` and `/api/dpc/enroll`.
+List endpoints return `{ data, pagination }`. The `/api/dpc/*` routes use a
+different scheme entirely — see [Device Policy Controller API](#-device-policy-controller-api).
 
 | Endpoint | Method | Role | Description |
 |---|---|---|---|
@@ -167,6 +168,78 @@ List endpoints return `{ data, pagination }`.
 | `/api/enrollment/generate` | POST | staff | Single-use provisioning QR |
 | `/api/users` | GET/POST/PATCH/DELETE | dealer admin | Staff management |
 | `/api/audit-logs` | GET | dealer admin | Immutable action trail |
+| `/api/dpc/enroll` | POST | public | Redeem an enrollment QR, receive device credentials |
+| `/api/dpc/check-in` | POST | device | Heartbeat; returns any waiting command |
+| `/api/dpc/commands/ack` | POST | device | Confirm a command was applied |
+| `/api/dpc/policy` | GET | device | Current lock state and lock-screen figures |
+
+---
+
+## 📱 Device Policy Controller API
+
+The Android app on the customer's phone talks to `/api/dpc/*`. This is not the
+dashboard API behind a different prefix — it differs in three ways that matter.
+
+### It authenticates as a device, not a person
+
+A handset has no user session and must never carry a staff token. Enrollment
+issues it a credential of its own:
+
+```
+Authorization: Device <deviceId>.<token>
+```
+
+The token is 32 random bytes, transmitted exactly once — in the response to
+`POST /api/dpc/enroll` — and only its SHA-256 hash is stored. A leak of the
+`devices` table therefore does not let anyone impersonate a customer's phone.
+
+The hash is **SHA-256, not bcrypt**, and that is deliberate. bcrypt is slow on
+purpose because human-chosen passwords have little entropy and must be expensive
+to guess; these tokens come from the system CSPRNG, so brute force is not the
+threat, and every phone in the fleet authenticates on every check-in. A
+deliberately slow hash there would be a self-inflicted denial of service.
+
+Re-enrolling rotates the credential, which is what makes a factory reset or a
+handset swap safe: whatever the previous installation held stops working the
+moment a new enrollment completes. A device moved to `REMOVED` or `INACTIVE`
+stops authenticating altogether.
+
+### A lock is only real once the phone says so
+
+This is the point of the whole protocol:
+
+```
+dealer locks an offline phone   →  LOCK_PENDING, command queued
+phone checks in                 →  server hands over the command, state unchanged
+phone applies it, acknowledges  →  LOCKED
+```
+
+`/check-in` **reports** the waiting command; it does not apply it. Only
+`/commands/ack` with `applied: true` moves the device to `LOCKED`. If the phone
+answers `applied: false` — device-admin permission revoked, say — the command
+stays queued for the next check-in and the reason is written to the device's
+timeline for support to read.
+
+Without this split, the dashboard would show a lock that had never reached the
+handset, and a dealer would tell a customer their phone was restricted when it
+was not.
+
+### It answers to the device, never about the dealership
+
+Responses carry only what the phone needs to render its lock screen: whether it
+is locked, the message, whether emergency calls are permitted, the accepted
+payment methods, the real amount overdue, the next due date, and the shop's name
+and number. No IMEI, no CNIC, no other customer, no other device. A test asserts
+that a check-in response contains none of it.
+
+The amounts are the real ones from the installment plan. A fabricated figure on
+a screen that is holding someone's phone hostage would be indefensible.
+
+### Trying it without a phone
+
+The **Simulator** page drives all of this against real records — it stands in
+for the handset, so `TOGGLE_ONLINE` performs the check-in and the acknowledgement
+in one step rather than the two round trips a real DPC makes.
 
 ---
 
@@ -196,6 +269,7 @@ committed, then typechecks, tests and builds both halves of the app.
 | `tests/api/lifecycle.test.ts` | Registration → six payments → completion, over HTTP |
 | `tests/db/base-repository.test.ts` | CRUD, date-only columns, transaction rollback, database constraints |
 | `tests/db/queries.test.ts` | Dealer scoping, relation searches, SQL aggregates, receipt numbering |
+| `tests/api/dpc.test.ts` | Device credentials, rotation, revocation, the offline lock round trip |
 
 These made the PostgreSQL cutover safe. The storage engine was replaced entirely
 and the behavioural assertions did not change — the same tests that passed against
@@ -256,7 +330,7 @@ Two operations deliberately run *after* their transaction commits, because they 
 
 ## 🗺️ Roadmap
 
-1. **Android DPC application** — until this exists, "locking" is a database field.
+1. **Android DPC application** — the server contract it talks to is done; the handset app itself is not. Until it exists, "locking" is a database field.
 2. **SMS gateway** (Twilio / Jazz / Telenor) so reminders actually reach customers.
 3. **Payment gateway** integration for JazzCash, Easypaisa and Raast.
 4. **Client tests** — the backend suite runs in CI on every push; the React app has no tests at all.

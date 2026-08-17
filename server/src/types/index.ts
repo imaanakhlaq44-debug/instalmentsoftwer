@@ -140,6 +140,20 @@ export interface Device {
    */
   pendingCommand?: 'LOCK' | 'UNLOCK';
   pendingCommandAt?: string;
+
+  // --- DPC credentials -------------------------------------------------------
+  /**
+   * SHA-256 of the token the Device Policy Controller presents. The token
+   * itself is shown once, when enrollment completes, and never stored.
+   * Must never be serialised into an API response — see `sanitizeDevice`.
+   */
+  authTokenHash?: string;
+  authTokenIssuedAt?: string;
+  /** DPC build running on the handset. */
+  dpcVersion?: string;
+  /** Last successful DPC check-in, as distinct from any dashboard activity. */
+  lastCheckInAt?: string;
+
   createdAt: string;
   updatedAt: string;
 }

@@ -7,6 +7,7 @@ import { EnrollmentToken, QRType, Device, UserRole } from '../types/index.js';
 import { deviceManagementService } from './DeviceManagementService.js';
 import { AuditService } from './AuditService.js';
 import { AppError } from '../utils/AppError.js';
+import { issueDeviceToken } from '../utils/deviceToken.js';
 
 export interface EnrollmentActor {
   userId: string;
@@ -120,8 +121,10 @@ export class EnrollmentService {
     token: string;
     /** Only used when the token was issued without a device attached. */
     deviceId?: string;
+    /** DPC build on the handset, recorded for support. */
+    dpcVersion?: string;
     ipAddress?: string;
-  }): Promise<{ success: boolean; device: Device; message: string }> {
+  }): Promise<{ success: boolean; device: Device; deviceToken: string; message: string }> {
     const tokenRecord = await repo.enrollmentTokens.findByToken(params.token);
 
     if (!tokenRecord) {
@@ -176,6 +179,21 @@ export class EnrollmentService {
     try {
       const result = await deviceManagementService.enrollDevice(device.id, tokenRecord.token, params.ipAddress);
 
+      /**
+       * Issue the handset its own credentials.
+       *
+       * Re-enrolling rotates the token, which is what makes a factory reset or
+       * a handset swap safe: whatever the previous installation held stops
+       * working the moment a new one completes.
+       */
+      const credentials = issueDeviceToken();
+      await repo.devices.update(device.id, {
+        authTokenHash: credentials.tokenHash,
+        authTokenIssuedAt: new Date().toISOString(),
+        dpcVersion: params.dpcVersion,
+        updatedAt: new Date().toISOString(),
+      });
+
       await repo.enrollmentTokens.update(tokenRecord.id, {
         status: 'ENROLLED',
         deviceId: device.id,
@@ -196,6 +214,7 @@ export class EnrollmentService {
       return {
         success: true,
         device: result.device,
+        deviceToken: credentials.token,
         message: `${device.brand} ${device.model} was enrolled successfully and is now active.`,
       };
     } catch (err) {

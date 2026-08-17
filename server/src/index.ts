@@ -25,6 +25,7 @@ import { auditRouter } from './routes/audit.routes.js';
 import { settingsRouter } from './routes/settings.routes.js';
 import { simulatorRouter } from './routes/simulator.routes.js';
 import { usersRouter } from './routes/users.routes.js';
+import { dpcRouter } from './routes/dpc.routes.js';
 
 const app = express();
 
@@ -87,6 +88,32 @@ const authLimiter = rateLimit({
   },
 });
 
+/**
+ * The DPC fleet gets its own budget.
+ *
+ * A shop's handsets share one mobile network and often one NAT, so they arrive
+ * from a handful of addresses. Under the dashboard's limit a busy dealership
+ * would rate-limit its own phones out of enforcement. Enrollment stays tight,
+ * because that route is unauthenticated and a redemption attempt is a guess at
+ * a token.
+ */
+const dpcLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 240,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many device requests. Slow down.', code: 'DPC_RATE_LIMITED' },
+});
+
+const dpcEnrollLimiter = rateLimit({
+  windowMs: 15 * 60_000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  message: { error: 'Too many enrollment attempts. Please wait before trying again.', code: 'DPC_ENROLL_RATE_LIMITED' },
+});
+
 app.use('/api', generalLimiter);
 
 // ---------------------------------------------------------------------------
@@ -123,6 +150,16 @@ app.get('/api/health', (_req, res) => {
 // Auth router handles its own per-route protection: /login and /register-dealer
 // are public, everything else inside it requires a session.
 app.use('/api/auth', authLimiter, authRouter);
+
+/**
+ * The Device Policy Controller API.
+ *
+ * Mounted outside `requireAuth`: a handset authenticates with its own device
+ * credential, not a staff session. Enrollment is the single public route, and
+ * the enrollment token is what protects it.
+ */
+app.use('/api/dpc/enroll', dpcEnrollLimiter);
+app.use('/api/dpc', dpcLimiter, dpcRouter);
 
 // ---------------------------------------------------------------------------
 // Protected routes — every single one requires a valid JWT

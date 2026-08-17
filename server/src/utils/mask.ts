@@ -80,11 +80,16 @@ export function cnicView(cnic: string | undefined, role: UserRole): { cnic: stri
  * Returns a device object safe to send to `role`, with the raw IMEI and serial
  * number stripped unless the role is permitted to see them.
  */
-export function sanitizeDevice<T extends { imei?: string; serialNumber?: string }>(
+export function sanitizeDevice<
+  T extends { imei?: string; serialNumber?: string; authTokenHash?: string }
+>(
   device: T,
   role: UserRole
-): Omit<T, 'imei' | 'serialNumber'> & ImeiView & { serialNumber?: string } {
-  const { imei, serialNumber, ...rest } = device;
+): Omit<T, 'imei' | 'serialNumber' | 'authTokenHash'> & ImeiView & { serialNumber?: string } {
+  // `authTokenHash` is destructured out and never re-added. It is the handset's
+  // credential: no role has a reason to see it, and it would otherwise ride
+  // along in `rest` on every device response in the system.
+  const { imei, serialNumber, authTokenHash: _authTokenHash, ...rest } = device;
   const view = imeiView(imei, role);
   const allowed = IMEI_FULL_ACCESS.includes(role);
 

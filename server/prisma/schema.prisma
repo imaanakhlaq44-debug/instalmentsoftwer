@@ -319,6 +319,18 @@ model Device {
   wifiSsid         String?         @map("wifi_ssid") @db.VarChar(60)
   pendingCommand   PendingCommand? @map("pending_command")
   pendingCommandAt DateTime?       @map("pending_command_at") @db.Timestamptz(3)
+
+  // --- DPC credentials -------------------------------------------------------
+  // Issued when the device completes enrollment. The phone stores the token and
+  // presents it on every check-in; only its hash is kept here, so a database
+  // leak does not let anyone impersonate a customer's handset.
+  authTokenHash    String?   @map("auth_token_hash") @db.VarChar(64)
+  authTokenIssuedAt DateTime? @map("auth_token_issued_at") @db.Timestamptz(3)
+  /** DPC build running on the phone — support needs to know what is out there. */
+  dpcVersion       String?   @map("dpc_version") @db.VarChar(20)
+  /** Last successful DPC check-in, as distinct from any dashboard activity. */
+  lastCheckInAt    DateTime? @map("last_check_in_at") @db.Timestamptz(3)
+
   createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime        @default(now()) @map("updated_at") @db.Timestamptz(3)
 
@@ -333,6 +345,8 @@ model Device {
   @@index([dealerId, status])
   @@index([customerId])
   @@index([dealerId, brand])
+  // Every DPC request looks the device up by this hash before anything else.
+  @@index([authTokenHash])
   @@map("devices")
 }
 
