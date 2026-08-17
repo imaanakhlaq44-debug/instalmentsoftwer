@@ -1,0 +1,594 @@
+// EMI Shield — PostgreSQL schema
+//
+// Design notes that matter:
+//
+//  * Money is stored as Int (whole rupees). The application already rounds to
+//    whole rupees everywhere; using Int rules out floating-point drift on
+//    balances, which is the classic way installment ledgers stop reconciling.
+//
+//  * Dates that are genuinely date-only (due dates, grace dates, licence
+//    expiry) use @db.Date. Everything else is timestamptz. The repository layer
+//    converts these back to the ISO strings the application already uses, so
+//    the domain logic did not have to be rewritten around Date objects.
+//
+//  * Columns are snake_case so that psql queries during support work read
+//    naturally; the Prisma client keeps camelCase in TypeScript.
+//
+//  * Foreign keys are real, with deliberate onDelete rules. Financial and audit
+//    rows are never cascade-deleted — losing a payment because someone removed
+//    a customer would be unacceptable.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+// Prisma 7 takes the connection URL from prisma.config.ts (driver adapter),
+// not from this block.
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  SUPER_ADMIN
+  DEALER_ADMIN
+  DEALER_STAFF
+  CUSTOMER
+}
+
+enum DeviceStatus {
+  PENDING
+  ENROLLED
+  ACTIVE
+  OVERDUE
+  LOCK_PENDING
+  LOCKED
+  UNLOCK_PENDING
+  INACTIVE
+  REMOVED
+}
+
+enum PendingCommand {
+  LOCK
+  UNLOCK
+}
+
+enum InstallmentStatus {
+  PENDING
+  DUE_SOON
+  DUE_TODAY
+  OVERDUE
+  PAID
+}
+
+enum PlanStatus {
+  CURRENT
+  DUE_SOON
+  DUE_TODAY
+  OVERDUE
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  JAZZCASH
+  EASYPAISA
+  RAAST
+  ONLINE
+}
+
+enum PaymentStatus {
+  PENDING
+  VERIFIED
+  FAILED
+  REFUNDED
+}
+
+enum QRType {
+  STANDARD
+  PRO
+  LEGACY
+  QC
+}
+
+enum EnrollmentTokenStatus {
+  WAITING
+  SCANNED
+  VERIFYING
+  ENROLLED
+  EXPIRED
+  FAILED
+}
+
+enum TransactionType {
+  DOWN_PAYMENT
+  MONTHLY_INSTALLMENT
+  LATE_FEE
+  LATE_FEE_WAIVER
+  REFUND
+  REVERSAL
+  ADVANCE_CREDIT
+  EARLY_SETTLEMENT
+}
+
+enum TransactionStatus {
+  COMPLETED
+  PENDING
+  FAILED
+  REVERSED
+}
+
+enum DeviceAction {
+  LOCK
+  UNLOCK
+  REGISTER
+  ENROLL
+  REBOOT
+  SEND_MESSAGE
+  STATUS_CHANGE
+}
+
+enum LicensePlan {
+  STARTER
+  PROFESSIONAL
+  BUSINESS
+  ENTERPRISE
+}
+
+enum LicenseStatus {
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+}
+
+enum LateFeeType {
+  FIXED
+  PERCENTAGE
+}
+
+enum LateFeeFrequency {
+  ONE_TIME
+  DAILY
+}
+
+enum NotificationType {
+  PAYMENT_DUE
+  PAYMENT_OVERDUE
+  DEVICE_LOCKED
+  DEVICE_UNLOCKED
+  DEVICE_OFFLINE
+  ENROLLMENT_SUCCESS
+  SECURITY_ALERT
+}
+
+enum NotificationChannel {
+  IN_APP
+  SMS
+  EMAIL
+  PUSH
+}
+
+enum NotificationStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+}
+
+// ---------------------------------------------------------------------------
+// Core tenancy
+// ---------------------------------------------------------------------------
+
+model Dealer {
+  id           String   @id
+  name         String   @db.VarChar(120)
+  code         String   @unique @db.VarChar(40)
+  ownerName    String   @map("owner_name") @db.VarChar(120)
+  email        String   @unique @db.VarChar(255)
+  phone        String   @db.VarChar(20)
+  city         String   @db.VarChar(60)
+  address      String   @db.VarChar(300)
+  licenseKeyId String?  @map("license_key_id")
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  users            User[]
+  customers        Customer[]
+  devices          Device[]
+  enrollmentTokens EnrollmentToken[]
+  installmentPlans InstallmentPlan[]
+  installments     Installment[]
+  payments         Payment[]
+  transactions     Transaction[]
+  deviceActionLogs DeviceActionLog[]
+  auditLogs        AuditLog[]
+  licenseKeys      LicenseKey[]
+  devicePolicy     DevicePolicy?
+  notifications    Notification[]
+
+  @@index([active])
+  @@map("dealers")
+}
+
+model LicenseKey {
+  id          String        @id
+  dealerId    String        @map("dealer_id")
+  licenseKey  String        @unique @map("license_key") @db.VarChar(60)
+  plan        LicensePlan
+  deviceLimit Int           @map("device_limit")
+  usedDevices Int           @default(0) @map("used_devices")
+  expiryDate  DateTime      @map("expiry_date") @db.Date
+  status      LicenseStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  dealer Dealer @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+
+  @@index([dealerId])
+  @@map("license_keys")
+}
+
+model User {
+  id                  String    @id
+  dealerId            String?   @map("dealer_id")
+  customerId          String?   @map("customer_id")
+  name                String    @db.VarChar(120)
+  email               String    @unique @db.VarChar(255)
+  passwordHash        String    @map("password_hash") @db.VarChar(255)
+  role                UserRole
+  phone               String    @db.VarChar(20)
+  active              Boolean   @default(true)
+  lastLoginAt         DateTime? @map("last_login_at") @db.Timestamptz(3)
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until") @db.Timestamptz(3)
+  mustChangePassword  Boolean   @default(false) @map("must_change_password")
+  passwordChangedAt   DateTime? @map("password_changed_at") @db.Timestamptz(3)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  dealer   Dealer?   @relation(fields: [dealerId], references: [id], onDelete: SetNull)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([dealerId])
+  @@index([role])
+  @@map("users")
+}
+
+model Customer {
+  id                    String   @id
+  dealerId              String   @map("dealer_id")
+  name                  String   @db.VarChar(120)
+  phone                 String   @db.VarChar(20)
+  cnic                  String   @db.VarChar(20)
+  address               String   @db.VarChar(300)
+  emergencyContactName  String   @map("emergency_contact_name") @db.VarChar(120)
+  emergencyContactPhone String   @map("emergency_contact_phone") @db.VarChar(20)
+  notes                 String?  @db.VarChar(1000)
+  active                Boolean  @default(true)
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  dealer           Dealer            @relation(fields: [dealerId], references: [id], onDelete: Restrict)
+  devices          Device[]
+  installmentPlans InstallmentPlan[]
+  installments     Installment[]
+  payments         Payment[]
+  transactions     Transaction[]
+  notifications    Notification[]
+  enrollmentTokens EnrollmentToken[]
+  logins           User[]
+
+  // The same person must not be entered twice at one counter.
+  @@unique([dealerId, cnic], name: "customer_dealer_cnic")
+  @@index([dealerId])
+  @@index([dealerId, name])
+  @@index([phone])
+  @@map("customers")
+}
+
+// ---------------------------------------------------------------------------
+// Devices
+// ---------------------------------------------------------------------------
+
+model Device {
+  id               String          @id
+  dealerId         String          @map("dealer_id")
+  customerId       String          @map("customer_id")
+  brand            String          @db.VarChar(40)
+  model            String          @db.VarChar(60)
+  imei             String          @unique @db.VarChar(20)
+  serialNumber     String          @map("serial_number") @db.VarChar(64)
+  color            String          @db.VarChar(30)
+  ramStorage       String          @map("ram_storage") @db.VarChar(40)
+  purchasePrice    Int             @map("purchase_price")
+  status           DeviceStatus    @default(PENDING)
+  lastSeen         DateTime        @map("last_seen") @db.Timestamptz(3)
+  batteryLevel     Int             @default(100) @map("battery_level")
+  isOnline         Boolean         @default(false) @map("is_online")
+  osVersion        String          @map("os_version") @db.VarChar(40)
+  securityPatch    String          @map("security_patch") @db.VarChar(20)
+  lockReason       String?         @map("lock_reason") @db.VarChar(500)
+  lockMessage      String?         @map("lock_message") @db.VarChar(300)
+  locationLat      Float?          @map("location_lat")
+  locationLng      Float?          @map("location_lng")
+  simCarrier       String?         @map("sim_carrier") @db.VarChar(40)
+  wifiSsid         String?         @map("wifi_ssid") @db.VarChar(60)
+  pendingCommand   PendingCommand? @map("pending_command")
+  pendingCommandAt DateTime?       @map("pending_command_at") @db.Timestamptz(3)
+  createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime        @default(now()) @map("updated_at") @db.Timestamptz(3)
+
+  dealer           Dealer            @relation(fields: [dealerId], references: [id], onDelete: Restrict)
+  customer         Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  installmentPlan  InstallmentPlan?
+  actionLogs       DeviceActionLog[]
+  enrollmentTokens EnrollmentToken[]
+  notifications    Notification[]
+
+  @@index([dealerId])
+  @@index([dealerId, status])
+  @@index([customerId])
+  @@index([dealerId, brand])
+  @@map("devices")
+}
+
+model DeviceActionLog {
+  id            String        @id
+  deviceId      String        @map("device_id")
+  dealerId      String        @map("dealer_id")
+  userId        String        @map("user_id") @db.VarChar(64)
+  userName      String        @map("user_name") @db.VarChar(120)
+  action        DeviceAction
+  oldStatus     DeviceStatus? @map("old_status")
+  newStatus     DeviceStatus? @map("new_status")
+  reason        String?       @db.VarChar(600)
+  commandPayload String?      @map("command_payload")
+  deviceAck     Boolean       @default(false) @map("device_ack")
+  ipAddress     String        @map("ip_address") @db.VarChar(64)
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  dealer Dealer @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId, createdAt(sort: Desc)])
+  @@index([dealerId, createdAt(sort: Desc)])
+  @@map("device_action_logs")
+}
+
+model EnrollmentToken {
+  id         String                @id
+  dealerId   String                @map("dealer_id")
+  deviceId   String?               @map("device_id")
+  customerId String?               @map("customer_id")
+  token      String                @unique @db.VarChar(120)
+  qrType     QRType                @map("qr_type")
+  status     EnrollmentTokenStatus @default(WAITING)
+  expiresAt  DateTime              @map("expires_at") @db.Timestamptz(3)
+  createdAt  DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  dealer   Dealer    @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  device   Device?   @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([dealerId, createdAt(sort: Desc)])
+  @@index([status, expiresAt])
+  @@map("enrollment_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Financing
+// ---------------------------------------------------------------------------
+
+model InstallmentPlan {
+  id                  String     @id
+  dealerId            String     @map("dealer_id")
+  customerId          String     @map("customer_id")
+  deviceId            String     @unique @map("device_id")
+  totalAmount         Int        @map("total_amount")
+  downPayment         Int        @map("down_payment")
+  financedAmount      Int        @map("financed_amount")
+  monthlyInstallment  Int        @map("monthly_installment")
+  totalInstallments   Int        @map("total_installments")
+  paidInstallments    Int        @default(0) @map("paid_installments")
+  remainingBalance    Int        @map("remaining_balance")
+  firstDueDate        DateTime   @map("first_due_date") @db.Date
+  gracePeriodDays     Int        @default(3) @map("grace_period_days")
+  status              PlanStatus @default(CURRENT)
+  creditBalance       Int        @default(0) @map("credit_balance")
+  outstandingLateFees Int        @default(0) @map("outstanding_late_fees")
+  closedAt            DateTime?  @map("closed_at") @db.Timestamptz(3)
+  closureReason       String?    @map("closure_reason") @db.VarChar(500)
+  createdAt           DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  dealer       Dealer        @relation(fields: [dealerId], references: [id], onDelete: Restrict)
+  customer     Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  device       Device        @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+  installments Installment[]
+  payments     Payment[]
+  transactions Transaction[]
+
+  @@index([dealerId, status])
+  @@index([customerId])
+  @@map("installment_plans")
+}
+
+model Installment {
+  id                   String            @id
+  planId               String            @map("plan_id")
+  dealerId             String            @map("dealer_id")
+  customerId           String            @map("customer_id")
+  installmentNumber    Int               @map("installment_number")
+  amountDue            Int               @map("amount_due")
+  amountPaid           Int               @default(0) @map("amount_paid")
+  dueDate              DateTime          @map("due_date") @db.Date
+  graceDate            DateTime          @map("grace_date") @db.Date
+  status               InstallmentStatus @default(PENDING)
+  paidAt               DateTime?         @map("paid_at") @db.Timestamptz(3)
+  lateFee              Int               @default(0) @map("late_fee")
+  lateFeePaid          Int               @default(0) @map("late_fee_paid")
+  lateFeeWaivedAt      DateTime?         @map("late_fee_waived_at") @db.Timestamptz(3)
+  lateFeeWaivedBy      String?           @map("late_fee_waived_by") @db.VarChar(64)
+  lateFeeWaiverReason  String?           @map("late_fee_waiver_reason") @db.VarChar(500)
+  lateFeeAccruedThrough DateTime?        @map("late_fee_accrued_through") @db.Date
+  createdAt            DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  plan     InstallmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  dealer   Dealer          @relation(fields: [dealerId], references: [id], onDelete: Restrict)
+  customer Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  payments Payment[]
+
+  // The nightly overdue job scans by status + grace date; this index is what
+  // keeps that a range scan instead of a full table scan.
+  @@index([status, graceDate])
+  @@index([planId, installmentNumber])
+  @@index([dealerId, dueDate])
+  @@index([customerId])
+  @@map("installments")
+}
+
+model Payment {
+  id                  String        @id
+  dealerId            String        @map("dealer_id")
+  customerId          String        @map("customer_id")
+  installmentId       String?       @map("installment_id")
+  planId              String?       @map("plan_id")
+  amount              Int
+  paymentMethod       PaymentMethod @map("payment_method")
+  referenceNumber     String        @map("reference_number") @db.VarChar(60)
+  notes               String?       @db.VarChar(500)
+  status              PaymentStatus @default(PENDING)
+  verifiedBy          String?       @map("verified_by") @db.VarChar(64)
+  verifiedAt          DateTime?     @map("verified_at") @db.Timestamptz(3)
+  reversedAt          DateTime?     @map("reversed_at") @db.Timestamptz(3)
+  reversedBy          String?       @map("reversed_by") @db.VarChar(64)
+  reversalReason      String?       @map("reversal_reason") @db.VarChar(500)
+  reversalOfPaymentId String?       @map("reversal_of_payment_id") @db.VarChar(64)
+  lateFeePortion      Int           @default(0) @map("late_fee_portion")
+  receiptNumber       String?       @map("receipt_number") @db.VarChar(40)
+  recordedBy          String?       @map("recorded_by") @db.VarChar(64)
+  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  dealer      Dealer           @relation(fields: [dealerId], references: [id], onDelete: Restrict)
+  customer    Customer         @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  installment Installment?     @relation(fields: [installmentId], references: [id], onDelete: SetNull)
+  plan        InstallmentPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+  transactions Transaction[]
+
+  // Blocks the double-submit at the counter at the database level, not just in
+  // application code — two concurrent requests cannot both win.
+  @@unique([dealerId, referenceNumber], name: "payment_dealer_reference")
+  @@index([dealerId, createdAt(sort: Desc)])
+  @@index([customerId, createdAt(sort: Desc)])
+  @@index([planId])
+  @@index([status])
+  @@map("payments")
+}
+
+model Transaction {
+  id         String            @id
+  dealerId   String            @map("dealer_id")
+  customerId String            @map("customer_id")
+  paymentId  String?           @map("payment_id")
+  planId     String?           @map("plan_id")
+  type       TransactionType
+  amount     Int
+  status     TransactionStatus @default(COMPLETED)
+  date       DateTime          @db.Timestamptz(3)
+  notes      String?           @db.VarChar(500)
+
+  dealer   Dealer           @relation(fields: [dealerId], references: [id], onDelete: Restrict)
+  customer Customer         @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  payment  Payment?         @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  plan     InstallmentPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+
+  @@index([dealerId, date(sort: Desc)])
+  @@index([customerId])
+  @@index([type])
+  @@map("transactions")
+}
+
+// ---------------------------------------------------------------------------
+// Policy, audit, messaging
+// ---------------------------------------------------------------------------
+
+model DevicePolicy {
+  id                       String            @id
+  dealerId                 String            @unique @map("dealer_id")
+  gracePeriodDays          Int               @default(3) @map("grace_period_days")
+  autoLockEnabled          Boolean           @default(false) @map("auto_lock_enabled")
+  autoUnlockEnabled        Boolean           @default(true) @map("auto_unlock_enabled")
+  lockWarningDays          Int               @default(2) @map("lock_warning_days")
+  customerReminderEnabled  Boolean           @default(true) @map("customer_reminder_enabled")
+  emergencyCallsAllowed    Boolean           @default(true) @map("emergency_calls_allowed")
+  paymentMethodsOnLock     String[]          @map("payment_methods_on_lock")
+  lateFeeEnabled           Boolean           @default(false) @map("late_fee_enabled")
+  lateFeeType              LateFeeType       @default(FIXED) @map("late_fee_type")
+  lateFeeAmount            Int               @default(500) @map("late_fee_amount")
+  lateFeeFrequency         LateFeeFrequency  @default(ONE_TIME) @map("late_fee_frequency")
+  lateFeeMaxPerInstallment Int               @default(5000) @map("late_fee_max_per_installment")
+  createdAt                DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                DateTime          @default(now()) @map("updated_at") @db.Timestamptz(3)
+
+  dealer Dealer @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+
+  @@map("device_policies")
+}
+
+model AuditLog {
+  id         String   @id
+  dealerId   String?  @map("dealer_id")
+  userId     String   @map("user_id") @db.VarChar(64)
+  actorName  String   @map("actor_name") @db.VarChar(120)
+  actorRole  UserRole @map("actor_role")
+  action     String   @db.VarChar(60)
+  targetType String   @map("target_type") @db.VarChar(40)
+  targetId   String   @map("target_id") @db.VarChar(64)
+  details    String   @db.VarChar(1000)
+  ipAddress  String   @map("ip_address") @db.VarChar(64)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  dealer Dealer? @relation(fields: [dealerId], references: [id], onDelete: SetNull)
+
+  @@index([dealerId, createdAt(sort: Desc)])
+  @@index([action])
+  @@index([targetType])
+  @@map("audit_logs")
+}
+
+model Notification {
+  id         String              @id
+  dealerId   String              @map("dealer_id")
+  customerId String?             @map("customer_id")
+  deviceId   String?             @map("device_id")
+  type       NotificationType
+  channel    NotificationChannel @default(SMS)
+  title      String              @db.VarChar(120)
+  message    String              @db.VarChar(600)
+  status     NotificationStatus  @default(QUEUED)
+  sentAt     DateTime?           @map("sent_at") @db.Timestamptz(3)
+  createdAt  DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  dealer   Dealer    @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  device   Device?   @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+
+  @@index([dealerId, createdAt(sort: Desc)])
+  @@index([customerId, createdAt(sort: Desc)])
+  @@index([status])
+  @@map("notifications")
+}
+
+model NotificationTemplate {
+  id              String @id
+  name            String @db.VarChar(120)
+  triggerEvent    String @map("trigger_event") @db.VarChar(60)
+  channel         String @db.VarChar(20)
+  subjectTemplate String @map("subject_template") @db.VarChar(200)
+  bodyTemplate    String @map("body_template") @db.VarChar(1000)
+
+  @@map("notification_templates")
+}

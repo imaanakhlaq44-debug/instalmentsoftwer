@@ -1,0 +1,119 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    background-color: #F8FAFC;
+    color: #0F172A;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Badge & Card utilities */
+.status-pill {
+  @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider;
+}
+
+.status-active {
+  @apply bg-emerald-50 text-emerald-700 border border-emerald-200/80;
+}
+
+.status-pending {
+  @apply bg-amber-50 text-amber-700 border border-amber-200/80;
+}
+
+.status-overdue {
+  @apply bg-orange-50 text-orange-700 border border-orange-200/80;
+}
+
+.status-locked {
+  @apply bg-rose-50 text-rose-700 border border-rose-200/80 animate-pulse;
+}
+
+.status-enrolled {
+  @apply bg-blue-50 text-blue-700 border border-blue-200/80;
+}
+
+.status-inactive {
+  @apply bg-slate-100 text-slate-600 border border-slate-200;
+}
+
+/* Glassmorphic elements */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.phone-screen-frame {
+  box-shadow: 0 25px 50px -12px rgba(11, 25, 44, 0.25), 0 0 0 12px #0f172a, 0 0 0 14px #334155;
+}
+
+/* ---------------------------------------------------------------------------
+   Print
+   Receipts are printed from a modal that sits inside the dashboard, so
+   everything except the receipt has to be removed from the printed page.
+   Sized for 80mm thermal rolls, which is what most of these counters run.
+   --------------------------------------------------------------------------- */
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 4mm;
+  }
+
+  body {
+    background: #fff !important;
+  }
+
+  /* Hide the whole app, then re-show only the receipt's ancestor chain. */
+  body * {
+    visibility: hidden;
+  }
+
+  #printable-receipt,
+  #printable-receipt * {
+    visibility: visible;
+  }
+
+  #printable-receipt {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 0 !important;
+    color: #000 !important;
+    font-size: 11px;
+  }
+
+  /* Backgrounds and shadows waste toner and look muddy on thermal paper. */
+  #printable-receipt * {
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #000 !important;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+}
