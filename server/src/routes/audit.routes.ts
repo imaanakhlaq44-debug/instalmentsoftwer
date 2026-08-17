@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { z } from 'zod';
 
-import { db } from '../db/db.js';
-import { AuditLog, DeviceActionLog, Device } from '../types/index.js';
+import { repo, dealerScope } from '../db/repositories/index.js';
 import { requireDealerAdmin, getAuthUser, resolveDealerScope, assertDealerAccess } from '../middleware/auth.js';
 import { validateQuery, getQuery } from '../middleware/validate.js';
-import { paginationSchema, paginate } from '../utils/validators.js';
+import { asyncHandler } from '../middleware/errorHandler.js';
+import { paginationSchema, pageEnvelope } from '../utils/validators.js';
 
 export const auditRouter = Router();
 
@@ -22,46 +22,40 @@ const listQuerySchema = paginationSchema.extend({
   dealerId: z.string().trim().max(64).optional(),
 });
 
-auditRouter.get('/', validateQuery(listQuerySchema), (req, res) => {
-  const user = getAuthUser(req);
-  const scope = resolveDealerScope(req);
-  const q = getQuery<z.infer<typeof listQuerySchema>>(req);
+auditRouter.get(
+  '/',
+  validateQuery(listQuerySchema),
+  asyncHandler(async (req, res) => {
+    const user = getAuthUser(req);
+    const scope = resolveDealerScope(req);
+    const q = getQuery<z.infer<typeof listQuerySchema>>(req);
 
-  let logs = db.find<AuditLog>('auditLogs', (l) => {
-    // System-wide entries (no dealerId) belong to the super admin's view only.
-    if (scope !== null && l.dealerId !== scope) return false;
-    if (scope === null && user.role !== 'SUPER_ADMIN') return false;
-    if (q.targetType && q.targetType !== 'ALL' && l.targetType !== q.targetType) return false;
-    if (q.action && q.action !== 'ALL' && l.action !== q.action) return false;
-    if (q.userId && l.userId !== q.userId) return false;
-    if (q.from && l.createdAt < q.from) return false;
-    if (q.to && l.createdAt > `${q.to}T23:59:59.999Z`) return false;
-    return true;
-  });
+    // System-wide entries carry no dealerId and belong to the super admin's
+    // view only; nobody else ever reaches an unscoped query.
+    if (scope === null && user.role !== 'SUPER_ADMIN') {
+      res.json({ ...pageEnvelope([], { total: 0, page: 1 }, q.limit), facets: { actions: [], targetTypes: [] } });
+      return;
+    }
 
-  if (q.search) {
-    const needle = q.search.toLowerCase();
-    logs = logs.filter(
-      (l) =>
-        l.actorName.toLowerCase().includes(needle) ||
-        l.action.toLowerCase().includes(needle) ||
-        l.details.toLowerCase().includes(needle)
-    );
-  }
+    const filters = {
+      dealerId: scope,
+      targetType: q.targetType,
+      action: q.action,
+      userId: q.userId,
+      search: q.search,
+      from: q.from,
+      to: q.to,
+    };
 
-  logs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const [page, facets] = await Promise.all([
+      repo.auditLogs.list({ ...filters, page: q.page, limit: q.limit }),
+      // Powers the filter dropdowns without a second round trip from the client.
+      repo.auditLogs.facets(repo.auditLogs.buildWhere(filters)),
+    ]);
 
-  const page = paginate(logs, { page: q.page, limit: q.limit });
-
-  res.json({
-    ...page,
-    // Powers the filter dropdowns without a second round trip.
-    facets: {
-      actions: [...new Set(logs.map((l) => l.action))].sort(),
-      targetTypes: [...new Set(logs.map((l) => l.targetType))].sort(),
-    },
-  });
-});
+    res.json({ ...pageEnvelope(page.data, page, q.limit), facets });
+  })
+);
 
 const deviceActionsQuerySchema = paginationSchema.extend({
   deviceId: z.string().trim().max(64).optional(),
@@ -69,23 +63,29 @@ const deviceActionsQuerySchema = paginationSchema.extend({
   dealerId: z.string().trim().max(64).optional(),
 });
 
-auditRouter.get('/device-actions', validateQuery(deviceActionsQuerySchema), (req, res) => {
-  const scope = resolveDealerScope(req);
-  const q = getQuery<z.infer<typeof deviceActionsQuerySchema>>(req);
+auditRouter.get(
+  '/device-actions',
+  validateQuery(deviceActionsQuerySchema),
+  asyncHandler(async (req, res) => {
+    const scope = resolveDealerScope(req);
+    const q = getQuery<z.infer<typeof deviceActionsQuerySchema>>(req);
 
-  if (q.deviceId) {
-    const device = db.findById<Device>('devices', q.deviceId);
-    if (device) assertDealerAccess(req, device.dealerId, 'device');
-  }
+    if (q.deviceId) {
+      const device = await repo.devices.findById(q.deviceId);
+      if (device) assertDealerAccess(req, device.dealerId, 'device');
+    }
 
-  const logs = db.find<DeviceActionLog>('deviceActionLogs', (l) => {
-    if (scope !== null && l.dealerId !== scope) return false;
-    if (q.deviceId && l.deviceId !== q.deviceId) return false;
-    if (q.action && q.action !== 'ALL' && l.action !== q.action) return false;
-    return true;
-  });
+    const where: Record<string, unknown> = { ...dealerScope(scope) };
+    if (q.deviceId) where.deviceId = q.deviceId;
+    if (q.action && q.action !== 'ALL') where.action = q.action;
 
-  logs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const page = await repo.deviceActionLogs.paginate({
+      where,
+      orderBy: { createdAt: 'desc' },
+      page: q.page,
+      limit: q.limit,
+    });
 
-  res.json(paginate(logs, { page: q.page, limit: q.limit }));
-});
+    res.json(pageEnvelope(page.data, page, q.limit));
+  })
+);

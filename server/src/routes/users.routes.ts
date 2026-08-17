@@ -2,8 +2,8 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 
-import { db } from '../db/db.js';
-import { User, Customer } from '../types/index.js';
+import { repo, dealerScope } from '../db/repositories/index.js';
+import { User } from '../types/index.js';
 import { AuthService, toPublicUser } from '../services/AuthService.js';
 import { AuditService } from '../services/AuditService.js';
 import {
@@ -16,6 +16,7 @@ import {
   routeParam,
 } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
+import { asyncHandler } from '../middleware/errorHandler.js';
 import { AppError } from '../utils/AppError.js';
 import { hashPassword, validatePasswordStrength } from '../utils/password.js';
 import { pakistaniPhoneSchema, normalizePhone } from '../utils/validators.js';
@@ -26,11 +27,17 @@ export const usersRouter = Router();
 usersRouter.use(requireDealerAdmin);
 
 /** List staff for the caller's dealership. */
-usersRouter.get('/', (req, res) => {
-  const scope = resolveDealerScope(req);
-  const users = db.find<User>('users', (u) => (scope === null ? true : u.dealerId === scope));
-  res.json(users.map(toPublicUser));
-});
+usersRouter.get(
+  '/',
+  asyncHandler(async (req, res) => {
+    const scope = resolveDealerScope(req);
+    const users = await repo.users.findMany({
+      where: dealerScope(scope),
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(users.map(toPublicUser));
+  })
+);
 
 const createUserSchema = z.object({
   name: z.string().trim().min(2, 'Name must be at least 2 characters.').max(120),
@@ -43,16 +50,18 @@ const createUserSchema = z.object({
   dealerId: z.string().trim().optional(),
 });
 
-usersRouter.post('/', validateBody(createUserSchema), (req, res) => {
+usersRouter.post(
+  '/',
+  validateBody(createUserSchema),
+  asyncHandler(async (req, res) => {
   const actor = getAuthUser(req);
   const body = req.body as z.infer<typeof createUserSchema>;
-  const dealerId = resolveWritableDealerId(req, body.dealerId);
+  const dealerId = await resolveWritableDealerId(req, body.dealerId);
 
   const strength = validatePasswordStrength(body.password);
   if (!strength.valid) throw AppError.badRequest(strength.errors.join(' '));
 
-  const emailLower = body.email.toLowerCase();
-  if (db.findOne<User>('users', (u) => u.email.toLowerCase() === emailLower)) {
+  if (await repo.users.findByEmail(body.email)) {
     throw AppError.conflict('A user account already exists with this email address.');
   }
 
@@ -62,14 +71,14 @@ usersRouter.post('/', validateBody(createUserSchema), (req, res) => {
     if (!body.customerId) {
       throw AppError.badRequest('A customerId is required when creating a CUSTOMER login.');
     }
-    const customer = db.findById<Customer>('customers', body.customerId);
+    const customer = await repo.customers.findById(body.customerId);
     if (!customer) throw AppError.notFound('Customer');
     assertDealerAccess(req, customer.dealerId, 'customer');
     customerId = customer.id;
   }
 
   const nowIso = new Date().toISOString();
-  const user = db.insert<User>('users', {
+  const user = await repo.users.create({
     id: `user-${uuidv4().substring(0, 8)}`,
     dealerId,
     customerId,
@@ -85,7 +94,7 @@ usersRouter.post('/', validateBody(createUserSchema), (req, res) => {
     createdAt: nowIso,
   });
 
-  AuditService.log({
+  await AuditService.log({
     dealerId,
     userId: actor.userId,
     actorName: actor.name,
@@ -98,7 +107,8 @@ usersRouter.post('/', validateBody(createUserSchema), (req, res) => {
   });
 
   res.status(201).json(toPublicUser(user));
-});
+  })
+);
 
 const updateUserSchema = z.object({
   name: z.string().trim().min(2).max(120).optional(),
@@ -107,9 +117,12 @@ const updateUserSchema = z.object({
   active: z.boolean().optional(),
 });
 
-usersRouter.patch('/:id', validateBody(updateUserSchema), (req, res) => {
+usersRouter.patch(
+  '/:id',
+  validateBody(updateUserSchema),
+  asyncHandler(async (req, res) => {
   const actor = getAuthUser(req);
-  const target = db.findById<User>('users', routeParam(req, 'id'));
+  const target = await repo.users.findById(routeParam(req, 'id'));
   if (!target) throw AppError.notFound('User');
   assertDealerAccess(req, target.dealerId, 'user');
 
@@ -137,10 +150,10 @@ usersRouter.patch('/:id', validateBody(updateUserSchema), (req, res) => {
     throw AppError.badRequest('No changes were supplied.');
   }
 
-  const updated = db.update<User>('users', target.id, updates);
+  const updated = await repo.users.update(target.id, updates);
   if (!updated) throw AppError.notFound('User');
 
-  AuditService.log({
+  await AuditService.log({
     dealerId: target.dealerId,
     userId: actor.userId,
     actorName: actor.name,
@@ -153,30 +166,37 @@ usersRouter.patch('/:id', validateBody(updateUserSchema), (req, res) => {
   });
 
   res.json(toPublicUser(updated));
-});
+  })
+);
 
 const resetPasswordSchema = z.object({
   temporaryPassword: z.string().min(8, 'Temporary password must be at least 8 characters.').max(128),
 });
 
-usersRouter.post('/:id/reset-password', validateBody(resetPasswordSchema), (req, res) => {
+usersRouter.post(
+  '/:id/reset-password',
+  validateBody(resetPasswordSchema),
+  asyncHandler(async (req, res) => {
   const actor = getAuthUser(req);
-  const result = AuthService.resetPassword({
+  const result = await AuthService.resetPassword({
     actor,
     targetUserId: routeParam(req, 'id'),
     temporaryPassword: (req.body as z.infer<typeof resetPasswordSchema>).temporaryPassword,
     ipAddress: clientIp(req),
   });
   res.json(result);
-});
+  })
+);
 
 /**
  * Deactivation rather than deletion — audit logs and payment records reference
  * user ids, so hard-deleting a staff member would orphan the trail.
  */
-usersRouter.delete('/:id', (req, res) => {
+usersRouter.delete(
+  '/:id',
+  asyncHandler(async (req, res) => {
   const actor = getAuthUser(req);
-  const target = db.findById<User>('users', routeParam(req, 'id'));
+  const target = await repo.users.findById(routeParam(req, 'id'));
   if (!target) throw AppError.notFound('User');
   assertDealerAccess(req, target.dealerId, 'user');
 
@@ -187,9 +207,9 @@ usersRouter.delete('/:id', (req, res) => {
     throw AppError.forbidden('Only a super admin can deactivate a super admin account.');
   }
 
-  db.update<User>('users', target.id, { active: false });
+  await repo.users.update(target.id, { active: false });
 
-  AuditService.log({
+  await AuditService.log({
     dealerId: target.dealerId,
     userId: actor.userId,
     actorName: actor.name,
@@ -202,4 +222,5 @@ usersRouter.delete('/:id', (req, res) => {
   });
 
   res.json({ success: true, message: `${target.name}'s account has been deactivated.` });
-});
+  })
+);

@@ -12,13 +12,13 @@ This codebase is **not yet a production system**, and the README should not pret
 |---|---|
 | Authentication, RBAC, tenant isolation | ✅ Implemented and tested |
 | Installment / payment / late-fee engine | ✅ Implemented |
-| Data store | ⚠️ **Migration in progress.** The PostgreSQL schema, migrations and data import are complete and verified; the application code still reads and writes the JSON store. See [PostgreSQL migration](#-postgresql-migration) below. |
+| Data store | ✅ **PostgreSQL.** Schema, migrations, repository layer, services and routes are all on it. The JSON store is gone. |
 | Device locking | ⚠️ **Mock only.** `MockDeviceManagementService` changes a status field in the database. **No real phone is locked.** |
 | SMS / WhatsApp delivery | ❌ Not connected. Messages are queued in the database and marked `QUEUED`, never `SENT` |
 | Payment gateways (JazzCash / Easypaisa / Raast) | ❌ Not integrated. All payments are recorded manually at the counter |
-| Automated tests | ⚠️ **Backend only.** 120 Vitest/Supertest tests cover the installment engine, payment allocation and the auth/RBAC/tenant-isolation surface. The React client has none. See [Testing](#-testing) |
+| Automated tests | ⚠️ **Backend only.** 183 Vitest/Supertest tests run against a real PostgreSQL instance. The React client has none. See [Testing](#-testing) |
 
-The two things standing between this and a real product are **a PostgreSQL migration** and **an actual Android DPC application**.
+The one thing standing between this and a real product is **an actual Android DPC application**. Until it exists, "locking" is a status column.
 
 ---
 
@@ -72,7 +72,7 @@ The two things standing between this and a real product are **a PostgreSQL migra
 
 - **Frontend** — React 18, TypeScript, Tailwind, Vite, React Router 7
 - **Backend** — Node.js, Express, TypeScript, Zod, JWT, bcryptjs, helmet, node-cron
-- **Data** — PostgreSQL 16+ via Prisma 7 (schema and migrations in `server/prisma/`); PGlite for zero-install local development. The legacy JSON store is still what the running app reads — see the migration section below.
+- **Data** — PostgreSQL 17 via Prisma 7, behind a repository layer in `server/src/db/repositories/`. `embedded-postgres` runs the real server binaries locally with nothing to install.
 
 ---
 
@@ -100,16 +100,28 @@ The server **refuses to start in production** without a strong `JWT_SECRET` and 
 
 > If a value contains `#`, wrap it in quotes — dotenv treats an unquoted `#` as the start of a comment.
 
-### 3. Seed
+### 3. Start the database
 
 ```bash
-npm run seed
+npm --prefix server run db:dev
+```
+
+Leave it running. Then, in another terminal, apply the schema:
+
+```bash
+npm --prefix server run db:deploy
 ```
 
 ### 4. Run
 
 ```bash
 npm run dev
+```
+
+An empty database is seeded with the demo dataset on first boot. To reload it at any time:
+
+```bash
+npm --prefix server run db:seed
 ```
 
 Dashboard at **http://localhost:5173**, API at **http://localhost:5000/api**.
@@ -163,9 +175,9 @@ npm --prefix server test        # one run
 npm --prefix server run test:watch
 ```
 
-The suite runs against a throwaway store in the OS temp directory (`DATA_DIR` is
-set by `server/tests/setup.ts`), so it never touches `server/data/store.json`.
-No database server needs to be running.
+Each run starts its own throwaway PostgreSQL cluster on port 5434 in the OS temp
+directory (`server/tests/globalSetup.ts`) and applies the migrations to it, so it
+never touches your development database. Nothing needs to be running first.
 
 | File | Covers |
 |---|---|
@@ -175,15 +187,18 @@ No database server needs to be running.
 | `tests/api/tenant-isolation.test.ts` | Cross-dealer reads and writes, customer self-service scoping |
 | `tests/api/rbac-and-masking.test.ts` | Role guards, PII redaction per role, pagination |
 | `tests/api/lifecycle.test.ts` | Registration → six payments → completion, over HTTP |
+| `tests/db/base-repository.test.ts` | CRUD, date-only columns, transaction rollback, database constraints |
+| `tests/db/queries.test.ts` | Dealer scoping, relation searches, SQL aggregates, receipt numbering |
 
-These exist to make the PostgreSQL cutover below safe: the repository layer can
-be swapped in underneath and the same 120 assertions must still hold.
+These made the PostgreSQL cutover safe. The storage engine was replaced entirely
+and the behavioural assertions did not change — the same tests that passed against
+the JSON store pass against PostgreSQL.
 
 ---
 
 ## 🐘 PostgreSQL migration
 
-The database half of the migration is **done and verified**. The application half is not — services and routes still use the JSON store, so the running app is unchanged and unbroken.
+The migration is **complete**. The application reads and writes PostgreSQL exclusively.
 
 ### What exists and works
 
@@ -192,7 +207,7 @@ The database half of the migration is **done and verified**. The application hal
 | Prisma schema — 15 tables, 19 enums, 60 indexes, 30 foreign keys | `prisma/schema.prisma` | ✅ |
 | Versioned SQL migration | `prisma/migrations/20260817000000_init/` | ✅ applied |
 | Prisma client + pooling + transaction helper | `src/db/prisma.ts` | ✅ |
-| Data import from the JSON store | `scripts/import-store-json.ts` | ✅ run, counts verified |
+| Data import from the legacy JSON store | `scripts/import-store-json.ts` | ✅ kept for one-off migration of an existing install |
 | Local PostgreSQL with nothing to install | `scripts/pg-server.ts` | ✅ |
 | Repository layer over Prisma | `src/db/repositories/` | ✅ |
 | Demo dataset loaded straight into PostgreSQL | `src/db/seedPostgres.ts` | ✅ |
@@ -201,7 +216,7 @@ Design decisions baked into the schema:
 
 - **Money is `Int`** (whole rupees). The app already rounds to whole rupees; integers remove any chance of floating-point drift on balances.
 - **Real date types.** Due dates and grace dates are `DATE`; everything else is `TIMESTAMPTZ`. The repository layer converts back to the ISO strings the app already uses, so domain logic does not have to be rewritten around `Date` objects.
-- **Constraints the JSON store could not enforce:** unique IMEI, unique `(dealer, CNIC)`, unique `(dealer, payment reference)` — that last one stops a double-submit at the counter at the database level, not just in application code.
+- **Constraints the old JSON store could not enforce:** unique IMEI, unique `(dealer, CNIC)`, unique `(dealer, payment reference)` — that last one stops a double-submit at the counter at the database level, not just in application code.
 - **No cascade deletes on financial or audit rows.** Removing a customer must never silently take their payment history with it.
 
 ### Running it
@@ -210,7 +225,7 @@ Design decisions baked into the schema:
 npm run db:dev      # starts a real PostgreSQL on :5433 — leave it running
 npm run db:deploy   # applies migrations
 npm run db:seed     # loads the demo dataset
-npm run db:import   # or: migrate server/data/store.json into it (idempotent)
+npm run db:import   # optional: migrate a legacy server/data/store.json (idempotent)
 npm run db:studio   # browse the data
 ```
 
@@ -220,23 +235,23 @@ npm run db:studio   # browse the data
 
 Both clusters are created with `--encoding=UTF8 --locale=C`. Without it `initdb` inherits the Windows host locale and builds a **WIN1252** database, which cannot store an Urdu customer name at all; `tests/db/connection.test.ts` asserts the encoding so this cannot regress unnoticed.
 
-### What is left
+### What the cutover changed
 
-1. ~~**Repository layer** replacing `src/db/db.ts`~~ — done. `src/db/repositories/` runs filtering, sorting, pagination, counts and sums in SQL; 56 tests cover it against a real PostgreSQL.
-2. **Services** (`AuthService`, `PaymentService`, `OverdueEngine`, `DeviceManagementService`, `EnrollmentService`) moved onto it, with payment allocation and customer creation inside real transactions.
-3. **Routes** converted to the async repositories.
-4. Re-run the full verification suite and delete `src/db/db.ts`.
+The JSON store is gone — `src/db/db.ts` was deleted. Beyond swapping the storage engine:
 
-Until step 4 lands, the app runs on the JSON store and PostgreSQL holds a verified copy of the same data.
+- **Real transactions.** Payment allocation, customer registration, dealer sign-up, device lock/unlock, late-fee waivers and plan restructuring each commit as a unit. `db.batch` had no rollback, so a failure part-way through registration could leave a customer holding a financed device with no repayment schedule.
+- **Work moved into SQL.** Filtering, sorting, pagination, counts and sums are executed by the database. The dashboard previously loaded every device, plan, payment and installment into memory and reduced them in JavaScript.
+- **Concurrency the store could not express.** Duplicate payment references and duplicate CNICs are stopped by unique indexes rather than by a read-then-write check; enrollment tokens are claimed with a compare-and-set so two scans of one QR cannot both win; receipt numbers come from the highest issued rather than a row count, which handed concurrent payments the same number.
+
+Two operations deliberately run *after* their transaction commits, because they open transactions of their own and Prisma has no nested interactive transactions — the auto-unlock following a settling payment, and the enrollment QR issued after registration. Both orderings are also the correct ones: a phone should only be released once the money is durably recorded, and a QR should not exist for a device the registration failed to write.
 
 ---
 
 ## 🗺️ Roadmap
 
-1. **PostgreSQL + Prisma migration** — schema and data done; application layer still to cut over (see above).
-2. **Android DPC application** — until this exists, "locking" is a database field.
-3. **SMS gateway** (Twilio / Jazz / Telenor) so reminders actually reach customers.
-4. **Payment gateway** integration for JazzCash, Easypaisa and Raast.
-5. **Client tests and CI** — the backend suite exists; the React app has none and nothing runs on push.
-6. **Contract PDF with digital signature** — device restriction needs recorded customer consent.
-7. Urdu localisation and RTL, PWA offline mode.
+1. **Android DPC application** — until this exists, "locking" is a database field.
+2. **SMS gateway** (Twilio / Jazz / Telenor) so reminders actually reach customers.
+3. **Payment gateway** integration for JazzCash, Easypaisa and Raast.
+4. **Client tests and CI** — the backend suite exists; the React app has none and nothing runs on push.
+5. **Contract PDF with digital signature** — device restriction needs recorded customer consent.
+6. Urdu localisation and RTL, PWA offline mode.

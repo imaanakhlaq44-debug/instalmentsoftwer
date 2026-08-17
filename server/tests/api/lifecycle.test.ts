@@ -1,10 +1,15 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 
-import { as, reseed, db, ACCOUNTS } from '../helpers.js';
+import { as, reseed, repo, ACCOUNTS } from '../helpers.js';
+import { disconnectDatabase } from '../../src/db/prisma.js';
 import { Customer, Device, InstallmentPlan, Installment, Payment } from '../../src/types/index.js';
 
-beforeEach(() => {
-  reseed();
+beforeEach(async () => {
+  await reseed();
+}, 60_000);
+
+afterAll(async () => {
+  await disconnectDatabase();
 });
 
 /** 15 digits with a valid Luhn checksum — the schema rejects anything else. */
@@ -39,20 +44,18 @@ async function register() {
   return res;
 }
 
-function created() {
-  const customer = db.findOne<Customer>('customers', (c) => c.name === registration.customer.name)!;
-  const device = db.findOne<Device>('devices', (d) => d.imei === IMEI)!;
-  const plan = db.findOne<InstallmentPlan>('installmentPlans', (p) => p.deviceId === device.id)!;
-  const installments = db
-    .find<Installment>('installments', (i) => i.planId === plan.id)
-    .sort((a, b) => a.installmentNumber - b.installmentNumber);
+async function created() {
+  const customer = (await repo.customers.findFirst({ name: registration.customer.name }))!;
+  const device = (await repo.devices.findByImei(IMEI))!;
+  const plan = (await repo.installmentPlans.findByDevice(device.id))!;
+  const installments = await repo.installments.findByPlan(plan.id);
   return { customer, device, plan, installments };
 }
 
 describe('registration', () => {
   it('creates the customer, the device and a balanced schedule in one call', async () => {
     await register();
-    const { customer, device, plan, installments } = created();
+    const { customer, device, plan, installments } = await created();
 
     expect(customer.dealerId).toBe('dealer-1');
     expect(device.customerId).toBe(customer.id);
@@ -65,7 +68,7 @@ describe('registration', () => {
 
   it('dates the installments monthly from the first due date', async () => {
     await register();
-    const { installments } = created();
+    const { installments } = await created();
 
     expect(installments.map((i) => i.dueDate)).toEqual([
       '2026-09-20', '2026-10-20', '2026-11-20',
@@ -132,7 +135,7 @@ describe('registration', () => {
 describe('payment lifecycle over the API', () => {
   it('takes a plan from registration to fully paid', async () => {
     await register();
-    const { customer, plan, installments } = created();
+    const { customer, plan, installments } = await created();
 
     for (const inst of installments) {
       const res = await as(ACCOUNTS.dealerStaff).post('/api/payments').send({
@@ -145,7 +148,7 @@ describe('payment lifecycle over the API', () => {
       expect(res.status).toBeLessThan(300);
     }
 
-    const final = db.findById<InstallmentPlan>('installmentPlans', plan.id)!;
+    const final = (await repo.installmentPlans.findById(plan.id))!;
     expect(final.status).toBe('COMPLETED');
     expect(final.remainingBalance).toBe(0);
     expect(final.paidInstallments).toBe(6);
@@ -154,7 +157,7 @@ describe('payment lifecycle over the API', () => {
 
   it('produces a printable receipt showing the remaining balance', async () => {
     await register();
-    const { customer, installments } = created();
+    const { customer, installments } = await created();
 
     const paid = await as(ACCOUNTS.dealerStaff).post('/api/payments').send({
       customerId: customer.id,
@@ -174,7 +177,7 @@ describe('payment lifecycle over the API', () => {
 
   it('rejects a duplicate payment reference from a double-submit', async () => {
     await register();
-    const { customer, installments } = created();
+    const { customer, installments } = await created();
 
     const body = {
       customerId: customer.id,
@@ -187,13 +190,13 @@ describe('payment lifecycle over the API', () => {
     expect((await as(ACCOUNTS.dealerStaff).post('/api/payments').send(body)).status).toBeLessThan(300);
     expect((await as(ACCOUNTS.dealerStaff).post('/api/payments').send(body)).status).toBe(409);
 
-    const recorded = db.find<Payment>('payments', (p) => p.referenceNumber === body.referenceNumber);
+    const recorded = await repo.payments.findMany({ where: { referenceNumber: body.referenceNumber } });
     expect(recorded).toHaveLength(1);
   });
 
   it('leaves the ledger balanced after a reversal', async () => {
     await register();
-    const { customer, plan, installments } = created();
+    const { customer, plan, installments } = await created();
 
     const paid = await as(ACCOUNTS.dealerStaff).post('/api/payments').send({
       customerId: customer.id,
@@ -209,13 +212,13 @@ describe('payment lifecycle over the API', () => {
       .send({ reason: 'Cheque returned unpaid by the bank.' });
 
     expect(reversal.status).toBeLessThan(300);
-    expect(db.findById<InstallmentPlan>('installmentPlans', plan.id)!.remainingBalance).toBe(48_000);
-    expect(db.findById<Payment>('payments', paymentId)!.status).toBe('REFUNDED');
+    expect((await repo.installmentPlans.findById(plan.id))!.remainingBalance).toBe(48_000);
+    expect((await repo.payments.findById(paymentId))!.status).toBe('REFUNDED');
   });
 
   it('does not let counter staff reverse a payment', async () => {
     await register();
-    const { customer, installments } = created();
+    const { customer, installments } = await created();
 
     const paid = await as(ACCOUNTS.dealerStaff).post('/api/payments').send({
       customerId: customer.id,
@@ -231,14 +234,14 @@ describe('payment lifecycle over the API', () => {
       .send({ reason: 'Staff attempting a reversal.' });
 
     expect(res.status).toBe(403);
-    expect(db.findById<Payment>('payments', paymentId)!.status).toBe('VERIFIED');
+    expect((await repo.payments.findById(paymentId))!.status).toBe('VERIFIED');
   });
 });
 
 describe('audit trail', () => {
   it('records the registration and the payment', async () => {
     await register();
-    const { customer, installments } = created();
+    const { customer, installments } = await created();
 
     await as(ACCOUNTS.dealerStaff).post('/api/payments').send({
       customerId: customer.id,

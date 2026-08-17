@@ -33,6 +33,50 @@ export function dealerScope(dealerId: string | null): { dealerId?: string } {
   return dealerId === null ? {} : { dealerId };
 }
 
+/**
+ * The filters each list screen sends.
+ *
+ * Declared as named types rather than inferred from the method that consumes
+ * them: a repository referring to its own method's parameter type from inside
+ * its object literal makes the inferred type circular.
+ */
+export interface TransactionFilters {
+  dealerId: string | null;
+  customerId?: string;
+  type?: string;
+  status?: string;
+  from?: string;
+  to?: string;
+}
+
+export interface AuditLogFilters {
+  dealerId: string | null;
+  action?: string;
+  targetType?: string;
+  userId?: string;
+  search?: string;
+  from?: string;
+  to?: string;
+}
+
+export interface NotificationFilters {
+  dealerId: string | null;
+  customerId?: string;
+  status?: string;
+  type?: string;
+}
+
+export interface PaymentFilters {
+  dealerId: string | null;
+  customerId?: string;
+  planId?: string;
+  status?: string;
+  method?: string;
+  search?: string;
+  from?: string;
+  to?: string;
+}
+
 /** Case-insensitive `LIKE %needle%`, executed by the database. */
 function contains(needle: string) {
   return { contains: needle, mode: 'insensitive' as const };
@@ -133,7 +177,14 @@ export const customers = {
   },
 
   list(
-    args: { dealerId: string | null; customerId?: string; search?: string } & PageArgs,
+    args: {
+      dealerId: string | null;
+      customerId?: string;
+      search?: string;
+      /** Derived from the customer's plans, not stored on the row. */
+      paymentStatus?: 'ALL' | 'CURRENT' | 'OVERDUE' | 'COMPLETED';
+      orderBy?: unknown;
+    } & PageArgs,
     tx?: Tx
   ): Promise<Page<Customer>> {
     const where: Record<string, unknown> = { ...dealerScope(args.dealerId) };
@@ -149,7 +200,21 @@ export const customers = {
       ];
     }
 
-    return this.paginate({ where, orderBy: { createdAt: 'desc' }, ...args }, tx);
+    /**
+     * Payment status is a property of the customer's plans, so it becomes a
+     * relation filter rather than a post-filter over fetched rows — otherwise
+     * the page size and the total would both be computed from the wrong set.
+     */
+    if (args.paymentStatus === 'OVERDUE') {
+      where.installmentPlans = { some: { status: 'OVERDUE' } };
+    } else if (args.paymentStatus === 'COMPLETED') {
+      where.installmentPlans = { some: {}, every: { status: 'COMPLETED' } };
+    } else if (args.paymentStatus === 'CURRENT') {
+      where.installmentPlans = { none: { status: 'OVERDUE' } };
+      where.NOT = { installmentPlans: { some: {}, every: { status: 'COMPLETED' } } };
+    }
+
+    return this.paginate({ where, orderBy: args.orderBy ?? { createdAt: 'desc' }, ...args }, tx);
   },
 };
 
@@ -254,12 +319,23 @@ export const installmentPlans = {
   },
 
   list(
-    args: { dealerId: string | null; customerId?: string; status?: string } & PageArgs,
+    args: { dealerId: string | null; customerId?: string; status?: string; search?: string } & PageArgs,
     tx?: Tx
   ): Promise<Page<InstallmentPlan>> {
     const where: Record<string, unknown> = { ...dealerScope(args.dealerId) };
     if (args.customerId) where.customerId = args.customerId;
     if (args.status && args.status !== 'ALL') where.status = args.status;
+
+    if (args.search) {
+      // Reaches through the customer and device relations so the search box
+      // matches a buyer's name or a handset model, not just the plan id.
+      where.OR = [
+        { id: contains(args.search) },
+        { customer: { is: { name: contains(args.search) } } },
+        { device: { is: { model: contains(args.search) } } },
+        { device: { is: { brand: contains(args.search) } } },
+      ];
+    }
 
     return this.paginate({ where, orderBy: { createdAt: 'desc' }, ...args }, tx);
   },
@@ -389,17 +465,7 @@ export const payments = {
     return `${prefix}${String(next).padStart(6, '0')}`;
   },
 
-  list(
-    args: {
-      dealerId: string | null;
-      customerId?: string;
-      planId?: string;
-      status?: string;
-      method?: string;
-      search?: string;
-    } & PageArgs,
-    tx?: Tx
-  ): Promise<Page<Payment>> {
+  buildWhere(args: PaymentFilters): Record<string, unknown> {
     const where: Record<string, unknown> = { ...dealerScope(args.dealerId) };
     if (args.customerId) where.customerId = args.customerId;
     if (args.planId) where.planId = args.planId;
@@ -409,11 +475,23 @@ export const payments = {
       where.OR = [
         { referenceNumber: contains(args.search) },
         { receiptNumber: contains(args.search) },
+        { paymentMethod: contains(args.search) },
         { customer: { is: { name: contains(args.search) } } },
       ];
     }
 
-    return this.paginate({ where, orderBy: { createdAt: 'desc' }, ...args }, tx);
+    if (args.from || args.to) {
+      const range: Record<string, Date> = {};
+      if (args.from) range.gte = new Date(args.from);
+      if (args.to) range.lte = new Date(`${args.to}T23:59:59.999Z`);
+      where.createdAt = range;
+    }
+
+    return where;
+  },
+
+  list(args: PaymentFilters & PageArgs, tx?: Tx): Promise<Page<Payment>> {
+    return this.paginate({ where: this.buildWhere(args), orderBy: { createdAt: 'desc' }, ...args }, tx);
   },
 
   /**
@@ -425,12 +503,20 @@ export const payments = {
   async totals(
     where: Record<string, unknown>,
     tx?: Tx
-  ): Promise<{ count: number; verifiedAmount: number; pendingAmount: number; reversedAmount: number }> {
+  ): Promise<{
+    count: number;
+    verifiedCount: number;
+    verifiedAmount: number;
+    pendingAmount: number;
+    reversedAmount: number;
+  }> {
     const d = delegate('payment', tx);
+    const settled = { ...where, status: 'VERIFIED', reversedAt: null };
 
-    const [count, verified, pending, reversed] = await Promise.all([
+    const [count, verifiedCount, verified, pending, reversed] = await Promise.all([
       d.count({ where }),
-      d.aggregate({ where: { ...where, status: 'VERIFIED', reversedAt: null }, _sum: { amount: true } }),
+      d.count({ where: settled }),
+      d.aggregate({ where: settled, _sum: { amount: true } }),
       d.aggregate({ where: { ...where, status: 'PENDING' }, _sum: { amount: true } }),
       d.aggregate({ where: { ...where, reversedAt: { not: null } }, _sum: { amount: true } }),
     ]);
@@ -439,6 +525,7 @@ export const payments = {
 
     return {
       count,
+      verifiedCount,
       verifiedAmount: sum(verified),
       pendingAmount: sum(pending),
       reversedAmount: sum(reversed),
@@ -468,16 +555,50 @@ export const transactions = {
     return this.findFirst({ paymentId }, tx);
   },
 
-  list(
-    args: { dealerId: string | null; customerId?: string; type?: string; status?: string } & PageArgs,
-    tx?: Tx
-  ): Promise<Page<Transaction>> {
+  /** The `where` a list request implies, shared by `list` and `totals`. */
+  buildWhere(args: TransactionFilters): Record<string, unknown> {
     const where: Record<string, unknown> = { ...dealerScope(args.dealerId) };
     if (args.customerId) where.customerId = args.customerId;
     if (args.type && args.type !== 'ALL') where.type = args.type;
     if (args.status && args.status !== 'ALL') where.status = args.status;
 
-    return this.paginate({ where, orderBy: { date: 'desc' }, ...args }, tx);
+    if (args.from || args.to) {
+      const range: Record<string, Date> = {};
+      if (args.from) range.gte = new Date(args.from);
+      // An inclusive end date means the whole of that day.
+      if (args.to) range.lte = new Date(`${args.to}T23:59:59.999Z`);
+      where.date = range;
+    }
+
+    return where;
+  },
+
+  list(args: TransactionFilters & PageArgs, tx?: Tx): Promise<Page<Transaction>> {
+    return this.paginate({ where: this.buildWhere(args), orderBy: { date: 'desc' }, ...args }, tx);
+  },
+
+  /**
+   * Money in versus money out for a filtered set, so the ledger footer balances.
+   * Both sums come from the database and cover the whole filter, not one page.
+   */
+  async totals(
+    where: Record<string, unknown>,
+    tx?: Tx
+  ): Promise<{ count: number; inflow: number; outflow: number; net: number }> {
+    const d = delegate('transaction', tx);
+    const completed = { ...where, status: 'COMPLETED' };
+
+    const [count, credits, debits] = await Promise.all([
+      d.count({ where }),
+      d.aggregate({ where: { ...completed, amount: { gt: 0 } }, _sum: { amount: true } }),
+      d.aggregate({ where: { ...completed, amount: { lt: 0 } }, _sum: { amount: true } }),
+    ]);
+
+    const sum = (r: unknown) => ((r as { _sum: { amount: number | null } })._sum.amount ?? 0);
+    const inflow = sum(credits);
+    const outflow = Math.abs(sum(debits));
+
+    return { count, inflow, outflow, net: inflow - outflow };
   },
 };
 
@@ -517,34 +638,85 @@ export const deviceActionLogs = {
 export const auditLogs = {
   ...makeRepository<AuditLog>('auditLog'),
 
-  list(
-    args: { dealerId: string | null; action?: string; targetType?: string; search?: string } & PageArgs,
-    tx?: Tx
-  ): Promise<Page<AuditLog>> {
+  buildWhere(args: AuditLogFilters): Record<string, unknown> {
     const where: Record<string, unknown> = { ...dealerScope(args.dealerId) };
     if (args.action && args.action !== 'ALL') where.action = args.action;
     if (args.targetType && args.targetType !== 'ALL') where.targetType = args.targetType;
+    if (args.userId) where.userId = args.userId;
     if (args.search) {
-      where.OR = [{ actorName: contains(args.search) }, { details: contains(args.search) }];
+      where.OR = [
+        { actorName: contains(args.search) },
+        { action: contains(args.search) },
+        { details: contains(args.search) },
+      ];
     }
 
-    return this.paginate({ where, orderBy: { createdAt: 'desc' }, ...args }, tx);
+    if (args.from || args.to) {
+      const range: Record<string, Date> = {};
+      if (args.from) range.gte = new Date(args.from);
+      if (args.to) range.lte = new Date(`${args.to}T23:59:59.999Z`);
+      where.createdAt = range;
+    }
+
+    return where;
+  },
+
+  list(args: AuditLogFilters & PageArgs, tx?: Tx): Promise<Page<AuditLog>> {
+    return this.paginate({ where: this.buildWhere(args), orderBy: { createdAt: 'desc' }, ...args }, tx);
+  },
+
+  /**
+   * The distinct values behind the filter dropdowns.
+   *
+   * Two grouped queries over the filtered set, rather than loading every log
+   * row into memory to collect its distinct actions.
+   */
+  async facets(
+    where: Record<string, unknown>,
+    tx?: Tx
+  ): Promise<{ actions: string[]; targetTypes: string[] }> {
+    const d = delegate('auditLog', tx);
+
+    const [actions, targetTypes] = await Promise.all([
+      d.groupBy({ by: ['action'], where }),
+      d.groupBy({ by: ['targetType'], where }),
+    ]);
+
+    return {
+      actions: (actions as { action: string }[]).map((r) => r.action).sort(),
+      targetTypes: (targetTypes as { targetType: string }[]).map((r) => r.targetType).sort(),
+    };
   },
 };
 
 export const notifications = {
   ...makeRepository<Notification>('notification'),
 
-  list(
-    args: { dealerId: string | null; customerId?: string; status?: string; type?: string } & PageArgs,
-    tx?: Tx
-  ): Promise<Page<Notification>> {
+  buildWhere(args: NotificationFilters): Record<string, unknown> {
     const where: Record<string, unknown> = { ...dealerScope(args.dealerId) };
     if (args.customerId) where.customerId = args.customerId;
     if (args.status && args.status !== 'ALL') where.status = args.status;
     if (args.type && args.type !== 'ALL') where.type = args.type;
+    return where;
+  },
 
-    return this.paginate({ where, orderBy: { createdAt: 'desc' }, ...args }, tx);
+  list(args: NotificationFilters & PageArgs, tx?: Tx): Promise<Page<Notification>> {
+    return this.paginate({ where: this.buildWhere(args), orderBy: { createdAt: 'desc' }, ...args }, tx);
+  },
+
+  /** Delivery-state tallies over the whole filter, counted by the database. */
+  async statusCounts(
+    where: Record<string, unknown>,
+    tx?: Tx
+  ): Promise<{ queued: number; sent: number; failed: number }> {
+    const rows = (await delegate('notification', tx).groupBy({
+      by: ['status'],
+      where,
+      _count: { _all: true },
+    })) as { status: string; _count: { _all: number } }[];
+
+    const by = (status: string) => rows.find((r) => r.status === status)?._count._all ?? 0;
+    return { queued: by('QUEUED'), sent: by('SENT'), failed: by('FAILED') };
   },
 };
 

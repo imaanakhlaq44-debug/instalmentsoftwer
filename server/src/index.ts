@@ -4,8 +4,9 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 
 import { config } from './config.js';
-import { db } from './db/db.js';
-import { runSeed } from './db/seed.js';
+import { connectDatabase, disconnectDatabase } from './db/prisma.js';
+import { repo } from './db/repositories/index.js';
+import { seedPostgres } from './db/seedPostgres.js';
 import { requireAuth } from './middleware/auth.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { startScheduler } from './services/Scheduler.js';
@@ -31,14 +32,6 @@ const app = express();
 // Rate limiting and audit logs are worthless without this.
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
-
-// ---------------------------------------------------------------------------
-// Seeding
-// ---------------------------------------------------------------------------
-if (config.autoSeed && db.find('dealers').length === 0) {
-  console.log('[startup] Database is empty — seeding the demo dataset.');
-  runSeed();
-}
 
 // ---------------------------------------------------------------------------
 // Security middleware
@@ -157,7 +150,25 @@ app.use(errorHandler);
 // ---------------------------------------------------------------------------
 // Boot
 // ---------------------------------------------------------------------------
-export function startServer() {
+/**
+ * Verifies the database is reachable and, in development, loads the demo
+ * dataset into an empty one.
+ *
+ * This is async and therefore runs before `listen` rather than at import time
+ * as it used to — the server must not accept a request it cannot serve.
+ */
+async function prepareDatabase(): Promise<void> {
+  await connectDatabase();
+
+  if (config.autoSeed && (await repo.dealers.count()) === 0) {
+    console.log('[startup] Database is empty — seeding the demo dataset.');
+    await seedPostgres();
+  }
+}
+
+export async function startServer() {
+  await prepareDatabase();
+
   const server = app.listen(config.port, () => {
     console.log('====================================================');
     console.log(`  EMI Shield Server listening on port ${config.port}`);
@@ -174,9 +185,10 @@ export function startServer() {
     console.log(`\n[shutdown] ${signal} received — closing gracefully.`);
     scheduler.stop();
     server.close(() => {
-      db.flush();
-      console.log('[shutdown] Server closed and data flushed.');
-      process.exit(0);
+      void disconnectDatabase().finally(() => {
+        console.log('[shutdown] Server closed and database connections released.');
+        process.exit(0);
+      });
     });
     // Do not hang forever on lingering keep-alive sockets.
     setTimeout(() => process.exit(1), 10_000).unref();
@@ -190,7 +202,7 @@ export function startServer() {
   });
   process.on('uncaughtException', (err) => {
     console.error('[fatal] Uncaught exception:', err);
-    db.flush();
+    // Committed data is the database's problem now, not a file to flush.
     process.exit(1);
   });
 
@@ -198,7 +210,10 @@ export function startServer() {
 }
 
 if (!config.isTest) {
-  startServer();
+  startServer().catch((err) => {
+    console.error('[fatal] The server could not start:', err);
+    process.exit(1);
+  });
 }
 
 export { app };

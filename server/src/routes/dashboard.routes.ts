@@ -1,165 +1,245 @@
 import { Router } from 'express';
 
-import { db } from '../db/db.js';
-import { Device, InstallmentPlan, Payment, Installment, Customer } from '../types/index.js';
+import { prisma } from '../db/prisma.js';
+import { repo, indexBy, dealerScope } from '../db/repositories/index.js';
+import { Device, InstallmentPlan, Customer, Installment } from '../types/index.js';
 import { getAuthUser, resolveDealerScope } from '../middleware/auth.js';
-import { amountOutstanding, addMonthsPreservingEndOfMonth, toDateOnly } from '../services/InstallmentMath.js';
+import { asyncHandler } from '../middleware/errorHandler.js';
+import { amountOutstanding, addMonthsPreservingEndOfMonth, toDateOnly, parseDateOnly } from '../services/InstallmentMath.js';
 
 export const dashboardRouter = Router();
 
-function scopeFilter<T extends { dealerId: string; customerId?: string }>(
-  items: T[],
-  scope: string | null,
-  customerId?: string
-): T[] {
-  return items.filter((i) => {
-    if (scope !== null && i.dealerId !== scope) return false;
-    if (customerId && i.customerId !== customerId) return false;
-    return true;
-  });
+/**
+ * The rows this request is allowed to see.
+ *
+ * Dealer scope comes from the verified JWT; a CUSTOMER login is narrowed
+ * further to its own records. Every query below starts from this.
+ */
+function scopeWhere(scope: string | null, customerId?: string): Record<string, unknown> {
+  return { ...dealerScope(scope), ...(customerId ? { customerId } : {}) };
 }
 
-dashboardRouter.get('/stats', (req, res) => {
-  const user = getAuthUser(req);
-  const scope = resolveDealerScope(req);
-  const customerScope = user.role === 'CUSTOMER' ? user.customerId : undefined;
+/** Turns a grouped `_count` result into a plain lookup. */
+function tally(rows: unknown[], key: string): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const row of rows as Record<string, unknown>[]) {
+    out.set(String(row[key]), (row._count as { _all: number })._all);
+  }
+  return out;
+}
 
-  const devices = scopeFilter(db.find<Device>('devices'), scope, customerScope);
-  const plans = scopeFilter(db.find<InstallmentPlan>('installmentPlans'), scope, customerScope);
-  const payments = scopeFilter(db.find<Payment>('payments'), scope, customerScope);
-  const installments = scopeFilter(db.find<Installment>('installments'), scope, customerScope);
+function sumOf(result: unknown, field: string): number {
+  return ((result as Record<string, Record<string, number | null>>)._sum?.[field]) ?? 0;
+}
 
-  // Only money that actually landed and was not later reversed.
-  const settled = payments.filter((p) => p.status === 'VERIFIED' && !p.reversedAt);
+dashboardRouter.get(
+  '/stats',
+  asyncHandler(async (req, res) => {
+    const user = getAuthUser(req);
+    const scope = resolveDealerScope(req);
+    const customerScope = user.role === 'CUSTOMER' ? user.customerId : undefined;
+    const where = scopeWhere(scope, customerScope);
 
-  const now = new Date();
-  const monthStart = toDateOnly(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)));
-  const todayStr = toDateOnly(now);
+    const now = new Date();
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const today = parseDateOnly(toDateOnly(now));
+    const weekEnd = new Date(today.getTime() + 7 * 86_400_000);
 
-  const overdueInstallments = installments.filter((i) => i.status === 'OVERDUE');
-  const dueThisWeek = installments.filter(
-    (i) => i.status !== 'PAID' && i.dueDate >= todayStr && i.dueDate <= toDateOnly(new Date(now.getTime() + 7 * 86_400_000))
-  );
+    /**
+     * Every figure below is computed by the database. The previous version
+     * loaded devices, plans, payments and installments in full and reduced them
+     * in JavaScript — affordable against a JSON file, not against a table.
+     */
+    const [
+      deviceStatuses,
+      planStatuses,
+      distinctPlanCustomers,
+      planSums,
+      overdueRows,
+      dueThisWeekRows,
+      settledAllTime,
+      settledThisMonth,
+      pendingVerification,
+      dueToDateSums,
+      offlineDevices,
+    ] = await Promise.all([
+      prisma.device.groupBy({ by: ['status'], where, _count: { _all: true } }),
+      prisma.installmentPlan.groupBy({ by: ['status'], where, _count: { _all: true } }),
+      prisma.installmentPlan.findMany({ where, distinct: ['customerId'], select: { customerId: true } }),
+      prisma.installmentPlan.aggregate({ where, _sum: { remainingBalance: true, outstandingLateFees: true } }),
+      repo.installments.findMany({ where: { ...where, status: 'OVERDUE' } }),
+      repo.installments.findMany({
+        where: { ...where, status: { not: 'PAID' }, dueDate: { gte: today, lte: weekEnd } },
+      }),
+      prisma.payment.aggregate({
+        where: { ...where, status: 'VERIFIED', reversedAt: null },
+        _sum: { amount: true },
+      }),
+      prisma.payment.aggregate({
+        where: { ...where, status: 'VERIFIED', reversedAt: null, createdAt: { gte: monthStart } },
+        _sum: { amount: true },
+      }),
+      prisma.payment.aggregate({ where: { ...where, status: 'PENDING' }, _sum: { amount: true } }),
+      prisma.installment.aggregate({
+        where: { ...where, dueDate: { lte: today } },
+        _sum: { amountDue: true, amountPaid: true },
+      }),
+      prisma.device.count({ where: { ...where, isOnline: false, status: { not: 'REMOVED' } } }),
+    ]);
 
-  const outstandingAmount = plans.reduce((sum, p) => sum + (p.remainingBalance || 0), 0);
-  const outstandingLateFees = plans.reduce((sum, p) => sum + (p.outstandingLateFees || 0), 0);
+    const devices = tally(deviceStatuses, 'status');
+    const plans = tally(planStatuses, 'status');
+    const countOf = (map: Map<string, number>, ...statuses: string[]) =>
+      statuses.reduce((s, status) => s + (map.get(status) ?? 0), 0);
 
-  // Collection rate: of everything that has fallen due, how much came in.
-  const dueToDate = installments.filter((i) => i.dueDate <= todayStr);
-  const dueAmount = dueToDate.reduce((s, i) => s + i.amountDue, 0);
-  const collectedOfDue = dueToDate.reduce((s, i) => s + i.amountPaid, 0);
+    const totalDevices = [...devices.values()].reduce((s, n) => s + n, 0);
+    const totalPlans = [...plans.values()].reduce((s, n) => s + n, 0);
 
-  res.json({
-    totalDevices: devices.length,
-    activeDevices: devices.filter((d) => d.status === 'ACTIVE').length,
-    pendingDevices: devices.filter((d) => d.status === 'PENDING' || d.status === 'ENROLLED').length,
-    lockedDevices: devices.filter((d) => d.status === 'LOCKED' || d.status === 'LOCK_PENDING').length,
-    overdueDevices: devices.filter((d) => d.status === 'OVERDUE').length,
-    inactiveDevices: devices.filter((d) => d.status === 'INACTIVE' || d.status === 'REMOVED').length,
-    offlineDevices: devices.filter((d) => !d.isOnline && d.status !== 'REMOVED').length,
+    // Collection rate: of everything that has fallen due, how much came in.
+    const dueAmount = sumOf(dueToDateSums, 'amountDue');
+    const collectedOfDue = sumOf(dueToDateSums, 'amountPaid');
 
-    totalCustomers: new Set(plans.map((p) => p.customerId)).size,
-    activePlans: plans.filter((p) => p.status !== 'COMPLETED' && p.status !== 'CANCELLED').length,
-    completedPlans: plans.filter((p) => p.status === 'COMPLETED').length,
+    res.json({
+      totalDevices,
+      activeDevices: countOf(devices, 'ACTIVE'),
+      pendingDevices: countOf(devices, 'PENDING', 'ENROLLED'),
+      lockedDevices: countOf(devices, 'LOCKED', 'LOCK_PENDING'),
+      overdueDevices: countOf(devices, 'OVERDUE'),
+      inactiveDevices: countOf(devices, 'INACTIVE', 'REMOVED'),
+      offlineDevices,
 
-    outstandingAmount,
-    outstandingLateFees,
-    overdueAmount: overdueInstallments.reduce((s, i) => s + amountOutstanding(i), 0),
-    overdueInstallmentsCount: overdueInstallments.length,
-    dueThisWeekCount: dueThisWeek.length,
-    dueThisWeekAmount: dueThisWeek.reduce((s, i) => s + amountOutstanding(i), 0),
+      totalCustomers: distinctPlanCustomers.length,
+      activePlans: totalPlans - countOf(plans, 'COMPLETED', 'CANCELLED'),
+      completedPlans: countOf(plans, 'COMPLETED'),
 
-    collectedThisMonth: settled.filter((p) => p.createdAt >= monthStart).reduce((s, p) => s + p.amount, 0),
-    totalCollectedAllTime: settled.reduce((s, p) => s + p.amount, 0),
-    pendingVerificationAmount: payments.filter((p) => p.status === 'PENDING').reduce((s, p) => s + p.amount, 0),
+      outstandingAmount: sumOf(planSums, 'remainingBalance'),
+      outstandingLateFees: sumOf(planSums, 'outstandingLateFees'),
+      // Outstanding blends principal and late fees per row, so it is summed
+      // over the fetched overdue rows rather than as a single SQL expression.
+      overdueAmount: overdueRows.reduce((s: number, i: Installment) => s + amountOutstanding(i), 0),
+      overdueInstallmentsCount: overdueRows.length,
+      dueThisWeekCount: dueThisWeekRows.length,
+      dueThisWeekAmount: dueThisWeekRows.reduce((s: number, i: Installment) => s + amountOutstanding(i), 0),
 
-    collectionRatePercentage: dueAmount > 0 ? Math.round((collectedOfDue / dueAmount) * 100) : 100,
-  });
-});
+      collectedThisMonth: sumOf(settledThisMonth, 'amount'),
+      totalCollectedAllTime: sumOf(settledAllTime, 'amount'),
+      pendingVerificationAmount: sumOf(pendingVerification, 'amount'),
 
-dashboardRouter.get('/charts', (req, res) => {
-  const user = getAuthUser(req);
-  const scope = resolveDealerScope(req);
-  const customerScope = user.role === 'CUSTOMER' ? user.customerId : undefined;
-
-  const devices = scopeFilter(db.find<Device>('devices'), scope, customerScope);
-  const installments = scopeFilter(db.find<Installment>('installments'), scope, customerScope);
-  const payments = scopeFilter(db.find<Payment>('payments'), scope, customerScope).filter(
-    (p) => p.status === 'VERIFIED' && !p.reversedAt
-  );
-
-  // -------------------------------------------------------------------------
-  // Monthly trend — computed from real records. The previous version returned a
-  // hardcoded array, so the chart showed the same five months to every dealer
-  // regardless of their actual business.
-  // -------------------------------------------------------------------------
-  const now = new Date();
-  const monthlyTrends = [];
-
-  for (let offset = 5; offset >= 0; offset--) {
-    const monthDate = addMonthsPreservingEndOfMonth(
-      new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)),
-      -offset
-    );
-    const start = toDateOnly(monthDate);
-    const end = toDateOnly(addMonthsPreservingEndOfMonth(monthDate, 1));
-
-    const monthPayments = payments.filter((p) => p.createdAt >= start && p.createdAt < end);
-    const monthInstallments = installments.filter((i) => i.dueDate >= start && i.dueDate < end);
-
-    monthlyTrends.push({
-      month: monthDate.toLocaleString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' }),
-      collection: monthPayments.reduce((s, p) => s + p.amount, 0),
-      // "Target" is what was scheduled to be collected that month — a real
-      // benchmark rather than an invented number.
-      target: monthInstallments.reduce((s, i) => s + i.amountDue, 0),
-      overdue: monthInstallments.filter((i) => i.status === 'OVERDUE').reduce((s, i) => s + amountOutstanding(i), 0),
-      paymentCount: monthPayments.length,
+      collectionRatePercentage: dueAmount > 0 ? Math.round((collectedOfDue / dueAmount) * 100) : 100,
     });
-  }
+  })
+);
 
-  const brandCounts = new Map<string, number>();
-  for (const d of devices) {
-    brandCounts.set(d.brand, (brandCounts.get(d.brand) ?? 0) + 1);
-  }
+dashboardRouter.get(
+  '/charts',
+  asyncHandler(async (req, res) => {
+    const user = getAuthUser(req);
+    const scope = resolveDealerScope(req);
+    const customerScope = user.role === 'CUSTOMER' ? user.customerId : undefined;
+    const where = scopeWhere(scope, customerScope);
+    // `as const` so the status narrows to the enum literal Prisma expects
+    // rather than widening to `string`.
+    const settledWhere = { ...where, status: 'VERIFIED' as const, reversedAt: null };
 
-  const methodTotals = new Map<string, { amount: number; count: number }>();
-  for (const p of payments) {
-    const current = methodTotals.get(p.paymentMethod) ?? { amount: 0, count: 0 };
-    methodTotals.set(p.paymentMethod, { amount: current.amount + p.amount, count: current.count + 1 });
-  }
+    // -------------------------------------------------------------------------
+    // Monthly trend — computed from real records. The previous version returned a
+    // hardcoded array, so the chart showed the same five months to every dealer
+    // regardless of their actual business.
+    // -------------------------------------------------------------------------
+    const now = new Date();
+    const firstOfThisMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 
-  const statusCounts = new Map<string, number>();
-  for (const d of devices) {
-    statusCounts.set(d.status, (statusCounts.get(d.status) ?? 0) + 1);
-  }
+    const months = Array.from({ length: 6 }, (_, i) => {
+      const monthDate = addMonthsPreservingEndOfMonth(firstOfThisMonth, -(5 - i));
+      return { monthDate, start: monthDate, end: addMonthsPreservingEndOfMonth(monthDate, 1) };
+    });
 
-  res.json({
-    monthlyTrends,
-    brandDistribution: [...brandCounts.entries()]
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count),
-    paymentMethodDistribution: [...methodTotals.entries()]
-      .map(([name, v]) => ({ name, amount: v.amount, count: v.count }))
-      .sort((a, b) => b.amount - a.amount),
-    deviceStatusDistribution: [...statusCounts.entries()]
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count),
-  });
-});
+    const monthlyTrends = await Promise.all(
+      months.map(async ({ monthDate, start, end }) => {
+        const monthInstallmentWhere = { ...where, dueDate: { gte: start, lt: end } };
+
+        const [collection, scheduled, overdueRows] = await Promise.all([
+          prisma.payment.aggregate({
+            where: { ...settledWhere, createdAt: { gte: start, lt: end } },
+            _sum: { amount: true },
+            _count: { _all: true },
+          }),
+          prisma.installment.aggregate({ where: monthInstallmentWhere, _sum: { amountDue: true } }),
+          repo.installments.findMany({ where: { ...monthInstallmentWhere, status: 'OVERDUE' } }),
+        ]);
+
+        return {
+          month: monthDate.toLocaleString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' }),
+          collection: sumOf(collection, 'amount'),
+          // "Target" is what was scheduled to be collected that month — a real
+          // benchmark rather than an invented number.
+          target: sumOf(scheduled, 'amountDue'),
+          overdue: overdueRows.reduce((s: number, i: Installment) => s + amountOutstanding(i), 0),
+          paymentCount: (collection as { _count: { _all: number } })._count._all,
+        };
+      })
+    );
+
+    const [brands, methods, statuses] = await Promise.all([
+      prisma.device.groupBy({ by: ['brand'], where, _count: { _all: true } }),
+      prisma.payment.groupBy({
+        by: ['paymentMethod'],
+        where: settledWhere,
+        _sum: { amount: true },
+        _count: { _all: true },
+      }),
+      prisma.device.groupBy({ by: ['status'], where, _count: { _all: true } }),
+    ]);
+
+    res.json({
+      monthlyTrends,
+      brandDistribution: [...tally(brands, 'brand').entries()]
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count),
+      paymentMethodDistribution: (methods as {
+        paymentMethod: string;
+        _sum: { amount: number | null };
+        _count: { _all: number };
+      }[])
+        .map((m) => ({ name: m.paymentMethod, amount: m._sum.amount ?? 0, count: m._count._all }))
+        .sort((a, b) => b.amount - a.amount),
+      deviceStatusDistribution: [...tally(statuses, 'status').entries()]
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count),
+    });
+  })
+);
 
 /** Actionable list for the dashboard: who to chase today. */
-dashboardRouter.get('/attention', (req, res) => {
-  const scope = resolveDealerScope(req);
-  const customersById = db.indexBy<Customer>('customers', (c) => c.id);
-  const devicesById = db.indexBy<Device>('devices', (d) => d.id);
-  const plansById = db.indexBy<InstallmentPlan>('installmentPlans', (p) => p.id);
+dashboardRouter.get(
+  '/attention',
+  asyncHandler(async (req, res) => {
+    const scope = resolveDealerScope(req);
 
-  const overdue = db
-    .find<Installment>('installments', (i) => i.status === 'OVERDUE' && (scope === null || i.dealerId === scope))
-    .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
-    .slice(0, 25)
-    .map((i) => {
+    // 25 rows, ordered and limited by the database.
+    const overdueRows = await repo.installments.findMany({
+      where: { ...dealerScope(scope), status: 'OVERDUE' },
+      orderBy: { dueDate: 'asc' },
+      take: 25,
+    });
+
+    if (overdueRows.length === 0) {
+      res.json({ overdueInstallments: [] });
+      return;
+    }
+
+    const [plans, customers] = await Promise.all([
+      repo.installmentPlans.findMany({ where: { id: { in: overdueRows.map((i) => i.planId) } } }),
+      repo.customers.findByIds([...new Set(overdueRows.map((i) => i.customerId))]),
+    ]);
+    const plansById = indexBy<InstallmentPlan>(plans, (p) => p.id);
+    const customersById = indexBy<Customer>(customers, (c) => c.id);
+    const devicesById = indexBy<Device>(
+      await repo.devices.findByIds([...new Set(plans.map((p) => p.deviceId))]),
+      (d) => d.id
+    );
+
+    const overdue = overdueRows.map((i) => {
       const plan = plansById.get(i.planId);
       const device = plan ? devicesById.get(plan.deviceId) : undefined;
       const customer = customersById.get(i.customerId);
@@ -182,5 +262,6 @@ dashboardRouter.get('/attention', (req, res) => {
       };
     });
 
-  res.json({ overdueInstallments: overdue });
-});
+    res.json({ overdueInstallments: overdue });
+  })
+);

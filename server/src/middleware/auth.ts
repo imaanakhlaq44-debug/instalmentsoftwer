@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/AuthService.js';
-import { db } from '../db/db.js';
-import { User, UserRole, AuthenticatedUser } from '../types/index.js';
+import { repo } from '../db/repositories/index.js';
+import { UserRole, AuthenticatedUser } from '../types/index.js';
 import { AppError } from '../utils/AppError.js';
+import { asyncHandler } from './errorHandler.js';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -43,7 +44,7 @@ function extractToken(req: Request): string | null {
  * Rejects any request without a valid, non-expired JWT belonging to an account
  * that still exists and is still active. Attaches `req.user`.
  */
-export function requireAuth(req: Request, _res: Response, next: NextFunction): void {
+export const requireAuth = asyncHandler(async (req: Request, _res: Response, next: NextFunction) => {
   const token = extractToken(req);
   if (!token) {
     return next(AppError.unauthorized('Authentication required. Please sign in.'));
@@ -55,8 +56,9 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction): v
   }
 
   // Re-check the account on every request: a user deactivated or role-changed
-  // mid-session must not keep working off a stale token.
-  const user = db.findById<User>('users', decoded.userId);
+  // mid-session must not keep working off a stale token. This is also why the
+  // role is never taken from the token's own claims.
+  const user = await repo.users.findById(decoded.userId);
   if (!user) {
     return next(AppError.unauthorized('Account no longer exists.'));
   }
@@ -74,7 +76,7 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction): v
   };
 
   next();
-}
+});
 
 /** Restricts a route to the given roles. Must run after `requireAuth`. */
 export function requireRole(...roles: UserRole[]) {
@@ -141,7 +143,7 @@ export function resolveDealerScope(req: Request): string | null {
  * this must always produce a concrete id — a SUPER_ADMIN creating records has to
  * say which dealer they are acting for.
  */
-export function resolveWritableDealerId(req: Request, bodyDealerId?: unknown): string {
+export async function resolveWritableDealerId(req: Request, bodyDealerId?: unknown): Promise<string> {
   const user = getAuthUser(req);
 
   if (user.role === 'SUPER_ADMIN') {
@@ -149,7 +151,7 @@ export function resolveWritableDealerId(req: Request, bodyDealerId?: unknown): s
     if (!target || target === 'all') {
       throw AppError.badRequest('As a super admin you must specify which dealerId this record belongs to.');
     }
-    if (!db.findById('dealers', String(target))) {
+    if (!(await repo.dealers.findById(String(target)))) {
       throw AppError.notFound(`Dealer ${target}`);
     }
     return String(target);

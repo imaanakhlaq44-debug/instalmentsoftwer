@@ -49,6 +49,8 @@ export function delegate(model: ModelName, tx?: Tx): Delegate {
 export interface Page<T> {
   data: T[];
   total: number;
+  /** The page actually returned, which may be clamped to the last one. */
+  page: number;
 }
 
 export interface PageArgs {
@@ -121,7 +123,21 @@ export function makeRepository<T extends { id: string }>(model: ModelName): Base
         d.count({ where }),
       ]);
 
-      return { data: toDomainList<T>(rows), total };
+      // Asking for page 99 of a 3-page result returns the last page, not an
+      // empty one — the behaviour the dashboard has always had. The corrective
+      // query only runs on that overshoot, which is rare.
+      const totalPages = Math.max(1, Math.ceil(total / take));
+      if (rows.length === 0 && total > 0 && skip >= total) {
+        const corrected = await d.findMany({
+          where,
+          orderBy,
+          skip: (totalPages - 1) * take,
+          take,
+        });
+        return { data: toDomainList<T>(corrected), total, page: totalPages };
+      }
+
+      return { data: toDomainList<T>(rows), total, page: Math.min(Math.max(1, page ?? 1), totalPages) };
     },
 
     async create(data, tx) {

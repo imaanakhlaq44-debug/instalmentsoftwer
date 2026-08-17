@@ -3,8 +3,9 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 
 import { AuthService, toPublicUser } from '../services/AuthService.js';
-import { db } from '../db/db.js';
-import { Dealer, User, LicenseKey, DevicePolicy } from '../types/index.js';
+import { repo } from '../db/repositories/index.js';
+import { runInTransaction } from '../db/prisma.js';
+import { Dealer } from '../types/index.js';
 import { requireAuth, requireSuperAdmin, getAuthUser, clientIp } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
@@ -27,11 +28,11 @@ const loginSchema = z.object({
 authRouter.post(
   '/login',
   validateBody(loginSchema),
-  (req, res) => {
+  asyncHandler(async (req, res) => {
     const { email, password } = req.body as z.infer<typeof loginSchema>;
-    const session = AuthService.login(email, password, clientIp(req));
+    const session = await AuthService.login(email, password, clientIp(req));
     res.json(session);
-  }
+  })
 );
 
 const registerDealerSchema = z.object({
@@ -55,7 +56,7 @@ const PLAN_DEVICE_LIMITS: Record<string, number> = {
 authRouter.post(
   '/register-dealer',
   validateBody(registerDealerSchema),
-  (req, res) => {
+  asyncHandler(async (req, res) => {
     const body = req.body as z.infer<typeof registerDealerSchema>;
 
     const strength = validatePasswordStrength(body.password);
@@ -63,12 +64,10 @@ authRouter.post(
       throw AppError.badRequest(strength.errors.join(' '));
     }
 
-    const emailLower = body.email.toLowerCase();
-
-    if (db.findOne<Dealer>('dealers', (d) => d.email.toLowerCase() === emailLower)) {
+    if (await repo.dealers.findFirst({ email: { equals: body.email, mode: 'insensitive' } })) {
       throw AppError.conflict('A dealer is already registered with this email address.');
     }
-    if (db.findOne<User>('users', (u) => u.email.toLowerCase() === emailLower)) {
+    if (await repo.users.findByEmail(body.email)) {
       throw AppError.conflict('A user account already exists with this email address.');
     }
 
@@ -80,8 +79,28 @@ authRouter.post(
     const expiry = new Date();
     expiry.setFullYear(expiry.getFullYear() + 1);
 
-    const session = db.batch(() => {
-      db.insert<LicenseKey>('licenseKeys', {
+    // A dealer without its licence, policy or owner login is not a usable
+    // account. All four rows land together or none of them do.
+    const session = await runInTransaction(async (tx) => {
+      // The dealer row comes first: the licence references it.
+      await repo.dealers.create(
+        {
+          id: dealerId,
+          name: body.name,
+          code: `DLR-${cityCode}-${Math.floor(100 + Math.random() * 900)}`,
+          ownerName: body.ownerName,
+          email: body.email,
+          phone: normalizePhone(body.phone),
+          city: body.city,
+          address: body.address,
+          licenseKeyId: licenseId,
+          active: true,
+          createdAt: nowIso,
+        },
+        tx
+      );
+
+      await repo.licenseKeys.create({
         id: licenseId,
         dealerId,
         licenseKey: `EMIS-${body.plan.substring(0, 3)}-${Math.floor(1000 + Math.random() * 9000)}-${cityCode}`,
@@ -91,23 +110,9 @@ authRouter.post(
         expiryDate: expiry.toISOString().split('T')[0],
         status: 'ACTIVE',
         createdAt: nowIso,
-      });
+      }, tx);
 
-      db.insert<Dealer>('dealers', {
-        id: dealerId,
-        name: body.name,
-        code: `DLR-${cityCode}-${Math.floor(100 + Math.random() * 900)}`,
-        ownerName: body.ownerName,
-        email: body.email,
-        phone: normalizePhone(body.phone),
-        city: body.city,
-        address: body.address,
-        licenseKeyId: licenseId,
-        active: true,
-        createdAt: nowIso,
-      });
-
-      const user = db.insert<User>('users', {
+      const user = await repo.users.create({
         id: `user-${uuidv4().substring(0, 8)}`,
         dealerId,
         name: body.ownerName,
@@ -118,9 +123,9 @@ authRouter.post(
         active: true,
         passwordChangedAt: nowIso,
         createdAt: nowIso,
-      });
+      }, tx);
 
-      db.insert<DevicePolicy>('devicePolicies', {
+      await repo.devicePolicies.create({
         id: `pol-${dealerId}`,
         dealerId,
         gracePeriodDays: 3,
@@ -132,9 +137,9 @@ authRouter.post(
         paymentMethodsOnLock: ['CASH', 'JAZZCASH', 'EASYPAISA', 'BANK_TRANSFER'],
         createdAt: nowIso,
         updatedAt: nowIso,
-      });
+      }, tx);
 
-      AuditService.log({
+      await AuditService.log({
         dealerId,
         userId: user.id,
         actorName: user.name,
@@ -144,17 +149,17 @@ authRouter.post(
         targetId: dealerId,
         details: `New dealer "${body.name}" registered in ${body.city} on the ${body.plan} plan.`,
         ipAddress: clientIp(req),
-      });
+      }, tx);
 
       return {
         user: toPublicUser(user),
-        dealer: db.findById<Dealer>('dealers', dealerId),
+        dealer: await repo.dealers.findById(dealerId, tx),
         token: AuthService.issueToken(user),
       };
     });
 
     res.status(201).json(session);
-  }
+  })
 );
 
 // ---------------------------------------------------------------------------
@@ -165,9 +170,9 @@ authRouter.post(
 authRouter.get(
   '/me',
   requireAuth,
-  (req, res) => {
-    res.json(AuthService.getSession(getAuthUser(req).userId));
-  }
+  asyncHandler(async (req, res) => {
+    res.json(await AuthService.getSession(getAuthUser(req).userId));
+  })
 );
 
 const changePasswordSchema = z.object({
@@ -179,16 +184,16 @@ authRouter.post(
   '/change-password',
   requireAuth,
   validateBody(changePasswordSchema),
-  (req, res) => {
+  asyncHandler(async (req, res) => {
     const { currentPassword, newPassword } = req.body as z.infer<typeof changePasswordSchema>;
-    const result = AuthService.changePassword({
+    const result = await AuthService.changePassword({
       userId: getAuthUser(req).userId,
       currentPassword,
       newPassword,
       ipAddress: clientIp(req),
     });
     res.json(result);
-  }
+  })
 );
 
 /**
@@ -198,9 +203,9 @@ authRouter.post(
 authRouter.post(
   '/logout',
   requireAuth,
-  (req, res) => {
+  asyncHandler(async (req, res) => {
     const user = getAuthUser(req);
-    AuditService.log({
+    await AuditService.log({
       dealerId: user.dealerId,
       userId: user.userId,
       actorName: user.name,
@@ -212,7 +217,7 @@ authRouter.post(
       ipAddress: clientIp(req),
     });
     res.json({ success: true, message: 'Signed out successfully.' });
-  }
+  })
 );
 
 /**
@@ -234,12 +239,12 @@ authRouter.post(
   validateBody(impersonateSchema),
   asyncHandler(async (req, res) => {
     const actor = getAuthUser(req);
-    const target = db.findById<User>('users', (req.body as z.infer<typeof impersonateSchema>).userId);
+    const target = await repo.users.findById((req.body as z.infer<typeof impersonateSchema>).userId);
 
     if (!target) throw AppError.notFound('User');
     if (!target.active) throw AppError.badRequest('That account is deactivated and cannot be impersonated.');
 
-    AuditService.log({
+    await AuditService.log({
       dealerId: target.dealerId,
       userId: actor.userId,
       actorName: actor.name,
@@ -253,7 +258,7 @@ authRouter.post(
 
     res.json({
       user: toPublicUser(target),
-      dealer: target.dealerId ? db.findById<Dealer>('dealers', target.dealerId) : undefined,
+      dealer: target.dealerId ? await repo.dealers.findById(target.dealerId) : undefined,
       token: AuthService.issueToken(target),
       impersonatedBy: { id: actor.userId, name: actor.name },
     });

@@ -1,16 +1,21 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 
-import { as, reseed, db, ACCOUNTS } from '../helpers.js';
+import { as, reseed, repo, ACCOUNTS } from '../helpers.js';
+import { disconnectDatabase } from '../../src/db/prisma.js';
 import { Device, Customer } from '../../src/types/index.js';
 
-beforeEach(() => {
-  reseed();
+beforeEach(async () => {
+  await reseed();
+}, 60_000);
+
+afterAll(async () => {
+  await disconnectDatabase();
 });
 
 /** A device and a customer that belong to dealer-2, i.e. not to dealer-1. */
-function otherDealersRecords() {
-  const device = db.findOne<Device>('devices', (d) => d.dealerId === 'dealer-2')!;
-  const customer = db.findOne<Customer>('customers', (c) => c.dealerId === 'dealer-2')!;
+async function otherDealersRecords() {
+  const device = (await repo.devices.findFirst({ dealerId: 'dealer-2' }))!;
+  const customer = (await repo.customers.findFirst({ dealerId: 'dealer-2' }))!;
   return { device, customer };
 }
 
@@ -68,52 +73,50 @@ describe('list scoping', () => {
 
 describe('single-record access', () => {
   it('returns 404, not 403, for another dealer\'s device', async () => {
-    const { device } = otherDealersRecords();
+    const { device } = await otherDealersRecords();
 
     const res = await as(ACCOUNTS.dealerAdmin).get(`/api/devices/${device.id}`);
     expect(res.status).toBe(404);
   });
 
   it('returns 404 for another dealer\'s customer', async () => {
-    const { customer } = otherDealersRecords();
+    const { customer } = await otherDealersRecords();
 
     const res = await as(ACCOUNTS.dealerAdmin).get(`/api/customers/${customer.id}`);
     expect(res.status).toBe(404);
   });
 
   it('refuses to lock another dealer\'s device', async () => {
-    const { device } = otherDealersRecords();
+    const { device } = await otherDealersRecords();
 
     const res = await as(ACCOUNTS.dealerAdmin)
       .post(`/api/devices/${device.id}/lock`)
       .send({ reason: 'Testing cross-tenant lock.' });
 
     expect(res.status).toBe(404);
-    expect(db.findById<Device>('devices', device.id)!.status).toBe(
-      otherDealersRecords().device.status
-    );
+    expect((await repo.devices.findById(device.id))!.status).toBe(device.status);
   });
 
   it('refuses to edit another dealer\'s customer', async () => {
-    const { customer } = otherDealersRecords();
+    const { customer } = await otherDealersRecords();
 
     const res = await as(ACCOUNTS.dealerAdmin)
       .patch(`/api/customers/${customer.id}`)
       .send({ name: 'Renamed By Another Dealer' });
 
     expect(res.status).toBe(404);
-    expect(db.findById<Customer>('customers', customer.id)!.name).toBe(customer.name);
+    expect((await repo.customers.findById(customer.id))!.name).toBe(customer.name);
   });
 
   it('stops a customer login from opening another customer\'s device', async () => {
-    const foreign = db.findOne<Device>('devices', (d) => d.dealerId === 'dealer-1' && d.customerId !== 'cust-1')!;
+    const foreign = (await repo.devices.findFirst({ dealerId: 'dealer-1', customerId: { not: 'cust-1' } }))!;
 
     const res = await as(ACCOUNTS.customer).get(`/api/devices/${foreign.id}`);
     expect(res.status).toBe(404);
   });
 
   it('lets a super admin reach any dealership\'s device', async () => {
-    const { device } = otherDealersRecords();
+    const { device } = await otherDealersRecords();
 
     const res = await as(ACCOUNTS.superAdmin).get(`/api/devices/${device.id}`);
     expect(res.status).toBe(200);
@@ -136,14 +139,14 @@ describe('writes are stamped with the caller\'s dealer', () => {
       .send({ dealerId: 'dealer-2', customer });
 
     expect(res.status).toBe(403);
-    expect(db.findOne<Customer>('customers', (c) => c.name === customer.name)).toBeUndefined();
+    expect(await repo.customers.findFirst({ name: customer.name })).toBeUndefined();
   });
 
   it('stamps a new customer with the caller\'s own dealer', async () => {
     const res = await as(ACCOUNTS.dealerStaff).post('/api/customers').send({ customer });
 
     expect(res.status).toBeLessThan(300);
-    expect(db.findOne<Customer>('customers', (c) => c.name === customer.name)!.dealerId).toBe('dealer-1');
+    expect((await repo.customers.findFirst({ name: customer.name }))!.dealerId).toBe('dealer-1');
   });
 
   it('makes a super admin name the dealer explicitly', async () => {

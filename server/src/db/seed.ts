@@ -1,4 +1,3 @@
-import { db, DatabaseStore } from './db.js';
 import {
   Dealer,
   User,
@@ -19,7 +18,31 @@ import {
 import { hashPassword } from '../utils/password.js';
 import { config } from '../config.js';
 
-export function generateSeedData(): DatabaseStore {
+/**
+ * The demo dataset, one array per table.
+ *
+ * This is the only shape the old JSON store left behind: it describes the
+ * fixture, not a storage engine. `seedPostgres.ts` writes it to the database.
+ */
+export interface SeedData {
+  dealers: Dealer[];
+  users: User[];
+  customers: Customer[];
+  devices: Device[];
+  enrollmentTokens: EnrollmentToken[];
+  installmentPlans: InstallmentPlan[];
+  installments: Installment[];
+  payments: Payment[];
+  transactions: Transaction[];
+  deviceActionLogs: DeviceActionLog[];
+  auditLogs: AuditLog[];
+  licenseKeys: LicenseKey[];
+  devicePolicies: DevicePolicy[];
+  notifications: Notification[];
+  notificationTemplates: NotificationTemplate[];
+}
+
+export function generateSeedData(): SeedData {
   const now = new Date('2026-08-17T06:00:00.000Z');
 
   // Every demo account shares one password, hashed once and reused so seeding
@@ -683,21 +706,4 @@ export function generateSeedData(): DatabaseStore {
     notifications,
     notificationTemplates,
   };
-}
-
-// If run directly
-export function runSeed(): void {
-  const seed = generateSeedData();
-  db.reset(seed);
-  console.log('EMI Shield Database Seeded Successfully!');
-  console.log(`- Dealers: ${seed.dealers.length}`);
-  console.log(`- Customers: ${seed.customers.length}`);
-  console.log(`- Devices: ${seed.devices.length}`);
-  console.log(`- Installments: ${seed.installments.length}`);
-  console.log(`- Payments: ${seed.payments.length}`);
-  console.log(`- Transactions: ${seed.transactions.length}`);
-}
-
-if (process.argv[1] && process.argv[1].endsWith('seed.ts')) {
-  runSeed();
 }

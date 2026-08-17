@@ -2,9 +2,10 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 
-import { db } from '../db/db.js';
+import { repo, groupBy } from '../db/repositories/index.js';
+import { runInTransaction, Tx } from '../db/prisma.js';
 import {
-  Customer, Device, InstallmentPlan, Installment, Payment, Notification, LicenseKey,
+  Customer, Device, InstallmentPlan, Installment, Payment,
 } from '../types/index.js';
 import { EnrollmentService } from '../services/EnrollmentService.js';
 import { AuditService } from '../services/AuditService.js';
@@ -15,11 +16,12 @@ import {
   routeParam,
 } from '../middleware/auth.js';
 import { validateBody, validateQuery, getQuery } from '../middleware/validate.js';
+import { asyncHandler } from '../middleware/errorHandler.js';
 import { AppError } from '../utils/AppError.js';
 import { sanitizeCustomer, sanitizeDevice } from '../utils/mask.js';
 import {
   cnicSchema, pakistaniPhoneSchema, imeiSchema, isoDateSchema, moneySchema,
-  normalizePhone, paginationSchema, paginate,
+  normalizePhone, paginationSchema, pageEnvelope,
 } from '../utils/validators.js';
 
 export const customersRouter = Router();
@@ -34,44 +36,49 @@ const listQuerySchema = paginationSchema.extend({
   dealerId: z.string().trim().max(64).optional(),
 });
 
-customersRouter.get('/', validateQuery(listQuerySchema), (req, res) => {
+customersRouter.get('/', validateQuery(listQuerySchema), asyncHandler(async (req, res) => {
   const user = getAuthUser(req);
   const scope = resolveDealerScope(req);
   const q = getQuery<z.infer<typeof listQuerySchema>>(req);
 
-  let customers = db.find<Customer>('customers', (c) => {
-    if (scope !== null && c.dealerId !== scope) return false;
-    // A customer login only ever sees itself.
-    if (user.role === 'CUSTOMER' && c.id !== user.customerId) return false;
-    return true;
+  // Search and the payment-status filter are both applied by the database, so
+  // the page and the total describe the same set. The old code filtered after
+  // paginating, which made the page counter disagree with the rows shown.
+  const page = await repo.customers.list({
+    dealerId: scope,
+    customerId: user.role === 'CUSTOMER' ? user.customerId : undefined,
+    search: q.search,
+    paymentStatus: q.status,
+    orderBy: { name: 'asc' },
+    page: q.page,
+    limit: q.limit,
   });
 
-  if (q.search) {
-    const needle = q.search.toLowerCase();
-    customers = customers.filter(
-      (c) =>
-        c.name.toLowerCase().includes(needle) ||
-        c.phone.includes(needle) ||
-        c.cnic.includes(needle)
-    );
-  }
+  // The joins below cover only the customers on this page.
+  const ids = page.data.map((c) => c.id);
+  const [deviceRows, planRows, paymentRows] = await Promise.all([
+    repo.devices.findMany({ where: { customerId: { in: ids } } }),
+    repo.installmentPlans.findMany({ where: { customerId: { in: ids } } }),
+    repo.payments.findMany({
+      where: { customerId: { in: ids }, status: 'VERIFIED' },
+      orderBy: { createdAt: 'desc' },
+    }),
+  ]);
 
-  // Single-pass joins rather than per-row lookups.
-  const devicesByCustomer = db.groupBy<Device>('devices', (d) => d.customerId);
-  const plansByCustomer = db.groupBy<InstallmentPlan>('installmentPlans', (p) => p.customerId);
-  const paymentsByCustomer = db.groupBy<Payment>('payments', (p) => p.customerId);
+  const devicesByCustomer = groupBy<Device>(deviceRows, (d) => d.customerId);
+  const plansByCustomer = groupBy<InstallmentPlan>(planRows, (p) => p.customerId);
+  const paymentsByCustomer = groupBy<Payment>(paymentRows, (p) => p.customerId);
 
-  const withStats = customers.map((c) => {
+  const withStats = page.data.map((c) => {
     const custDevices = devicesByCustomer.get(c.id) ?? [];
     const custPlans = plansByCustomer.get(c.id) ?? [];
-    const verifiedPayments = (paymentsByCustomer.get(c.id) ?? []).filter((p) => p.status === 'VERIFIED');
+    const verifiedPayments = paymentsByCustomer.get(c.id) ?? [];
 
     const outstandingBalance = custPlans.reduce((sum, p) => sum + (p.remainingBalance || 0), 0);
     const outstandingLateFees = custPlans.reduce((sum, p) => sum + (p.outstandingLateFees || 0), 0);
     const creditBalance = custPlans.reduce((sum, p) => sum + (p.creditBalance || 0), 0);
-    const lastPayment = verifiedPayments
-      .slice()
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+    // Already ordered newest-first by the query.
+    const lastPayment = verifiedPayments[0];
 
     const hasOverdue = custPlans.some((p) => p.status === 'OVERDUE');
     const allComplete = custPlans.length > 0 && custPlans.every((p) => p.status === 'COMPLETED');
@@ -89,21 +96,16 @@ customersRouter.get('/', validateQuery(listQuerySchema), (req, res) => {
     };
   });
 
-  const filtered =
-    q.status === 'ALL' ? withStats : withStats.filter((c) => c.paymentStatus === q.status);
-
-  filtered.sort((a, b) => a.name.localeCompare(b.name));
-
-  res.json(paginate(filtered, { page: q.page, limit: q.limit }));
-});
+  res.json(pageEnvelope(withStats, page, q.limit));
+}));
 
 // ---------------------------------------------------------------------------
 // DETAIL
 // ---------------------------------------------------------------------------
 
-customersRouter.get('/:id', (req, res) => {
+customersRouter.get('/:id', asyncHandler(async (req, res) => {
   const user = getAuthUser(req);
-  const customer = db.findById<Customer>('customers', routeParam(req, 'id'));
+  const customer = await repo.customers.findById(routeParam(req, 'id'));
   if (!customer) throw AppError.notFound('Customer');
 
   assertDealerAccess(req, customer.dealerId, 'customer');
@@ -111,18 +113,20 @@ customersRouter.get('/:id', (req, res) => {
     throw AppError.notFound('Customer');
   }
 
-  const devices = db.find<Device>('devices', (d) => d.customerId === customer.id);
-  const plans = db.find<InstallmentPlan>('installmentPlans', (p) => p.customerId === customer.id);
-  const installments = db
-    .find<Installment>('installments', (i) => i.customerId === customer.id)
-    .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-  const payments = db
-    .find<Payment>('payments', (p) => p.customerId === customer.id)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  const notifications = db
-    .find<Notification>('notifications', (n) => n.customerId === customer.id)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 50);
+  const [devices, plans, installments, payments, notifications] = await Promise.all([
+    repo.devices.findByCustomer(customer.id),
+    repo.installmentPlans.findByCustomer(customer.id),
+    repo.installments.findMany({
+      where: { customerId: customer.id },
+      orderBy: [{ dueDate: 'asc' }, { installmentNumber: 'asc' }],
+    }),
+    repo.payments.findMany({ where: { customerId: customer.id }, orderBy: { createdAt: 'desc' } }),
+    repo.notifications.findMany({
+      where: { customerId: customer.id },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    }),
+  ]);
 
   res.json({
     customer: sanitizeCustomer(customer, user.role, user.customerId),
@@ -140,7 +144,7 @@ customersRouter.get('/:id', (req, res) => {
       overdueInstallments: installments.filter((i) => i.status === 'OVERDUE').length,
     },
   });
-});
+}));
 
 // ---------------------------------------------------------------------------
 // CREATE (customer + optional device + financing plan)
@@ -180,10 +184,10 @@ const createSchema = z.object({
   qrType: z.enum(['STANDARD', 'PRO', 'LEGACY', 'QC']).default('STANDARD'),
 });
 
-customersRouter.post('/', requireDealerStaff, validateBody(createSchema), (req, res) => {
+customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncHandler(async (req, res) => {
   const user = getAuthUser(req);
   const body = req.body as z.infer<typeof createSchema>;
-  const dealerId = resolveWritableDealerId(req, body.dealerId);
+  const dealerId = await resolveWritableDealerId(req, body.dealerId);
 
   // A device may not be financed without a plan, and vice versa.
   if (body.device && !body.plan) {
@@ -197,10 +201,11 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), (req, 
 
   // Duplicate guard — the same person being entered twice at the counter is the
   // single most common data-quality problem in these shops.
-  const duplicate = db.findOne<Customer>(
-    'customers',
-    (c) => c.dealerId === dealerId && c.active && (c.cnic === body.customer.cnic || c.phone === normalizedPhone)
-  );
+  const duplicate = await repo.customers.findDuplicate({
+    dealerId,
+    cnic: body.customer.cnic,
+    phone: normalizedPhone,
+  });
   if (duplicate) {
     throw AppError.conflict(
       `A customer with this ${duplicate.cnic === body.customer.cnic ? 'CNIC' : 'phone number'} already exists: ${duplicate.name}.`
@@ -208,12 +213,12 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), (req, 
   }
 
   if (body.device) {
-    if (db.findOne<Device>('devices', (d) => d.imei === body.device!.imei)) {
+    if (await repo.devices.findByImei(body.device.imei)) {
       throw AppError.conflict(`A device with this IMEI is already registered in the system.`);
     }
 
     // Enforce the dealer's licensed device limit.
-    const license = db.findOne<LicenseKey>('licenseKeys', (l) => l.dealerId === dealerId);
+    const license = await repo.licenseKeys.findByDealer(dealerId);
     if (license) {
       if (license.status !== 'ACTIVE') {
         throw AppError.forbidden(`Your license is ${license.status}. Please renew it to register new devices.`);
@@ -221,7 +226,7 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), (req, 
       if (license.expiryDate < new Date().toISOString().split('T')[0]) {
         throw AppError.forbidden('Your license has expired. Please renew it to register new devices.');
       }
-      const inUse = db.find<Device>('devices', (d) => d.dealerId === dealerId && d.status !== 'REMOVED').length;
+      const inUse = await repo.devices.countActiveForDealer(dealerId);
       if (inUse >= license.deviceLimit) {
         throw AppError.forbidden(
           `Your ${license.plan} plan allows ${license.deviceLimit} devices and ${inUse} are already registered. Please upgrade to add more.`
@@ -230,10 +235,13 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), (req, 
     }
   }
 
-  const result = db.batch(() => {
+  // Customer, device, plan, every installment and the down-payment entry are
+  // one unit. Under the JSON store a failure part-way left a customer with a
+  // device and no schedule — a financed phone nobody was billed for.
+  const result = await runInTransaction(async (tx: Tx) => {
     const nowIso = new Date().toISOString();
 
-    const customer = db.insert<Customer>('customers', {
+    const customer = await repo.customers.create({
       id: `cust-${uuidv4().substring(0, 8)}`,
       dealerId,
       name: body.customer.name,
@@ -245,12 +253,11 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), (req, 
       notes: body.customer.notes,
       active: true,
       createdAt: nowIso,
-    });
+    }, tx);
 
     let device: Device | undefined;
     let plan: InstallmentPlan | undefined;
     let installments: Installment[] = [];
-    let enrollmentToken: unknown;
 
     if (body.device && body.plan) {
       const price = body.device.purchasePrice;
@@ -259,7 +266,7 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), (req, 
         throw AppError.badRequest('The down payment cannot be equal to or greater than the device price.');
       }
 
-      device = db.insert<Device>('devices', {
+      device = await repo.devices.create({
         id: `dev-${uuidv4().substring(0, 8)}`,
         dealerId,
         customerId: customer.id,
@@ -280,7 +287,7 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), (req, 
         securityPatch: nowIso.split('T')[0],
         createdAt: nowIso,
         updatedAt: nowIso,
-      });
+      }, tx);
 
       const planId = `plan-${uuidv4().substring(0, 8)}`;
 
@@ -292,7 +299,7 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), (req, 
         gracePeriodDays: body.plan.gracePeriodDays,
       });
 
-      plan = db.insert<InstallmentPlan>('installmentPlans', {
+      plan = await repo.installmentPlans.create({
         id: planId,
         dealerId,
         customerId: customer.id,
@@ -310,10 +317,11 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), (req, 
         creditBalance: 0,
         outstandingLateFees: 0,
         createdAt: nowIso,
-      });
+      }, tx);
 
-      installments = schedule.rows.map((row) =>
-        db.insert<Installment>('installments', {
+      installments = [];
+      for (const row of schedule.rows) {
+        installments.push(await repo.installments.create({
           id: `inst-${planId}-${row.installmentNumber}`,
           planId,
           dealerId,
@@ -327,13 +335,13 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), (req, 
           lateFee: 0,
           lateFeePaid: 0,
           createdAt: nowIso,
-        })
-      );
+        }, tx));
+      }
 
       // The down payment is real money that changed hands — it belongs in the
       // ledger. The original code dropped it entirely.
       if (body.plan.downPayment > 0) {
-        db.insert('transactions', {
+        await repo.transactions.create({
           id: `tx-${uuidv4().substring(0, 8)}`,
           dealerId,
           customerId: customer.id,
@@ -343,19 +351,11 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), (req, 
           status: 'COMPLETED' as const,
           date: nowIso,
           notes: `Down payment collected at the time of sale for ${device.brand} ${device.model}.`,
-        });
+        }, tx);
       }
-
-      enrollmentToken = EnrollmentService.generateToken({
-        dealerId,
-        deviceId: device.id,
-        customerId: customer.id,
-        qrType: body.qrType,
-        actor: { userId: user.userId, userName: user.name, userRole: user.role },
-      });
     }
 
-    AuditService.log({
+    await AuditService.log({
       dealerId,
       userId: user.userId,
       actorName: user.name,
@@ -367,20 +367,37 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), (req, 
         ? `Registered ${customer.name} with financed device ${device.brand} ${device.model} (Rs. ${device.purchasePrice.toLocaleString()}).`
         : `Registered customer ${customer.name} with no device.`,
       ipAddress: clientIp(req),
-    });
+    }, tx);
 
-    return {
-      success: true,
-      customer: sanitizeCustomer(customer, user.role, user.customerId),
-      device: device ? sanitizeDevice(device, user.role) : undefined,
-      plan,
-      installments,
-      enrollmentToken,
-    };
+    return { customer, device, plan, installments };
   });
 
-  res.status(201).json(result);
-});
+  /**
+   * The enrollment QR is issued after the registration commits.
+   *
+   * It opens a transaction of its own to retire any earlier token, and Prisma
+   * has no nested interactive transactions. Issuing it second is also the right
+   * order: a QR must never exist for a device the registration failed to write.
+   */
+  const enrollmentToken = result.device
+    ? await EnrollmentService.generateToken({
+        dealerId,
+        deviceId: result.device.id,
+        customerId: result.customer.id,
+        qrType: body.qrType,
+        actor: { userId: user.userId, userName: user.name, userRole: user.role },
+      })
+    : undefined;
+
+  res.status(201).json({
+    success: true,
+    customer: sanitizeCustomer(result.customer, user.role, user.customerId),
+    device: result.device ? sanitizeDevice(result.device, user.role) : undefined,
+    plan: result.plan,
+    installments: result.installments,
+    enrollmentToken,
+  });
+}));
 
 // ---------------------------------------------------------------------------
 // UPDATE / DEACTIVATE — neither existed before, so a typo was permanent
@@ -396,9 +413,9 @@ const updateSchema = z.object({
   notes: z.string().trim().max(1000).optional(),
 });
 
-customersRouter.patch('/:id', requireDealerStaff, validateBody(updateSchema), (req, res) => {
+customersRouter.patch('/:id', requireDealerStaff, validateBody(updateSchema), asyncHandler(async (req, res) => {
   const user = getAuthUser(req);
-  const customer = db.findById<Customer>('customers', routeParam(req, 'id'));
+  const customer = await repo.customers.findById(routeParam(req, 'id'));
   if (!customer) throw AppError.notFound('Customer');
   assertDealerAccess(req, customer.dealerId, 'customer');
 
@@ -408,14 +425,12 @@ customersRouter.patch('/:id', requireDealerStaff, validateBody(updateSchema), (r
   // Changing CNIC or phone must not create a duplicate of another customer.
   if (body.cnic || body.phone) {
     const newPhone = body.phone ? normalizePhone(body.phone) : customer.phone;
-    const clash = db.findOne<Customer>(
-      'customers',
-      (c) =>
-        c.id !== customer.id &&
-        c.dealerId === customer.dealerId &&
-        c.active &&
-        ((body.cnic !== undefined && c.cnic === body.cnic) || c.phone === newPhone)
-    );
+    const clash = await repo.customers.findDuplicate({
+      dealerId: customer.dealerId,
+      cnic: body.cnic ?? customer.cnic,
+      phone: newPhone,
+      excludeId: customer.id,
+    });
     if (clash) {
       throw AppError.conflict(`Another customer (${clash.name}) already uses this CNIC or phone number.`);
     }
@@ -425,10 +440,10 @@ customersRouter.patch('/:id', requireDealerStaff, validateBody(updateSchema), (r
   if (body.phone) updates.phone = normalizePhone(body.phone);
   if (body.emergencyContactPhone) updates.emergencyContactPhone = normalizePhone(body.emergencyContactPhone);
 
-  const updated = db.update<Customer>('customers', customer.id, updates);
+  const updated = await repo.customers.update(customer.id, updates);
   if (!updated) throw AppError.notFound('Customer');
 
-  AuditService.log({
+  await AuditService.log({
     dealerId: customer.dealerId,
     userId: user.userId,
     actorName: user.name,
@@ -441,22 +456,19 @@ customersRouter.patch('/:id', requireDealerStaff, validateBody(updateSchema), (r
   });
 
   res.json(sanitizeCustomer(updated, user.role, user.customerId));
-});
+}));
 
 /**
  * Deactivation, never deletion — payments, installments and audit entries all
  * reference the customer id. Blocked while money is still owed.
  */
-customersRouter.delete('/:id', requireDealerAdmin, (req, res) => {
+customersRouter.delete('/:id', requireDealerAdmin, asyncHandler(async (req, res) => {
   const user = getAuthUser(req);
-  const customer = db.findById<Customer>('customers', routeParam(req, 'id'));
+  const customer = await repo.customers.findById(routeParam(req, 'id'));
   if (!customer) throw AppError.notFound('Customer');
   assertDealerAccess(req, customer.dealerId, 'customer');
 
-  const openPlans = db.find<InstallmentPlan>(
-    'installmentPlans',
-    (p) => p.customerId === customer.id && p.status !== 'COMPLETED' && p.status !== 'CANCELLED'
-  );
+  const openPlans = await repo.installmentPlans.findOpenForCustomer(customer.id);
   if (openPlans.length > 0) {
     const owed = openPlans.reduce((s, p) => s + (p.remainingBalance || 0), 0);
     throw AppError.badRequest(
@@ -465,9 +477,9 @@ customersRouter.delete('/:id', requireDealerAdmin, (req, res) => {
     );
   }
 
-  db.update<Customer>('customers', customer.id, { active: false });
+  await repo.customers.update(customer.id, { active: false });
 
-  AuditService.log({
+  await AuditService.log({
     dealerId: customer.dealerId,
     userId: user.userId,
     actorName: user.name,
@@ -480,4 +492,4 @@ customersRouter.delete('/:id', requireDealerAdmin, (req, res) => {
   });
 
   res.json({ success: true, message: `${customer.name} has been deactivated.` });
-});
+}));

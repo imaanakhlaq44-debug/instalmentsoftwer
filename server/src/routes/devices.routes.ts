@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
 
-import { db } from '../db/db.js';
-import { Device, Customer, InstallmentPlan, Installment, DeviceActionLog } from '../types/index.js';
+import { repo, indexBy, groupBy } from '../db/repositories/index.js';
+import { Customer, InstallmentPlan, Installment } from '../types/index.js';
 import { deviceManagementService } from '../services/DeviceManagementService.js';
 import { AuditService } from '../services/AuditService.js';
 import {
@@ -18,7 +18,7 @@ import { validateBody, validateQuery, getQuery } from '../middleware/validate.js
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { AppError } from '../utils/AppError.js';
 import { sanitizeDevice, sanitizeCustomer, maskImei } from '../utils/mask.js';
-import { paginationSchema, paginate } from '../utils/validators.js';
+import { paginationSchema, pageEnvelope } from '../utils/validators.js';
 
 export const devicesRouter = Router();
 
@@ -41,42 +41,36 @@ const listQuerySchema = paginationSchema.extend({
 devicesRouter.get(
   '/',
   validateQuery(listQuerySchema),
-  (req, res) => {
+  asyncHandler(async (req, res) => {
     const user = getAuthUser(req);
     const scope = resolveDealerScope(req);
     const q = getQuery<z.infer<typeof listQuerySchema>>(req);
 
-    let devices = db.find<Device>('devices', (d) => {
-      if (scope !== null && d.dealerId !== scope) return false;
-      if (user.role === 'CUSTOMER' && d.customerId !== user.customerId) return false;
-      if (q.status && q.status !== 'ALL' && d.status !== q.status) return false;
-      if (q.brand && q.brand !== 'ALL' && d.brand.toLowerCase() !== q.brand.toLowerCase()) return false;
-      if (q.customerId && d.customerId !== q.customerId) return false;
-      return true;
+    // Filtering, searching (including through the customer relation), sorting
+    // and paging all happen in SQL. The previous version loaded every device
+    // for the dealer and narrowed the array in JavaScript.
+    const page = await repo.devices.list({
+      dealerId: scope,
+      // A CUSTOMER login only ever sees its own devices.
+      customerId: user.role === 'CUSTOMER' ? user.customerId : q.customerId,
+      status: q.status,
+      brand: q.brand,
+      search: q.search,
+      page: q.page,
+      limit: q.limit,
     });
 
-    // Join once up front instead of a findById per row (the original was O(n*m)).
-    const customersById = db.indexBy<Customer>('customers', (c) => c.id);
-    const plansByDevice = db.indexBy<InstallmentPlan>('installmentPlans', (p) => p.deviceId);
-    const installmentsByPlan = db.groupBy<Installment>('installments', (i) => i.planId);
-
-    if (q.search) {
-      const needle = q.search.toLowerCase();
-      devices = devices.filter((d) => {
-        const customer = customersById.get(d.customerId);
-        return (
-          d.brand.toLowerCase().includes(needle) ||
-          d.model.toLowerCase().includes(needle) ||
-          d.imei.includes(needle) ||
-          (customer?.name.toLowerCase().includes(needle) ?? false) ||
-          (customer?.phone.includes(needle) ?? false)
-        );
-      });
-    }
-
-    devices.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-
-    const page = paginate(devices, { page: q.page, limit: q.limit });
+    // The joins below cover only the rows on this page.
+    const customersById = indexBy<Customer>(
+      await repo.customers.findByIds([...new Set(page.data.map((d) => d.customerId))]),
+      (c) => c.id
+    );
+    const plans = await repo.installmentPlans.findByDevices(page.data.map((d) => d.id));
+    const plansByDevice = indexBy<InstallmentPlan>(plans, (p) => p.deviceId);
+    const installmentsByPlan = groupBy<Installment>(
+      await repo.installments.findByPlans(plans.map((p) => p.id)),
+      (i) => i.planId
+    );
 
     const enriched = page.data.map((d) => {
       const customer = customersById.get(d.customerId);
@@ -98,14 +92,14 @@ devicesRouter.get(
       };
     });
 
-    res.json({ ...page, data: enriched });
-  }
+    res.json(pageEnvelope(enriched, page, q.limit));
+  })
 );
 
 /** Device 360 profile. */
-devicesRouter.get('/:id', (req, res) => {
+devicesRouter.get('/:id', asyncHandler(async (req, res) => {
   const user = getAuthUser(req);
-  const device = db.findById<Device>('devices', routeParam(req, 'id'));
+  const device = await repo.devices.findById(routeParam(req, 'id'));
   if (!device) throw AppError.notFound('Device');
 
   assertDealerAccess(req, device.dealerId, 'device');
@@ -113,22 +107,16 @@ devicesRouter.get('/:id', (req, res) => {
     throw AppError.notFound('Device');
   }
 
-  const customer = db.findById<Customer>('customers', device.customerId);
-  const plan = db.findOne<InstallmentPlan>('installmentPlans', (p) => p.deviceId === device.id);
-  const installments = plan
-    ? db
-        .find<Installment>('installments', (i) => i.planId === plan.id)
-        .sort((a, b) => a.installmentNumber - b.installmentNumber)
-    : [];
+  const [customer, plan] = await Promise.all([
+    repo.customers.findById(device.customerId),
+    repo.installmentPlans.findByDevice(device.id),
+  ]);
+
+  const installments = plan ? await repo.installments.findByPlan(plan.id) : [];
 
   // Customers do not need — and must not receive — the internal enforcement log.
   const actionLogs =
-    user.role === 'CUSTOMER'
-      ? []
-      : db
-          .find<DeviceActionLog>('deviceActionLogs', (l) => l.deviceId === device.id)
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-          .slice(0, 100);
+    user.role === 'CUSTOMER' ? [] : await repo.deviceActionLogs.findByDevice(device.id, 100);
 
   res.json({
     ...sanitizeDevice(device, user.role),
@@ -137,7 +125,7 @@ devicesRouter.get('/:id', (req, res) => {
     installments,
     actionLogs,
   });
-});
+}));
 
 // ---------------------------------------------------------------------------
 // Enforcement actions — dealer admin only. Locking someone's phone is not a
@@ -155,7 +143,7 @@ devicesRouter.post(
   validateBody(lockSchema),
   asyncHandler(async (req, res) => {
     const user = getAuthUser(req);
-    const device = db.findById<Device>('devices', routeParam(req, 'id'));
+    const device = await repo.devices.findById(routeParam(req, 'id'));
     if (!device) throw AppError.notFound('Device');
     assertDealerAccess(req, device.dealerId, 'device');
 
@@ -185,7 +173,7 @@ devicesRouter.post(
   validateBody(unlockSchema),
   asyncHandler(async (req, res) => {
     const user = getAuthUser(req);
-    const device = db.findById<Device>('devices', routeParam(req, 'id'));
+    const device = await repo.devices.findById(routeParam(req, 'id'));
     if (!device) throw AppError.notFound('Device');
     assertDealerAccess(req, device.dealerId, 'device');
 
@@ -213,7 +201,7 @@ devicesRouter.post(
   validateBody(messageSchema),
   asyncHandler(async (req, res) => {
     const user = getAuthUser(req);
-    const device = db.findById<Device>('devices', routeParam(req, 'id'));
+    const device = await repo.devices.findById(routeParam(req, 'id'));
     if (!device) throw AppError.notFound('Device');
     assertDealerAccess(req, device.dealerId, 'device');
 
@@ -236,7 +224,7 @@ devicesRouter.post(
   requireDealerAdmin,
   asyncHandler(async (req, res) => {
     const user = getAuthUser(req);
-    const device = db.findById<Device>('devices', routeParam(req, 'id'));
+    const device = await repo.devices.findById(routeParam(req, 'id'));
     if (!device) throw AppError.notFound('Device');
     assertDealerAccess(req, device.dealerId, 'device');
 
@@ -265,9 +253,9 @@ devicesRouter.patch(
   '/:id',
   requireDealerAdmin,
   validateBody(updateDeviceSchema),
-  (req, res) => {
+  asyncHandler(async (req, res) => {
     const user = getAuthUser(req);
-    const device = db.findById<Device>('devices', routeParam(req, 'id'));
+    const device = await repo.devices.findById(routeParam(req, 'id'));
     if (!device) throw AppError.notFound('Device');
     assertDealerAccess(req, device.dealerId, 'device');
 
@@ -276,13 +264,13 @@ devicesRouter.patch(
       throw AppError.badRequest('No changes were supplied.');
     }
 
-    const updated = db.update<Device>('devices', device.id, {
+    const updated = await repo.devices.update(device.id, {
       ...updates,
       updatedAt: new Date().toISOString(),
     });
     if (!updated) throw AppError.notFound('Device');
 
-    deviceManagementService.recordAction({
+    await deviceManagementService.recordAction({
       deviceId: device.id,
       dealerId: device.dealerId,
       userId: user.userId,
@@ -292,7 +280,7 @@ devicesRouter.patch(
       ipAddress: clientIp(req),
     });
 
-    AuditService.log({
+    await AuditService.log({
       dealerId: device.dealerId,
       userId: user.userId,
       actorName: user.name,
@@ -305,7 +293,7 @@ devicesRouter.patch(
     });
 
     res.json(sanitizeDevice(updated, user.role));
-  }
+  })
 );
 
 /**
@@ -322,26 +310,27 @@ devicesRouter.post(
   '/:id/correct-imei',
   requireDealerAdmin,
   validateBody(correctImeiSchema),
-  (req, res) => {
+  asyncHandler(async (req, res) => {
     const user = getAuthUser(req);
-    const device = db.findById<Device>('devices', routeParam(req, 'id'));
+    const device = await repo.devices.findById(routeParam(req, 'id'));
     if (!device) throw AppError.notFound('Device');
     assertDealerAccess(req, device.dealerId, 'device');
 
     const body = req.body as z.infer<typeof correctImeiSchema>;
 
-    if (db.findOne<Device>('devices', (d) => d.imei === body.imei && d.id !== device.id)) {
+    const clash = await repo.devices.findByImei(body.imei);
+    if (clash && clash.id !== device.id) {
       throw AppError.conflict('Another device is already registered with this IMEI.');
     }
 
     const previous = device.imei;
-    const updated = db.update<Device>('devices', device.id, {
+    const updated = await repo.devices.update(device.id, {
       imei: body.imei,
       updatedAt: new Date().toISOString(),
     });
     if (!updated) throw AppError.notFound('Device');
 
-    deviceManagementService.recordAction({
+    await deviceManagementService.recordAction({
       deviceId: device.id,
       dealerId: device.dealerId,
       userId: user.userId,
@@ -353,7 +342,7 @@ devicesRouter.post(
 
     // Changing a device's identity is a dealership-level event, not just a
     // device-timeline note — it belongs in the global audit trail too.
-    AuditService.log({
+    await AuditService.log({
       dealerId: device.dealerId,
       userId: user.userId,
       actorName: user.name,
@@ -368,17 +357,13 @@ devicesRouter.post(
     });
 
     res.json(sanitizeDevice(updated, user.role));
-  }
+  })
 );
 
-devicesRouter.get('/:id/actions', requireDealerStaff, (req, res) => {
-  const device = db.findById<Device>('devices', routeParam(req, 'id'));
+devicesRouter.get('/:id/actions', requireDealerStaff, asyncHandler(async (req, res) => {
+  const device = await repo.devices.findById(routeParam(req, 'id'));
   if (!device) throw AppError.notFound('Device');
   assertDealerAccess(req, device.dealerId, 'device');
 
-  const logs = db
-    .find<DeviceActionLog>('deviceActionLogs', (l) => l.deviceId === device.id)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-  res.json(logs);
-});
+  res.json(await repo.deviceActionLogs.findByDevice(device.id, 200));
+}));

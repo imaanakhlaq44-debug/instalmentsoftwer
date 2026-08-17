@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { db } from '../db/db.js';
+import { repo } from '../db/repositories/index.js';
 import { User, UserRole, Dealer, AuthenticatedUser } from '../types/index.js';
 import { AuditService } from './AuditService.js';
 import { config } from '../config.js';
@@ -49,12 +49,12 @@ export function toPublicUser(user: User): PublicUser {
 }
 
 export class AuthService {
-  public static login(email: string, password: string, ipAddress?: string): AuthSession {
+  public static async login(email: string, password: string, ipAddress?: string): Promise<AuthSession> {
     if (!email || !password) {
       throw new AppError('Email and password are required.', 400);
     }
 
-    const user = db.findOne<User>('users', (u) => u.email.toLowerCase() === String(email).trim().toLowerCase());
+    const user = await repo.users.findByEmail(String(email));
 
     // Uniform message: never reveal whether the email exists.
     const invalidCredentials = () => new AppError('Invalid email or password.', 401);
@@ -79,7 +79,7 @@ export class AuthService {
     }
 
     if (!verifyPassword(password, user.passwordHash)) {
-      this.registerFailedAttempt(user, ipAddress);
+      await this.registerFailedAttempt(user, ipAddress);
       throw invalidCredentials();
     }
 
@@ -94,15 +94,15 @@ export class AuthService {
       updates.passwordChangedAt = new Date().toISOString();
       console.warn(`[auth] Migrated legacy plain-text password to bcrypt for user ${user.id}.`);
     }
-    const current = db.update<User>('users', user.id, updates) || user;
+    const current = (await repo.users.update(user.id, updates)) || user;
 
-    const dealer = current.dealerId ? db.findById<Dealer>('dealers', current.dealerId) : undefined;
+    const dealer = current.dealerId ? await repo.dealers.findById(current.dealerId) : undefined;
 
     if (dealer && !dealer.active) {
       throw new AppError('Your dealer account is suspended. Please contact EMI Shield support.', 403);
     }
 
-    AuditService.log({
+    await AuditService.log({
       dealerId: current.dealerId,
       userId: current.id,
       actorName: current.name,
@@ -122,7 +122,7 @@ export class AuthService {
     };
   }
 
-  private static registerFailedAttempt(user: User, ipAddress?: string): void {
+  private static async registerFailedAttempt(user: User, ipAddress?: string): Promise<void> {
     const attempts = (user.failedLoginAttempts || 0) + 1;
     const updates: Partial<User> = { failedLoginAttempts: attempts };
 
@@ -130,7 +130,7 @@ export class AuthService {
       updates.lockedUntil = new Date(Date.now() + LOCKOUT_MINUTES * 60_000).toISOString();
       updates.failedLoginAttempts = 0;
 
-      AuditService.log({
+      await AuditService.log({
         dealerId: user.dealerId,
         userId: user.id,
         actorName: user.name,
@@ -143,7 +143,7 @@ export class AuthService {
       });
     }
 
-    db.update<User>('users', user.id, updates);
+    await repo.users.update(user.id, updates);
   }
 
   public static issueToken(user: User): string {
@@ -173,12 +173,12 @@ export class AuthService {
   }
 
   /** Returns the current session for an already-authenticated request. */
-  public static getSession(userId: string): AuthSession {
-    const user = db.findById<User>('users', userId);
+  public static async getSession(userId: string): Promise<AuthSession> {
+    const user = await repo.users.findById(userId);
     if (!user || !user.active) {
       throw new AppError('Session is no longer valid. Please sign in again.', 401);
     }
-    const dealer = user.dealerId ? db.findById<Dealer>('dealers', user.dealerId) : undefined;
+    const dealer = user.dealerId ? await repo.dealers.findById(user.dealerId) : undefined;
     return {
       user: toPublicUser(user),
       dealer,
@@ -187,13 +187,13 @@ export class AuthService {
     };
   }
 
-  public static changePassword(params: {
+  public static async changePassword(params: {
     userId: string;
     currentPassword: string;
     newPassword: string;
     ipAddress?: string;
-  }): { success: true; message: string } {
-    const user = db.findById<User>('users', params.userId);
+  }): Promise<{ success: true; message: string }> {
+    const user = await repo.users.findById(params.userId);
     if (!user) throw new AppError('User not found.', 404);
 
     if (!verifyPassword(params.currentPassword, user.passwordHash)) {
@@ -209,7 +209,7 @@ export class AuthService {
       throw new AppError(strength.errors.join(' '), 400);
     }
 
-    db.update<User>('users', user.id, {
+    await repo.users.update(user.id, {
       passwordHash: hashPassword(params.newPassword),
       passwordChangedAt: new Date().toISOString(),
       mustChangePassword: false,
@@ -217,7 +217,7 @@ export class AuthService {
       lockedUntil: undefined,
     });
 
-    AuditService.log({
+    await AuditService.log({
       dealerId: user.dealerId,
       userId: user.id,
       actorName: user.name,
@@ -236,13 +236,13 @@ export class AuthService {
    * Admin-initiated reset. The target user must change the temporary password
    * on their next login.
    */
-  public static resetPassword(params: {
+  public static async resetPassword(params: {
     actor: AuthenticatedUser;
     targetUserId: string;
     temporaryPassword: string;
     ipAddress?: string;
-  }): { success: true; message: string } {
-    const target = db.findById<User>('users', params.targetUserId);
+  }): Promise<{ success: true; message: string }> {
+    const target = await repo.users.findById(params.targetUserId);
     if (!target) throw new AppError('User not found.', 404);
 
     // A dealer admin may only reset passwords inside their own dealership.
@@ -255,7 +255,7 @@ export class AuthService {
       throw new AppError(strength.errors.join(' '), 400);
     }
 
-    db.update<User>('users', target.id, {
+    await repo.users.update(target.id, {
       passwordHash: hashPassword(params.temporaryPassword),
       passwordChangedAt: new Date().toISOString(),
       mustChangePassword: true,
@@ -263,7 +263,7 @@ export class AuthService {
       lockedUntil: undefined,
     });
 
-    AuditService.log({
+    await AuditService.log({
       dealerId: target.dealerId,
       userId: params.actor.userId,
       actorName: params.actor.name,

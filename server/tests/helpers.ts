@@ -1,12 +1,12 @@
 import request from 'supertest';
 
 import { app } from '../src/index.js';
-import { db } from '../src/db/db.js';
-import { generateSeedData } from '../src/db/seed.js';
+import { repo } from '../src/db/repositories/index.js';
+import { resetAndSeedPostgres } from '../src/db/seedPostgres.js';
 import { AuthService } from '../src/services/AuthService.js';
 import { User } from '../src/types/index.js';
 
-export { app, db };
+export { app, repo };
 
 export const SEED_PASSWORD = 'Emishield#2026';
 
@@ -20,17 +20,31 @@ export const ACCOUNTS = {
 } as const;
 
 /**
- * Restores the store to the seeded fixture. Call in `beforeEach` — the JSON
- * store is a process-wide singleton, so a test that records a payment would
- * otherwise leak into the next one.
+ * The seeded logins, cached so `as()` can stay synchronous.
+ *
+ * Minting a token needs the user record, and making that an `await` would turn
+ * `as(id).post(url).send(body)` into a promise chain at every call site. The
+ * accounts are fixed by the fixture, so they are read once per reseed instead.
  */
-export function reseed(): void {
-  db.reset(generateSeedData());
+const seededUsers = new Map<string, User>();
+
+/**
+ * Truncates every table and reloads the seeded fixture. Call in `beforeEach` —
+ * the database is shared across the file, so a test that records a payment
+ * would otherwise leak into the next one.
+ */
+export async function reseed(): Promise<void> {
+  await resetAndSeedPostgres();
+
+  seededUsers.clear();
+  for (const user of await repo.users.findMany()) {
+    seededUsers.set(user.id, user);
+  }
 }
 
 /** A bearer token for a seeded user, minted directly to skip the bcrypt cost. */
 export function tokenFor(userId: string): string {
-  const user = db.findById<User>('users', userId);
+  const user = seededUsers.get(userId);
   if (!user) throw new Error(`No seeded user with id "${userId}". Did you call reseed()?`);
   return AuthService.issueToken(user);
 }

@@ -1,10 +1,15 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 
-import { as, reseed, db, ACCOUNTS } from '../helpers.js';
+import { as, reseed, repo, ACCOUNTS } from '../helpers.js';
+import { disconnectDatabase } from '../../src/db/prisma.js';
 import { Device, Customer } from '../../src/types/index.js';
 
-beforeEach(() => {
-  reseed();
+beforeEach(async () => {
+  await reseed();
+}, 60_000);
+
+afterAll(async () => {
+  await disconnectDatabase();
 });
 
 describe('role restrictions', () => {
@@ -19,18 +24,18 @@ describe('role restrictions', () => {
   });
 
   it('does not let counter staff lock a device', async () => {
-    const device = db.findOne<Device>('devices', (d) => d.dealerId === 'dealer-1' && d.status === 'ACTIVE')!;
+    const device = (await repo.devices.findFirst({ dealerId: 'dealer-1', status: 'ACTIVE' }))!;
 
     const res = await as(ACCOUNTS.dealerStaff)
       .post(`/api/devices/${device.id}/lock`)
       .send({ reason: 'Staff attempting an enforcement action.' });
 
     expect(res.status).toBe(403);
-    expect(db.findById<Device>('devices', device.id)!.status).toBe('ACTIVE');
+    expect((await repo.devices.findById(device.id))!.status).toBe('ACTIVE');
   });
 
   it('does not let a customer lock their own device', async () => {
-    const device = db.findOne<Device>('devices', (d) => d.customerId === 'cust-1')!;
+    const device = (await repo.devices.findFirst({ customerId: 'cust-1' }))!;
 
     const res = await as(ACCOUNTS.customer)
       .post(`/api/devices/${device.id}/unlock`)
@@ -120,7 +125,7 @@ describe('PII masking by role', () => {
     const res = await as(ACCOUNTS.dealerAdmin).get('/api/customers?limit=5');
     const customer = res.body.data[0];
 
-    const stored = db.findById<Customer>('customers', customer.id)!;
+    const stored = (await repo.customers.findById(customer.id))!;
     expect(customer.address).toBe(stored.address);
   });
 
@@ -129,7 +134,7 @@ describe('PII masking by role', () => {
     const me = res.body.data[0];
 
     expect(me.id).toBe('cust-1');
-    expect(me.address).toBe(db.findById<Customer>('customers', 'cust-1')!.address);
+    expect(me.address).toBe((await repo.customers.findById('cust-1'))!.address);
   });
 });
 

@@ -2,12 +2,13 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 
-import { db } from '../db/db.js';
+import { repo, indexBy, groupBy, dealerScope } from '../db/repositories/index.js';
+import { runInTransaction } from '../db/prisma.js';
 import {
   Installment, InstallmentPlan, Customer, Device, Transaction, DevicePolicy,
 } from '../types/index.js';
 import { OverdueEngine } from '../services/OverdueEngine.js';
-import { buildInstallmentSchedule, amountOutstanding, DEFAULT_POLICY } from '../services/InstallmentMath.js';
+import { buildInstallmentSchedule, amountOutstanding, DEFAULT_POLICY, parseDateOnly } from '../services/InstallmentMath.js';
 import { AuditService } from '../services/AuditService.js';
 import {
   requireDealerAdmin, getAuthUser, resolveDealerScope, assertDealerAccess, clientIp,
@@ -17,7 +18,7 @@ import { validateBody, validateQuery, getQuery } from '../middleware/validate.js
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { AppError } from '../utils/AppError.js';
 import { maskImei } from '../utils/mask.js';
-import { isoDateSchema, paginationSchema, paginate } from '../utils/validators.js';
+import { isoDateSchema, paginationSchema, pageEnvelope } from '../utils/validators.js';
 
 export const installmentsRouter = Router();
 
@@ -31,39 +32,31 @@ const plansQuerySchema = paginationSchema.extend({
   dealerId: z.string().trim().max(64).optional(),
 });
 
-installmentsRouter.get('/plans', validateQuery(plansQuerySchema), (req, res) => {
+installmentsRouter.get('/plans', validateQuery(plansQuerySchema), asyncHandler(async (req, res) => {
   const user = getAuthUser(req);
   const scope = resolveDealerScope(req);
   const q = getQuery<z.infer<typeof plansQuerySchema>>(req);
 
-  const customersById = db.indexBy<Customer>('customers', (c) => c.id);
-  const devicesById = db.indexBy<Device>('devices', (d) => d.id);
-  const installmentsByPlan = db.groupBy<Installment>('installments', (i) => i.planId);
-
-  let plans = db.find<InstallmentPlan>('installmentPlans', (p) => {
-    if (scope !== null && p.dealerId !== scope) return false;
-    if (user.role === 'CUSTOMER' && p.customerId !== user.customerId) return false;
-    if (q.status && q.status !== 'ALL' && p.status !== q.status) return false;
-    return true;
+  const page = await repo.installmentPlans.list({
+    dealerId: scope,
+    // A CUSTOMER login only ever sees its own plans.
+    customerId: user.role === 'CUSTOMER' ? user.customerId : undefined,
+    status: q.status,
+    search: q.search,
+    page: q.page,
+    limit: q.limit,
   });
 
-  if (q.search) {
-    const needle = q.search.toLowerCase();
-    plans = plans.filter((p) => {
-      const customer = customersById.get(p.customerId);
-      const device = devicesById.get(p.deviceId);
-      return (
-        (customer?.name.toLowerCase().includes(needle) ?? false) ||
-        (device?.model.toLowerCase().includes(needle) ?? false) ||
-        (device?.brand.toLowerCase().includes(needle) ?? false) ||
-        p.id.toLowerCase().includes(needle)
-      );
-    });
-  }
+  // The joins cover only the plans on this page.
+  const [customerRows, deviceRows, installmentRows] = await Promise.all([
+    repo.customers.findByIds([...new Set(page.data.map((p) => p.customerId))]),
+    repo.devices.findByIds([...new Set(page.data.map((p) => p.deviceId))]),
+    repo.installments.findByPlans(page.data.map((p) => p.id)),
+  ]);
 
-  plans.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-  const page = paginate(plans, { page: q.page, limit: q.limit });
+  const customersById = indexBy<Customer>(customerRows, (c) => c.id);
+  const devicesById = indexBy<Device>(deviceRows, (d) => d.id);
+  const installmentsByPlan = groupBy<Installment>(installmentRows, (i) => i.planId);
 
   const enriched = page.data.map((p) => {
     const customer = customersById.get(p.customerId);
@@ -87,13 +80,13 @@ installmentsRouter.get('/plans', validateQuery(plansQuerySchema), (req, res) => 
     };
   });
 
-  res.json({ ...page, data: enriched });
-});
+  res.json(pageEnvelope(enriched, page, q.limit));
+}));
 
 /** Full plan detail including the schedule and a payoff quote. */
-installmentsRouter.get('/plans/:id', (req, res) => {
+installmentsRouter.get('/plans/:id', asyncHandler(async (req, res) => {
   const user = getAuthUser(req);
-  const plan = db.findById<InstallmentPlan>('installmentPlans', routeParam(req, 'id'));
+  const plan = await repo.installmentPlans.findById(routeParam(req, 'id'));
   if (!plan) throw AppError.notFound('Installment plan');
 
   assertDealerAccess(req, plan.dealerId, 'installment plan');
@@ -101,9 +94,11 @@ installmentsRouter.get('/plans/:id', (req, res) => {
     throw AppError.notFound('Installment plan');
   }
 
-  const installments = db
-    .find<Installment>('installments', (i) => i.planId === plan.id)
-    .sort((a, b) => a.installmentNumber - b.installmentNumber);
+  const [installments, customer, device] = await Promise.all([
+    repo.installments.findByPlan(plan.id),
+    repo.customers.findById(plan.customerId),
+    repo.devices.findById(plan.deviceId),
+  ]);
 
   const unpaid = installments.filter((i) => i.status !== 'PAID');
   const payoffAmount = Math.max(0, unpaid.reduce((s, i) => s + amountOutstanding(i), 0) - (plan.creditBalance ?? 0));
@@ -111,8 +106,8 @@ installmentsRouter.get('/plans/:id', (req, res) => {
   res.json({
     plan,
     installments,
-    customer: db.findById<Customer>('customers', plan.customerId) ?? null,
-    device: db.findById<Device>('devices', plan.deviceId) ?? null,
+    customer: customer ?? null,
+    device: device ?? null,
     payoff: {
       amount: payoffAmount,
       remainingInstallments: unpaid.length,
@@ -120,7 +115,7 @@ installmentsRouter.get('/plans/:id', (req, res) => {
       creditApplied: plan.creditBalance ?? 0,
     },
   });
-});
+}));
 
 // ---------------------------------------------------------------------------
 // INSTALLMENT ROWS
@@ -134,30 +129,34 @@ const listQuerySchema = paginationSchema.extend({
   dealerId: z.string().trim().max(64).optional(),
 });
 
-installmentsRouter.get('/', validateQuery(listQuerySchema), (req, res) => {
+installmentsRouter.get('/', validateQuery(listQuerySchema), asyncHandler(async (req, res) => {
   const user = getAuthUser(req);
   const scope = resolveDealerScope(req);
   const q = getQuery<z.infer<typeof listQuerySchema>>(req);
 
-  const rows = db.find<Installment>('installments', (i) => {
-    if (scope !== null && i.dealerId !== scope) return false;
-    if (user.role === 'CUSTOMER' && i.customerId !== user.customerId) return false;
-    if (q.planId && i.planId !== q.planId) return false;
-    if (q.customerId && i.customerId !== q.customerId) return false;
-    if (q.status && q.status !== 'ALL' && i.status !== q.status) return false;
-    if (q.dueBefore && i.dueDate > q.dueBefore) return false;
-    return true;
+  const where: Record<string, unknown> = { ...dealerScope(scope) };
+  // A CUSTOMER login only ever sees its own schedule.
+  const customerId = user.role === 'CUSTOMER' ? user.customerId : q.customerId;
+  if (customerId) where.customerId = customerId;
+  if (q.planId) where.planId = q.planId;
+  if (q.status && q.status !== 'ALL') where.status = q.status;
+  if (q.dueBefore) where.dueDate = { lte: parseDateOnly(q.dueBefore) };
+
+  const page = await repo.installments.paginate({
+    where,
+    orderBy: [{ dueDate: 'asc' }, { installmentNumber: 'asc' }],
+    page: q.page,
+    limit: q.limit,
   });
 
-  rows.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-
-  const page = paginate(rows, { page: q.page, limit: q.limit });
-
-  res.json({
-    ...page,
-    data: page.data.map((i) => ({ ...i, totalOutstanding: amountOutstanding(i) })),
-  });
-});
+  res.json(
+    pageEnvelope(
+      page.data.map((i) => ({ ...i, totalOutstanding: amountOutstanding(i) })),
+      page,
+      q.limit
+    )
+  );
+}));
 
 // ---------------------------------------------------------------------------
 // OVERDUE ENGINE
@@ -201,9 +200,9 @@ const waiveSchema = z.object({
   reason: z.string().trim().min(10, 'Please record why the late fee is being waived.').max(500),
 });
 
-installmentsRouter.post('/:id/waive-late-fee', requireDealerAdmin, validateBody(waiveSchema), (req, res) => {
+installmentsRouter.post('/:id/waive-late-fee', requireDealerAdmin, validateBody(waiveSchema), asyncHandler(async (req, res) => {
   const user = getAuthUser(req);
-  const inst = db.findById<Installment>('installments', routeParam(req, 'id'));
+  const inst = await repo.installments.findById(routeParam(req, 'id'));
   if (!inst) throw AppError.notFound('Installment');
   assertDealerAccess(req, inst.dealerId, 'installment');
 
@@ -215,15 +214,17 @@ installmentsRouter.post('/:id/waive-late-fee', requireDealerAdmin, validateBody(
   const reason = (req.body as z.infer<typeof waiveSchema>).reason;
   const nowIso = new Date().toISOString();
 
-  db.batch(() => {
-    db.update<Installment>('installments', inst.id, {
+  // The waiver, its ledger entry and the plan total move together — a waiver
+  // recorded without the matching contra-entry would leave the books wrong.
+  await runInTransaction(async (tx) => {
+    await repo.installments.update(inst.id, {
       lateFee: inst.lateFeePaid ?? 0,
       lateFeeWaivedAt: nowIso,
       lateFeeWaivedBy: user.userId,
       lateFeeWaiverReason: reason,
-    });
+    }, tx);
 
-    db.insert<Transaction>('transactions', {
+    await repo.transactions.create({
       id: `tx-${uuidv4().substring(0, 8)}`,
       dealerId: inst.dealerId,
       customerId: inst.customerId,
@@ -233,15 +234,16 @@ installmentsRouter.post('/:id/waive-late-fee', requireDealerAdmin, validateBody(
       status: 'COMPLETED',
       date: nowIso,
       notes: `Late fee of Rs. ${outstandingFee.toLocaleString()} waived on installment #${inst.installmentNumber}. Reason: ${reason}`,
-    });
+    }, tx);
 
-    const remaining = db
-      .find<Installment>('installments', (i) => i.planId === inst.planId)
-      .reduce((s, i) => s + Math.max(0, (i.lateFee ?? 0) - (i.lateFeePaid ?? 0)), 0);
-    db.update<InstallmentPlan>('installmentPlans', inst.planId, { outstandingLateFees: remaining });
+    const remaining = (await repo.installments.findByPlan(inst.planId, tx)).reduce(
+      (s: number, i: Installment) => s + Math.max(0, (i.lateFee ?? 0) - (i.lateFeePaid ?? 0)),
+      0
+    );
+    await repo.installmentPlans.update(inst.planId, { outstandingLateFees: remaining }, tx);
   });
 
-  AuditService.log({
+  await AuditService.log({
     dealerId: inst.dealerId,
     userId: user.userId,
     actorName: user.name,
@@ -254,7 +256,7 @@ installmentsRouter.post('/:id/waive-late-fee', requireDealerAdmin, validateBody(
   });
 
   res.json({ success: true, waivedAmount: outstandingFee, message: 'Late fee waived.' });
-});
+}));
 
 // ---------------------------------------------------------------------------
 // RESCHEDULE — when a customer genuinely cannot pay, the alternative to
@@ -268,9 +270,9 @@ const rescheduleSchema = z.object({
   reason: z.string().trim().min(10, 'Please record why the plan is being restructured.').max(500),
 });
 
-installmentsRouter.post('/plans/:id/reschedule', requireDealerAdmin, validateBody(rescheduleSchema), (req, res) => {
+installmentsRouter.post('/plans/:id/reschedule', requireDealerAdmin, validateBody(rescheduleSchema), asyncHandler(async (req, res) => {
   const user = getAuthUser(req);
-  const plan = db.findById<InstallmentPlan>('installmentPlans', routeParam(req, 'id'));
+  const plan = await repo.installmentPlans.findById(routeParam(req, 'id'));
   if (!plan) throw AppError.notFound('Installment plan');
   assertDealerAccess(req, plan.dealerId, 'installment plan');
 
@@ -279,7 +281,7 @@ installmentsRouter.post('/plans/:id/reschedule', requireDealerAdmin, validateBod
   }
 
   const body = req.body as z.infer<typeof rescheduleSchema>;
-  const existing = db.find<Installment>('installments', (i) => i.planId === plan.id);
+  const existing = await repo.installments.findByPlan(plan.id);
   const paidRows = existing.filter((i) => i.amountPaid > 0 || i.status === 'PAID');
   const unpaidRows = existing.filter((i) => i.amountPaid === 0 && i.status !== 'PAID');
 
@@ -300,14 +302,18 @@ installmentsRouter.post('/plans/:id/reschedule', requireDealerAdmin, validateBod
 
   const nowIso = new Date().toISOString();
 
-  const created = db.batch(() => {
+  // Deleting the old rows, writing the new schedule and updating the plan are
+  // one unit: a plan left with its old rows deleted and none written would
+  // erase a customer's remaining balance.
+  const created = await runInTransaction(async (tx) => {
     // Paid and partially-paid rows are history and stay exactly as they are.
     for (const row of unpaidRows) {
-      db.delete('installments', row.id);
+      await repo.installments.delete(row.id, tx);
     }
 
-    const rows = schedule.rows.map((row, idx) =>
-      db.insert<Installment>('installments', {
+    const rows = [];
+    for (const [idx, row] of schedule.rows.entries()) {
+      rows.push(await repo.installments.create({
         id: `inst-${plan.id}-r${Date.now().toString(36)}-${row.installmentNumber}`,
         planId: plan.id,
         dealerId: plan.dealerId,
@@ -321,21 +327,21 @@ installmentsRouter.post('/plans/:id/reschedule', requireDealerAdmin, validateBod
         lateFee: 0,
         lateFeePaid: 0,
         createdAt: nowIso,
-      })
-    );
+      }, tx));
+    }
 
-    db.update<InstallmentPlan>('installmentPlans', plan.id, {
+    await repo.installmentPlans.update(plan.id, {
       totalInstallments: paidRows.length + body.totalInstallments,
       monthlyInstallment: schedule.baseInstallment,
       firstDueDate: body.firstDueDate,
       gracePeriodDays: grace,
       status: 'CURRENT',
-    });
+    }, tx);
 
     return rows;
   });
 
-  AuditService.log({
+  await AuditService.log({
     dealerId: plan.dealerId,
     userId: user.userId,
     actorName: user.name,
@@ -353,30 +359,33 @@ installmentsRouter.post('/plans/:id/reschedule', requireDealerAdmin, validateBod
     success: true,
     message: `Plan restructured into ${body.totalInstallments} new installment(s).`,
     installments: created,
-    plan: db.findById<InstallmentPlan>('installmentPlans', plan.id),
+    plan: await repo.installmentPlans.findById(plan.id),
   });
-});
+}));
 
 // ---------------------------------------------------------------------------
 // EARLY SETTLEMENT QUOTE
 // ---------------------------------------------------------------------------
 
-installmentsRouter.get('/plans/:id/payoff-quote', (req, res) => {
+installmentsRouter.get('/plans/:id/payoff-quote', asyncHandler(async (req, res) => {
   const user = getAuthUser(req);
-  const plan = db.findById<InstallmentPlan>('installmentPlans', routeParam(req, 'id'));
+  const plan = await repo.installmentPlans.findById(routeParam(req, 'id'));
   if (!plan) throw AppError.notFound('Installment plan');
   assertDealerAccess(req, plan.dealerId, 'installment plan');
   if (user.role === 'CUSTOMER' && plan.customerId !== user.customerId) {
     throw AppError.notFound('Installment plan');
   }
 
-  const rows = db.find<Installment>('installments', (i) => i.planId === plan.id && i.status !== 'PAID');
+  const rows = await repo.installments.findMany({
+    where: { planId: plan.id, status: { not: 'PAID' } },
+    orderBy: { installmentNumber: 'asc' },
+  });
   const principal = rows.reduce((s, i) => s + Math.max(0, i.amountDue - i.amountPaid), 0);
   const lateFees = rows.reduce((s, i) => s + Math.max(0, (i.lateFee ?? 0) - (i.lateFeePaid ?? 0)), 0);
   const credit = plan.creditBalance ?? 0;
 
   const policy =
-    db.findOne<DevicePolicy>('devicePolicies', (p) => p.dealerId === plan.dealerId) ??
+    (await repo.devicePolicies.findByDealer(plan.dealerId)) ??
     ({ ...DEFAULT_POLICY, dealerId: plan.dealerId } as DevicePolicy);
 
   res.json({
@@ -389,4 +398,4 @@ installmentsRouter.get('/plans/:id/payoff-quote', (req, res) => {
     gracePeriodDays: policy.gracePeriodDays,
     note: 'This quote settles the plan in full. Verify with the customer before recording the payment.',
   });
-});
+}));

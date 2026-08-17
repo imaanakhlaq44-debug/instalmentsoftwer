@@ -1,8 +1,9 @@
 import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 
-import { db } from '../db/db.js';
-import { EnrollmentToken, QRType, Device, UserRole, Dealer } from '../types/index.js';
+import { repo } from '../db/repositories/index.js';
+import { runInTransaction, Tx } from '../db/prisma.js';
+import { EnrollmentToken, QRType, Device, UserRole } from '../types/index.js';
 import { deviceManagementService } from './DeviceManagementService.js';
 import { AuditService } from './AuditService.js';
 import { AppError } from '../utils/AppError.js';
@@ -18,7 +19,7 @@ const DEFAULT_TTL_MINUTES = 60;
 const MAX_TTL_MINUTES = 1440;
 
 export class EnrollmentService {
-  public static generateToken(params: {
+  public static async generateToken(params: {
     dealerId: string;
     deviceId?: string;
     customerId?: string;
@@ -26,27 +27,18 @@ export class EnrollmentService {
     expiresInMinutes?: number;
     actor: EnrollmentActor;
     ipAddress?: string;
-  }): EnrollmentToken {
+  }): Promise<EnrollmentToken> {
     const ttl = Math.min(params.expiresInMinutes || DEFAULT_TTL_MINUTES, MAX_TTL_MINUTES);
     const nowIso = new Date().toISOString();
 
     if (params.deviceId) {
-      const device = db.findById<Device>('devices', params.deviceId);
+      const device = await repo.devices.findById(params.deviceId);
       if (!device) throw AppError.notFound('Device');
       if (device.dealerId !== params.dealerId) {
         throw AppError.forbidden('You cannot generate an enrollment token for another dealer\'s device.');
       }
       if (device.status === 'ACTIVE' || device.status === 'LOCKED') {
         throw AppError.badRequest('This device is already enrolled and under management.');
-      }
-
-      // Only one live token per device — otherwise an old printed QR keeps working.
-      const existing = db.find<EnrollmentToken>(
-        'enrollmentTokens',
-        (t) => t.deviceId === params.deviceId && t.status === 'WAITING' && new Date(t.expiresAt) > new Date()
-      );
-      for (const old of existing) {
-        db.update<EnrollmentToken>('enrollmentTokens', old.id, { status: 'EXPIRED' });
       }
     }
 
@@ -55,36 +47,58 @@ export class EnrollmentService {
     const secret = crypto.randomBytes(24).toString('base64url').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 24);
     const tokenStr = `EMIS-${params.qrType.substring(0, 3)}-${secret}`;
 
-    const token = db.insert<EnrollmentToken>('enrollmentTokens', {
-      id: `tok-${uuidv4().substring(0, 8)}`,
-      dealerId: params.dealerId,
-      deviceId: params.deviceId,
-      customerId: params.customerId,
-      token: tokenStr,
-      qrType: params.qrType,
-      status: 'WAITING',
-      expiresAt: new Date(Date.now() + ttl * 60_000).toISOString(),
-      createdAt: nowIso,
-    });
+    const token = await runInTransaction(async (tx) => {
+      // Only one live token per device — otherwise an old printed QR keeps
+      // working. Retiring the old ones and issuing the new one in a single
+      // transaction means there is never a moment with two valid QRs, nor one
+      // with none at all.
+      if (params.deviceId) {
+        await repo.enrollmentTokens.updateMany(
+          { deviceId: params.deviceId, status: 'WAITING', expiresAt: { gt: new Date() } },
+          { status: 'EXPIRED' },
+          tx
+        );
+      }
 
-    AuditService.log({
-      dealerId: params.dealerId,
-      userId: params.actor.userId,
-      actorName: params.actor.userName,
-      actorRole: params.actor.userRole,
-      action: 'ENROLLMENT_QR_GENERATED',
-      targetType: 'ENROLLMENT_TOKEN',
-      targetId: token.id,
-      details: `Generated a ${params.qrType} enrollment QR for device ${params.deviceId || '(unassigned)'}, valid for ${ttl} minutes.`,
-      ipAddress: params.ipAddress,
+      const created = await repo.enrollmentTokens.create(
+        {
+          id: `tok-${uuidv4().substring(0, 8)}`,
+          dealerId: params.dealerId,
+          deviceId: params.deviceId,
+          customerId: params.customerId,
+          token: tokenStr,
+          qrType: params.qrType,
+          status: 'WAITING',
+          expiresAt: new Date(Date.now() + ttl * 60_000).toISOString(),
+          createdAt: nowIso,
+        },
+        tx
+      );
+
+      await AuditService.log(
+        {
+          dealerId: params.dealerId,
+          userId: params.actor.userId,
+          actorName: params.actor.userName,
+          actorRole: params.actor.userRole,
+          action: 'ENROLLMENT_QR_GENERATED',
+          targetType: 'ENROLLMENT_TOKEN',
+          targetId: created.id,
+          details: `Generated a ${params.qrType} enrollment QR for device ${params.deviceId || '(unassigned)'}, valid for ${ttl} minutes.`,
+          ipAddress: params.ipAddress,
+        },
+        tx
+      );
+
+      return created;
     });
 
     return token;
   }
 
   /** The provisioning JSON an Android DPC reads out of the QR code. */
-  public static buildQrPayload(token: EnrollmentToken): string {
-    const dealer = db.findById<Dealer>('dealers', token.dealerId);
+  public static async buildQrPayload(token: EnrollmentToken, tx?: Tx): Promise<string> {
+    const dealer = await repo.dealers.findById(token.dealerId, tx);
     return JSON.stringify({
       version: '2.4.0',
       type: token.qrType,
@@ -108,7 +122,7 @@ export class EnrollmentService {
     deviceId?: string;
     ipAddress?: string;
   }): Promise<{ success: boolean; device: Device; message: string }> {
-    const tokenRecord = db.findOne<EnrollmentToken>('enrollmentTokens', (t) => t.token === params.token);
+    const tokenRecord = await repo.enrollmentTokens.findByToken(params.token);
 
     if (!tokenRecord) {
       throw AppError.badRequest('This enrollment code is not valid.');
@@ -119,7 +133,7 @@ export class EnrollmentService {
     }
 
     if (tokenRecord.status === 'EXPIRED' || new Date(tokenRecord.expiresAt) < new Date()) {
-      db.update<EnrollmentToken>('enrollmentTokens', tokenRecord.id, { status: 'EXPIRED' });
+      await repo.enrollmentTokens.update(tokenRecord.id, { status: 'EXPIRED' });
       throw AppError.badRequest('This enrollment code has expired. Please generate a new QR.');
     }
 
@@ -130,7 +144,7 @@ export class EnrollmentService {
       if (!params.deviceId) {
         throw AppError.badRequest('This enrollment code is not linked to a device, and no device was supplied.');
       }
-      const candidate = db.findById<Device>('devices', params.deviceId);
+      const candidate = await repo.devices.findById(params.deviceId);
       if (!candidate) throw AppError.notFound('Device');
       if (candidate.dealerId !== tokenRecord.dealerId) {
         throw AppError.forbidden('This enrollment code belongs to a different dealer.');
@@ -140,20 +154,34 @@ export class EnrollmentService {
       throw AppError.badRequest('This enrollment code was issued for a different device.');
     }
 
-    const device = db.findById<Device>('devices', targetDeviceId);
+    const device = await repo.devices.findById(targetDeviceId);
     if (!device) throw AppError.notFound('Device');
 
-    db.update<EnrollmentToken>('enrollmentTokens', tokenRecord.id, { status: 'VERIFYING' });
+    /**
+     * Claim the token before doing the work.
+     *
+     * `updateMany` with the status in the filter is a compare-and-set: only one
+     * of two concurrent redemptions of the same QR can move it out of its
+     * current state, and the loser is told the code is already in use. The JSON
+     * store had no way to express this.
+     */
+    const claimed = await repo.enrollmentTokens.updateMany(
+      { id: tokenRecord.id, status: { in: ['WAITING', 'SCANNED'] } },
+      { status: 'VERIFYING' }
+    );
+    if (claimed === 0) {
+      throw AppError.conflict('This enrollment code is already being redeemed. Please generate a new QR.');
+    }
 
     try {
       const result = await deviceManagementService.enrollDevice(device.id, tokenRecord.token, params.ipAddress);
 
-      db.update<EnrollmentToken>('enrollmentTokens', tokenRecord.id, {
+      await repo.enrollmentTokens.update(tokenRecord.id, {
         status: 'ENROLLED',
         deviceId: device.id,
       });
 
-      AuditService.log({
+      await AuditService.log({
         dealerId: device.dealerId,
         userId: 'system',
         actorName: 'Enrollment Client',
@@ -172,7 +200,7 @@ export class EnrollmentService {
       };
     } catch (err) {
       // Leave the token reusable so a transient failure does not burn the QR.
-      db.update<EnrollmentToken>('enrollmentTokens', tokenRecord.id, { status: 'WAITING' });
+      await repo.enrollmentTokens.update(tokenRecord.id, { status: 'WAITING' });
       throw err;
     }
   }

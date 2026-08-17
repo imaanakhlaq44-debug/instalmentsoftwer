@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
 
-import { db } from '../db/db.js';
-import { Device, Customer, InstallmentPlan, Installment, Dealer, DevicePolicy } from '../types/index.js';
+import { repo, indexBy, groupBy, dealerScope } from '../db/repositories/index.js';
+import { Customer, InstallmentPlan, Installment, Dealer, DevicePolicy } from '../types/index.js';
 import { deviceManagementService } from '../services/DeviceManagementService.js';
 import { EnrollmentService } from '../services/EnrollmentService.js';
 import { amountOutstanding, DEFAULT_POLICY } from '../services/InstallmentMath.js';
@@ -20,17 +20,38 @@ export const simulatorRouter = Router();
 simulatorRouter.use(requireDealerStaff);
 
 /** Virtual phones the simulator can drive, scoped to the caller's dealership. */
-simulatorRouter.get('/devices', (req, res) => {
+simulatorRouter.get('/devices', asyncHandler(async (req, res) => {
   const user = getAuthUser(req);
   const scope = resolveDealerScope(req);
 
-  const customersById = db.indexBy<Customer>('customers', (c) => c.id);
-  const dealersById = db.indexBy<Dealer>('dealers', (d) => d.id);
-  const plansByDevice = db.indexBy<InstallmentPlan>('installmentPlans', (p) => p.deviceId);
-  const installmentsByPlan = db.groupBy<Installment>('installments', (i) => i.planId);
-  const policiesByDealer = db.indexBy<DevicePolicy>('devicePolicies', (p) => p.dealerId);
+  const devices = await repo.devices.findMany({
+    where: dealerScope(scope),
+    orderBy: { updatedAt: 'desc' },
+  });
 
-  const devices = db.find<Device>('devices', (d) => scope === null || d.dealerId === scope);
+  if (devices.length === 0) {
+    res.json([]);
+    return;
+  }
+
+  // Each related table is fetched once, for the ids these devices actually
+  // reference, and joined in memory afterwards.
+  const dealerIds = [...new Set(devices.map((d) => d.dealerId))];
+  const [customerRows, dealerRows, policyRows, plans] = await Promise.all([
+    repo.customers.findByIds([...new Set(devices.map((d) => d.customerId))]),
+    repo.dealers.findByIds(dealerIds),
+    repo.devicePolicies.findByDealers(dealerIds),
+    repo.installmentPlans.findByDevices(devices.map((d) => d.id)),
+  ]);
+
+  const customersById = indexBy<Customer>(customerRows, (c) => c.id);
+  const dealersById = indexBy<Dealer>(dealerRows, (d) => d.id);
+  const policiesByDealer = indexBy<DevicePolicy>(policyRows, (p) => p.dealerId);
+  const plansByDevice = indexBy<InstallmentPlan>(plans, (p) => p.deviceId);
+  const installmentsByPlan = groupBy<Installment>(
+    await repo.installments.findByPlans(plans.map((p) => p.id)),
+    (i) => i.planId
+  );
 
   const simulated = devices.map((d) => {
     const customer = customersById.get(d.customerId);
@@ -65,7 +86,7 @@ simulatorRouter.get('/devices', (req, res) => {
   });
 
   res.json(simulated);
-});
+}));
 
 const updateStateSchema = z.object({
   deviceId: z.string().trim().min(1, 'Device id is required.'),
@@ -96,7 +117,7 @@ simulatorRouter.post(
     const user = getAuthUser(req);
     const { deviceId, action, payload } = req.body as z.infer<typeof updateStateSchema>;
 
-    const device = db.findById<Device>('devices', deviceId);
+    const device = await repo.devices.findById(deviceId);
     if (!device) throw AppError.notFound('Device');
     assertDealerAccess(req, device.dealerId, 'device');
 
@@ -110,7 +131,7 @@ simulatorRouter.post(
     switch (action) {
       case 'TOGGLE_ONLINE': {
         const nextOnline = payload.isOnline ?? !device.isOnline;
-        db.update<Device>('devices', device.id, {
+        await repo.devices.update(device.id, {
           isOnline: nextOnline,
           lastSeen: nowIso,
           updatedAt: nowIso,
@@ -125,7 +146,7 @@ simulatorRouter.post(
 
       case 'SET_BATTERY': {
         const level = payload.batteryLevel ?? 50;
-        db.update<Device>('devices', device.id, {
+        await repo.devices.update(device.id, {
           batteryLevel: Math.round(level),
           lastSeen: nowIso,
           updatedAt: nowIso,
@@ -134,24 +155,26 @@ simulatorRouter.post(
       }
 
       case 'SIMULATE_OVERDUE': {
-        const plan = db.findOne<InstallmentPlan>('installmentPlans', (p) => p.deviceId === device.id);
+        const plan = await repo.installmentPlans.findByDevice(device.id);
         if (!plan) {
           throw AppError.badRequest('This device has no financing plan, so it cannot become overdue.');
         }
 
-        const nextUnpaid = db
-          .find<Installment>('installments', (i) => i.planId === plan.id && i.status !== 'PAID')
-          .sort((a, b) => a.dueDate.localeCompare(b.dueDate))[0];
+        const [nextUnpaid] = await repo.installments.findMany({
+          where: { planId: plan.id, status: { not: 'PAID' } },
+          orderBy: { dueDate: 'asc' },
+          take: 1,
+        });
 
         if (!nextUnpaid) {
           throw AppError.badRequest('Every installment on this plan is already paid.');
         }
 
-        db.update<Installment>('installments', nextUnpaid.id, { status: 'OVERDUE' });
-        db.update<InstallmentPlan>('installmentPlans', plan.id, { status: 'OVERDUE' });
+        await repo.installments.update(nextUnpaid.id, { status: 'OVERDUE' });
+        await repo.installmentPlans.update(plan.id, { status: 'OVERDUE' });
 
         if (device.status === 'ACTIVE' || device.status === 'ENROLLED') {
-          db.update<Device>('devices', device.id, {
+          await repo.devices.update(device.id, {
             status: 'OVERDUE',
             lockReason: `Installment #${nextUnpaid.installmentNumber} marked overdue from the simulator.`,
             updatedAt: nowIso,
@@ -215,7 +238,8 @@ simulatorRouter.post(
       }
     }
 
-    const updated = db.findById<Device>('devices', device.id)!;
+    const updated = await repo.devices.findById(device.id);
+    if (!updated) throw AppError.notFound('Device');
     res.json({ success: true, ...extra, device: sanitizeDevice(updated, user.role) });
   })
 );

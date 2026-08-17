@@ -1,8 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
 
-import { db } from '../db/db.js';
+import { repo, indexBy } from '../db/repositories/index.js';
 import {
-  Installment, InstallmentPlan, Device, DevicePolicy, Notification, Transaction,
+  Installment, InstallmentPlan, Device, DevicePolicy, Notification,
 } from '../types/index.js';
 import { deviceManagementService } from './DeviceManagementService.js';
 import { AuditService } from './AuditService.js';
@@ -43,13 +43,34 @@ export class OverdueEngine {
       warningsSent: 0,
     };
 
-    const openInstallments = db.find<Installment>('installments', (i) => i.status !== 'PAID');
+    const openInstallments = await repo.installments.findMany({
+      where: { status: { not: 'PAID' } },
+      orderBy: { dueDate: 'asc' },
+    });
     result.evaluatedCount = openInstallments.length;
 
-    // Pre-index the joins so this stays linear even with tens of thousands of rows.
-    const plansById = db.indexBy<InstallmentPlan>('installmentPlans', (p) => p.id);
-    const devicesById = db.indexBy<Device>('devices', (d) => d.id);
-    const policiesByDealer = db.indexBy<DevicePolicy>('devicePolicies', (p) => p.dealerId);
+    if (openInstallments.length === 0) {
+      await this.auditRun(result);
+      return result;
+    }
+
+    /**
+     * Fetch the related rows in three queries keyed by the ids actually
+     * referenced, rather than loading every plan, device and policy in the
+     * database. The maps below are only for the in-memory join afterwards.
+     */
+    const planIds = [...new Set(openInstallments.map((i) => i.planId))];
+    const plans = await repo.installmentPlans.findMany({ where: { id: { in: planIds } } });
+    const plansById = indexBy<InstallmentPlan>(plans, (p) => p.id);
+
+    const deviceIds = [...new Set(plans.map((p) => p.deviceId))];
+    const devicesById = indexBy<Device>(await repo.devices.findByIds(deviceIds), (d) => d.id);
+
+    const dealerIds = [...new Set(openInstallments.map((i) => i.dealerId))];
+    const policiesByDealer = indexBy<DevicePolicy>(
+      await repo.devicePolicies.findByDealers(dealerIds),
+      (p) => p.dealerId
+    );
 
     const affectedPlans = new Set<string>();
 
@@ -73,12 +94,13 @@ export class OverdueEngine {
 
         if (owedFee > currentFee) {
           const delta = owedFee - currentFee;
-          db.update<Installment>('installments', inst.id, {
+
+          await repo.installments.update(inst.id, {
             lateFee: owedFee,
             lateFeeAccruedThrough: todayStr,
           });
 
-          db.insert<Transaction>('transactions', {
+          await repo.transactions.create({
             id: `tx-${uuidv4().substring(0, 8)}`,
             dealerId: inst.dealerId,
             customerId: inst.customerId,
@@ -100,15 +122,15 @@ export class OverdueEngine {
       // Status transitions
       // ---------------------------------------------------------------------
       if (pastGrace && inst.status !== 'OVERDUE') {
-        db.update<Installment>('installments', inst.id, { status: 'OVERDUE' });
-        db.update<InstallmentPlan>('installmentPlans', plan.id, { status: 'OVERDUE' });
+        await repo.installments.update(inst.id, { status: 'OVERDUE' });
+        await repo.installmentPlans.update(plan.id, { status: 'OVERDUE' });
         result.newlyOverdueCount++;
         affectedPlans.add(plan.id);
 
         if (device) {
           const daysLate = daysBetween(inst.dueDate, todayStr);
 
-          if (this.queueNotification({
+          const queued = await this.queueNotification({
             dealerId: inst.dealerId,
             customerId: inst.customerId,
             deviceId: device.id,
@@ -117,10 +139,8 @@ export class OverdueEngine {
             message:
               `Your installment of Rs. ${inst.amountDue.toLocaleString()} for ${device.brand} ${device.model} ` +
               `is ${daysLate} day(s) overdue. Please pay immediately to avoid restrictions on your device.`,
-            dedupeKey: `overdue:${inst.id}`,
-          })) {
-            result.notificationsQueued++;
-          }
+          });
+          if (queued) result.notificationsQueued++;
 
           if (policy.autoLockEnabled && device.status !== 'LOCKED' && device.status !== 'LOCK_PENDING') {
             try {
@@ -138,7 +158,7 @@ export class OverdueEngine {
               console.error(`[overdue] Failed to auto-lock device ${device.id}:`, err);
             }
           } else if (device.status === 'ACTIVE' || device.status === 'ENROLLED') {
-            db.update<Device>('devices', device.id, {
+            await repo.devices.update(device.id, {
               status: 'OVERDUE',
               lockReason: `Installment #${inst.installmentNumber} overdue by ${daysLate} day(s).`,
               updatedAt: new Date().toISOString(),
@@ -147,24 +167,24 @@ export class OverdueEngine {
           }
         }
       } else if (dueToday && inst.status === 'PENDING') {
-        db.update<Installment>('installments', inst.id, { status: 'DUE_TODAY' });
+        await repo.installments.update(inst.id, { status: 'DUE_TODAY' });
       } else if (pastDue && !pastGrace && inst.status !== 'OVERDUE') {
         // Inside the grace window — due, but not yet a default.
         if (inst.status !== 'DUE_TODAY') {
-          db.update<Installment>('installments', inst.id, { status: 'DUE_TODAY' });
+          await repo.installments.update(inst.id, { status: 'DUE_TODAY' });
         }
       } else if (!pastDue && inst.status === 'PENDING') {
-        // ---------------------------------------------------------------------
+        // -------------------------------------------------------------------
         // Advance warning — the whole point of `lockWarningDays`, which the
         // original engine defined in the policy but never actually used.
-        // ---------------------------------------------------------------------
+        // -------------------------------------------------------------------
         const daysUntilDue = daysBetween(todayStr, inst.dueDate);
         const warnWindow = policy.lockWarningDays ?? 2;
 
         if (policy.customerReminderEnabled && daysUntilDue > 0 && daysUntilDue <= warnWindow) {
-          db.update<Installment>('installments', inst.id, { status: 'DUE_SOON' });
+          await repo.installments.update(inst.id, { status: 'DUE_SOON' });
 
-          if (this.queueNotification({
+          const queued = await this.queueNotification({
             dealerId: inst.dealerId,
             customerId: inst.customerId,
             deviceId: device?.id,
@@ -173,8 +193,8 @@ export class OverdueEngine {
             message:
               `Reminder: your installment of Rs. ${inst.amountDue.toLocaleString()} is due on ${inst.dueDate} ` +
               `(${daysUntilDue} day(s) from now). You have ${policy.gracePeriodDays} grace day(s) after that.`,
-            dedupeKey: `duesoon:${inst.id}`,
-          })) {
+          });
+          if (queued) {
             result.warningsSent++;
             result.notificationsQueued++;
           }
@@ -184,10 +204,15 @@ export class OverdueEngine {
 
     // Keep plan-level totals honest after fee accrual.
     for (const planId of affectedPlans) {
-      this.recalculatePlanFees(planId);
+      await this.recalculatePlanFees(planId);
     }
 
-    AuditService.log({
+    await this.auditRun(result);
+    return result;
+  }
+
+  private static async auditRun(result: OverdueEvaluationResult): Promise<void> {
+    await AuditService.log({
       userId: 'system',
       actorName: 'Overdue Engine',
       actorRole: 'SUPER_ADMIN',
@@ -201,8 +226,6 @@ export class OverdueEngine {
         `(Rs. ${result.lateFeeAmountTotal.toLocaleString()}), ${result.notificationsQueued} notifications queued.`,
       ipAddress: 'system',
     });
-
-    return result;
   }
 
   /**
@@ -210,28 +233,28 @@ export class OverdueEngine {
    * Without this, a nightly job plus manual runs would text the customer
    * repeatedly about the same installment.
    */
-  private static queueNotification(params: {
+  private static async queueNotification(params: {
     dealerId: string;
     customerId: string;
     deviceId?: string;
     type: Notification['type'];
     title: string;
     message: string;
-    dedupeKey: string;
-  }): boolean {
-    const todayPrefix = new Date().toISOString().split('T')[0];
+  }): Promise<boolean> {
+    const dayStart = new Date();
+    dayStart.setUTCHours(0, 0, 0, 0);
 
-    const alreadySent = db.findOne<Notification>(
-      'notifications',
-      (n) =>
-        n.customerId === params.customerId &&
-        n.type === params.type &&
-        n.createdAt.startsWith(todayPrefix) &&
-        n.message === params.message
-    );
+    // The same check as before, but expressed as a query the database answers
+    // with an index rather than a scan of every notification ever queued.
+    const alreadySent = await repo.notifications.findFirst({
+      customerId: params.customerId,
+      type: params.type,
+      message: params.message,
+      createdAt: { gte: dayStart },
+    });
     if (alreadySent) return false;
 
-    db.insert<Notification>('notifications', {
+    await repo.notifications.create({
       id: `notif-${uuidv4().substring(0, 8)}`,
       dealerId: params.dealerId,
       customerId: params.customerId,
@@ -249,12 +272,12 @@ export class OverdueEngine {
     return true;
   }
 
-  private static recalculatePlanFees(planId: string): void {
-    const installments = db.find<Installment>('installments', (i) => i.planId === planId);
+  private static async recalculatePlanFees(planId: string): Promise<void> {
+    const installments = await repo.installments.findByPlan(planId);
     const outstandingLateFees = installments.reduce(
-      (sum, i) => sum + Math.max(0, (i.lateFee ?? 0) - (i.lateFeePaid ?? 0)),
+      (sum: number, i: Installment) => sum + Math.max(0, (i.lateFee ?? 0) - (i.lateFeePaid ?? 0)),
       0
     );
-    db.update<InstallmentPlan>('installmentPlans', planId, { outstandingLateFees });
+    await repo.installmentPlans.update(planId, { outstandingLateFees });
   }
 }

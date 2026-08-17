@@ -1,7 +1,6 @@
 import cron from 'node-cron';
 import { OverdueEngine } from './OverdueEngine.js';
-import { db } from '../db/db.js';
-import { EnrollmentToken } from '../types/index.js';
+import { repo } from '../db/repositories/index.js';
 import { config } from '../config.js';
 
 export interface SchedulerHandle {
@@ -41,20 +40,14 @@ async function runOverdueEvaluation(): Promise<void> {
   }
 }
 
-function expireStaleTokens(): void {
+async function expireStaleTokens(): Promise<void> {
   try {
-    const now = new Date();
-    const stale = db.find<EnrollmentToken>(
-      'enrollmentTokens',
-      (t) => (t.status === 'WAITING' || t.status === 'SCANNED' || t.status === 'VERIFYING') && new Date(t.expiresAt) < now
-    );
+    // One UPDATE with the predicate in the WHERE clause, instead of loading
+    // every token and updating the stale ones row by row.
+    const expired = await repo.enrollmentTokens.expireStale(new Date());
 
-    for (const token of stale) {
-      db.update<EnrollmentToken>('enrollmentTokens', token.id, { status: 'EXPIRED' });
-    }
-
-    if (stale.length > 0) {
-      console.log(`[scheduler] Expired ${stale.length} stale enrollment token(s).`);
+    if (expired > 0) {
+      console.log(`[scheduler] Expired ${expired} stale enrollment token(s).`);
     }
   } catch (err) {
     console.error('[scheduler] Token cleanup failed:', err);
@@ -67,14 +60,14 @@ export function startScheduler(): SchedulerHandle {
   }
 
   const overdueJob = cron.schedule(OVERDUE_CRON, runOverdueEvaluation, { timezone: TIMEZONE });
-  const cleanupJob = cron.schedule(TOKEN_CLEANUP_CRON, expireStaleTokens, { timezone: TIMEZONE });
+  const cleanupJob = cron.schedule(TOKEN_CLEANUP_CRON, () => void expireStaleTokens(), { timezone: TIMEZONE });
 
   console.log(`[scheduler] Overdue evaluation scheduled at "${OVERDUE_CRON}" (${TIMEZONE}).`);
   console.log(`[scheduler] Enrollment token cleanup scheduled at "${TOKEN_CLEANUP_CRON}" (${TIMEZONE}).`);
 
   // Catch up on anything missed while the server was down, without blocking boot.
   setTimeout(() => {
-    expireStaleTokens();
+    void expireStaleTokens();
     void runOverdueEvaluation();
   }, 5_000).unref();
 
@@ -85,7 +78,7 @@ export function startScheduler(): SchedulerHandle {
       console.log('[scheduler] Background jobs stopped.');
     },
     async runAllNow() {
-      expireStaleTokens();
+      await expireStaleTokens();
       await runOverdueEvaluation();
     },
   };

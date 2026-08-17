@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
 
-import { db } from '../db/db.js';
-import { DevicePolicy, Dealer, User, LicenseKey } from '../types/index.js';
+import { repo } from '../db/repositories/index.js';
+import { DevicePolicy, Dealer } from '../types/index.js';
 import { AuditService } from '../services/AuditService.js';
 import { toPublicUser } from '../services/AuthService.js';
 import { DEFAULT_POLICY } from '../services/InstallmentMath.js';
@@ -10,6 +10,7 @@ import {
   requireDealerAdmin, getAuthUser, resolveDealerScope, resolveWritableDealerId, clientIp,
 } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
+import { asyncHandler } from '../middleware/errorHandler.js';
 import { AppError } from '../utils/AppError.js';
 import { pakistaniPhoneSchema, normalizePhone } from '../utils/validators.js';
 
@@ -17,12 +18,12 @@ export const settingsRouter = Router();
 
 settingsRouter.use(requireDealerAdmin);
 
-function ensurePolicy(dealerId: string): DevicePolicy {
-  const existing = db.findOne<DevicePolicy>('devicePolicies', (p) => p.dealerId === dealerId);
+async function ensurePolicy(dealerId: string): Promise<DevicePolicy> {
+  const existing = await repo.devicePolicies.findByDealer(dealerId);
   if (existing) return existing;
 
   const nowIso = new Date().toISOString();
-  return db.insert<DevicePolicy>('devicePolicies', {
+  return repo.devicePolicies.create({
     ...DEFAULT_POLICY,
     id: `pol-${dealerId}`,
     dealerId,
@@ -33,7 +34,9 @@ function ensurePolicy(dealerId: string): DevicePolicy {
   });
 }
 
-settingsRouter.get('/', (req, res) => {
+settingsRouter.get(
+  '/',
+  asyncHandler(async (req, res) => {
   const user = getAuthUser(req);
   const scope = resolveDealerScope(req);
 
@@ -43,15 +46,18 @@ settingsRouter.get('/', (req, res) => {
     throw AppError.badRequest('Select a specific dealer to view their settings.');
   }
 
-  const dealer = db.findById<Dealer>('dealers', dealerId);
+  const dealer = await repo.dealers.findById(dealerId);
   if (!dealer) throw AppError.notFound('Dealer');
 
-  const policy = ensurePolicy(dealer.id);
-  const license = db.findOne<LicenseKey>('licenseKeys', (l) => l.dealerId === dealer.id);
-  const staffUsers = db.find<User>('users', (u) => u.dealerId === dealer.id).map(toPublicUser);
+  const [policy, license, staff] = await Promise.all([
+    ensurePolicy(dealer.id),
+    repo.licenseKeys.findByDealer(dealer.id),
+    repo.users.findMany({ where: { dealerId: dealer.id }, orderBy: { createdAt: 'desc' } }),
+  ]);
 
-  res.json({ dealer, policy, license: license ?? null, staffUsers });
-});
+  res.json({ dealer, policy, license: license ?? null, staffUsers: staff.map(toPublicUser) });
+  })
+);
 
 // ---------------------------------------------------------------------------
 // POLICY
@@ -89,12 +95,12 @@ settingsRouter.put('/policy', (req, res, next) => {
     req.body = { ...(body.policyData as object), dealerId: body.dealerId };
   }
   next();
-}, validateBody(policySchema), (req, res) => {
+}, validateBody(policySchema), asyncHandler(async (req, res) => {
   const user = getAuthUser(req);
   const { dealerId: bodyDealerId, ...changes } = req.body as z.infer<typeof policySchema>;
-  const dealerId = resolveWritableDealerId(req, bodyDealerId);
+  const dealerId = await resolveWritableDealerId(req, bodyDealerId);
 
-  const existing = ensurePolicy(dealerId);
+  const existing = await ensurePolicy(dealerId);
 
   const updates = Object.fromEntries(
     Object.entries(changes).filter(([, v]) => v !== undefined)
@@ -104,7 +110,7 @@ settingsRouter.put('/policy', (req, res, next) => {
     throw AppError.badRequest('No changes were supplied.');
   }
 
-  const updated = db.update<DevicePolicy>('devicePolicies', existing.id, {
+  const updated = await repo.devicePolicies.update(existing.id, {
     ...updates,
     updatedAt: new Date().toISOString(),
   });
@@ -115,7 +121,7 @@ settingsRouter.put('/policy', (req, res, next) => {
   const autoLockChanged =
     updates.autoLockEnabled !== undefined && updates.autoLockEnabled !== existing.autoLockEnabled;
 
-  AuditService.log({
+  await AuditService.log({
     dealerId,
     userId: user.userId,
     actorName: user.name,
@@ -130,7 +136,7 @@ settingsRouter.put('/policy', (req, res, next) => {
   });
 
   res.json({ success: true, policy: updated });
-});
+}));
 
 // ---------------------------------------------------------------------------
 // DEALER PROFILE
@@ -151,12 +157,12 @@ settingsRouter.put('/profile', (req, res, next) => {
     req.body = { ...(body.profileData as object), dealerId: body.dealerId };
   }
   next();
-}, validateBody(profileSchema), (req, res) => {
+}, validateBody(profileSchema), asyncHandler(async (req, res) => {
   const user = getAuthUser(req);
   const { dealerId: bodyDealerId, ...changes } = req.body as z.infer<typeof profileSchema>;
-  const dealerId = resolveWritableDealerId(req, bodyDealerId);
+  const dealerId = await resolveWritableDealerId(req, bodyDealerId);
 
-  const dealer = db.findById<Dealer>('dealers', dealerId);
+  const dealer = await repo.dealers.findById(dealerId);
   if (!dealer) throw AppError.notFound('Dealer');
 
   const updates = Object.fromEntries(
@@ -168,10 +174,10 @@ settingsRouter.put('/profile', (req, res, next) => {
     throw AppError.badRequest('No changes were supplied.');
   }
 
-  const updated = db.update<Dealer>('dealers', dealer.id, updates);
+  const updated = await repo.dealers.update(dealer.id, updates);
   if (!updated) throw AppError.notFound('Dealer');
 
-  AuditService.log({
+  await AuditService.log({
     dealerId,
     userId: user.userId,
     actorName: user.name,
@@ -184,4 +190,4 @@ settingsRouter.put('/profile', (req, res, next) => {
   });
 
   res.json({ success: true, dealer: updated });
-});
+}));

@@ -209,11 +209,23 @@ describe('paginate', () => {
     expect(page.total).toBeLessThan(12);
   });
 
-  it('returns an empty page past the end without failing', async () => {
-    const page = await customers.paginate({ page: 99, limit: 5 });
+  it('clamps a page past the end to the last one with rows', async () => {
+    // The dashboard has always behaved this way: asking for page 99 of a
+    // 3-page result shows the last page rather than an empty screen. Plain
+    // SQL OFFSET would return nothing, so `paginate` corrects for it.
+    const page = await customers.paginate({ page: 99, limit: 5, orderBy: { name: 'asc' } });
 
-    expect(page.data).toHaveLength(0);
     expect(page.total).toBe(12);
+    expect(page.page).toBe(3);
+    expect(page.data).toHaveLength(2);
+  });
+
+  it('reports an empty result as page 1', async () => {
+    const page = await customers.paginate({ where: { name: 'no such customer' }, page: 4, limit: 5 });
+
+    expect(page.total).toBe(0);
+    expect(page.page).toBe(1);
+    expect(page.data).toHaveLength(0);
   });
 });
 

@@ -1,4 +1,5 @@
-import { db } from '../db/db.js';
+import { repo } from '../db/repositories/index.js';
+import { runInTransaction, Tx } from '../db/prisma.js';
 import { Device, DeviceStatus, DeviceActionLog, UserRole } from '../types/index.js';
 import { v4 as uuidv4 } from 'uuid';
 import { AuditService } from './AuditService.js';
@@ -83,12 +84,12 @@ export class MockDeviceManagementService implements IDeviceManagementService {
   // -------------------------------------------------------------------------
 
   async registerDevice(deviceData: Omit<Device, 'id' | 'createdAt' | 'updatedAt'>): Promise<Device> {
-    if (db.findOne<Device>('devices', (d) => d.imei === deviceData.imei)) {
+    if (await repo.devices.findByImei(deviceData.imei)) {
       throw AppError.conflict(`A device with IMEI ${maskImei(deviceData.imei)} is already registered.`);
     }
 
     const nowIso = new Date().toISOString();
-    return db.insert<Device>('devices', {
+    return repo.devices.create({
       ...deviceData,
       id: `dev-${uuidv4().substring(0, 8)}`,
       status: 'PENDING',
@@ -106,7 +107,7 @@ export class MockDeviceManagementService implements IDeviceManagementService {
    * The handshake now moves through ENROLLED as the state machine intends.
    */
   async enrollDevice(deviceId: string, token: string, ipAddress?: string): Promise<{ success: boolean; device: Device }> {
-    const device = db.findById<Device>('devices', deviceId);
+    const device = await repo.devices.findById(deviceId);
     if (!device) throw AppError.notFound('Device');
 
     if (device.status === 'ACTIVE') {
@@ -115,35 +116,44 @@ export class MockDeviceManagementService implements IDeviceManagementService {
 
     const nowIso = new Date().toISOString();
 
-    // Step 1: PENDING -> ENROLLED (provisioning handshake accepted)
-    if (device.status === 'PENDING') {
-      this.validateTransition(device.status, 'ENROLLED');
-      db.update<Device>('devices', deviceId, { status: 'ENROLLED', updatedAt: nowIso });
-    }
+    // Both steps and the log entry commit together: a device left stranded in
+    // ENROLLED, with nothing recording why, is not a state worth persisting.
+    const updated = await runInTransaction(async (tx) => {
+      // Step 1: PENDING -> ENROLLED (provisioning handshake accepted)
+      if (device.status === 'PENDING') {
+        this.validateTransition(device.status, 'ENROLLED');
+        await repo.devices.update(deviceId, { status: 'ENROLLED', updatedAt: nowIso }, tx);
+      }
 
-    // Step 2: ENROLLED -> ACTIVE (device checked in and is under management)
-    const midway = db.findById<Device>('devices', deviceId)!;
-    this.validateTransition(midway.status, 'ACTIVE');
+      // Step 2: ENROLLED -> ACTIVE (device checked in and is under management)
+      const midway = await repo.devices.findById(deviceId, tx);
+      if (!midway) throw AppError.notFound('Device');
+      this.validateTransition(midway.status, 'ACTIVE');
 
-    const updated = db.update<Device>('devices', deviceId, {
-      status: 'ACTIVE',
-      isOnline: true,
-      lastSeen: nowIso,
-      updatedAt: nowIso,
-    });
-    if (!updated) throw new AppError('Failed to enroll device.', 500);
+      const active = await repo.devices.update(
+        deviceId,
+        { status: 'ACTIVE', isOnline: true, lastSeen: nowIso, updatedAt: nowIso },
+        tx
+      );
+      if (!active) throw new AppError('Failed to enroll device.', 500);
 
-    this.recordAction({
-      deviceId,
-      dealerId: device.dealerId,
-      userId: 'system',
-      userName: 'Android Enrollment Client',
-      action: 'ENROLL',
-      oldStatus: device.status,
-      newStatus: 'ACTIVE',
-      reason: `Device provisioned via enrollment token ${token}.`,
-      deviceAck: true,
-      ipAddress,
+      await this.recordAction(
+        {
+          deviceId,
+          dealerId: device.dealerId,
+          userId: 'system',
+          userName: 'Android Enrollment Client',
+          action: 'ENROLL',
+          oldStatus: device.status,
+          newStatus: 'ACTIVE',
+          reason: `Device provisioned via enrollment token ${token}.`,
+          deviceAck: true,
+          ipAddress,
+        },
+        tx
+      );
+
+      return active;
     });
 
     return { success: true, device: updated };
@@ -154,11 +164,11 @@ export class MockDeviceManagementService implements IDeviceManagementService {
   // -------------------------------------------------------------------------
 
   async getDeviceStatus(deviceId: string): Promise<DeviceStatus> {
-    return this.requireDevice(deviceId).status;
+    return (await this.requireDevice(deviceId)).status;
   }
 
   async getDeviceHealth(deviceId: string): Promise<DeviceHealth> {
-    const device = this.requireDevice(deviceId);
+    const device = await this.requireDevice(deviceId);
     return {
       batteryLevel: device.batteryLevel,
       isOnline: device.isOnline,
@@ -171,7 +181,7 @@ export class MockDeviceManagementService implements IDeviceManagementService {
   }
 
   async getDeviceLocation(deviceId: string): Promise<DeviceLocation> {
-    const device = this.requireDevice(deviceId);
+    const device = await this.requireDevice(deviceId);
     return {
       lat: device.locationLat ?? 31.5204,
       lng: device.locationLng ?? 74.3587,
@@ -193,7 +203,7 @@ export class MockDeviceManagementService implements IDeviceManagementService {
    * dealers a lock that had not actually taken effect.
    */
   async lockDevice(params: ActorContext & { deviceId: string; reason: string; lockMessage?: string }): Promise<CommandResult> {
-    const device = this.requireDevice(params.deviceId);
+    const device = await this.requireDevice(params.deviceId);
 
     if (device.status === 'LOCKED') {
       return { success: true, status: 'LOCKED', queued: false, message: 'This device is already in restricted mode.' };
@@ -220,42 +230,58 @@ export class MockDeviceManagementService implements IDeviceManagementService {
       'DEVICE RESTRICTED: Your installment payment is overdue. Please contact your dealer to restore access.';
 
     const nowIso = new Date().toISOString();
-    const updated = db.update<Device>('devices', params.deviceId, {
-      status: targetStatus,
-      lockReason: params.reason,
-      lockMessage,
-      pendingCommand: device.isOnline ? undefined : 'LOCK',
-      pendingCommandAt: device.isOnline ? undefined : nowIso,
-      updatedAt: nowIso,
-    });
-    if (!updated) throw new AppError('Failed to update device status.', 500);
 
-    this.recordAction({
-      deviceId: params.deviceId,
-      dealerId: device.dealerId,
-      userId: params.userId,
-      userName: params.userName,
-      action: 'LOCK',
-      oldStatus: device.status,
-      newStatus: targetStatus,
-      reason: params.reason,
-      commandPayload: JSON.stringify({ mode: 'REMOTE_LOCK', emergencyCallAllowed: true, message: lockMessage }),
-      deviceAck: device.isOnline,
-      ipAddress: params.ipAddress,
-    });
+    // The status change, the device action log and the audit entry are one
+    // unit: an audit trail claiming a lock that was never written would be
+    // worse than no trail at all.
+    await runInTransaction(async (tx) => {
+      const updated = await repo.devices.update(
+        params.deviceId,
+        {
+          status: targetStatus,
+          lockReason: params.reason,
+          lockMessage,
+          pendingCommand: device.isOnline ? undefined : 'LOCK',
+          pendingCommandAt: device.isOnline ? undefined : nowIso,
+          updatedAt: nowIso,
+        },
+        tx
+      );
+      if (!updated) throw new AppError('Failed to update device status.', 500);
 
-    AuditService.log({
-      dealerId: device.dealerId,
-      userId: params.userId,
-      actorName: params.userName,
-      actorRole: params.userRole ?? 'DEALER_ADMIN',
-      action: 'DEVICE_LOCKED',
-      targetType: 'DEVICE',
-      targetId: params.deviceId,
-      details:
-        `Restricted lock ${device.isOnline ? 'applied to' : 'queued for'} ${device.brand} ${device.model} ` +
-        `(IMEI ${maskImei(device.imei)}). Reason: ${params.reason}`,
-      ipAddress: params.ipAddress,
+      await this.recordAction(
+        {
+          deviceId: params.deviceId,
+          dealerId: device.dealerId,
+          userId: params.userId,
+          userName: params.userName,
+          action: 'LOCK',
+          oldStatus: device.status,
+          newStatus: targetStatus,
+          reason: params.reason,
+          commandPayload: JSON.stringify({ mode: 'REMOTE_LOCK', emergencyCallAllowed: true, message: lockMessage }),
+          deviceAck: device.isOnline,
+          ipAddress: params.ipAddress,
+        },
+        tx
+      );
+
+      await AuditService.log(
+        {
+          dealerId: device.dealerId,
+          userId: params.userId,
+          actorName: params.userName,
+          actorRole: params.userRole ?? 'DEALER_ADMIN',
+          action: 'DEVICE_LOCKED',
+          targetType: 'DEVICE',
+          targetId: params.deviceId,
+          details:
+            `Restricted lock ${device.isOnline ? 'applied to' : 'queued for'} ${device.brand} ${device.model} ` +
+            `(IMEI ${maskImei(device.imei)}). Reason: ${params.reason}`,
+          ipAddress: params.ipAddress,
+        },
+        tx
+      );
     });
 
     return {
@@ -269,7 +295,7 @@ export class MockDeviceManagementService implements IDeviceManagementService {
   }
 
   async unlockDevice(params: ActorContext & { deviceId: string; reason: string }): Promise<CommandResult> {
-    const device = this.requireDevice(params.deviceId);
+    const device = await this.requireDevice(params.deviceId);
 
     if (device.status === 'ACTIVE') {
       return { success: true, status: 'ACTIVE', queued: false, message: 'This device is already active.' };
@@ -287,40 +313,53 @@ export class MockDeviceManagementService implements IDeviceManagementService {
     this.validateTransition(device.status, targetStatus);
 
     const nowIso = new Date().toISOString();
-    const updated = db.update<Device>('devices', params.deviceId, {
-      status: targetStatus,
-      lockReason: device.isOnline ? undefined : device.lockReason,
-      lockMessage: device.isOnline ? undefined : device.lockMessage,
-      pendingCommand: device.isOnline ? undefined : 'UNLOCK',
-      pendingCommandAt: device.isOnline ? undefined : nowIso,
-      updatedAt: nowIso,
-    });
-    if (!updated) throw new AppError('Failed to unlock device.', 500);
 
-    this.recordAction({
-      deviceId: params.deviceId,
-      dealerId: device.dealerId,
-      userId: params.userId,
-      userName: params.userName,
-      action: 'UNLOCK',
-      oldStatus: device.status,
-      newStatus: targetStatus,
-      reason: params.reason,
-      commandPayload: JSON.stringify({ mode: 'RESTORE_ACTIVE' }),
-      deviceAck: device.isOnline,
-      ipAddress: params.ipAddress,
-    });
+    await runInTransaction(async (tx) => {
+      const updated = await repo.devices.update(
+        params.deviceId,
+        {
+          status: targetStatus,
+          lockReason: device.isOnline ? undefined : device.lockReason,
+          lockMessage: device.isOnline ? undefined : device.lockMessage,
+          pendingCommand: device.isOnline ? undefined : 'UNLOCK',
+          pendingCommandAt: device.isOnline ? undefined : nowIso,
+          updatedAt: nowIso,
+        },
+        tx
+      );
+      if (!updated) throw new AppError('Failed to unlock device.', 500);
 
-    AuditService.log({
-      dealerId: device.dealerId,
-      userId: params.userId,
-      actorName: params.userName,
-      actorRole: params.userRole ?? 'DEALER_ADMIN',
-      action: 'DEVICE_UNLOCKED',
-      targetType: 'DEVICE',
-      targetId: params.deviceId,
-      details: `Access ${device.isOnline ? 'restored for' : 'restore queued for'} ${device.brand} ${device.model}. Reason: ${params.reason}`,
-      ipAddress: params.ipAddress,
+      await this.recordAction(
+        {
+          deviceId: params.deviceId,
+          dealerId: device.dealerId,
+          userId: params.userId,
+          userName: params.userName,
+          action: 'UNLOCK',
+          oldStatus: device.status,
+          newStatus: targetStatus,
+          reason: params.reason,
+          commandPayload: JSON.stringify({ mode: 'RESTORE_ACTIVE' }),
+          deviceAck: device.isOnline,
+          ipAddress: params.ipAddress,
+        },
+        tx
+      );
+
+      await AuditService.log(
+        {
+          dealerId: device.dealerId,
+          userId: params.userId,
+          actorName: params.userName,
+          actorRole: params.userRole ?? 'DEALER_ADMIN',
+          action: 'DEVICE_UNLOCKED',
+          targetType: 'DEVICE',
+          targetId: params.deviceId,
+          details: `Access ${device.isOnline ? 'restored for' : 'restore queued for'} ${device.brand} ${device.model}. Reason: ${params.reason}`,
+          ipAddress: params.ipAddress,
+        },
+        tx
+      );
     });
 
     return {
@@ -338,11 +377,11 @@ export class MockDeviceManagementService implements IDeviceManagementService {
    * heartbeat). Applies whatever command was waiting for it.
    */
   async acknowledgeCommand(deviceId: string): Promise<{ applied: boolean; status: DeviceStatus; message: string }> {
-    const device = this.requireDevice(deviceId);
+    const device = await this.requireDevice(deviceId);
     const nowIso = new Date().toISOString();
 
     if (!device.pendingCommand) {
-      db.update<Device>('devices', deviceId, { lastSeen: nowIso, updatedAt: nowIso });
+      await repo.devices.update(deviceId, { lastSeen: nowIso, updatedAt: nowIso });
       return { applied: false, status: device.status, message: 'No pending commands for this device.' };
     }
 
@@ -350,26 +389,35 @@ export class MockDeviceManagementService implements IDeviceManagementService {
     const finalStatus: DeviceStatus = isLock ? 'LOCKED' : 'ACTIVE';
     this.validateTransition(device.status, finalStatus);
 
-    db.update<Device>('devices', deviceId, {
-      status: finalStatus,
-      lockReason: isLock ? device.lockReason : undefined,
-      lockMessage: isLock ? device.lockMessage : undefined,
-      pendingCommand: undefined,
-      pendingCommandAt: undefined,
-      lastSeen: nowIso,
-      updatedAt: nowIso,
-    });
+    await runInTransaction(async (tx) => {
+      await repo.devices.update(
+        deviceId,
+        {
+          status: finalStatus,
+          lockReason: isLock ? device.lockReason : undefined,
+          lockMessage: isLock ? device.lockMessage : undefined,
+          pendingCommand: undefined,
+          pendingCommandAt: undefined,
+          lastSeen: nowIso,
+          updatedAt: nowIso,
+        },
+        tx
+      );
 
-    this.recordAction({
-      deviceId,
-      dealerId: device.dealerId,
-      userId: 'system',
-      userName: 'Device DPC Client',
-      action: isLock ? 'LOCK' : 'UNLOCK',
-      oldStatus: device.status,
-      newStatus: finalStatus,
-      reason: `Device reconnected and applied the queued ${device.pendingCommand} command.`,
-      deviceAck: true,
+      await this.recordAction(
+        {
+          deviceId,
+          dealerId: device.dealerId,
+          userId: 'system',
+          userName: 'Device DPC Client',
+          action: isLock ? 'LOCK' : 'UNLOCK',
+          oldStatus: device.status,
+          newStatus: finalStatus,
+          reason: `Device reconnected and applied the queued ${device.pendingCommand} command.`,
+          deviceAck: true,
+        },
+        tx
+      );
     });
 
     return {
@@ -384,9 +432,9 @@ export class MockDeviceManagementService implements IDeviceManagementService {
   async sendNotification(
     params: ActorContext & { deviceId: string; title: string; message: string }
   ): Promise<{ success: boolean; queued: boolean; message: string }> {
-    const device = this.requireDevice(params.deviceId);
+    const device = await this.requireDevice(params.deviceId);
 
-    this.recordAction({
+    await this.recordAction({
       deviceId: params.deviceId,
       dealerId: device.dealerId,
       userId: params.userId,
@@ -408,13 +456,13 @@ export class MockDeviceManagementService implements IDeviceManagementService {
   }
 
   async rebootDevice(params: ActorContext & { deviceId: string }): Promise<{ success: boolean; queued: boolean; message: string }> {
-    const device = this.requireDevice(params.deviceId);
+    const device = await this.requireDevice(params.deviceId);
 
     if (!device.isOnline) {
       throw AppError.badRequest('This device is offline and cannot be rebooted right now.');
     }
 
-    this.recordAction({
+    await this.recordAction({
       deviceId: params.deviceId,
       dealerId: device.dealerId,
       userId: params.userId,
@@ -432,8 +480,8 @@ export class MockDeviceManagementService implements IDeviceManagementService {
   // Internals
   // -------------------------------------------------------------------------
 
-  private requireDevice(deviceId: string): Device {
-    const device = db.findById<Device>('devices', deviceId);
+  private async requireDevice(deviceId: string, tx?: Tx): Promise<Device> {
+    const device = await repo.devices.findById(deviceId, tx);
     if (!device) throw AppError.notFound('Device');
     return device;
   }
@@ -448,14 +496,20 @@ export class MockDeviceManagementService implements IDeviceManagementService {
   }
 
   /** Public so routes can record non-command events (edits, corrections). */
-  public recordAction(log: Omit<DeviceActionLog, 'id' | 'createdAt' | 'deviceAck' | 'ipAddress'> & { deviceAck?: boolean; ipAddress?: string }): void {
-    db.insert<DeviceActionLog>('deviceActionLogs', {
-      ...log,
-      deviceAck: log.deviceAck ?? false,
-      ipAddress: log.ipAddress || 'system',
-      id: `dlog-${uuidv4().substring(0, 8)}`,
-      createdAt: new Date().toISOString(),
-    });
+  public async recordAction(
+    log: Omit<DeviceActionLog, 'id' | 'createdAt' | 'deviceAck' | 'ipAddress'> & { deviceAck?: boolean; ipAddress?: string },
+    tx?: Tx
+  ): Promise<void> {
+    await repo.deviceActionLogs.create(
+      {
+        ...log,
+        deviceAck: log.deviceAck ?? false,
+        ipAddress: log.ipAddress || 'system',
+        id: `dlog-${uuidv4().substring(0, 8)}`,
+        createdAt: new Date().toISOString(),
+      },
+      tx
+    );
   }
 }
 

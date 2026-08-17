@@ -1,11 +1,16 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import jwt from 'jsonwebtoken';
 
-import { anonymous, as, reseed, db, ACCOUNTS, SEED_PASSWORD } from '../helpers.js';
-import { User } from '../../src/types/index.js';
+import { disconnectDatabase } from '../../src/db/prisma.js';
 
-beforeEach(() => {
-  reseed();
+import { anonymous, as, reseed, repo, tokenFor, ACCOUNTS, SEED_PASSWORD } from '../helpers.js';
+
+beforeEach(async () => {
+  await reseed();
+}, 60_000);
+
+afterAll(async () => {
+  await disconnectDatabase();
 });
 
 describe('POST /api/auth/login', () => {
@@ -57,7 +62,7 @@ describe('POST /api/auth/login', () => {
   });
 
   it('refuses a deactivated account', async () => {
-    db.update<User>('users', ACCOUNTS.dealerStaff, { active: false });
+    await repo.users.update(ACCOUNTS.dealerStaff, { active: false });
 
     const res = await anonymous()
       .post('/api/auth/login')
@@ -88,13 +93,13 @@ describe('POST /api/auth/login', () => {
         .post('/api/auth/login')
         .send({ email: 'usman@almadinamobiles.pk', password: 'WrongPassword#1' });
     }
-    expect(db.findById<User>('users', ACCOUNTS.dealerStaff)!.failedLoginAttempts).toBe(3);
+    expect((await repo.users.findById(ACCOUNTS.dealerStaff))!.failedLoginAttempts).toBe(3);
 
     await anonymous()
       .post('/api/auth/login')
       .send({ email: 'usman@almadinamobiles.pk', password: SEED_PASSWORD });
 
-    expect(db.findById<User>('users', ACCOUNTS.dealerStaff)!.failedLoginAttempts).toBe(0);
+    expect((await repo.users.findById(ACCOUNTS.dealerStaff))!.failedLoginAttempts).toBe(0);
   });
 });
 
@@ -141,18 +146,20 @@ describe('token handling', () => {
     const before = await as(ACCOUNTS.dealerStaff).get('/api/devices');
     expect(before.status).toBe(200);
 
-    const req = as(ACCOUNTS.dealerStaff).get('/api/devices');
-    db.update<User>('users', ACCOUNTS.dealerStaff, { active: false });
-    const after = await req;
+    await repo.users.update(ACCOUNTS.dealerStaff, { active: false });
+    const after = await as(ACCOUNTS.dealerStaff).get('/api/devices');
 
     expect(after.status).toBe(403);
   });
 
   it('stops honouring a token whose account has been deleted', async () => {
-    const req = as(ACCOUNTS.dealerStaff).get('/api/devices');
-    db.delete('users', ACCOUNTS.dealerStaff);
+    // The token is minted before the account goes away, so it is well-formed
+    // and correctly signed — only the account behind it is gone.
+    const token = tokenFor(ACCOUNTS.dealerStaff);
+    await repo.users.delete(ACCOUNTS.dealerStaff);
 
-    expect((await req).status).toBe(401);
+    const res = await anonymous().get('/api/devices').set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(401);
   });
 
   it('does not trust a role claim baked into the token', async () => {

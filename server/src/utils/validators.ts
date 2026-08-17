@@ -82,6 +82,32 @@ export const paginationSchema = z.object({
 export type Pagination = z.infer<typeof paginationSchema>;
 
 /** Applies page/limit to an already-filtered array and returns a standard envelope. */
+/**
+ * Wraps a repository page in the response envelope the dashboard expects.
+ *
+ * The counterpart to `paginate` below, for data the database already sliced.
+ * `data` is passed separately because routes enrich rows (joining a customer
+ * name, masking PII) before serialising them.
+ */
+export function pageEnvelope<T>(
+  data: T[],
+  page: { total: number; page: number },
+  limit: number
+) {
+  const totalPages = Math.max(1, Math.ceil(page.total / limit));
+  return {
+    data,
+    pagination: {
+      page: page.page,
+      limit,
+      total: page.total,
+      totalPages,
+      hasNextPage: page.page < totalPages,
+      hasPreviousPage: page.page > 1,
+    },
+  };
+}
+
 export function paginate<T>(items: T[], { page, limit }: Pagination) {
   const total = items.length;
   const totalPages = Math.max(1, Math.ceil(total / limit));
