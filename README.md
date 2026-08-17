@@ -1,5 +1,7 @@
 # EMI Shield — Mobile EMI Device Management & Installment Platform
 
+[![CI](https://github.com/imaanakhlaq44-debug/instalmentsoftwer/actions/workflows/ci.yml/badge.svg)](https://github.com/imaanakhlaq44-debug/instalmentsoftwer/actions/workflows/ci.yml)
+
 A full-stack platform for Pakistani mobile retailers who sell phones on installments: register financed devices, run repayment schedules, track collections, and apply policy-driven device restrictions when payments fall overdue.
 
 ---
@@ -16,7 +18,7 @@ This codebase is **not yet a production system**, and the README should not pret
 | Device locking | ⚠️ **Mock only.** `MockDeviceManagementService` changes a status field in the database. **No real phone is locked.** |
 | SMS / WhatsApp delivery | ❌ Not connected. Messages are queued in the database and marked `QUEUED`, never `SENT` |
 | Payment gateways (JazzCash / Easypaisa / Raast) | ❌ Not integrated. All payments are recorded manually at the counter |
-| Automated tests | ⚠️ **Backend only.** 183 Vitest/Supertest tests run against a real PostgreSQL instance. The React client has none. See [Testing](#-testing) |
+| Automated tests | ⚠️ **Backend only.** 183 Vitest/Supertest tests run against a real PostgreSQL instance, on every push via GitHub Actions. The React client has none. See [Testing](#-testing) |
 
 The one thing standing between this and a real product is **an actual Android DPC application**. Until it exists, "locking" is a status column.
 
@@ -179,6 +181,11 @@ Each run starts its own throwaway PostgreSQL cluster on port 5434 in the OS temp
 directory (`server/tests/globalSetup.ts`) and applies the migrations to it, so it
 never touches your development database. Nothing needs to be running first.
 
+The same command runs in CI on every push and pull request
+(`.github/workflows/ci.yml`) — a real PostgreSQL there too, not a stub. The
+workflow generates the Prisma client first, since `server/src/generated/` is not
+committed, then typechecks, tests and builds both halves of the app.
+
 | File | Covers |
 |---|---|
 | `tests/unit/installment-math.test.ts` | Schedule totals, end-of-month date arithmetic, late-fee accrual, caps, waivers |
@@ -252,6 +259,6 @@ Two operations deliberately run *after* their transaction commits, because they 
 1. **Android DPC application** — until this exists, "locking" is a database field.
 2. **SMS gateway** (Twilio / Jazz / Telenor) so reminders actually reach customers.
 3. **Payment gateway** integration for JazzCash, Easypaisa and Raast.
-4. **Client tests and CI** — the backend suite exists; the React app has none and nothing runs on push.
+4. **Client tests** — the backend suite runs in CI on every push; the React app has no tests at all.
 5. **Contract PDF with digital signature** — device restriction needs recorded customer consent.
 6. Urdu localisation and RTL, PWA offline mode.

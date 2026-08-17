@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Lets a run be triggered by hand from the Actions tab.
+  workflow_dispatch:
+
+# A new push to a branch cancels the run still in flight for it. The last
+# commit is the one worth knowing about.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server:
+    name: Server — typecheck, tests, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      # config.ts refuses to boot without these. The tests override DATABASE_URL
+      # with their own throwaway instance; this value only has to exist so that
+      # `prisma generate` and the config module load.
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/placeholder
+      JWT_SECRET: ci-only-secret-0123456789abcdef0123456789abcdef
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install
+        working-directory: server
+        run: npm ci
+
+      # The Prisma client is generated into src/generated/, which is not
+      # committed — nothing typechecks or runs until this step has run.
+      - name: Generate Prisma client
+        working-directory: server
+        run: npm run db:generate
+
+      - name: Typecheck
+        working-directory: server
+        run: npm run typecheck
+
+      # Each run starts its own PostgreSQL from the embedded-postgres binaries,
+      # exactly as it does on a developer's machine — no service container, and
+      # no second code path to keep working.
+      - name: Test
+        working-directory: server
+        run: npm test
+
+      - name: Build
+        working-directory: server
+        run: npm run build
+
+  client:
+    name: Client — typecheck and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install
+        working-directory: client
+        run: npm ci
+
+      # `vite build` runs `tsc -b` first, so this covers typechecking too.
+      - name: Build
+        working-directory: client
+        run: npm run build
