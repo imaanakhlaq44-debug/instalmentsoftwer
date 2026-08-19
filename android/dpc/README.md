@@ -76,7 +76,7 @@ The QR carries the address. `gradle.properties` only supplies the fallback that
 the typed enrolment form starts with:
 
 ```properties
-emishield.defaultServerUrl=http://10.0.2.2:5000/api/dpc
+almassdm.defaultServerUrl=http://10.0.2.2:5000/api/dpc
 ```
 
 `10.0.2.2` is the host machine as the emulator sees it. Debug builds permit

@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "pk.emishield.dpc"
+    namespace = "pk.almassdm.dpc"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "pk.emishield.dpc"
+        applicationId = "pk.almassdm.dpc"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
@@ -17,7 +17,7 @@ android {
         buildConfigField(
             "String",
             "DEFAULT_SERVER_URL",
-            "\"${project.findProperty("emishield.defaultServerUrl") ?: "http://10.0.2.2:5000/api/dpc"}\""
+            "\"${project.findProperty("almassdm.defaultServerUrl") ?: "http://10.0.2.2:5000/api/dpc"}\""
         )
     }
 

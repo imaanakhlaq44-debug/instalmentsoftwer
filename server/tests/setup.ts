@@ -7,7 +7,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'emishield-test-'));
+const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'almassdm-test-'));
 
 process.env.NODE_ENV = 'test';
 
@@ -20,7 +20,7 @@ process.env.JWT_SECRET = 'test-only-secret-0123456789abcdef0123456789abcdef';
 // The tests seed explicitly; booting the app must not do it for them.
 process.env.AUTO_SEED = 'false';
 
-process.env.SEED_DEFAULT_PASSWORD = 'Emishield#2026';
+process.env.SEED_DEFAULT_PASSWORD = 'AlmasSdm#2026';
 
 // Rate limits exist to be tested deliberately, not to trip a hundred fixtures.
 process.env.RATE_LIMIT_MAX = '100000';
@@ -33,7 +33,7 @@ process.env.BCRYPT_ROUNDS = '4';
 // The throwaway PostgreSQL started by tests/globalSetup.ts. Note the port:
 // 5433 is the developer's own database and must not be touched by a test run.
 const port = process.env.TEST_PG_PORT || '5434';
-process.env.DATABASE_URL = `postgresql://postgres:postgres@127.0.0.1:${port}/emishield_test`;
+process.env.DATABASE_URL = `postgresql://postgres:postgres@127.0.0.1:${port}/almassdm_test`;
 
 // A real server, so a real pool — an interactive transaction holds one
 // connection while other queries use another, exactly as in production.

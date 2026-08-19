@@ -401,7 +401,7 @@ describe('the enrollment QR a factory-reset phone scans', () => {
     // These exact keys are what the Android setup wizard reads. A payload of
     // our own design scans as unrecognised text and provisions nothing.
     expect(payload['android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME'])
-      .toMatch(/^pk\.emishield\.dpc\//);
+      .toMatch(/^pk\.almassdm\.dpc\//);
 
     const extras = payload['android.app.extra.PROVISIONING_ADMIN_EXTRAS_BUNDLE'];
     expect(extras.enrollmentToken).toBe(res.body.token.token);

@@ -8,7 +8,7 @@ import { User } from '../src/types/index.js';
 
 export { app, repo };
 
-export const SEED_PASSWORD = 'Emishield#2026';
+export const SEED_PASSWORD = 'AlmasSdm#2026';
 
 /** Demo accounts, one per role, as created by `generateSeedData`. */
 export const ACCOUNTS = {

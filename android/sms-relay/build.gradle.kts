@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "pk.emishield.relay"
+    namespace = "pk.almassdm.relay"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "pk.emishield.relay"
+        applicationId = "pk.almassdm.relay"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
@@ -17,7 +17,7 @@ android {
         buildConfigField(
             "String",
             "DEFAULT_SERVER_URL",
-            "\"${project.findProperty("emishield.defaultRelayUrl") ?: "http://10.0.2.2:5000/api/sms-relay"}\""
+            "\"${project.findProperty("almassdm.defaultRelayUrl") ?: "http://10.0.2.2:5000/api/sms-relay"}\""
         )
     }
 

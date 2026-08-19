@@ -137,7 +137,7 @@ Dashboard at **http://localhost:5173**, API at **http://localhost:5000/api**.
 
 ### Demo accounts
 
-All seeded accounts share the password from `SEED_DEFAULT_PASSWORD` in `server/.env` (default `Emishield#2026`).
+All seeded accounts share the password from `SEED_DEFAULT_PASSWORD` in `server/.env`. The example file ships `ChangeMe#2026`, which is also what the server falls back to when the variable is unset.
 
 | Email | Role |
 |---|---|

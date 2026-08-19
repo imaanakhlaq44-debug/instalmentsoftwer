@@ -148,7 +148,7 @@ export const config = {
     serverUrl: (process.env.DPC_SERVER_URL || '').trim(),
     adminComponent:
       (process.env.DPC_ADMIN_COMPONENT || '').trim() ||
-      'pk.emishield.dpc/pk.emishield.dpc.admin.EmiDeviceAdminReceiver',
+      'pk.almassdm.dpc/pk.almassdm.dpc.admin.AlmasDeviceAdminReceiver',
     apkUrl: (process.env.DPC_APK_URL || '').trim(),
     apkSignatureChecksum: (process.env.DPC_APK_SIGNATURE_CHECKSUM || '').trim(),
     /** Leaving system apps enabled keeps the phone a usable phone, not a kiosk terminal. */

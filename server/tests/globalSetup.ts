@@ -28,7 +28,7 @@ export const TEST_PG_PORT = Number(process.env.TEST_PG_PORT || 5434);
 
 const USER = 'postgres';
 const PASSWORD = 'postgres';
-const DATABASE = 'emishield_test';
+const DATABASE = 'almassdm_test';
 
 /** The URL the test processes connect with; `tests/setup.ts` builds the same one. */
 export const TEST_DATABASE_URL =
@@ -59,7 +59,7 @@ async function applyMigrations(client: { query(sql: string): Promise<unknown> })
 export async function setup(): Promise<void> {
   // Keep the data directory off OneDrive: a synced folder holding a running
   // Postgres data directory is a reliable way to corrupt it.
-  dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'emishield-pg-'));
+  dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'almassdm-pg-'));
 
   postgres = new EmbeddedPostgres({
     databaseDir: dataDir,

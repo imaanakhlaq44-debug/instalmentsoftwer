@@ -46,7 +46,7 @@ const Probe = () => {
           .filter(Boolean)
           .join(',')}
       </span>
-      <button onClick={() => auth.login('tariq@almadinamobiles.pk', 'Emishield#2026').catch(() => undefined)}>
+      <button onClick={() => auth.login('tariq@almadinamobiles.pk', 'AlmasSdm#2026').catch(() => undefined)}>
         Sign in
       </button>
       <button onClick={() => auth.logout()}>Sign out</button>
