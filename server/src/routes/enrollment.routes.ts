@@ -106,10 +106,18 @@ enrollmentRouter.post(
       ipAddress: clientIp(req),
     });
 
+    const qr = await EnrollmentService.buildQrPayload(token);
+
     res.status(201).json({
       success: true,
       token,
-      qrPayloadString: await EnrollmentService.buildQrPayload(token),
+      qrPayloadString: qr.payload,
+      qrImageDataUrl: qr.imageDataUrl,
+      // Whether this QR can actually provision a factory-reset handset, and
+      // what is missing if it cannot. Printing a QR that does nothing at setup
+      // is a failure a shop would only discover with a customer in front of it.
+      qrProvisioningReady: qr.provisioningReady,
+      qrWarning: qr.warning,
     });
   })
 );

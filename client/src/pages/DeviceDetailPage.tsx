@@ -26,6 +26,7 @@ import {
   Send,
   RotateCw,
   Pencil,
+  FileText,
 } from 'lucide-react';
 
 export const DeviceDetailPage: React.FC = () => {
@@ -46,6 +47,8 @@ export const DeviceDetailPage: React.FC = () => {
   const [messageContent, setMessageContent] = useState('Please visit the shop or transfer installment via JazzCash.');
   const [actionProcessing, setActionProcessing] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  /** The signed consent this device's lock rests on, if it has one. */
+  const [contract, setContract] = useState<any>(null);
 
   const loadDeviceDetail = async () => {
     if (!id) return;
@@ -53,6 +56,15 @@ export const DeviceDetailPage: React.FC = () => {
       setLoading(true);
       const data = await ApiService.getDevice(id);
       setDevice(data);
+
+      // A device registered before contracts existed has none, and a customer
+      // with no financing plan never had one. Neither is an error worth a toast.
+      try {
+        const doc = await ApiService.getContractForDevice(id);
+        setContract({ ...doc.contract, hashMatches: doc.hashMatches });
+      } catch {
+        setContract(null);
+      }
     } catch (err: any) {
       showToast(err.message, 'error');
     } finally {
@@ -365,6 +377,45 @@ export const DeviceDetailPage: React.FC = () => {
                   </span>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/*
+            The consent this device's lock rests on.
+
+            Shown next to the plan rather than buried: a handset that can be
+            restricted with nothing signed is the state a shop most needs to
+            notice, and the lock will refuse until it is fixed.
+          */}
+          {contract && (
+            <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-card space-y-3">
+              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                <FileText className="w-4 h-4 text-blue-600" /> Financing Agreement
+              </h2>
+
+              {contract.status === 'SIGNED' && contract.hashMatches ? (
+                <p className="text-xs text-emerald-700 font-bold">
+                  Signed by {contract.signerName}
+                  {contract.signedAt ? ` on ${new Date(contract.signedAt).toLocaleDateString()}` : ''}
+                </p>
+              ) : contract.status === 'SIGNED' ? (
+                <p className="text-xs text-rose-700 font-bold">
+                  Signed, but the plan has changed since. It must be re-signed before this device can be restricted.
+                </p>
+              ) : contract.status === 'VOID' ? (
+                <p className="text-xs text-slate-600 font-bold">Voided — this device cannot be restricted.</p>
+              ) : (
+                <p className="text-xs text-amber-700 font-bold">
+                  Not signed. This device cannot be restricted until the customer signs.
+                </p>
+              )}
+
+              <button
+                onClick={() => navigate(`/contracts/${contract.id}`)}
+                className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold"
+              >
+                {contract.status === 'DRAFT' ? 'Read and sign with the customer' : 'View the agreement'}
+              </button>
             </div>
           )}
         </div>

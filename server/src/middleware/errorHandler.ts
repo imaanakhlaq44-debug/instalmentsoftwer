@@ -41,6 +41,22 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
     return;
   }
 
+  /**
+   * A body larger than `config.bodyLimit`.
+   *
+   * express.json throws this before any route sees the request, so without
+   * this branch an oversized upload — a customer's payment screenshot, say —
+   * came back as a 500 with an incident id, as though the server had broken.
+   * It is a rejection, and the caller can act on it.
+   */
+  if (typeof err === 'object' && err !== null && (err as { type?: string }).type === 'entity.too.large') {
+    res.status(413).json({
+      error: 'That upload is too large. Please send a smaller image.',
+      code: 'PAYLOAD_TOO_LARGE',
+    });
+    return;
+  }
+
   if (isAppError(err)) {
     const appErr = err as AppError;
     // 5xx AppErrors still deserve a server-side record.

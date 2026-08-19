@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.EmiShield" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/brand</item>
+        <item name="colorPrimaryDark">@color/brand_dark</item>
+        <item name="android:statusBarColor">@color/brand_dark</item>
+    </style>
+
+    <!-- The lock screen owns the whole display: no bars, no title, no way out. -->
+    <style name="Theme.EmiShield.Lock" parent="Theme.EmiShield">
+        <item name="android:windowBackground">@color/lock_background</item>
+        <item name="android:statusBarColor">@color/lock_background</item>
+        <item name="android:navigationBarColor">@color/lock_background</item>
+        <item name="android:windowShowWallpaper">false</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
+    </style>
+</resources>

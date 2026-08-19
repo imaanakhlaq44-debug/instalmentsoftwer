@@ -29,6 +29,8 @@ export const EnrollmentPage: React.FC = () => {
   const [activeQrType, setActiveQrType] = useState<QRType>('STANDARD');
   const [activeGeneratedToken, setActiveGeneratedToken] = useState<any | null>(null);
   const [generating, setGenerating] = useState(false);
+  /** The rendered provisioning QR, and whether it can actually provision a phone. */
+  const [activeQr, setActiveQr] = useState<{ image?: string; ready: boolean; warning?: string } | null>(null);
 
   const paged = usePagination([selectedDealerId]);
 
@@ -91,6 +93,11 @@ export const EnrollmentPage: React.FC = () => {
         expiresInMinutes: 120,
       });
       setActiveGeneratedToken(res.token);
+      setActiveQr({
+        image: res.qrImageDataUrl,
+        ready: res.qrProvisioningReady !== false,
+        warning: res.qrWarning,
+      });
       showToast(`Generated new ${type} Enrollment QR token!`, 'success');
       loadTokens();
     } catch (err: any) {
@@ -174,8 +181,23 @@ export const EnrollmentPage: React.FC = () => {
           {/* Left: Visual QR Box */}
           <div className="lg:col-span-5 flex flex-col items-center justify-center p-6 bg-slate-950 text-white rounded-3xl shadow-xl space-y-4 text-center">
             <div className="bg-white p-4 rounded-2xl shadow-md">
-              <QrCode className="w-48 h-48 text-slate-900" />
+              {activeQr?.image ? (
+                <img
+                  src={activeQr.image}
+                  alt="Android provisioning QR code"
+                  className="w-48 h-48"
+                />
+              ) : (
+                <QrCode className="w-48 h-48 text-slate-900" />
+              )}
             </div>
+
+            {activeQr && !activeQr.ready && (
+              <div className="text-[11px] text-left bg-amber-500/15 border border-amber-400/40 text-amber-200 rounded-xl p-3">
+                <strong className="block text-amber-100">This QR will not provision a new phone yet.</strong>
+                {activeQr.warning}
+              </div>
+            )}
 
             <div>
               <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">

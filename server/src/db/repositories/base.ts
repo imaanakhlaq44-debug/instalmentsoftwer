@@ -38,7 +38,7 @@ export type ModelName =
   | 'dealer' | 'user' | 'customer' | 'device' | 'enrollmentToken'
   | 'installmentPlan' | 'installment' | 'payment' | 'transaction'
   | 'deviceActionLog' | 'auditLog' | 'licenseKey' | 'devicePolicy'
-  | 'notification' | 'notificationTemplate';
+  | 'notification' | 'notificationTemplate' | 'smsRelay' | 'contract';
 
 /** Resolves the delegate on either the shared client or an open transaction. */
 export function delegate(model: ModelName, tx?: Tx): Delegate {

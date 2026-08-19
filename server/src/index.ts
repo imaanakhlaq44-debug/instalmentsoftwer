@@ -26,6 +26,8 @@ import { settingsRouter } from './routes/settings.routes.js';
 import { simulatorRouter } from './routes/simulator.routes.js';
 import { usersRouter } from './routes/users.routes.js';
 import { dpcRouter } from './routes/dpc.routes.js';
+import { smsRelayRouter } from './routes/smsRelay.routes.js';
+import { contractsRouter } from './routes/contracts.routes.js';
 
 const app = express();
 
@@ -161,6 +163,15 @@ app.use('/api/auth', authLimiter, authRouter);
 app.use('/api/dpc/enroll', dpcEnrollLimiter);
 app.use('/api/dpc', dpcLimiter, dpcRouter);
 
+/**
+ * The SMS relay API — a phone the shop paired to send its messages.
+ *
+ * Outside `requireAuth` for the same reason as the DPC: the handset holds a
+ * credential of its own and must never carry a staff token. It polls, so it
+ * shares the DPC's limiter rather than the dashboard's.
+ */
+app.use('/api/sms-relay', dpcLimiter, smsRelayRouter);
+
 // ---------------------------------------------------------------------------
 // Protected routes — every single one requires a valid JWT
 // ---------------------------------------------------------------------------
@@ -171,6 +182,7 @@ app.use('/api/installments', requireAuth, installmentsRouter);
 app.use('/api/payments', requireAuth, paymentsRouter);
 app.use('/api/transactions', requireAuth, transactionsRouter);
 app.use('/api/enrollment', requireAuth, enrollmentRouter);
+app.use('/api/contracts', requireAuth, contractsRouter);
 app.use('/api/licenses', requireAuth, licensesRouter);
 app.use('/api/notifications', requireAuth, notificationsRouter);
 app.use('/api/audit-logs', requireAuth, auditRouter);

@@ -1,6 +1,8 @@
 import crypto from 'crypto';
+import QRCode from 'qrcode';
 import { v4 as uuidv4 } from 'uuid';
 
+import { config } from '../config.js';
 import { repo } from '../db/repositories/index.js';
 import { runInTransaction, Tx } from '../db/prisma.js';
 import { EnrollmentToken, QRType, Device, UserRole } from '../types/index.js';
@@ -97,17 +99,82 @@ export class EnrollmentService {
     return token;
   }
 
-  /** The provisioning JSON an Android DPC reads out of the QR code. */
-  public static async buildQrPayload(token: EnrollmentToken, tx?: Tx): Promise<string> {
+  /**
+   * The QR a factory-reset handset scans during setup.
+   *
+   * This is Android's own provisioning format, not a shape of our choosing —
+   * the setup wizard reads these exact `android.app.extra.PROVISIONING_*` keys,
+   * downloads the DPC from `PACKAGE_DOWNLOAD_LOCATION`, verifies its signing
+   * certificate against `SIGNATURE_CHECKSUM`, installs it as **device owner**,
+   * and hands `ADMIN_EXTRAS_BUNDLE` to `EmiDeviceAdminReceiver`. The enrollment
+   * code travels in that bundle, which is how the phone knows which device it
+   * is without anybody typing anything.
+   *
+   * Device owner is the whole point. An app the customer merely installed can
+   * be uninstalled the day a payment is missed; a device owner survives until a
+   * factory reset, which provisioning is what blocks.
+   *
+   * `provisioningReady` is false when the APK URL or its checksum has not been
+   * configured. The payload is still returned — a DPC already installed on the
+   * handset can redeem it — but nothing will install the app for a phone that
+   * does not have it, and the dashboard should say so rather than print a QR
+   * that silently does nothing at setup.
+   */
+  public static async buildQrPayload(
+    token: EnrollmentToken,
+    tx?: Tx
+  ): Promise<{ payload: string; imageDataUrl: string; provisioningReady: boolean; warning?: string }> {
     const dealer = await repo.dealers.findById(token.dealerId, tx);
-    return JSON.stringify({
-      version: '2.4.0',
-      type: token.qrType,
-      token: token.token,
-      serverUrl: process.env.DPC_SERVER_URL || 'https://api.emishield.pk/dpc/v1',
-      dealerCode: dealer?.code ?? token.dealerId,
-      expiresAt: token.expiresAt,
-    });
+    const dpc = config.dpc;
+
+    const payload: Record<string, unknown> = {
+      'android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME': dpc.adminComponent,
+      'android.app.extra.PROVISIONING_LEAVE_ALL_SYSTEM_APPS_ENABLED': dpc.leaveSystemAppsEnabled,
+      'android.app.extra.PROVISIONING_SKIP_ENCRYPTION': dpc.skipEncryption,
+      'android.app.extra.PROVISIONING_ADMIN_EXTRAS_BUNDLE': {
+        // Read by EmiDeviceAdminReceiver.onProfileProvisioningComplete.
+        enrollmentToken: token.token,
+        serverUrl: dpc.serverUrl || `http://localhost:${config.port}/api/dpc`,
+        dealerCode: dealer?.code ?? token.dealerId,
+        qrType: token.qrType,
+        expiresAt: token.expiresAt,
+      },
+    };
+
+    if (dpc.apkUrl) {
+      payload['android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION'] = dpc.apkUrl;
+    }
+    if (dpc.apkSignatureChecksum) {
+      payload['android.app.extra.PROVISIONING_DEVICE_ADMIN_SIGNATURE_CHECKSUM'] = dpc.apkSignatureChecksum;
+    }
+
+    const missing: string[] = [];
+    if (!dpc.apkUrl) missing.push('DPC_APK_URL');
+    if (!dpc.apkSignatureChecksum) missing.push('DPC_APK_SIGNATURE_CHECKSUM');
+    if (!dpc.serverUrl) missing.push('DPC_SERVER_URL');
+
+    const payloadString = JSON.stringify(payload);
+
+    return {
+      payload: payloadString,
+      /**
+       * The QR itself, rendered here rather than in the browser.
+       *
+       * A setup wizard scans this off a screen or a printed slip, so it has to
+       * be a real code — the dashboard used to draw a QR-shaped icon, which
+       * looks identical in a screenshot and provisions nothing.
+       */
+      imageDataUrl: await QRCode.toDataURL(payloadString, {
+        errorCorrectionLevel: 'M',
+        margin: 2,
+        width: 512,
+      }),
+      provisioningReady: missing.length === 0,
+      warning: missing.length
+        ? `This QR cannot provision a factory-reset phone until ${missing.join(', ')} are configured on the server. ` +
+          'A handset that already has the DPC installed can still redeem the code.'
+        : undefined,
+    };
   }
 
   /**

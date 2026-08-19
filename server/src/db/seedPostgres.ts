@@ -8,6 +8,7 @@
 import { runInTransaction, Tx, prisma } from './prisma.js';
 import { generateSeedData } from './seed.js';
 import { repo } from './repositories/index.js';
+import { ContractService } from '../services/ContractService.js';
 
 /**
  * Insert order matters: every table below depends only on tables above it.
@@ -35,7 +36,50 @@ export async function seedPostgres(): Promise<void> {
     await repo.auditLogs.createMany(data.auditLogs, tx);
     await repo.notifications.createMany(data.notifications, tx);
     await repo.notificationTemplates.createMany(data.notificationTemplates, tx);
+
+    await seedContracts(data, tx);
   });
+}
+
+/**
+ * A signed financing agreement for every seeded plan.
+ *
+ * Not decoration: a device cannot be locked without one, so a fixture that
+ * omitted them would describe a shop where nothing works. These go through the
+ * real draft-then-sign path rather than being written directly, which keeps the
+ * demo data honest about how a contract comes into being — the signature is an
+ * obvious placeholder, because nobody actually signed for demo customers.
+ */
+async function seedContracts(data: ReturnType<typeof generateSeedData>, tx: Tx): Promise<void> {
+  /** A 1×1 transparent PNG. Demo data should not pretend to hold a real signature. */
+  const PLACEHOLDER_SIGNATURE =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+
+  for (const plan of data.installmentPlans) {
+    const customer = data.customers.find((c) => c.id === plan.customerId);
+    if (!customer) continue;
+
+    const contract = await ContractService.createDraft(
+      {
+        dealerId: plan.dealerId,
+        customerId: plan.customerId,
+        deviceId: plan.deviceId,
+        plan,
+        installments: data.installments.filter((i) => i.planId === plan.id),
+      },
+      tx
+    );
+
+    await ContractService.sign(
+      {
+        contractId: contract.id,
+        signerName: customer.name,
+        signatureImage: PLACEHOLDER_SIGNATURE,
+        actor: { userId: 'system', userName: 'Seed fixture', userRole: 'DEALER_STAFF' },
+      },
+      tx
+    );
+  }
 }
 
 /**
@@ -53,6 +97,7 @@ const ALL_TABLES = [
   'enrollment_tokens',
   'notifications',
   'notification_templates',
+  'contracts',
   'audit_logs',
   'customers',
   'users',

@@ -5,9 +5,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { repo, indexBy } from '../db/repositories/index.js';
 import { Customer, Device } from '../types/index.js';
 import { AuditService } from '../services/AuditService.js';
+import { SmsRelayService } from '../services/SmsRelayService.js';
 import {
   requireDealerStaff, getAuthUser, resolveDealerScope, resolveWritableDealerId,
-  assertDealerAccess, clientIp,
+  assertDealerAccess, clientIp, routeParam,
 } from '../middleware/auth.js';
 import { validateBody, validateQuery, getQuery } from '../middleware/validate.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
@@ -66,17 +67,24 @@ notificationsRouter.get(
       };
     });
 
+    /**
+     * Honesty flag for the UI. Delivery is enabled only when a paired phone has
+     * actually been heard from recently — not when one exists in the database.
+     * A relay left switched off in a drawer must not make the dashboard imply
+     * customers are being texted.
+     */
+    const delivery = await SmsRelayService.deliveryState(scope);
+
     res.json({
       ...pageEnvelope(enriched, page, q.limit),
       counts,
-      /**
-       * Honesty flag for the UI: no SMS gateway is connected, so "QUEUED" means
-       * the message exists in the database and nothing more. The dashboard must
-       * not imply the customer received a text.
-       */
-      deliveryEnabled: false,
-      deliveryNote:
-        'No SMS/WhatsApp gateway is configured. Messages are queued in the system but are not delivered to customers yet.',
+      deliveryEnabled: delivery.enabled,
+      relays: delivery.relays,
+      deliveryNote: delivery.enabled
+        ? 'A paired phone is sending these messages from its own SIM. "SENT" means the SIM accepted the message, not that it was delivered.'
+        : delivery.relays.length > 0
+          ? 'A phone is paired but has not checked in recently. Messages stay queued until it does.'
+          : 'No SMS gateway or paired phone is connected. Messages are queued in the system but are not delivered to customers yet.',
     });
   })
 );
@@ -152,5 +160,71 @@ notificationsRouter.post(
       notification,
       message: 'Message queued. It will be delivered once an SMS gateway is connected.',
     });
+  })
+);
+
+// ---------------------------------------------------------------------------
+// PAIRED PHONES — the shop's own handset, standing in for an SMS gateway.
+// ---------------------------------------------------------------------------
+
+/** The phones currently able to send this dealership's messages. */
+notificationsRouter.get(
+  '/relays',
+  requireDealerStaff,
+  asyncHandler(async (req, res) => {
+    res.json(await SmsRelayService.deliveryState(resolveDealerScope(req)));
+  })
+);
+
+const pairSchema = z.object({
+  dealerId: z.string().trim().max(64).optional(),
+  name: z.string().trim().min(2, 'Give the phone a name.').max(80),
+});
+
+notificationsRouter.post(
+  '/relays',
+  requireDealerStaff,
+  validateBody(pairSchema),
+  asyncHandler(async (req, res) => {
+    const user = getAuthUser(req);
+    const body = req.body as z.infer<typeof pairSchema>;
+    const dealerId = await resolveWritableDealerId(req, body.dealerId);
+
+    const { relay, token } = await SmsRelayService.pair({
+      dealerId,
+      name: body.name,
+      actor: { userId: user.userId, userName: user.name, userRole: user.role },
+      ipAddress: clientIp(req),
+    });
+
+    res.status(201).json({
+      success: true,
+      relay: { id: relay.id, name: relay.name, createdAt: relay.createdAt },
+      /**
+       * The only time this is ever transmitted. From here the phone holds it
+       * and the server keeps nothing but its SHA-256 hash.
+       */
+      pairingCode: `${relay.id}.${token}`,
+      message: 'Enter this code in the relay app on the phone. It is shown once and cannot be retrieved.',
+    });
+  })
+);
+
+notificationsRouter.post(
+  '/relays/:id/revoke',
+  requireDealerStaff,
+  asyncHandler(async (req, res) => {
+    const user = getAuthUser(req);
+    const relay = await repo.smsRelays.findById(routeParam(req, 'id'));
+    if (!relay) throw AppError.notFound('SMS relay');
+    assertDealerAccess(req, relay.dealerId, 'SMS relay');
+
+    const revoked = await SmsRelayService.revoke(
+      relay.id,
+      { userId: user.userId, userName: user.name, userRole: user.role },
+      clientIp(req)
+    );
+
+    res.json({ success: true, relay: { id: revoked.id, name: revoked.name, revokedAt: revoked.revokedAt } });
   })
 );

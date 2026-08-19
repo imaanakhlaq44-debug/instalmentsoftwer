@@ -132,4 +132,27 @@ export const config = {
 
   /** Max JSON request body size — blocks trivial memory-exhaustion payloads. */
   bodyLimit: '256kb',
+
+  /**
+   * What goes into the enrollment QR the Android Device Policy Controller scans
+   * during setup.
+   *
+   * `apkUrl` and `apkSignatureChecksum` are what make the QR a real Android
+   * provisioning QR: the setup wizard downloads the DPC from that URL and
+   * refuses to install it unless the signing certificate matches the checksum.
+   * Without both, the phone has no app to become device owner and the QR can
+   * only be used by a DPC that is already installed — see
+   * `EnrollmentService.buildQrPayload`.
+   */
+  dpc: {
+    serverUrl: (process.env.DPC_SERVER_URL || '').trim(),
+    adminComponent:
+      (process.env.DPC_ADMIN_COMPONENT || '').trim() ||
+      'pk.emishield.dpc/pk.emishield.dpc.admin.EmiDeviceAdminReceiver',
+    apkUrl: (process.env.DPC_APK_URL || '').trim(),
+    apkSignatureChecksum: (process.env.DPC_APK_SIGNATURE_CHECKSUM || '').trim(),
+    /** Leaving system apps enabled keeps the phone a usable phone, not a kiosk terminal. */
+    leaveSystemAppsEnabled: bool(process.env.DPC_LEAVE_SYSTEM_APPS_ENABLED, true),
+    skipEncryption: bool(process.env.DPC_SKIP_ENCRYPTION, false),
+  },
 } as const;

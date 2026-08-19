@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand">#0F766E</color>
+    <color name="brand_dark">#115E59</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="on_surface">#0F172A</color>
+    <color name="muted">#64748B</color>
+    <color name="lock_background">#7F1D1D</color>
+    <color name="lock_panel">#991B1B</color>
+    <color name="on_lock">#FFFFFF</color>
+    <color name="on_lock_muted">#FECACA</color>
+    <color name="ok">#15803D</color>
+</resources>

@@ -5,6 +5,8 @@ import { Pagination } from '../components/ui/Pagination.js';
 import { ExportButton } from '../components/ui/ExportButton.js';
 import { ReceiptModal } from '../components/modals/ReceiptModal.js';
 import { usePagination } from '../hooks/usePagination.js';
+import { SubmitPaymentCard } from '../components/payments/SubmitPaymentCard.js';
+import { PendingSubmissions } from '../components/payments/PendingSubmissions.js';
 import { csvMoney, csvDateTime, CsvColumn } from '../utils/csv.js';
 import {
   CreditCard,
@@ -20,7 +22,7 @@ import {
 } from 'lucide-react';
 
 export const PaymentsPage: React.FC = () => {
-  const { selectedDealerId, showToast, isStaff, isDealerAdmin } = useAuth();
+  const { selectedDealerId, showToast, isStaff, isDealerAdmin, isCustomer } = useAuth();
 
   const [payments, setPayments] = useState<any[]>([]);
   const [paymentTotals, setPaymentTotals] = useState<{ verifiedAmount: number; pendingAmount: number; count: number } | null>(null);
@@ -173,6 +175,10 @@ export const PaymentsPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* A customer reports what they have sent; staff work through what has been reported. */}
+      {isCustomer && <SubmitPaymentCard onSubmitted={loadData} />}
+      {isStaff && <PendingSubmissions onVerified={loadData} />}
 
       {/* Payments List Table */}
       <div className="bg-white rounded-3xl border border-slate-200/80 shadow-card overflow-hidden">

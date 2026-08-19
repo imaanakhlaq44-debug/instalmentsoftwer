@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ای ایم آئی شیلڈ ریلے</string>
+
+    <string name="pair_title">یہ فون منسلک کریں</string>
+    <string name="pair_subtitle">یہ فون آپ کی دکان کے قسط یاد دہانی پیغامات اپنی سم سے بھیجے گا۔ ڈیش بورڈ سے ملا ہوا کوڈ یہاں لگائیں۔</string>
+    <string name="pair_server_hint">سرور کا پتہ</string>
+    <string name="pair_code_hint">پیئرنگ کوڈ</string>
+    <string name="pair_submit">منسلک کریں</string>
+
+    <string name="status_paired">منسلک ہے</string>
+    <string name="status_not_paired">منسلک نہیں</string>
+    <string name="status_running">پیغامات بھیجے جا رہے ہیں</string>
+    <string name="status_stopped">بھیجنا بند ہے</string>
+    <string name="status_sent_count">اس فون سے بھیجے گئے: %1$d</string>
+    <string name="status_failed_count">ناکام: %1$d</string>
+    <string name="status_last_poll">آخری بار دیکھا: %1$s</string>
+    <string name="status_never">کبھی نہیں</string>
+    <string name="start">بھیجنا شروع کریں</string>
+    <string name="stop">بھیجنا بند کریں</string>
+    <string name="unpair">اس فون کو الگ کریں</string>
+
+    <string name="permission_needed">اس ایپ کو ایس ایم ایس بھیجنے کی اجازت درکار ہے۔ اجازت کے بغیر کچھ نہیں بھیجا جا سکتا۔</string>
+    <string name="grant_permission">اجازت دیں</string>
+
+    <string name="notification_channel">ایس ایم ایس ریلے</string>
+    <string name="notification_title">ای ایم آئی شیلڈ پیغامات بھیج رہا ہے</string>
+    <string name="notification_text">یہ فون آپ کی دکان کی یاد دہانیاں بھیجتا ہے۔</string>
+
+    <string name="error_network">سرور تک رسائی نہیں ہو سکی۔ دوبارہ کوشش جاری ہے۔</string>
+    <string name="error_pairing">منسلک نہیں ہو سکا: %1$s</string>
+
+    <string name="cost_warning">ہر یاد دہانی ایک عام ایس ایم ایس ہے جو اسی سم کے پیکج سے کٹے گا۔ وہی فون منسلک کریں جس کا بنڈل اتنے پیغامات سہار سکے۔</string>
+</resources>

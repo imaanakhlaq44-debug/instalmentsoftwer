@@ -132,6 +132,154 @@ paymentsRouter.post(
   })
 );
 
+// ---------------------------------------------------------------------------
+// CUSTOMER SUBMISSION
+//
+// The shop is shut at ten at night and the customer has just transferred the
+// money. Until now that payment could not enter the system until somebody
+// opened the counter in the morning — and the handset stayed locked in the
+// meantime. This lets the customer report it; a person still has to verify it
+// before a rupee moves.
+// ---------------------------------------------------------------------------
+
+/**
+ * The largest proof image accepted, in characters of data URL.
+ *
+ * `config.bodyLimit` is 256kb and applies to the whole request, so this has to
+ * leave room for the rest of the body. Base64 also inflates the bytes by about
+ * a third — 180,000 characters is roughly a 130 KB JPEG, which a downscaled
+ * screenshot comfortably fits inside.
+ */
+const PROOF_IMAGE_MAX_CHARS = 180_000;
+
+const submitSchema = z
+  .object({
+    planId: z.string().trim().max(64).optional(),
+    installmentId: z.string().trim().max(80).optional(),
+    amount: positiveMoneySchema,
+    // No CASH here. Cash is handed over at a counter; there is nothing for a
+    // customer to report from home, and nothing anyone could verify.
+    paymentMethod: z.enum(['BANK_TRANSFER', 'JAZZCASH', 'EASYPAISA', 'RAAST', 'ONLINE']),
+    referenceNumber: z.string().trim().min(4, 'Enter the transaction ID from your transfer.').max(60),
+    notes: z.string().trim().max(500).optional(),
+    /**
+     * A screenshot of the transfer.
+     *
+     * The cap sits below `config.bodyLimit` on purpose. The browser downscales
+     * and re-compresses until the image fits, so a normal screenshot always
+     * gets through; anything that does not is either not from this app or is a
+     * photograph somebody tried to upload whole.
+     */
+    proofImage: z
+      .string()
+      .trim()
+      .startsWith('data:image/', 'The proof must be an image.')
+      .max(PROOF_IMAGE_MAX_CHARS, 'That image is too large. Please send a smaller screenshot.')
+      .optional(),
+    /** Staff may submit on a customer's behalf; a customer login may not name anyone. */
+    customerId: z.string().trim().max(64).optional(),
+  })
+  .refine((v) => Boolean(v.planId || v.installmentId), {
+    message: 'Choose which financing plan this payment is for.',
+    path: ['planId'],
+  });
+
+/** More unverified claims than this from one customer is not a queue, it is noise. */
+const MAX_OPEN_SUBMISSIONS = 5;
+
+paymentsRouter.post(
+  '/submit',
+  validateBody(submitSchema),
+  asyncHandler(async (req, res) => {
+    const user = getAuthUser(req);
+    const body = req.body as z.infer<typeof submitSchema>;
+
+    /**
+     * The customer id comes from the verified session, never from the body.
+     * Letting a customer login name the customer would be the tenant-isolation
+     * hole this codebase closes everywhere else.
+     */
+    const customerId = user.role === 'CUSTOMER' ? user.customerId : body.customerId;
+    if (!customerId) {
+      throw AppError.badRequest('No customer was identified for this payment.');
+    }
+
+    const customer = await repo.customers.findById(customerId);
+    if (!customer) throw AppError.notFound('Customer');
+    assertDealerAccess(req, customer.dealerId, 'customer');
+    if (user.role === 'CUSTOMER' && customer.id !== user.customerId) {
+      throw AppError.notFound('Customer');
+    }
+    if (!customer.active) throw AppError.badRequest('This customer account is deactivated.');
+
+    const plan = body.planId ? await repo.installmentPlans.findById(body.planId) : undefined;
+    if (body.planId && (!plan || plan.customerId !== customer.id)) {
+      throw AppError.badRequest('That financing plan does not belong to this customer.');
+    }
+
+    const open = await repo.payments.count({
+      customerId: customer.id,
+      status: 'PENDING',
+      source: 'CUSTOMER',
+    });
+    if (open >= MAX_OPEN_SUBMISSIONS) {
+      throw AppError.badRequest(
+        `You have ${open} payments still waiting to be checked. Please contact the shop rather than sending more.`
+      );
+    }
+
+    const result = await PaymentService.recordPayment({
+      dealerId: customer.dealerId,
+      customerId: customer.id,
+      installmentId: body.installmentId,
+      planId: body.planId,
+      amount: body.amount,
+      paymentMethod: body.paymentMethod,
+      referenceNumber: body.referenceNumber,
+      notes: body.notes,
+      // Never. A payment nobody has checked must not settle an installment or
+      // release a handset — the whole point is that a person confirms it first.
+      autoVerify: false,
+      source: 'CUSTOMER',
+      proofImage: body.proofImage,
+      actor: actorFrom(req),
+    });
+
+    res.status(201).json({
+      ...result,
+      message:
+        'Thank you. The shop will check this against their account and your phone will unlock once it is confirmed.',
+    });
+  })
+);
+
+/** The queue: what customers say they have paid, oldest first. */
+paymentsRouter.get(
+  '/pending-submissions',
+  requireDealerStaff,
+  asyncHandler(async (req, res) => {
+    const scope = resolveDealerScope(req);
+
+    const pending = await repo.payments.findMany({
+      where: { ...(scope === null ? {} : { dealerId: scope }), status: 'PENDING', source: 'CUSTOMER' },
+      orderBy: { createdAt: 'asc' },
+      take: 50,
+    });
+
+    const customers = await repo.customers.findByIds([...new Set(pending.map((p) => p.customerId))]);
+    const byId = indexBy<Customer>(customers, (c) => c.id);
+
+    res.json({
+      data: pending.map((payment) => ({
+        ...payment,
+        customerName: byId.get(payment.customerId)?.name ?? 'Unknown',
+        customerPhone: byId.get(payment.customerId)?.phone ?? null,
+      })),
+      count: pending.length,
+    });
+  })
+);
+
 paymentsRouter.post(
   '/:id/verify',
   requireDealerAdmin,

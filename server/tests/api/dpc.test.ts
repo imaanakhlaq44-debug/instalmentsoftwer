@@ -387,3 +387,47 @@ describe('the dashboard never exposes the device credential', () => {
     expect(stored.authTokenHash).toBeTruthy();
   });
 });
+
+describe('the enrollment QR a factory-reset phone scans', () => {
+  it('is an Android provisioning payload, not a shape of our own', async () => {
+    const device = (await repo.devices.findFirst({ dealerId: 'dealer-1', status: 'PENDING' }))!;
+
+    const res = await as(ACCOUNTS.dealerStaff)
+      .post('/api/enrollment/generate')
+      .send({ deviceId: device.id, qrType: 'STANDARD' });
+
+    const payload = JSON.parse(res.body.qrPayloadString);
+
+    // These exact keys are what the Android setup wizard reads. A payload of
+    // our own design scans as unrecognised text and provisions nothing.
+    expect(payload['android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME'])
+      .toMatch(/^pk\.emishield\.dpc\//);
+
+    const extras = payload['android.app.extra.PROVISIONING_ADMIN_EXTRAS_BUNDLE'];
+    expect(extras.enrollmentToken).toBe(res.body.token.token);
+    expect(extras.serverUrl).toEqual(expect.any(String));
+  });
+
+  it('renders a real QR image rather than leaving the dashboard to draw one', async () => {
+    const device = (await repo.devices.findFirst({ dealerId: 'dealer-1', status: 'PENDING' }))!;
+
+    const res = await as(ACCOUNTS.dealerStaff)
+      .post('/api/enrollment/generate')
+      .send({ deviceId: device.id, qrType: 'STANDARD' });
+
+    expect(res.body.qrImageDataUrl).toMatch(/^data:image\/png;base64,/);
+  });
+
+  it('says so when it cannot actually provision a phone', async () => {
+    // The test environment configures no APK location, which is exactly the
+    // case a shop must be warned about: the QR scans, and nothing installs.
+    const device = (await repo.devices.findFirst({ dealerId: 'dealer-1', status: 'PENDING' }))!;
+
+    const res = await as(ACCOUNTS.dealerStaff)
+      .post('/api/enrollment/generate')
+      .send({ deviceId: device.id, qrType: 'STANDARD' });
+
+    expect(res.body.qrProvisioningReady).toBe(false);
+    expect(res.body.qrWarning).toMatch(/DPC_APK_URL/);
+  });
+});

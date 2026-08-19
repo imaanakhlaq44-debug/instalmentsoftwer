@@ -3,6 +3,7 @@ import { runInTransaction, Tx } from '../db/prisma.js';
 import { Device, DeviceStatus, DeviceActionLog, UserRole } from '../types/index.js';
 import { v4 as uuidv4 } from 'uuid';
 import { AuditService } from './AuditService.js';
+import { ContractService } from './ContractService.js';
 import { AppError } from '../utils/AppError.js';
 import { maskImei } from '../utils/mask.js';
 
@@ -220,6 +221,22 @@ export class MockDeviceManagementService implements IDeviceManagementService {
       throw AppError.badRequest(
         `This device cannot be locked while its status is ${device.status}. It must be enrolled and active first.`
       );
+    }
+
+    /**
+     * Consent, checked here rather than at the route.
+     *
+     * This is the choke point every lock passes through — the dashboard button,
+     * the nightly auto-lock policy, all of it. Restricting a handset somebody
+     * is paying for without a signed agreement saying it may be restricted is
+     * the one thing this system must not do, so the check lives where it cannot
+     * be routed around.
+     */
+    const consent = await ContractService.consentForDevice(device.id);
+    if (!consent.allowed) {
+      throw new AppError(consent.reason ?? 'This device has no signed financing agreement.', 409, {
+        code: 'CONTRACT_NOT_SIGNED',
+      });
     }
 
     const targetStatus: DeviceStatus = device.isOnline ? 'LOCKED' : 'LOCK_PENDING';

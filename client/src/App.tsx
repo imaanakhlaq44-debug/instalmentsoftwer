@@ -17,6 +17,7 @@ import { InstallmentsPage } from './pages/InstallmentsPage.js';
 import { PaymentsPage } from './pages/PaymentsPage.js';
 import { TransactionsPage } from './pages/TransactionsPage.js';
 import { EnrollmentPage } from './pages/EnrollmentPage.js';
+import { ContractPage } from './pages/ContractPage.js';
 import { LicensesPage } from './pages/LicensesPage.js';
 import { NotificationsPage } from './pages/NotificationsPage.js';
 import { AuditLogsPage } from './pages/AuditLogsPage.js';
@@ -71,6 +72,9 @@ export function App() {
 
               <Route path="/simulator" element={<RequireRole roles={[...STAFF]}><SimulatorPage /></RequireRole>} />
               <Route path="/enrollment" element={<RequireRole roles={[...STAFF]}><EnrollmentPage /></RequireRole>} />
+
+              {/* A customer may read the agreement they signed; only staff may take a signature. */}
+              <Route path="/contracts/:id" element={<RequireRole roles={[...ALL]}><ContractPage /></RequireRole>} />
 
               <Route path="/licenses" element={<RequireRole roles={[...ADMIN]}><LicensesPage /></RequireRole>} />
               <Route path="/audit-logs" element={<RequireRole roles={[...ADMIN]}><AuditLogsPage /></RequireRole>} />

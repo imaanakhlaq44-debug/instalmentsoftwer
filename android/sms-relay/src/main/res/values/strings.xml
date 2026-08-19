@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">EMI Shield Relay</string>
+
+    <string name="pair_title">Pair this phone</string>
+    <string name="pair_subtitle">This phone will send your shop\'s payment reminders from its own SIM. Paste the pairing code from the dashboard.</string>
+    <string name="pair_server_hint">Server address</string>
+    <string name="pair_code_hint">Pairing code</string>
+    <string name="pair_submit">Pair</string>
+
+    <string name="status_paired">Paired</string>
+    <string name="status_not_paired">Not paired</string>
+    <string name="status_running">Sending is on</string>
+    <string name="status_stopped">Sending is off</string>
+    <string name="status_sent_count">Sent from this phone: %1$d</string>
+    <string name="status_failed_count">Failed: %1$d</string>
+    <string name="status_last_poll">Last checked: %1$s</string>
+    <string name="status_never">Never</string>
+    <string name="start">Start sending</string>
+    <string name="stop">Stop sending</string>
+    <string name="unpair">Unpair this phone</string>
+
+    <string name="permission_needed">This app needs permission to send SMS. Without it nothing can be delivered.</string>
+    <string name="grant_permission">Grant SMS permission</string>
+
+    <string name="notification_channel">SMS relay</string>
+    <string name="notification_title">EMI Shield is sending messages</string>
+    <string name="notification_text">This phone sends your shop\'s payment reminders.</string>
+
+    <string name="error_network">Could not reach the server. Retrying.</string>
+    <string name="error_pairing">Pairing failed: %1$s</string>
+
+    <string name="cost_warning">Each reminder is a normal SMS charged to this SIM\'s package. Only pair a phone whose bundle covers the volume you send.</string>
+</resources>

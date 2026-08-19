@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ای ایم آئی شیلڈ</string>
+    <string name="admin_label">ای ایم آئی شیلڈ ڈیوائس مینجمنٹ</string>
+    <string name="admin_description">قسطوں کے معاہدے میں طے شدہ پابندیاں اس فون پر لاگو کرنے کی اجازت دیتا ہے۔</string>
+
+    <string name="enroll_title">یہ فون رجسٹر کریں</string>
+    <string name="enroll_subtitle">دکان سے ملا ہوا کوڈ درج کریں، یا سیٹ اپ کے دوران کیو آر اسکین کریں۔</string>
+    <string name="enroll_code_hint">رجسٹریشن کوڈ</string>
+    <string name="enroll_server_hint">سرور کا پتہ</string>
+    <string name="enroll_submit">رجسٹر کریں</string>
+    <string name="enroll_working">رجسٹر ہو رہا ہے…</string>
+    <string name="enroll_done">یہ فون رجسٹر ہو چکا ہے۔</string>
+
+    <string name="status_title">ای ایم آئی شیلڈ</string>
+    <string name="status_registered">رجسٹرڈ · محفوظ</string>
+    <string name="status_not_registered">رجسٹرڈ نہیں</string>
+    <string name="status_amount_due">واجب الادا رقم</string>
+    <string name="status_next_due">اگلی قسط کی تاریخ</string>
+    <string name="status_last_check_in">دکان سے آخری رابطہ</string>
+    <string name="status_never">کبھی نہیں</string>
+    <string name="status_check_now">ابھی چیک کریں</string>
+    <string name="status_checking">چیک ہو رہا ہے…</string>
+    <string name="status_shop">دکان</string>
+    <string name="status_call_shop">دکان کو کال کریں</string>
+    <string name="status_no_dues">کوئی قسط بقایا نہیں۔ شکریہ۔</string>
+    <string name="status_owner_warning">اس ایپ کے پاس ڈیوائس اونر اختیارات نہیں، اس لیے پابندی لاگو نہیں ہو سکتی۔ دکان سے فون دوبارہ سیٹ کروائیں۔</string>
+
+    <string name="lock_heading">یہ فون بند کر دیا گیا ہے</string>
+    <string name="lock_default_message">آپ کی قسط واجب الادا ہے۔ ادائیگی درج ہوتے ہی فون کھل جائے گا۔</string>
+    <string name="lock_amount_label">واجب الادا رقم</string>
+    <string name="lock_due_label">تاریخ</string>
+    <string name="lock_pay_at">ادائیگی کی جگہ</string>
+    <string name="lock_methods">قابلِ قبول: %1$s</string>
+    <string name="lock_call_shop">دکان کو کال کریں</string>
+    <string name="lock_emergency">ایمرجنسی کال</string>
+    <string name="lock_refresh">ادائیگی کر دی ہے — دوبارہ چیک کریں</string>
+    <string name="lock_checking">دکان سے رابطہ ہو رہا ہے…</string>
+    <string name="lock_still_locked">ادائیگی ابھی تک دکان تک نہیں پہنچی۔</string>
+
+    <string name="error_network">دکان کے سرور تک رسائی نہیں ہو سکی۔ دوبارہ کوشش خودکار ہوگی۔</string>
+    <string name="error_code_invalid">یہ رجسٹریشن کوڈ قبول نہیں ہوا: %1$s</string>
+    <string name="error_not_device_owner">ڈیوائس اونر اختیارات موجود نہیں، اس لیے پابندی لاگو نہیں ہو سکتی۔</string>
+
+    <string name="currency_amount">روپے %1$s</string>
+</resources>

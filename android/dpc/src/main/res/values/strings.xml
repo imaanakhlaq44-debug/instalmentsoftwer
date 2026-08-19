@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">EMI Shield</string>
+    <string name="admin_label">EMI Shield device management</string>
+    <string name="admin_description">Lets the financed handset receive and apply the restrictions agreed in the installment contract.</string>
+
+    <!-- Enrolment -->
+    <string name="enroll_title">Register this phone</string>
+    <string name="enroll_subtitle">Enter the code from the shop, or scan the QR during setup.</string>
+    <string name="enroll_code_hint">Enrolment code</string>
+    <string name="enroll_server_hint">Server address</string>
+    <string name="enroll_submit">Register</string>
+    <string name="enroll_working">Registering…</string>
+    <string name="enroll_done">This phone is registered.</string>
+
+    <!-- Status -->
+    <string name="status_title">EMI Shield</string>
+    <string name="status_registered">Registered · protected</string>
+    <string name="status_not_registered">Not registered</string>
+    <string name="status_amount_due">Amount overdue</string>
+    <string name="status_next_due">Next payment due</string>
+    <string name="status_last_check_in">Last contact with the shop</string>
+    <string name="status_never">Never</string>
+    <string name="status_check_now">Check now</string>
+    <string name="status_checking">Checking…</string>
+    <string name="status_shop">Shop</string>
+    <string name="status_call_shop">Call the shop</string>
+    <string name="status_no_dues">Nothing is overdue. Thank you.</string>
+    <string name="status_owner_warning">This app does not hold device-owner rights, so it cannot apply a restriction. Ask the shop to re-provision the phone.</string>
+
+    <!-- Lock screen -->
+    <string name="lock_heading">This phone is restricted</string>
+    <string name="lock_default_message">Your installment payment is overdue. The phone will unlock as soon as the payment is recorded.</string>
+    <string name="lock_amount_label">Amount overdue</string>
+    <string name="lock_due_label">Due date</string>
+    <string name="lock_pay_at">Pay at</string>
+    <string name="lock_methods">Accepted: %1$s</string>
+    <string name="lock_call_shop">Call the shop</string>
+    <string name="lock_emergency">Emergency call</string>
+    <string name="lock_refresh">I have paid — check again</string>
+    <string name="lock_checking">Contacting the shop…</string>
+    <string name="lock_still_locked">The payment has not reached the shop yet.</string>
+
+    <!-- Errors -->
+    <string name="error_network">Could not reach the shop\'s server. It will retry automatically.</string>
+    <string name="error_code_invalid">That enrolment code was not accepted: %1$s</string>
+    <string name="error_not_device_owner">Device-owner rights are not held, so the restriction cannot be enforced.</string>
+
+    <string name="currency_amount">Rs %1$s</string>
+</resources>

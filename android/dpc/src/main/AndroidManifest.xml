@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!--
+      Deliberately absent: location and phone-state.
+
+      Nothing in the lock protocol needs to know where the customer is, and a
+      financing app that quietly tracks people is a different product from the
+      one this is meant to be. The check-in reports battery, OS build and
+      carrier name; the server accepts a location it is never sent.
+    -->
+
+    <application
+        android:name=".EmiApp"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:networkSecurityConfig="${networkSecurityConfig}"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.EmiShield">
+
+        <activity
+            android:name=".ui.StatusActivity"
+            android:exported="true"
+            android:launchMode="singleTask">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".ui.EnrollActivity"
+            android:exported="false"
+            android:launchMode="singleTask" />
+
+        <!--
+          The lock screen.
+
+          Its own task, excluded from recents, and it cannot be left by the back
+          key. It does NOT declare itself a home activity here: an unlocked
+          phone must not offer this app in the launcher chooser. The alias below
+          carries the HOME filter and is enabled only while a lock is in force.
+        -->
+        <activity
+            android:name=".ui.LockActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:showOnLockScreen="true"
+            android:taskAffinity="pk.emishield.dpc.lock"
+            android:theme="@style/Theme.EmiShield.Lock" />
+
+        <activity-alias
+            android:name=".ui.LockHomeAlias"
+            android:enabled="false"
+            android:exported="true"
+            android:targetActivity=".ui.LockActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity-alias>
+
+        <receiver
+            android:name=".admin.EmiDeviceAdminReceiver"
+            android:description="@string/admin_description"
+            android:exported="true"
+            android:label="@string/admin_label"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+                <action android:name="android.app.action.PROFILE_PROVISIONING_COMPLETE" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".work.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

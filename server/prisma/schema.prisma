@@ -182,6 +182,26 @@ enum NotificationStatus {
   FAILED
 }
 
+/**
+ * Where a payment record came from.
+ *
+ * GATEWAY is not reachable yet — no gateway is integrated. It is named here so
+ * that when one is, the difference between "the counter says so", "the customer
+ * says so" and "the payment processor says so" is a column rather than a guess
+ * from the payment method.
+ */
+enum PaymentSource {
+  COUNTER
+  CUSTOMER
+  GATEWAY
+}
+
+enum ContractStatus {
+  DRAFT
+  SIGNED
+  VOID
+}
+
 // ---------------------------------------------------------------------------
 // Core tenancy
 // ---------------------------------------------------------------------------
@@ -212,6 +232,8 @@ model Dealer {
   licenseKeys      LicenseKey[]
   devicePolicy     DevicePolicy?
   notifications    Notification[]
+  smsRelays        SmsRelay[]
+  contracts        Contract[]
 
   @@index([active])
   @@map("dealers")
@@ -281,6 +303,7 @@ model Customer {
   notifications    Notification[]
   enrollmentTokens EnrollmentToken[]
   logins           User[]
+  contracts        Contract[]
 
   // The same person must not be entered twice at one counter.
   @@unique([dealerId, cnic], name: "customer_dealer_cnic")
@@ -340,6 +363,7 @@ model Device {
   actionLogs       DeviceActionLog[]
   enrollmentTokens EnrollmentToken[]
   notifications    Notification[]
+  contract         Contract?
 
   @@index([dealerId])
   @@index([dealerId, status])
@@ -424,6 +448,7 @@ model InstallmentPlan {
   installments Installment[]
   payments     Payment[]
   transactions Transaction[]
+  contract     Contract?
 
   @@index([dealerId, status])
   @@index([customerId])
@@ -484,6 +509,18 @@ model Payment {
   lateFeePortion      Int           @default(0) @map("late_fee_portion")
   receiptNumber       String?       @map("receipt_number") @db.VarChar(40)
   recordedBy          String?       @map("recorded_by") @db.VarChar(64)
+
+  /**
+   * Who put this payment into the system.
+   *
+   * It changes how much the record is worth on its own. COUNTER means staff
+   * saw the money. CUSTOMER means somebody said they had transferred it and
+   * nobody has checked yet — the amount is a claim until it is verified.
+   */
+  source     PaymentSource @default(COUNTER)
+  /** The customer's screenshot of the transfer, as a data URL. */
+  proofImage String?       @map("proof_image") @db.Text
+
   createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
 
   dealer      Dealer           @relation(fields: [dealerId], references: [id], onDelete: Restrict)
@@ -497,6 +534,8 @@ model Payment {
   @@unique([dealerId, referenceNumber], name: "payment_dealer_reference")
   @@index([dealerId, createdAt(sort: Desc)])
   @@index([customerId, createdAt(sort: Desc)])
+  /** The verification queue: one dealership's unverified customer submissions. */
+  @@index([dealerId, status, source])
   @@index([planId])
   @@index([status])
   @@map("payments")
@@ -586,6 +625,19 @@ model Notification {
   sentAt     DateTime?           @map("sent_at") @db.Timestamptz(3)
   createdAt  DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
 
+  /**
+   * Held by the relay that is currently trying to send this message.
+   *
+   * A phone claims a batch, sends it, then reports back. If it loses signal
+   * mid-batch the lease expires and the message becomes claimable again — which
+   * is why the claim is a compare-and-set on this column rather than a read
+   * followed by a write. Two relays polling at once must never both be handed
+   * the same overdue-payment text.
+   */
+  leaseUntil    DateTime? @map("lease_until") @db.Timestamptz(3)
+  attempts      Int       @default(0)
+  failureReason String?   @map("failure_reason") @db.VarChar(300)
+
   dealer   Dealer    @relation(fields: [dealerId], references: [id], onDelete: Cascade)
   customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
   device   Device?   @relation(fields: [deviceId], references: [id], onDelete: SetNull)
@@ -593,7 +645,89 @@ model Notification {
   @@index([dealerId, createdAt(sort: Desc)])
   @@index([customerId, createdAt(sort: Desc)])
   @@index([status])
+  /** The claim query: this dealer's unsent SMS, oldest first. */
+  @@index([dealerId, status, channel])
   @@map("notifications")
+}
+
+/**
+ * The customer's recorded consent to the financing terms and to the device
+ * restriction that enforces them.
+ *
+ * This exists because the system can lock a phone somebody is paying for, and
+ * doing that on the strength of a verbal understanding at a counter is not
+ * defensible. One contract per financing plan, signed on screen before the
+ * device can be restricted.
+ *
+ * `snapshot` holds the exact facts shown to the customer — their name, the
+ * handset, the price, the schedule — frozen at signing, and `documentHash`
+ * covers the snapshot together with the terms version. Editing a plan
+ * afterwards therefore cannot quietly change what somebody agreed to: the hash
+ * stops matching, and the contract has to be re-signed.
+ */
+model Contract {
+  id           String         @id
+  dealerId     String         @map("dealer_id")
+  customerId   String         @map("customer_id")
+  // One financing plan per device, so one contract per device too. Unique
+  // rather than merely indexed: two live contracts for one handset would leave
+  // it ambiguous which consent a lock was resting on.
+  deviceId     String         @unique @map("device_id")
+  planId       String         @unique @map("plan_id")
+  termsVersion String         @map("terms_version") @db.VarChar(20)
+  /** JSON: the facts the document was rendered from. */
+  snapshot     String         @db.Text
+  status       ContractStatus @default(DRAFT)
+
+  signedAt       DateTime? @map("signed_at") @db.Timestamptz(3)
+  /** Typed by the person signing, so a thumbprint scrawl still has a name against it. */
+  signerName     String?   @map("signer_name") @db.VarChar(120)
+  /** The signature drawn on screen, as a PNG data URL. */
+  signatureImage String?   @map("signature_image") @db.Text
+  signedIp       String?   @map("signed_ip") @db.VarChar(64)
+  /** SHA-256 over the terms version and the snapshot. */
+  documentHash   String?   @map("document_hash") @db.VarChar(64)
+
+  voidedAt   DateTime? @map("voided_at") @db.Timestamptz(3)
+  voidReason String?   @map("void_reason") @db.VarChar(300)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  dealer   Dealer          @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  customer Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  device   Device          @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  plan     InstallmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([dealerId, createdAt(sort: Desc)])
+  @@index([customerId])
+  @@index([status])
+  @@map("contracts")
+}
+
+/**
+ * A phone paired to a dealership to send its SMS.
+ *
+ * There is no SMS aggregator behind this system yet, so a shop can pair its own
+ * handset: the phone polls for queued messages, sends them from its own SIM and
+ * reports what happened. It authenticates like a handset does — `Relay
+ * <id>.<token>`, with only the SHA-256 hash stored — and it is scoped to one
+ * dealer, so a paired phone can never be handed another shop's customers.
+ */
+model SmsRelay {
+  id         String    @id
+  dealerId   String    @map("dealer_id")
+  name       String    @db.VarChar(80)
+  tokenHash  String    @map("token_hash") @db.VarChar(64)
+  lastSeenAt DateTime? @map("last_seen_at") @db.Timestamptz(3)
+  sentCount  Int       @default(0) @map("sent_count")
+  failedCount Int      @default(0) @map("failed_count")
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  dealer Dealer @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+
+  @@index([dealerId])
+  @@map("sms_relays")
 }
 
 model NotificationTemplate {

@@ -8,6 +8,7 @@ import {
   Customer, Device, InstallmentPlan, Installment, Payment,
 } from '../types/index.js';
 import { EnrollmentService } from '../services/EnrollmentService.js';
+import { ContractService } from '../services/ContractService.js';
 import { AuditService } from '../services/AuditService.js';
 import { buildInstallmentSchedule } from '../services/InstallmentMath.js';
 import {
@@ -337,6 +338,19 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
           createdAt: nowIso,
         }, tx));
       }
+
+      /**
+       * The contract is drafted with the sale, not after it.
+       *
+       * A financed device that exists with nothing for the customer to sign is
+       * exactly the gap this closes — and drafting it inside the transaction
+       * means there is never a handset in the system whose consent document was
+       * never created.
+       */
+      await ContractService.createDraft(
+        { dealerId, customerId: customer.id, deviceId: device.id, plan, installments },
+        tx
+      );
 
       // The down payment is real money that changed hands — it belongs in the
       // ledger. The original code dropped it entirely.

@@ -266,6 +266,19 @@ export class ApiService {
     return this.request<any>('/payments', { method: 'POST', body: JSON.stringify(data) });
   }
 
+  /**
+   * A customer reporting a transfer they have already made. It is recorded
+   * unverified — nothing is applied until the shop confirms it.
+   */
+  static submitPayment(data: unknown) {
+    return this.request<any>('/payments/submit', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  /** The queue of customer-reported payments waiting to be checked. */
+  static getPendingSubmissions() {
+    return this.request<{ data: any[]; count: number }>('/payments/pending-submissions');
+  }
+
   static verifyPayment(paymentId: string) {
     return this.request<any>(`/payments/${paymentId}/verify`, { method: 'POST', body: '{}' });
   }
@@ -321,14 +334,55 @@ export class ApiService {
     return this.request<
       Paged<any> & {
         counts: { queued: number; sent: number; failed: number };
+        /** True only when a paired phone has actually been heard from recently. */
         deliveryEnabled: boolean;
         deliveryNote: string;
+        relays: {
+          id: string;
+          name: string;
+          lastSeenAt?: string;
+          online: boolean;
+          sentCount: number;
+          failedCount: number;
+        }[];
       }
     >(`/notifications${buildQuery(params)}`);
   }
 
+  /** The financing agreement, rendered — clauses, snapshot, signature. */
+  static getContract(id: string) {
+    return this.request<any>(`/contracts/${id}`);
+  }
+
+  static getContractForDevice(deviceId: string) {
+    return this.request<any>(`/contracts/device/${deviceId}`);
+  }
+
+  static signContract(id: string, data: unknown) {
+    return this.request<any>(`/contracts/${id}/sign`, { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  static voidContract(id: string, reason: string) {
+    return this.request<any>(`/contracts/${id}/void`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
   static getNotificationTemplates() {
     return this.request<any[]>('/notifications/templates');
+  }
+
+  /**
+   * Pairs a phone to send this dealership's SMS. The response carries the
+   * pairing code, which the server will never send again.
+   */
+  static pairSmsRelay(data: unknown) {
+    return this.request<any>('/notifications/relays', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  static revokeSmsRelay(id: string) {
+    return this.request<any>(`/notifications/relays/${id}/revoke`, { method: 'POST', body: '{}' });
   }
 
   static sendNotification(data: unknown) {

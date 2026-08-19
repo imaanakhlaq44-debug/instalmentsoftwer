@@ -13,7 +13,7 @@ import { toDomainList } from '../mappers.js';
 import {
   Dealer, User, Customer, Device, EnrollmentToken, InstallmentPlan, Installment,
   Payment, Transaction, DeviceActionLog, AuditLog, LicenseKey, DevicePolicy,
-  Notification, NotificationTemplate,
+  Notification, NotificationTemplate, SmsRelay, Contract,
 } from '../../types/index.js';
 
 export type { Page, PageArgs };
@@ -718,6 +718,95 @@ export const notifications = {
     const by = (status: string) => rows.find((r) => r.status === status)?._count._all ?? 0;
     return { queued: by('QUEUED'), sent: by('SENT'), failed: by('FAILED') };
   },
+
+  /**
+   * Claims queued SMS for one relay to send.
+   *
+   * The claim is an `updateMany` whose filter names the state it expects, which
+   * makes it a compare-and-set: of two relays polling at the same instant, only
+   * one can move a given row, and the other is handed nothing rather than the
+   * same message. A read-then-write here would text a customer twice about the
+   * same overdue payment.
+   *
+   * The ids are chosen first so the lease can be applied to exactly that set —
+   * `updateMany` cannot express "the oldest twenty" on its own.
+   */
+  async claimForRelay(
+    dealerId: string,
+    limit: number,
+    leaseUntil: Date,
+    tx?: Tx
+  ): Promise<Notification[]> {
+    const now = new Date();
+
+    const candidates = (await delegate('notification', tx).findMany({
+      where: {
+        dealerId,
+        channel: 'SMS',
+        status: 'QUEUED',
+        // Free, or held by a relay that stopped answering.
+        OR: [{ leaseUntil: null }, { leaseUntil: { lt: now } }],
+      },
+      orderBy: { createdAt: 'asc' },
+      take: limit,
+    })) as Record<string, unknown>[];
+
+    const ids = candidates.map((row) => row.id as string);
+    if (ids.length === 0) return [];
+
+    await delegate('notification', tx).updateMany({
+      where: {
+        id: { in: ids },
+        status: 'QUEUED',
+        OR: [{ leaseUntil: null }, { leaseUntil: { lt: now } }],
+      },
+      data: { leaseUntil, attempts: { increment: 1 } },
+    });
+
+    // Re-read so the caller sees the rows it actually won, not the ones it
+    // hoped to: a concurrent poll may have taken some of them in between.
+    const claimed = (await delegate('notification', tx).findMany({
+      where: { id: { in: ids }, leaseUntil },
+      orderBy: { createdAt: 'asc' },
+    })) as Record<string, unknown>[];
+
+    return toDomainList<Notification>(claimed);
+  },
+};
+
+/** Signed financing agreements. One per device, which is what makes these lookups unique. */
+export const contracts = {
+  ...makeRepository<Contract>('contract'),
+
+  findByDevice(deviceId: string, tx?: Tx): Promise<Contract | undefined> {
+    return this.findFirst({ deviceId }, tx);
+  },
+
+  findByPlan(planId: string, tx?: Tx): Promise<Contract | undefined> {
+    return this.findFirst({ planId }, tx);
+  },
+
+  list(args: { dealerId: string | null; status?: string; customerId?: string } & PageArgs, tx?: Tx) {
+    const where: Record<string, unknown> = { ...dealerScope(args.dealerId) };
+    if (args.customerId) where.customerId = args.customerId;
+    if (args.status && args.status !== 'ALL') where.status = args.status;
+
+    return this.paginate({ where, orderBy: { createdAt: 'desc' }, ...args }, tx);
+  },
+};
+
+/**
+ * Phones paired to send a dealership's SMS.
+ *
+ * The lookup is by token hash, exactly as the DPC's is — the relay presents its
+ * id alongside, so this is an indexed read rather than a scan.
+ */
+export const smsRelays = {
+  ...makeRepository<SmsRelay>('smsRelay'),
+
+  findActiveByDealer(dealerId: string, tx?: Tx): Promise<SmsRelay[]> {
+    return this.findMany({ where: { dealerId, revokedAt: null }, orderBy: { createdAt: 'desc' } }, tx);
+  },
 };
 
 export const notificationTemplates = makeRepository<NotificationTemplate>('notificationTemplate');
@@ -741,6 +830,8 @@ export const repo = {
   devicePolicies,
   notifications,
   notificationTemplates,
+  smsRelays,
+  contracts,
 };
 
 /**

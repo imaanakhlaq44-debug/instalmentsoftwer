@@ -244,6 +244,13 @@ export interface Payment {
   lateFeePortion?: number;
   receiptNumber?: string;
   recordedBy?: string;
+  /**
+   * Who put this payment into the system. A CUSTOMER payment is a claim until
+   * somebody at the shop verifies it; a COUNTER one was seen by staff.
+   */
+  source?: 'COUNTER' | 'CUSTOMER' | 'GATEWAY';
+  /** The customer's screenshot of the transfer, as a data URL. */
+  proofImage?: string;
   createdAt: string;
 }
 
@@ -346,6 +353,53 @@ export interface Notification {
   message: string;
   status: 'QUEUED' | 'SENT' | 'DELIVERED' | 'FAILED';
   sentAt?: string;
+  createdAt: string;
+  /** Held by the relay currently trying to send this message. */
+  leaseUntil?: string;
+  attempts?: number;
+  failureReason?: string;
+}
+
+/**
+ * The customer's recorded consent to the terms and to the device restriction.
+ *
+ * `snapshot` is JSON — the facts the document was rendered from, frozen at
+ * signing — and `documentHash` covers it together with `termsVersion`.
+ */
+export interface Contract {
+  id: string;
+  dealerId: string;
+  customerId: string;
+  deviceId: string;
+  planId: string;
+  termsVersion: string;
+  snapshot: string;
+  status: 'DRAFT' | 'SIGNED' | 'VOID';
+  signedAt?: string;
+  signerName?: string;
+  signatureImage?: string;
+  signedIp?: string;
+  documentHash?: string;
+  voidedAt?: string;
+  voidReason?: string;
+  createdAt: string;
+}
+
+/**
+ * A phone paired to a dealership to send its SMS.
+ *
+ * The token is shown once, at pairing, and only its hash is stored — the same
+ * arrangement the DPC uses, for the same reason.
+ */
+export interface SmsRelay {
+  id: string;
+  dealerId: string;
+  name: string;
+  tokenHash: string;
+  lastSeenAt?: string;
+  sentCount: number;
+  failedCount: number;
+  revokedAt?: string;
   createdAt: string;
 }
 

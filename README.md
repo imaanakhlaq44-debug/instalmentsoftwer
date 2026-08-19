@@ -15,12 +15,16 @@ This codebase is **not yet a production system**, and the README should not pret
 | Authentication, RBAC, tenant isolation | ✅ Implemented and tested |
 | Installment / payment / late-fee engine | ✅ Implemented |
 | Data store | ✅ **PostgreSQL.** Schema, migrations, repository layer, services and routes are all on it. The JSON store is gone. |
-| Device locking | ⚠️ **Server side ready, no phone app.** The DPC API (enroll, check-in, command, acknowledge) is built and tested; `MockDeviceManagementService` stands in for the handset. **No real phone is locked until the Android DPC exists.** See [Device Policy Controller API](#-device-policy-controller-api) |
-| SMS / WhatsApp delivery | ❌ Not connected. Messages are queued in the database and marked `QUEUED`, never `SENT` |
-| Payment gateways (JazzCash / Easypaisa / Raast) | ❌ Not integrated. All payments are recorded manually at the counter |
-| Automated tests | ✅ **292 tests** — 210 backend against a real PostgreSQL instance, 82 on the React client. Both run on every push via GitHub Actions. See [Testing](#-testing) |
+| Device locking — server | ✅ The DPC API (enroll, check-in, command, acknowledge) is built and tested. See [Device Policy Controller API](#-device-policy-controller-api) |
+| Device locking — handset | ⚠️ **The Android DPC is written** (`android/dpc/`) — enrolment, heartbeat, device-owner kiosk lock, honest acknowledgement, boot restore. It builds and its unit tests run in CI. **It has not yet been run on a fleet of real phones, and no release APK is published**, so provisioning needs `DPC_APK_URL` and a signing checksum before a factory-reset handset can scan a QR. See [android/dpc/README.md](android/dpc/README.md) |
+| Customer consent | ✅ **A device cannot be locked without a signed agreement.** Every financed sale drafts a bilingual contract; the customer signs it on screen; the lock refuses on anything unsigned, voided, or whose figures no longer match the plan. See [Consent](#-consent-the-contract-a-lock-rests-on) |
+| SMS delivery | ⚠️ **No aggregator, but messages can move.** A shop can pair a phone of its own and it sends the queue from its SIM ([`android/sms-relay/`](android/README.md)). Nothing is marked `SENT` until that handset reports the SIM accepted it. This is right for a small shop and for testing; volume needs an operator account with a registered sender mask |
+| WhatsApp delivery | ❌ Not connected |
+| Payments | ⚠️ **No gateway, but a customer can report a transfer.** Counter payments work fully; a customer who has sent money by JazzCash/Easypaisa/Raast can submit the transaction ID from home, and the shop confirms it against their own account. Nothing is applied until a person confirms. See [Customer-reported payments](#-customer-reported-payments) |
+| Payment gateways (JazzCash / Easypaisa / Raast) | ❌ Not integrated — that needs a merchant account. The seam where one attaches is in place |
+| Automated tests | ✅ **356 tests** — 264 backend against a real PostgreSQL instance, 82 on the React client, 10 on the two Android apps. All run on every push via GitHub Actions. See [Testing](#-testing) |
 
-The one thing standing between this and a real product is **the Android DPC application itself**. The server it will talk to is finished and tested; the handset app is not written.
+What is left before this is a real product is **signing and distributing the DPC, then proving it on real handsets**. The protocol is complete on both sides and the app refuses to claim a lock it did not apply, so a phone that cannot be held says so on the dashboard rather than silently pretending.
 
 ---
 
@@ -75,6 +79,7 @@ The one thing standing between this and a real product is **the Android DPC appl
 - **Frontend** — React 18, TypeScript, Tailwind, Vite, React Router 7
 - **Backend** — Node.js, Express, TypeScript, Zod, JWT, bcryptjs, helmet, node-cron
 - **Data** — PostgreSQL 17 via Prisma 7, behind a repository layer in `server/src/db/repositories/`. `embedded-postgres` runs the real server binaries locally with nothing to install.
+- **Handsets** — Kotlin, Android 8+ ([`android/`](android/README.md)). Two apps: `dpc` on the customer's phone (device owner via QR provisioning, WorkManager heartbeat) and `sms-relay` on the shop's counter phone. No Compose and no HTTP library in either: a handful of endpoints and a couple of screens do not justify them.
 
 ---
 
@@ -235,6 +240,14 @@ that a check-in response contains none of it.
 The amounts are the real ones from the installment plan. A fabricated figure on
 a screen that is holding someone's phone hostage would be indefensible.
 
+### The handset side
+
+The app that speaks this protocol lives in [`android/dpc/`](android/dpc/README.md).
+It is where `applied: true` comes from, and it will not send it for a lock that
+did not take hold — an installation that is not device owner refuses every lock
+with a reason the dashboard shows, rather than reporting a restriction the
+customer's phone never received.
+
 ### Trying it without a phone
 
 The **Simulator** page drives all of this against real records — it stands in
@@ -243,11 +256,185 @@ in one step rather than the two round trips a real DPC makes.
 
 ---
 
+## ✍️ Consent: the contract a lock rests on
+
+This system can restrict a handset somebody is paying for. Doing that on the
+strength of a conversation at a counter is not defensible, so it now rests on a
+document.
+
+**Every financed sale drafts a contract inside the registration transaction.**
+There is never a financed device in the system with nothing for the customer to
+sign. The customer signs on screen — a finger on a counter tablet is fine — and
+until they have, `lockDevice` refuses.
+
+### The clause that matters
+
+The terms live in [`server/src/services/contractTerms.ts`](server/src/services/contractTerms.ts),
+in English and Urdu side by side, because presenting only English in a Pakistani
+shop would make "the customer agreed" a technicality. Clause 4 states the
+restriction plainly, and states its limits just as plainly:
+
+> …the software may restrict the handset so that it cannot be used for ordinary
+> purposes until the overdue amount is paid. While restricted, the handset will
+> continue to allow emergency calls… The software does not read the customer's
+> messages, calls, photographs or contacts, does not track the handset's
+> location, and cannot erase any data on it.
+
+Those sentences are load-bearing. They are what the DPC actually does and does
+not do — the app requests no location permission, no `READ_SMS`, and implements
+no wipe command — so the document and the software describe the same product.
+
+### Why the terms are versioned
+
+`CURRENT_TERMS_VERSION` is in source and **an existing version is never edited**.
+A contract renders from the version it was signed under, which is the only way an
+old signature keeps meaning what it meant. Changing the terms means adding a
+version.
+
+### Why the hash covers the figures
+
+The document freezes a snapshot — the customer, the handset, the price, the full
+schedule — and `documentHash` is SHA-256 over that snapshot together with the
+terms version.
+
+This closes a specific abuse: signing a customer up at one figure, quietly
+restructuring the plan upward, then locking the phone for non-payment of the new
+one. The hash stops matching, the dashboard says so in red, and the lock refuses
+until a fresh agreement is signed.
+
+### What the lock checks
+
+`ContractService.consentForDevice` is the single question, asked from inside
+`DeviceManagementService.lockDevice` so the nightly auto-lock policy passes
+through it too. It refuses on:
+
+- no contract at all
+- a contract still in `DRAFT`
+- a contract that was voided
+- a contract whose hash no longer matches its plan
+
+### The printed copy
+
+The dashboard prints the agreement to A4 through the browser, which is also what
+makes the Urdu render correctly — every Node PDF library available here lacks
+proper Arabic text shaping, and half-shaped Urdu on a document somebody is
+signing is worse than no Urdu at all. A server-rendered PDF would need headless
+Chrome; that is a dependency worth adding when contracts need to be emailed, not
+before.
+
+---
+
+## 💸 Customer-reported payments
+
+The shop shuts at nine. The customer transfers their installment at ten, from
+JazzCash. Until now that payment could not enter the system until somebody
+opened the counter in the morning — and the handset stayed locked all night on
+money that had already been sent.
+
+A customer can now report the transfer themselves: amount, method, the
+transaction ID, and optionally a screenshot. It lands in the shop's queue, and
+whoever is on duty confirms it from wherever they are.
+
+### What it does not do
+
+**It does not credit anybody's account.** A transaction ID typed into a form is
+a claim, not a reconciliation. The payment is stored `PENDING` with
+`source = CUSTOMER`, no receipt number, and the plan's balance is untouched.
+Only verification — a person looking at their own JazzCash or bank statement and
+deciding — applies the money, settles the installment, issues the receipt and
+triggers the unlock.
+
+Both screens say so plainly. The customer's reads *"your phone unlocks once they
+confirm it — this form does not unlock it by itself"*, and the shop's says
+*"check each transaction ID against your own account before confirming"*.
+
+### The guards
+
+- **The customer id comes from the session, never the body.** A customer login
+  naming a different customer is ignored, and a plan belonging to somebody else
+  is refused outright.
+- **Cash is not submittable.** Cash changes hands at a counter; there is nothing
+  to report from home and nothing anyone could check.
+- **A transaction reference is mandatory**, and the existing unique index on
+  (dealer, reference) stops the same transfer being reported twice.
+- **Five open claims per customer.** More than that is not a queue, it is noise,
+  and the message points them at the shop instead.
+- **Screenshots are shrunk in the browser** before upload — scaled down and
+  re-compressed until they fit — because the API's body limit is 256 KB and a
+  phone screenshot is several megabytes. Discovering that from a server error,
+  while standing somewhere with a locked phone, would be the wrong way round.
+
+### Where a gateway attaches
+
+`PaymentSource` already distinguishes `COUNTER`, `CUSTOMER` and `GATEWAY`. When
+a processor is integrated, its webhook creates a payment with `source = GATEWAY`
+and `autoVerify: true` — the processor *is* the verification — and reuses
+`PaymentService.recordPayment` exactly as the other two paths do. Allocation,
+late-fee handling, receipt numbering and auto-unlock do not change.
+
+Nothing speculative has been built for that: no adapter interface with one
+implementation, no unused config. Just the column the distinction needs.
+
+---
+
+## 📨 SMS through a paired phone
+
+There is no aggregator behind this system, and rather than let reminders sit in
+the database looking as though they had been sent, a shop can pair a phone of
+its own. The relay app on that handset asks for queued messages, sends them from
+its SIM, and reports what happened to each one.
+
+**Nothing is marked `SENT` until the phone says the SIM accepted it** — the same
+rule the device lock follows, for the same reason. A customer whose phone gets
+locked should have been warned, and the dashboard must not claim a warning that
+never left the counter.
+
+### How it hangs together
+
+```
+dashboard queues a reminder        →  QUEUED
+counter phone polls /poll          →  claimed under a 3-minute lease
+phone sends it from its SIM        →  waits for the platform's real result
+phone reports /results             →  SENT, or back on the queue with a reason
+```
+
+The phone **pulls**; nothing is pushed to it. A handset on mobile data has no
+address anyone can reach, so this is not a shortcut — it is the only arrangement
+that works on a counter phone with a normal SIM.
+
+The lease is what stops two polls being handed the same message. Claiming is a
+compare-and-set, so a repeated or concurrent poll gets nothing rather than a
+second copy of an overdue-payment text; and a phone that loses signal mid-batch
+simply lets the lease expire instead of stranding the reminder.
+
+### Pairing one
+
+Notifications page → **Pair a phone**. The pairing code is transmitted once and
+only its SHA-256 hash is kept, exactly as the DPC's device token is. Enter it in
+the relay app, grant SMS permission, press start.
+
+The dashboard's "delivery is working" banner reflects whether that handset has
+actually checked in — not whether one exists in the database. A relay left
+switched off in a drawer shows as *not checked in*.
+
+### What this is not
+
+A consumer SIM is not a delivery channel for a shop at volume. Bulk commercial
+SMS in Pakistan needs an operator account and a PTA-approved sender mask, and a
+reminder arriving from an unrecognised mobile number is a reminder customers
+learn to ignore. This is the right tool for testing, and for a small shop
+messaging its own customers; it is a stopgap, and the roadmap says so.
+
+See [`android/README.md`](android/README.md) for the app itself.
+
+---
+
 ## 🧪 Testing
 
 ```bash
-npm --prefix server test        # backend, against a real PostgreSQL
-npm --prefix client test        # React, in jsdom
+npm --prefix server test                        # backend, against a real PostgreSQL
+npm --prefix client test                        # React, in jsdom
+cd android && ./gradlew testDebugUnitTest   # both handset apps, on the JVM
 ```
 
 ### Backend
@@ -277,7 +464,10 @@ committed, then typechecks, tests and builds both halves of the app.
 | `tests/api/lifecycle.test.ts` | Registration → six payments → completion, over HTTP |
 | `tests/db/base-repository.test.ts` | CRUD, date-only columns, transaction rollback, database constraints |
 | `tests/db/queries.test.ts` | Dealer scoping, relation searches, SQL aggregates, receipt numbering |
-| `tests/api/dpc.test.ts` | Device credentials, rotation, revocation, the offline lock round trip |
+| `tests/api/dpc.test.ts` | Device credentials, rotation, revocation, the offline lock round trip, the Android provisioning QR |
+| `tests/api/sms-relay.test.ts` | Pairing, the claim lease, sending the same message twice, cross-dealer isolation, retry and give-up, honest delivery reporting |
+| `tests/api/contracts.test.ts` | Drafting with the sale, the frozen snapshot, signing, refusing to lock an unsigned or voided agreement, and refusing when the plan was changed after signing |
+| `tests/api/customer-payments.test.ts` | A reported transfer stays unverified and moves no money, applies on confirmation, cannot name another customer's plan, and the queue's scoping and limits |
 
 **Client** (`client/src/**/*.test.ts(x)`)
 
@@ -288,6 +478,19 @@ committed, then typechecks, tests and builds both halves of the app.
 | `services/api.test.ts` | Auth header, query building, error mapping, why a failed sign-in is not an expired session |
 | `utils/csv.test.ts` | Quoting, the UTF-8 BOM, spreadsheet formula injection |
 | `hooks/usePagination.test.ts` | Page reset on filter and page-size change |
+
+**Android DPC** (`android/dpc/src/test/`)
+
+| File | Covers |
+|---|---|
+| `PolicyViewTest.kt` | Parsing the policy a lock screen renders — a JSON null must not become the word "null" in front of a customer, an absent `emergencyCallsAllowed` means permitted, and a command the app cannot carry out is rejected rather than acknowledged |
+| `DpcApiEndpointTest.kt` | Joining the base URL from the QR to an endpoint. Getting this wrong produces a phone that provisions cleanly and never checks in again |
+
+**Android SMS relay** (`android/sms-relay/src/test/`)
+
+| File | Covers |
+|---|---|
+| `RelayApiEndpointTest.kt` | The same join, for an address a shopkeeper types by hand on a counter phone |
 
 These made the PostgreSQL cutover safe. The storage engine was replaced entirely
 and the behavioural assertions did not change — the same tests that passed against
@@ -348,9 +551,9 @@ Two operations deliberately run *after* their transaction commits, because they 
 
 ## 🗺️ Roadmap
 
-1. **Android DPC application** — the server contract it talks to is done; the handset app itself is not. Until it exists, "locking" is a database field.
-2. **SMS gateway** (Twilio / Jazz / Telenor) so reminders actually reach customers.
-3. **Payment gateway** integration for JazzCash, Easypaisa and Raast.
+1. **Sign and publish the DPC**, then run it on real handsets. The app is written and builds ([`android/dpc/`](android/dpc/README.md)); what is missing is a signed release APK hosted somewhere a phone can reach, its certificate checksum in `DPC_APK_SIGNATURE_CHECKSUM`, and a pass across the Android versions and OEM skins a Pakistani shop actually sells.
+2. **An SMS aggregator account** (Jazz / Telenor / Zong corporate, or Twilio) with a PTA-approved sender mask. A paired phone gets reminders moving today, but a consumer SIM is not a delivery channel for a shop at volume — and a reminder that arrives from a random mobile number is a reminder customers ignore.
+3. **A payment gateway.** JazzCash's hosted checkout is the simplest of the real ones — an HMAC-signed form POST, no OAuth, no SDK — and the blocker is not code but a merchant account, which needs business registration and a bank account. Customers can already report transfers ([above](#-customer-reported-payments)); a gateway removes the manual confirmation, not the capability.
 4. **Deeper client coverage** — guards, auth, the API client, CSV export and pagination are tested; the page components and modals are not.
-5. **Contract PDF with digital signature** — device restriction needs recorded customer consent.
-6. Urdu localisation and RTL, PWA offline mode.
+5. **Legal review of the contract terms** — the agreement is written, bilingual, signed and enforced ([Consent](#-consent-the-contract-a-lock-rests-on)), but it was drafted by engineers. A Pakistani lawyer should read it before a shop relies on it. A server-rendered PDF is the other open piece, and needs headless Chrome for the Urdu to shape correctly.
+6. Urdu localisation and RTL for the dashboard itself, PWA offline mode.

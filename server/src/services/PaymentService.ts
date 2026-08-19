@@ -71,6 +71,10 @@ export class PaymentService {
     referenceNumber?: string;
     notes?: string;
     autoVerify?: boolean;
+    /** Who put this into the system. Defaults to the counter. */
+    source?: 'COUNTER' | 'CUSTOMER' | 'GATEWAY';
+    /** The customer's screenshot of the transfer, when they reported it themselves. */
+    proofImage?: string;
     actor: PaymentActor;
   }): Promise<PaymentOutcome> {
     if (params.amount <= 0) {
@@ -127,6 +131,8 @@ export class PaymentService {
             ? await repo.payments.nextReceiptNumber(params.dealerId, new Date().getFullYear(), tx)
             : undefined,
           recordedBy: params.actor.userId,
+          source: params.source ?? 'COUNTER',
+          proofImage: params.proofImage,
           createdAt: nowIso,
         },
         tx
