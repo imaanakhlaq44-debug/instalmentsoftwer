@@ -1,6 +1,6 @@
-# EMI Shield DPC — the app on the customer's phone
+# Almas SDM DPC — the app on the customer's phone
 
-The Android Device Policy Controller for [EMI Shield](../README.md). It is the
+The Android Device Policy Controller for [Almas SDM](../README.md). It is the
 half of the lock that actually holds a handset: the server decides *that* a
 phone should be restricted, this decides *whether the restriction is real*, and
 tells the server the truth either way.

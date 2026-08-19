@@ -21,7 +21,8 @@ export async function seedPostgres(): Promise<void> {
 
   await runInTransaction(async (tx: Tx) => {
     await repo.dealers.createMany(data.dealers, tx);
-    await repo.licenseKeys.createMany(data.licenseKeys, tx);
+    await repo.licensePacks.createMany(data.licensePacks, tx);
+    await repo.deviceLicenses.createMany(data.deviceLicenses, tx);
     await repo.devicePolicies.createMany(data.devicePolicies, tx);
     await repo.customers.createMany(data.customers, tx);
     // Users reference both a dealer and, for CUSTOMER logins, a customer.
@@ -102,7 +103,8 @@ const ALL_TABLES = [
   'customers',
   'users',
   'device_policies',
-  'license_keys',
+  'device_licenses',
+  'license_packs',
   'dealers',
 ] as const;
 

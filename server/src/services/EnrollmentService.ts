@@ -8,6 +8,7 @@ import { runInTransaction, Tx } from '../db/prisma.js';
 import { EnrollmentToken, QRType, Device, UserRole } from '../types/index.js';
 import { deviceManagementService } from './DeviceManagementService.js';
 import { AuditService } from './AuditService.js';
+import { LicenseService } from './LicenseService.js';
 import { AppError } from '../utils/AppError.js';
 import { issueDeviceToken } from '../utils/deviceToken.js';
 
@@ -48,7 +49,7 @@ export class EnrollmentService {
     // Cryptographically random, not a truncated UUID plus a timestamp — the old
     // format leaked when the token was created and had far less entropy.
     const secret = crypto.randomBytes(24).toString('base64url').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 24);
-    const tokenStr = `EMIS-${params.qrType.substring(0, 3)}-${secret}`;
+    const tokenStr = `ALMAS-${params.qrType.substring(0, 3)}-${secret}`;
 
     const token = await runInTransaction(async (tx) => {
       // Only one live token per device — otherwise an old printed QR keeps
@@ -228,6 +229,25 @@ export class EnrollmentService {
     if (!device) throw AppError.notFound('Device');
 
     /**
+     * The lock is spent here, and only here.
+     *
+     * Enrolment is the moment the handset is genuinely under management, so it
+     * is the honest moment to charge for it: a sale that falls through never
+     * costs the dealer a licence, and a phone that reaches this line is a phone
+     * the shop can hold. A device that already holds a licence keeps it, which
+     * is what makes re-enrolment after a factory reset free.
+     *
+     * This runs before the token is claimed so that a dealer who is out of
+     * locks is told plainly, with their QR still usable once they have bought
+     * more.
+     */
+    const { license, alreadyHeld } = await LicenseService.claimForDevice({
+      dealerId: device.dealerId,
+      deviceId: device.id,
+      imei: device.imei,
+    });
+
+    /**
      * Claim the token before doing the work.
      *
      * `updateMany` with the status in the filter is a compare-and-set: only one
@@ -274,7 +294,11 @@ export class EnrollmentService {
         action: 'DEVICE_ENROLLED',
         targetType: 'DEVICE',
         targetId: device.id,
-        details: `${device.brand} ${device.model} completed provisioning and is now under management.`,
+        details:
+          `${device.brand} ${device.model} completed provisioning and is now under management. ` +
+          (alreadyHeld
+            ? `Re-enrolled on its existing lock ${license.licenseKey} — no new lock was spent.`
+            : `Lock ${license.licenseKey} was spent on IMEI ${device.imei}.`),
         ipAddress: params.ipAddress,
       });
 

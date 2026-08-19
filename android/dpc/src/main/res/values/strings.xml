@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">EMI Shield</string>
-    <string name="admin_label">EMI Shield device management</string>
+    <string name="app_name">Almas SDM</string>
+    <string name="admin_label">Almas SDM device management</string>
     <string name="admin_description">Lets the financed handset receive and apply the restrictions agreed in the installment contract.</string>
 
     <!-- Enrolment -->
@@ -14,7 +14,7 @@
     <string name="enroll_done">This phone is registered.</string>
 
     <!-- Status -->
-    <string name="status_title">EMI Shield</string>
+    <string name="status_title">Almas SDM</string>
     <string name="status_registered">Registered · protected</string>
     <string name="status_not_registered">Not registered</string>
     <string name="status_amount_due">Amount overdue</string>

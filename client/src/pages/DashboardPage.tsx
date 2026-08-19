@@ -1,45 +1,60 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, QrCode, RefreshCw, ArrowRight, BadgeCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { ApiService } from '../services/api.js';
-import {
-  Smartphone,
-  CheckCircle2,
-  Clock,
-  Lock,
-  AlertTriangle,
-  PowerOff,
-  Wallet,
-  TrendingUp,
-  PlusCircle,
-  QrCode,
-  RefreshCw,
-  ArrowRight,
-  CreditCard,
-  ShieldAlert,
-  Radio,
-} from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { AddCustomerWizardModal } from '../components/modals/AddCustomerWizardModal.js';
+import { Card, CardHeader, Skeleton } from '../components/ui/Card.js';
+import { CollectionTrend, CollectionTrendLegend } from '../components/charts/CollectionTrend.js';
+import { FleetBar, type FleetSegment } from '../components/dashboard/FleetBar.js';
+import { CollectionQueue, type OverdueRow } from '../components/dashboard/CollectionQueue.js';
+import { money, moneyShort, longDate, greeting, firstName } from '../utils/format.js';
+
+/**
+ * The dashboard is a morning briefing, not a wall of metrics.
+ *
+ * It answers three questions in the order a shop owner actually asks them:
+ *
+ *   1. Is my money alright?      — the band at the top: outstanding, at risk,
+ *                                  collected this month against target.
+ *   2. What do I do today?       — the collection queue: who to call, with the
+ *                                  phone number as a link.
+ *   3. How is the fleet?         — one part-to-whole bar, then the trend.
+ *
+ * The previous version opened with eight tiles in eight colours, none of which
+ * outranked the others, and never showed a customer's name at all.
+ *
+ * One rule worth keeping: this page renders no invented figures. It used to seed
+ * its state with plausible-looking demo numbers, so a failed request left a
+ * dealer reading fiction. Now it holds nulls and shows skeletons.
+ */
+
+interface Stats {
+  totalDevices: number;
+  activeDevices: number;
+  pendingDevices: number;
+  lockedDevices: number;
+  overdueDevices: number;
+  inactiveDevices: number;
+  totalCustomers: number;
+  activePlans: number;
+  outstandingAmount: number;
+  overdueAmount: number;
+  overdueInstallmentsCount: number;
+  collectedThisMonth: number;
+  pendingVerificationAmount: number;
+  collectionRatePercentage: number;
+}
 
 export const DashboardPage: React.FC = () => {
-  const { dealer, selectedDealerId, showToast, isStaff, isDealerAdmin } = useAuth();
+  const { user, dealer, selectedDealerId, showToast, isStaff, isDealerAdmin } = useAuth();
   const navigate = useNavigate();
 
-  const [stats, setStats] = useState<any>({
-    totalDevices: 25,
-    activeDevices: 17,
-    pendingDevices: 2,
-    lockedDevices: 3,
-    overdueDevices: 3,
-    inactiveDevices: 1,
-    outstandingAmount: 1284500,
-    collectedThisMonth: 642300,
-    totalCollectedAllTime: 1845000,
-  });
-
+  const [stats, setStats] = useState<Stats | null>(null);
   const [charts, setCharts] = useState<any>(null);
+  const [overdueRows, setOverdueRows] = useState<OverdueRow[] | null>(null);
   const [loading, setLoading] = useState(true);
-  const [evaluatingOverdue, setEvaluatingOverdue] = useState(false);
+  const [evaluating, setEvaluating] = useState(false);
   const [showAddWizard, setShowAddWizard] = useState(false);
 
   const loadData = async () => {
@@ -51,8 +66,14 @@ export const DashboardPage: React.FC = () => {
       ]);
       setStats(statsData);
       setCharts(chartsData);
+
+      // Only staff may ask who is behind, so a customer never triggers a 403.
+      if (isStaff) {
+        const attention = await ApiService.getAttentionList(selectedDealerId);
+        setOverdueRows(attention.overdueInstallments ?? []);
+      }
     } catch (err: any) {
-      console.error(err);
+      showToast(err?.message || 'Could not load the dashboard', 'error');
     } finally {
       setLoading(false);
     }
@@ -60,334 +81,269 @@ export const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDealerId]);
 
   const handleRunOverdueEngine = async () => {
     try {
-      setEvaluatingOverdue(true);
+      setEvaluating(true);
       const res = await ApiService.evaluateOverdue();
       showToast(res.message || 'Overdue evaluation finished', 'success');
-      loadData();
+      await loadData();
     } catch (err: any) {
       showToast(err.message, 'error');
     } finally {
-      setEvaluatingOverdue(false);
+      setEvaluating(false);
     }
   };
 
-  const dealerDisplayName = dealer?.ownerName || 'Tariq Mehmood';
+  const name = firstName(user?.name || dealer?.ownerName);
+  const target = charts?.monthlyTrends?.find((m: any) => m.target > 0)?.target ?? 0;
+  const collected = stats?.collectedThisMonth ?? 0;
+  const targetPct = target > 0 ? Math.min(100, Math.round((collected / target) * 100)) : null;
+
+  /**
+   * The brand bars are scaled against the leading brand, not the whole fleet.
+   * Against the fleet the longest bar reached a quarter of its track and every
+   * brand looked identical; this panel is a ranking, so the leader sets the
+   * scale and the differences become visible.
+   */
+  const brandLeader: number = Math.max(
+    1,
+    ...((charts?.brandDistribution ?? []) as { count: number }[]).map((b) => b.count)
+  );
+
+  const fleet: FleetSegment[] = [
+    { key: 'active', label: 'Active', count: stats?.activeDevices ?? 0, status: 'ACTIVE', tone: 'positive' },
+    { key: 'overdue', label: 'Overdue', count: stats?.overdueDevices ?? 0, status: 'OVERDUE', tone: 'caution' },
+    { key: 'locked', label: 'Locked', count: stats?.lockedDevices ?? 0, status: 'LOCKED', tone: 'critical' },
+    { key: 'pending', label: 'Awaiting QR', count: stats?.pendingDevices ?? 0, status: 'PENDING', tone: 'accent' },
+    { key: 'inactive', label: 'Inactive', count: stats?.inactiveDevices ?? 0, status: 'INACTIVE', tone: 'neutral' },
+  ];
 
   return (
     <div className="space-y-6">
-      {/* Top Banner / Welcome */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-navy-950 via-navy-900 to-blue-950 p-6 sm:p-8 rounded-3xl text-white shadow-xl shadow-navy-950/10 border border-slate-800">
-        <div>
-          <div className="flex items-center gap-2 text-blue-400 text-xs font-bold uppercase tracking-wider mb-1">
-            <ShieldAlert className="w-4 h-4" /> Financed Asset Protection
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Good morning, {dealerDisplayName}
+      {/* ---------------------------------------------------------------- */}
+      {/* Dateline and greeting. A person is being spoken to, so the        */}
+      {/* greeting is set in the serif and the date is quiet above it.      */}
+      {/* ---------------------------------------------------------------- */}
+      {/* Stacks until there is genuinely room for both. Side by side at 1040px
+          the greeting was breaking across two lines to make space for three
+          buttons, which is the layout apologising for itself. */}
+      <header className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div className="min-w-0">
+          <p className="eyebrow">{longDate()}</p>
+          <h1 className="mt-1 font-serif text-display text-ink-900">
+            {greeting()}, {name}
           </h1>
-          <p className="text-slate-300 text-sm mt-1 max-w-xl">
-            Here's what's happening with your financed mobile portfolio and installment collections today.
+          <p className="mt-1 text-body text-ink-500">
+            {stats
+              ? `${stats.activePlans} active plans · ${stats.totalCustomers} customers`
+              : 'Loading your portfolio…'}
           </p>
         </div>
 
-        {/* Quick Action Shortcuts */}
-        <div className="flex items-center gap-3 flex-wrap">
-          {isStaff && (
-          <button
-            onClick={() => setShowAddWizard(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-bold rounded-xl shadow-lg shadow-blue-600/30 transition-all hover:scale-105 active:scale-95"
-          >
-            <PlusCircle className="w-4 h-4" /> Add Financed Device
-          </button>
-          )}
-          {isStaff && (
-          <button
-            onClick={() => navigate('/enrollment')}
-            className="flex items-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white text-xs sm:text-sm font-bold rounded-xl border border-white/20 transition-all"
-          >
-            <QrCode className="w-4 h-4" /> QR Provisioning
-          </button>
-          )}
+        <div className="flex flex-wrap items-center gap-2">
           {isDealerAdmin && (
-          <button
-            onClick={handleRunOverdueEngine}
-            disabled={evaluatingOverdue}
-            className="flex items-center gap-2 px-4 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs sm:text-sm font-bold rounded-xl border border-amber-500/40 transition-all"
-            title="Scan all active installments and flag overdue devices according to grace period policy"
-          >
-            <RefreshCw className={`w-4 h-4 ${evaluatingOverdue ? 'animate-spin' : ''}`} />
-            <span>{evaluatingOverdue ? 'Evaluating...' : 'Run Overdue Engine'}</span>
-          </button>
+            <button
+              type="button"
+              onClick={handleRunOverdueEngine}
+              disabled={evaluating}
+              className="btn-ghost"
+              title="Re-check every active instalment against the grace period. This runs itself nightly."
+            >
+              <RefreshCw className={`h-4 w-4 ${evaluating ? 'animate-spin' : ''}`} aria-hidden="true" />
+              {evaluating ? 'Checking…' : 'Re-check overdue'}
+            </button>
+          )}
+          {isStaff && (
+            <button type="button" onClick={() => navigate('/enrollment')} className="btn-secondary">
+              <QrCode className="h-4 w-4" aria-hidden="true" /> Provision a handset
+            </button>
+          )}
+          {isStaff && (
+            <button type="button" onClick={() => setShowAddWizard(true)} className="btn-primary">
+              <Plus className="h-4 w-4" aria-hidden="true" /> New financed sale
+            </button>
           )}
         </div>
-      </div>
+      </header>
 
-      {/* Summary Cards Grid (Clickable to open filtered lists) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4">
-        {/* Total Devices */}
-        <div
-          onClick={() => navigate('/devices?status=ALL')}
-          className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-card hover:shadow-card-hover transition-all cursor-pointer group"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Financed</span>
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Smartphone className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              {stats.totalDevices}
-            </span>
-          </div>
-          <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
-            <span>Portfolio units</span>
-            <ArrowRight className="w-3.5 h-3.5 text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-        </div>
-
-        {/* Active Devices */}
-        <div
-          onClick={() => navigate('/devices?status=ACTIVE')}
-          className="bg-white p-5 rounded-2xl border border-emerald-100 shadow-card hover:shadow-card-hover transition-all cursor-pointer group"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Active Devices</span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <CheckCircle2 className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl sm:text-3xl font-extrabold text-emerald-950 tracking-tight">
-              {stats.activeDevices}
-            </span>
-          </div>
-          <div className="mt-2 flex items-center justify-between text-xs text-emerald-600 font-semibold">
-            <span>Compliant & Online</span>
-            <ArrowRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-        </div>
-
-        {/* Pending Enrollment */}
-        <div
-          onClick={() => navigate('/devices?status=PENDING')}
-          className="bg-white p-5 rounded-2xl border border-amber-100 shadow-card hover:shadow-card-hover transition-all cursor-pointer group"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">Pending QR</span>
-            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Clock className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl sm:text-3xl font-extrabold text-amber-950 tracking-tight">
-              {stats.pendingDevices}
-            </span>
-          </div>
-          <div className="mt-2 flex items-center justify-between text-xs text-amber-600 font-semibold">
-            <span>Awaiting scan</span>
-            <ArrowRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-        </div>
-
-        {/* Locked Devices */}
-        <div
-          onClick={() => navigate('/devices?status=LOCKED')}
-          className="bg-white p-5 rounded-2xl border border-rose-200 shadow-card hover:shadow-card-hover transition-all cursor-pointer group bg-gradient-to-b from-white to-rose-50/30"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-rose-700 uppercase tracking-wider">Locked Devices</span>
-            <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Lock className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl sm:text-3xl font-extrabold text-rose-600 tracking-tight">
-              {stats.lockedDevices}
-            </span>
-          </div>
-          <div className="mt-2 flex items-center justify-between text-xs text-rose-600 font-bold">
-            <span>Restricted Mode</span>
-            <ArrowRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-        </div>
-
-        {/* Overdue Devices */}
-        <div
-          onClick={() => navigate('/devices?status=OVERDUE')}
-          className="bg-white p-5 rounded-2xl border border-orange-100 shadow-card hover:shadow-card-hover transition-all cursor-pointer group"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-orange-700 uppercase tracking-wider">Overdue Devices</span>
-            <div className="w-9 h-9 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <AlertTriangle className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl sm:text-3xl font-extrabold text-orange-950 tracking-tight">
-              {stats.overdueDevices}
-            </span>
-          </div>
-          <div className="mt-2 flex items-center justify-between text-xs text-orange-600 font-semibold">
-            <span>Eligible for Lock</span>
-            <ArrowRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-        </div>
-
-        {/* Inactive Devices */}
-        <div
-          onClick={() => navigate('/devices?status=INACTIVE')}
-          className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-card hover:shadow-card-hover transition-all cursor-pointer group"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Inactive</span>
-            <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <PowerOff className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">
-              {stats.inactiveDevices}
-            </span>
-          </div>
-          <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
-            <span>Removed / Inactive</span>
-            <ArrowRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-        </div>
-
-        {/* Outstanding Balance */}
-        <div
-          onClick={() => navigate('/installments')}
-          className="bg-white p-5 rounded-2xl border border-indigo-100 shadow-card hover:shadow-card-hover transition-all cursor-pointer group"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-indigo-700 uppercase tracking-wider">Outstanding Portfolio</span>
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Wallet className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-xl sm:text-2xl font-extrabold text-indigo-950 tracking-tight">
-              Rs. {Number(stats.outstandingAmount).toLocaleString()}
-            </span>
-          </div>
-          <div className="mt-2 flex items-center justify-between text-xs text-indigo-600 font-semibold">
-            <span>Financed balance</span>
-            <ArrowRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-        </div>
-
-        {/* Collected This Month */}
-        <div
-          onClick={() => navigate('/payments')}
-          className="bg-white p-5 rounded-2xl border border-emerald-200 shadow-card hover:shadow-card-hover transition-all cursor-pointer group bg-gradient-to-b from-white to-emerald-50/20"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Collected This Month</span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-100/70 text-emerald-700 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <TrendingUp className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-xl sm:text-2xl font-extrabold text-emerald-900 tracking-tight">
-              Rs. {Number(stats.collectedThisMonth).toLocaleString()}
-            </span>
-          </div>
-          <div className="mt-2 flex items-center justify-between text-xs text-emerald-700 font-bold">
-            <span>Aug 2026 Collections</span>
-            <ArrowRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-        </div>
-      </div>
-
-      {/* Analytics & Distribution Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Monthly Trend Chart Representation */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-card">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-base font-bold text-slate-900">Installment Collection Performance</h2>
-              <p className="text-xs text-slate-500">Monthly recovery versus overdue exposure (PKR)</p>
-            </div>
-            <div className="flex items-center gap-3 text-xs">
-              <div className="flex items-center gap-1.5 font-semibold text-slate-600">
-                <span className="w-3 h-3 rounded-full bg-blue-600"></span> Collection
-              </div>
-              <div className="flex items-center gap-1.5 font-semibold text-slate-600">
-                <span className="w-3 h-3 rounded-full bg-rose-500"></span> Overdue
-              </div>
-            </div>
-          </div>
-
-          {/* Bar Chart Visual */}
-          <div className="space-y-4">
-            {charts?.monthlyTrends?.map((item: any, idx: number) => {
-              const maxVal = 850000;
-              const collectionPct = Math.min(100, Math.round((item.collection / maxVal) * 100));
-              const overduePct = Math.min(100, Math.round((item.overdue / maxVal) * 100));
-
-              return (
-                <div key={idx} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                    <span>{item.month}</span>
-                    <span>Rs. {item.collection.toLocaleString()}</span>
-                  </div>
-                  <div className="h-3 bg-slate-100 rounded-full overflow-hidden flex gap-1">
-                    <div
-                      style={{ width: `${collectionPct}%` }}
-                      className="bg-blue-600 rounded-full transition-all duration-500"
-                    ></div>
-                    <div
-                      style={{ width: `${overduePct}%` }}
-                      className="bg-rose-500 rounded-full transition-all duration-500"
-                    ></div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Brand Distribution & Quick Actions */}
-        <div className="space-y-6">
-          <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-card">
-            <h2 className="text-base font-bold text-slate-900 mb-4">Device Brand Portfolio</h2>
-            <div className="space-y-3">
-              {charts?.brandDistribution?.map((b: any, idx: number) => (
-                <div key={idx} className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-slate-700">{b.name}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-900">{b.count} devices</span>
-                    <span className="text-slate-400">({Math.round((b.count / (stats.totalDevices || 1)) * 100)}%)</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Quick Info Box */}
-          <div className="bg-gradient-to-br from-indigo-900 to-navy-950 p-5 rounded-3xl text-white">
-            <div className="flex items-center gap-2 text-indigo-300 text-xs font-bold mb-2">
-              <Radio className="w-4 h-4 text-emerald-400" /> Interactive Phone Simulator
-            </div>
-            <p className="text-xs text-slate-300 leading-relaxed mb-4">
-              Test live device locking, unlock triggers, and simulated customer lock screens in real time.
+      {/* ---------------------------------------------------------------- */}
+      {/* The money. Three figures, one card, hairlines between them —      */}
+      {/* they are three views of the same portfolio, not three tiles.      */}
+      {/* ---------------------------------------------------------------- */}
+      <Card flush>
+        <div className="grid divide-y divide-paper-300 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <div className="p-5">
+            <p className="eyebrow">Outstanding</p>
+            {loading && !stats ? (
+              <Skeleton className="mt-2 h-9 w-40" />
+            ) : (
+              <p className="figure mt-1.5">{money(stats?.outstandingAmount)}</p>
+            )}
+            <p className="mt-1.5 text-caption text-ink-400">
+              Financed balance still to be recovered
             </p>
-            <button
-              onClick={() => navigate('/simulator')}
-              className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
-            >
-              Launch Simulator <ArrowRight className="w-3.5 h-3.5" />
-            </button>
           </div>
+
+          <div className="p-5">
+            <p className="eyebrow">At risk</p>
+            {loading && !stats ? (
+              <Skeleton className="mt-2 h-9 w-32" />
+            ) : (
+              <p className="figure mt-1.5">{money(stats?.overdueAmount)}</p>
+            )}
+            <p className="mt-1.5 text-caption">
+              {stats?.overdueInstallmentsCount ? (
+                <span className="text-critical-700">
+                  {stats.overdueInstallmentsCount} instalments past due
+                </span>
+              ) : (
+                <span className="text-positive-700">Nothing past due</span>
+              )}
+            </p>
+          </div>
+
+          <div className="p-5">
+            <p className="eyebrow">Collected this month</p>
+            {loading && !stats ? (
+              <Skeleton className="mt-2 h-9 w-32" />
+            ) : (
+              <p className="figure mt-1.5">{money(collected)}</p>
+            )}
+            {targetPct !== null ? (
+              <div className="mt-2.5">
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-paper-200">
+                  <div
+                    className="h-full rounded-full bg-accent-600 transition-[width] duration-500"
+                    style={{ width: `${targetPct}%` }}
+                  />
+                </div>
+                <p className="mt-1.5 text-caption text-ink-400 tabular">
+                  {targetPct}% of {moneyShort(target)} expected this month
+                </p>
+              </div>
+            ) : (
+              <p className="mt-1.5 text-caption text-ink-400">No instalments fall due this month</p>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      {/* A customer has reported a transfer and is waiting on a human. This
+          only appears when there is genuinely something to confirm. */}
+      {isStaff && (stats?.pendingVerificationAmount ?? 0) > 0 && (
+        <button
+          type="button"
+          onClick={() => navigate('/payments?status=PENDING')}
+          className="flex w-full items-center gap-3 rounded-lg border border-accent-200 bg-accent-50 px-4 py-3 text-left transition-colors hover:bg-accent-100"
+        >
+          <BadgeCheck className="h-5 w-5 shrink-0 text-accent-700" aria-hidden="true" />
+          <span className="flex-1 text-body text-accent-900">
+            <strong className="font-medium">{money(stats?.pendingVerificationAmount)}</strong> in
+            customer-reported payments is waiting for you to confirm it
+          </span>
+          <ArrowRight className="h-4 w-4 shrink-0 text-accent-700" aria-hidden="true" />
+        </button>
+      )}
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* min-w-0: a grid item defaults to min-width:auto, so the widest row inside
+            — a customer name, a pill and two buttons — was setting the column's
+            width and pushing the whole page into a horizontal scroll on a phone. */}
+        <div className="min-w-0 space-y-6 lg:col-span-2">
+          {/* ------------------------------------------------------------ */}
+          {/* Today's work. The whole point of the page.                    */}
+          {/* ------------------------------------------------------------ */}
+          {isStaff && (
+            <Card>
+              <CardHeader
+                title="Who to chase today"
+                hint="Worst arrears first, one line per customer"
+                action={
+                  <button
+                    type="button"
+                    onClick={() => navigate('/installments?status=OVERDUE')}
+                    className="btn-ghost -mr-2 text-caption"
+                  >
+                    See all <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                }
+              />
+              <div className="mt-4">
+                {overdueRows === null ? (
+                  <div className="space-y-3">
+                    {[0, 1, 2, 3].map((i) => (
+                      <Skeleton key={i} className="h-12 w-full" />
+                    ))}
+                  </div>
+                ) : (
+                  <CollectionQueue rows={overdueRows} />
+                )}
+              </div>
+            </Card>
+          )}
+
+          <Card>
+            <CardHeader
+              title="Collections"
+              hint="Recovered against overdue exposure, last six months"
+              action={<CollectionTrendLegend />}
+            />
+            <div className="mt-5">
+              {charts?.monthlyTrends ? (
+                <CollectionTrend data={charts.monthlyTrends} />
+              ) : (
+                <Skeleton className="h-52 w-full" />
+              )}
+            </div>
+          </Card>
+        </div>
+
+        <div className="min-w-0 space-y-6">
+          <Card>
+            <CardHeader title="Fleet" hint="Every financed handset, by state" />
+            <div className="mt-5">
+              {stats ? (
+                <FleetBar segments={fleet} total={stats.totalDevices} />
+              ) : (
+                <Skeleton className="h-32 w-full" />
+              )}
+            </div>
+          </Card>
+
+          <Card>
+            <CardHeader title="Brands financed" />
+            <div className="mt-4 space-y-2.5">
+              {charts?.brandDistribution?.length ? (
+                charts.brandDistribution.map((b: any) => {
+                  const pct = Math.round((b.count / (brandLeader || 1)) * 100);
+                  return (
+                    <div key={b.name}>
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span className="text-caption text-ink-700">{b.name}</span>
+                        <span className="text-caption text-ink-400 tabular">{b.count}</span>
+                      </div>
+                      {/* One hue, more-is-darker is unnecessary here: magnitude is
+                          already carried by length, so the bar stays quiet. */}
+                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-paper-200">
+                        <div
+                          className="h-full rounded-full bg-accent-400"
+                          style={{ width: `${Math.max(4, pct)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <Skeleton className="h-24 w-full" />
+              )}
+            </div>
+          </Card>
         </div>
       </div>
 
-      {/* Add Customer Wizard Modal */}
       {showAddWizard && (
         <AddCustomerWizardModal
           onClose={() => setShowAddWizard(false)}

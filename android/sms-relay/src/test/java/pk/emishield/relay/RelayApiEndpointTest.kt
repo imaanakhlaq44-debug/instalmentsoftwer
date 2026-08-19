@@ -13,12 +13,12 @@ class RelayApiEndpointTest {
     @Test
     fun `joins with and without a trailing slash`() {
         assertEquals(
-            "https://api.emishield.pk/api/sms-relay/poll",
-            RelayApi.endpoint("https://api.emishield.pk/api/sms-relay", "poll")
+            "https://api.almassdm.pk/api/sms-relay/poll",
+            RelayApi.endpoint("https://api.almassdm.pk/api/sms-relay", "poll")
         )
         assertEquals(
-            "https://api.emishield.pk/api/sms-relay/results",
-            RelayApi.endpoint("https://api.emishield.pk/api/sms-relay/", "results")
+            "https://api.almassdm.pk/api/sms-relay/results",
+            RelayApi.endpoint("https://api.almassdm.pk/api/sms-relay/", "results")
         )
     }
 

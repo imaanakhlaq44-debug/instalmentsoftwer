@@ -245,7 +245,7 @@ export const EnrollmentPage: React.FC = () => {
                 <span className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0">2</span>
                 <div>
                   <span className="font-bold text-slate-900">Scan this QR Code</span>
-                  <p className="text-slate-500 text-[11px] mt-0.5">The phone will automatically download and install the official EMI Shield Device Policy Controller (DPC).</p>
+                  <p className="text-slate-500 text-[11px] mt-0.5">The phone will automatically download and install the official Almas SDM Device Policy Controller (DPC).</p>
                 </div>
               </div>
 

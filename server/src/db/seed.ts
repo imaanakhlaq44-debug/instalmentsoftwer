@@ -7,7 +7,7 @@ import {
   Installment,
   Payment,
   Transaction,
-  LicenseKey,
+  LicensePack, DeviceLicense,
   DevicePolicy,
   AuditLog,
   DeviceActionLog,
@@ -36,7 +36,8 @@ export interface SeedData {
   transactions: Transaction[];
   deviceActionLogs: DeviceActionLog[];
   auditLogs: AuditLog[];
-  licenseKeys: LicenseKey[];
+  licensePacks: LicensePack[];
+  deviceLicenses: DeviceLicense[];
   devicePolicies: DevicePolicy[];
   notifications: Notification[];
   notificationTemplates: NotificationTemplate[];
@@ -60,7 +61,6 @@ export function generateSeedData(): SeedData {
       phone: '0300-8451299',
       city: 'Lahore',
       address: 'Shop 42, Ground Floor, Hafeez Centre, Gulberg III, Lahore',
-      licenseKeyId: 'lic-1',
       active: true,
       createdAt: '2026-01-10T10:00:00.000Z',
     },
@@ -73,7 +73,6 @@ export function generateSeedData(): SeedData {
       phone: '0321-9988771',
       city: 'Karachi',
       address: 'Shop 112, Star City Mall, Saddar, Karachi',
-      licenseKeyId: 'lic-2',
       active: true,
       createdAt: '2026-01-15T11:30:00.000Z',
     },
@@ -86,7 +85,6 @@ export function generateSeedData(): SeedData {
       phone: '0333-5123456',
       city: 'Rawalpindi',
       address: 'Opposite Singapore Plaza, Bank Road, Saddar, Rawalpindi',
-      licenseKeyId: 'lic-3',
       active: true,
       createdAt: '2026-02-01T09:15:00.000Z',
     },
@@ -99,7 +97,6 @@ export function generateSeedData(): SeedData {
       phone: '0345-5544332',
       city: 'Islamabad',
       address: 'Mezzanine Floor, Beverly Centre, Blue Area, Islamabad',
-      licenseKeyId: 'lic-4',
       active: true,
       createdAt: '2026-02-20T14:00:00.000Z',
     },
@@ -112,7 +109,6 @@ export function generateSeedData(): SeedData {
       phone: '0313-9090123',
       city: 'Peshawar',
       address: 'Deans Trade Centre, Cantt, Peshawar',
-      licenseKeyId: 'lic-5',
       active: true,
       createdAt: '2026-03-05T08:45:00.000Z',
     },
@@ -123,7 +119,7 @@ export function generateSeedData(): SeedData {
     {
       id: 'user-superadmin',
       name: 'System Super Admin',
-      email: 'admin@emishield.pk',
+      email: 'admin@almassdm.pk',
       passwordHash: demoPasswordHash,
       role: 'SUPER_ADMIN',
       phone: '0300-0000001',
@@ -430,64 +426,54 @@ export function generateSeedData(): SeedData {
     }
   });
 
-  // 6. License Keys
-  const licenseKeys: LicenseKey[] = [
-    {
-      id: 'lic-1',
-      dealerId: 'dealer-1',
-      licenseKey: 'EMIS-PRO-8892-4410-LHR',
-      plan: 'PROFESSIONAL',
-      deviceLimit: 100,
-      usedDevices: 12,
-      expiryDate: '2027-01-10',
-      status: 'ACTIVE',
-      createdAt: '2026-01-10T10:00:00.000Z',
-    },
-    {
-      id: 'lic-2',
-      dealerId: 'dealer-2',
-      licenseKey: 'EMIS-BIZ-1029-7744-KHI',
-      plan: 'BUSINESS',
-      deviceLimit: 500,
-      usedDevices: 4,
-      expiryDate: '2027-01-15',
-      status: 'ACTIVE',
-      createdAt: '2026-01-15T11:30:00.000Z',
-    },
-    {
-      id: 'lic-3',
-      dealerId: 'dealer-3',
-      licenseKey: 'EMIS-STR-3341-9902-RWP',
-      plan: 'STARTER',
-      deviceLimit: 25,
-      usedDevices: 9,
-      expiryDate: '2027-02-01',
-      status: 'ACTIVE',
-      createdAt: '2026-02-01T09:15:00.000Z',
-    },
-    {
-      id: 'lic-4',
-      dealerId: 'dealer-4',
-      licenseKey: 'EMIS-PRO-5541-1122-ISB',
-      plan: 'PROFESSIONAL',
-      deviceLimit: 100,
-      usedDevices: 0,
-      expiryDate: '2027-02-20',
-      status: 'ACTIVE',
-      createdAt: '2026-02-20T14:00:00.000Z',
-    },
-    {
-      id: 'lic-5',
-      dealerId: 'dealer-5',
-      licenseKey: 'EMIS-ENT-7788-3344-PEW',
-      plan: 'ENTERPRISE',
-      deviceLimit: 2000,
-      usedDevices: 0,
-      expiryDate: '2027-03-05',
-      status: 'ACTIVE',
-      createdAt: '2026-03-05T08:45:00.000Z',
-    },
-  ];
+  // 6. Device locks
+  //
+  // A lock is spent on one handset and never returned, so the demo data has to
+  // look like a shop that has been trading: every phone already under
+  // management holds a consumed lock naming its IMEI, and what is left in the
+  // pack is what that dealer could still enrol today.
+  const licensePacks: LicensePack[] = [];
+  const deviceLicenses: DeviceLicense[] = [];
+
+  dealers.forEach((dealer, dealerIdx) => {
+    const dealerDevices = devices.filter((d) => d.dealerId === dealer.id);
+    // Enough for what they have enrolled, plus room to keep selling.
+    const size = [30, 50, 100].find((n) => n >= dealerDevices.length + 5) ?? 100;
+    const unitPrice = size === 30 ? 800 : size === 50 ? 700 : 600;
+    const packId = `pack-${dealerIdx + 1}`;
+
+    licensePacks.push({
+      id: packId,
+      dealerId: dealer.id,
+      size,
+      unitPrice,
+      totalPrice: size * unitPrice,
+      reference: `SEED-INV-${1000 + dealerIdx}`,
+      issuedById: 'user-superadmin',
+      issuedByName: 'Platform Admin',
+      createdAt: dealer.createdAt,
+    });
+
+    // A PENDING handset has never enrolled, so its lock is still unspent —
+    // which is exactly the state the counter cares about.
+    const enrolled = dealerDevices.filter((d) => d.status !== 'PENDING');
+
+    for (let i = 0; i < size; i += 1) {
+      const device = enrolled[i];
+      deviceLicenses.push({
+        id: `dlic-${dealerIdx + 1}-${i + 1}`,
+        dealerId: dealer.id,
+        packId,
+        licenseKey: `ALMAS-L-${String(dealerIdx + 1).padStart(2, '0')}${String(i + 1).padStart(2, '0')}-` +
+          `${String(1000 + dealerIdx * 137 + i * 7).slice(0, 4)}-${String(4000 + i * 13).slice(0, 4)}`,
+        status: device ? 'CONSUMED' : 'AVAILABLE',
+        deviceId: device?.id ?? null,
+        imei: device?.imei ?? null,
+        consumedAt: device ? device.createdAt : null,
+        createdAt: dealer.createdAt,
+      });
+    }
+  });
 
   // 7. Device Policies
   const devicePolicies: DevicePolicy[] = dealers.map((d) => ({
@@ -681,7 +667,7 @@ export function generateSeedData(): SeedData {
       dealerId: 'dealer-1',
       deviceId: 'dev-6',
       customerId: 'cust-6',
-      token: 'EMIS-TOKEN-9941-LHR-2026',
+      token: 'ALMAS-TOKEN-9941-LHR-2026',
       qrType: 'STANDARD',
       status: 'WAITING',
       expiresAt: new Date(now.getTime() + 86400000 * 2).toISOString(),
@@ -701,7 +687,8 @@ export function generateSeedData(): SeedData {
     transactions,
     deviceActionLogs,
     auditLogs,
-    licenseKeys,
+    licensePacks,
+    deviceLicenses,
     devicePolicies,
     notifications,
     notificationTemplates,

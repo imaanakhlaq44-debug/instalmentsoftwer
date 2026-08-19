@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext.js';
 import { navItemsForRole } from './navItems.js';
 
 /** Which sections earn a slot on the small mobile bar, in priority order. */
-const MOBILE_PRIORITY = ['/', '/devices', '/simulator', '/payments', '/customers', '/installments'];
+const MOBILE_PRIORITY = ['/', '/devices', '/payments', '/customers', '/installments'];
 
 export const BottomNav: React.FC = () => {
   const { role } = useAuth();
@@ -19,7 +19,12 @@ export const BottomNav: React.FC = () => {
   if (items.length === 0) return null;
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-2 py-2 flex items-center justify-around shadow-lg">
+    <nav
+      className="fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around border-t
+                 border-paper-300 bg-paper-50/95 backdrop-blur-sm lg:hidden"
+      // Keeps the bar clear of the iOS home indicator.
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
       {items.map((item) => {
         const Icon = item.icon;
         return (
@@ -28,19 +33,17 @@ export const BottomNav: React.FC = () => {
             to={item.to}
             end={item.to === '/'}
             className={({ isActive }) =>
-              `flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[10px] font-semibold transition-all ${
-                isActive
-                  ? 'text-blue-600 font-bold scale-105'
-                  : item.highlight
-                  ? 'text-indigo-600'
-                  : 'text-slate-500 hover:text-slate-900'
+              `flex flex-1 flex-col items-center gap-1 py-2.5 text-micro normal-case tracking-normal transition-colors ${
+                isActive ? 'text-accent-700' : 'text-ink-400'
               }`
             }
           >
-            <div className={`p-1 rounded-lg ${item.highlight ? 'bg-indigo-50 text-indigo-600' : ''}`}>
-              <Icon className="w-5 h-5" />
-            </div>
-            <span className="mt-0.5">{item.label}</span>
+            {({ isActive }) => (
+              <>
+                <Icon className="h-5 w-5" aria-hidden="true" strokeWidth={isActive ? 2.2 : 1.8} />
+                <span className={isActive ? 'font-medium' : ''}>{item.label}</span>
+              </>
+            )}
           </NavLink>
         );
       })}

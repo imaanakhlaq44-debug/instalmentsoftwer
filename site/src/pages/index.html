@@ -1,0 +1,371 @@
+<!-- meta
+title: Instalments and device management for mobile shops
+titleUr: موبائل دکانوں کے لیے قسط اور ڈیوائس مینجمنٹ
+description: Sell phones on instalments without losing them. Almas SDM writes the plan, chases the payment, and locks the handset when a customer who signed for it genuinely stops paying.
+page: home
+-->
+
+<!-- ------------------------------------------------------------------ -->
+<!-- Hero                                                                -->
+<!--                                                                     -->
+<!-- The dark block is the only one on the site, and it earns its place:  -->
+<!-- this is where the product shows what it does rather than describing  -->
+<!-- it. The handset is built from divs — no video, no WebGL, no image —  -->
+<!-- and the lock it performs eight seconds in is the whole pitch.        -->
+<!-- ------------------------------------------------------------------ -->
+<section class="stage relative overflow-hidden">
+  <div class="mx-auto grid max-w-5xl items-center gap-14 px-4 pb-24 pt-16 sm:px-6 sm:pb-28 sm:pt-24 lg:grid-cols-[1.1fr,0.9fr]">
+    <div>
+      <p class="stage-eyebrow reveal reveal-1" data-ur="پاکستانی موبائل دکانوں کے لیے">For Pakistani mobile shops</p>
+
+      <h1 class="reveal reveal-2 mt-5 font-serif text-[2.5rem] leading-[1.05] tracking-[-0.03em] text-paper-50 sm:text-[3.5rem]" data-ur="قسط پر فون بیچیں، ڈوبنے کے ڈر کے بغیر۔">
+        Sell phones on instalments without losing them.
+      </h1>
+
+      <p class="reveal reveal-3 mt-6 max-w-lg text-lede" style="color: rgba(246,245,242,0.72)" data-ur="ہم قسطوں کا حساب رکھتے ہیں، وقت پر یاد دہانی بھیجتے ہیں، اور جہاں گاہک نے دستخط کر کے اجازت دی ہو، وہیں قسط واقعی رک جانے پر فون لاک کر دیتے ہیں۔">
+        We keep the schedule, send the reminder, and — only where your customer has signed for it —
+        lock the handset when the payments genuinely stop.
+      </p>
+
+      <div class="reveal reveal-4 mt-9 flex flex-wrap items-center gap-3">
+        <a href="/pricing.html" class="btn bg-paper-50 text-ink-900 hover:bg-paper-200" data-ur="قیمت دیکھیں">See pricing</a>
+        <a href="/how-it-works.html" class="btn border text-paper-100 hover:bg-paper-100/10" style="border-color: rgba(246,245,242,0.22)" data-ur="یہ کیسے چلتا ہے">How it works</a>
+      </div>
+
+      <p class="reveal reveal-5 mt-6 text-caption" style="color: rgba(246,245,242,0.45)" data-ur="ایک ہینڈسیٹ کے لیے ایک لاک، آٹھ سو روپے سے۔ کوئی ماہانہ فیس نہیں۔">
+        One lock per handset, from Rs 800. No monthly fee.
+      </p>
+    </div>
+
+    <!-- The handset, and beside it the shop's own screen. dir="ltr" because
+         both are pictures of an English interface: under RTL the bidi
+         algorithm reorders their labels and "57 days late" becomes nonsense. -->
+    <div class="relative mx-auto w-full max-w-md reveal reveal-3" dir="ltr">
+      <div class="handset float-slow mx-auto w-[15rem] rounded-[2rem] p-2.5 sm:w-[16.5rem]">
+        <div class="handset-screen relative flex h-[30rem] flex-col rounded-[1.6rem] p-5 sm:h-[32rem]">
+          <!-- Before: the phone is simply a phone. -->
+          <div data-phase="active" class="flex flex-1 flex-col">
+            <div class="flex items-center gap-2">
+              <img src="/logo-mark.webp" alt="" width="20" height="16" class="h-4 w-auto opacity-90" />
+              <span class="text-[11px] font-medium tracking-wide text-paper-300">Almas SDM</span>
+            </div>
+
+            <div class="mt-auto">
+              <p class="text-[11px] uppercase tracking-[0.12em] text-paper-400/70">Next instalment</p>
+              <p class="mt-1 font-serif text-4xl text-paper-50" style="font-variant-numeric: tabular-nums">Rs 7,750</p>
+              <p class="mt-1 text-caption text-paper-300/70">Due 20 September</p>
+
+              <div class="mt-5 flex items-center gap-2 rounded-md px-2.5 py-2" style="background: rgba(18,122,84,0.18)">
+                <span class="h-1.5 w-1.5 rounded-full" style="background:#3DBF93"></span>
+                <span class="text-[11px]" style="color:#8FE0C2">Paid up to date</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- After: the same phone, once the money has genuinely stopped. -->
+          <div data-phase="locked" class="absolute inset-0 hidden flex flex-col rounded-[1.6rem] p-5" style="background: linear-gradient(170deg, #2A1114, #140A0C)">
+            <div class="flex items-center gap-2">
+              <img src="/logo-mark.webp" alt="" width="20" height="16" class="h-4 w-auto opacity-90" />
+              <span class="text-[11px] font-medium tracking-wide text-paper-300">Almas SDM</span>
+            </div>
+
+            <div class="mt-auto">
+              <span class="pulse-soft inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold" style="background: rgba(194,57,52,0.2); color:#F2A8A5">
+                <svg viewBox="0 0 24 24" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <rect x="4" y="10" width="16" height="10" rx="2" />
+                  <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+                </svg>
+                Restricted
+              </span>
+
+              <p class="mt-3 text-[11px] uppercase tracking-[0.12em] text-paper-400/70">Amount overdue</p>
+              <p class="mt-1 font-serif text-4xl text-paper-50" style="font-variant-numeric: tabular-nums">Rs 15,500</p>
+              <p class="mt-1 text-caption text-paper-300/70">Al-Madina Mobile Hub · 0300-8451299</p>
+
+              <div class="mt-5 space-y-1.5">
+                <p class="rounded-md px-2.5 py-2 text-[11px] text-paper-200" style="background: rgba(246,245,242,0.07)">
+                  Pay at the shop or by JazzCash. The phone unlocks itself.
+                </p>
+                <p class="rounded-md px-2.5 py-2 text-[11px] text-paper-300/80" style="background: rgba(246,245,242,0.04)">
+                  Emergency calls still work
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- The shop's side of the same moment. -->
+      <div class="absolute -top-6 -left-10 hidden w-52 rounded-lg p-3 backdrop-blur-sm lg:block"
+           style="background: rgba(246,245,242,0.07); box-shadow: 0 0 0 1px rgba(246,245,242,0.1)">
+        <p class="text-[10px] uppercase tracking-[0.12em] text-paper-400/70">Your dashboard</p>
+        <div class="mt-2 space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[11px] text-paper-200">Zubair Ahmed</span>
+            <span data-phase="active" class="text-[10px]" style="color:#8FE0C2">on time</span>
+            <span data-phase="locked" class="hidden text-[10px]" style="color:#F2A8A5">57 days late</span>
+          </div>
+          <div class="h-px w-full" style="background: rgba(246,245,242,0.1)"></div>
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[11px] text-paper-300/80">Device</span>
+            <span data-phase="active" class="text-[10px] text-paper-300/80">active</span>
+            <span data-phase="locked" class="hidden text-[10px]" style="color:#F2A8A5">locked</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- What the shop finances, as a moving line. Concrete beats adjectives:
+       these are the handsets actually on the books in Pakistani shops. -->
+  <div class="relative overflow-hidden pb-10" aria-hidden="true">
+    <div class="flex w-max marquee-track gap-10 whitespace-nowrap px-4 text-caption" style="color: rgba(246,245,242,0.28)">
+      <span>Samsung Galaxy A16</span><span>Infinix Hot 40i</span><span>Tecno Spark 20</span>
+      <span>Xiaomi Redmi Note 12</span><span>Vivo Y27 5G</span><span>Oppo A38</span>
+      <span>Realme C53</span><span>Itel P55</span>
+      <span>Samsung Galaxy A16</span><span>Infinix Hot 40i</span><span>Tecno Spark 20</span>
+      <span>Xiaomi Redmi Note 12</span><span>Vivo Y27 5G</span><span>Oppo A38</span>
+      <span>Realme C53</span><span>Itel P55</span>
+    </div>
+  </div>
+
+  <div class="stage-edge"></div>
+</section>
+
+<!-- ------------------------------------------------------------------ -->
+<!-- What it replaces                                                    -->
+<!-- ------------------------------------------------------------------ -->
+<section class="border-y border-paper-300 bg-paper-50">
+  <div class="band-tight">
+    <div class="grid gap-8 sm:grid-cols-3">
+      <div>
+        <p class="text-title font-semibold text-ink-900" data-ur="کاپی اور رجسٹر کی جگہ">Instead of the register</p>
+        <p class="mt-2 text-body text-ink-500" data-ur="ہر گاہک کا شیڈول خود بنتا ہے، اور جمع شدہ رقم اپنے آپ درست قسط پر لگتی ہے۔ لیٹ فیس دوبارہ نہیں لگتی۔">
+          Every schedule is built for you, and money received lands on the right instalment by
+          itself. A late fee is never charged twice.
+        </p>
+      </div>
+      <div>
+        <p class="text-title font-semibold text-ink-900" data-ur="یاد دہانی جو واقعی جاتی ہے">Reminders that actually go</p>
+        <p class="mt-2 text-body text-ink-500" data-ur="اپنی دکان کا ایک فون جوڑ دیں اور یاد دہانیاں اُسی سم سے چلی جاتی ہیں۔ جب تک سم قبول نہ کرے، پیغام بھیجا ہوا نہیں گنا جاتا۔">
+          Pair a phone of your own and reminders go from its own SIM. Nothing counts as sent until
+          that handset reports the SIM accepted it.
+        </p>
+      </div>
+      <div>
+        <p class="text-title font-semibold text-ink-900" data-ur="آخری قدم، جب کچھ اور نہ بچے">The last resort, when nothing else worked</p>
+        <p class="mt-2 text-body text-ink-500" data-ur="قسط واقعی رک جائے تو فون محدود ہو جاتا ہے۔ ادائیگی آتے ہی خود کھل جاتا ہے۔">
+          When payments genuinely stop, the handset is restricted. It unlocks itself the moment the
+          payment arrives.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ------------------------------------------------------------------ -->
+<!-- How it works                                                        -->
+<!-- ------------------------------------------------------------------ -->
+<section class="band">
+  <p class="eyebrow reveal" data-ur="یہ کیسے چلتا ہے">How it works</p>
+  <h2 class="reveal reveal-1 mt-2 font-serif text-section text-ink-900" data-ur="کاؤنٹر پر تین قدم۔">Three steps at the counter.</h2>
+
+  <ol class="reveal reveal-2 mt-8 grid gap-6 sm:grid-cols-3">
+    <li class="surface p-5">
+      <span class="figure text-title">01</span>
+      <p class="mt-2 text-title font-semibold text-ink-900" data-ur="سودا درج کریں">Register the sale</p>
+      <p class="mt-2 text-body text-ink-500" data-ur="گاہک، فون اور قسط کا منصوبہ۔ معاہدہ خود بخود تیار ہو جاتا ہے، اردو اور انگریزی دونوں میں۔">
+        Customer, handset, plan. The contract drafts itself, in Urdu and English.
+      </p>
+    </li>
+    <li class="surface p-5">
+      <span class="figure text-title">02</span>
+      <p class="mt-2 text-title font-semibold text-ink-900" data-ur="گاہک اسکرین پر دستخط کرتا ہے">The customer signs on screen</p>
+      <p class="mt-2 text-body text-ink-500" data-ur="بغیر دستخط شدہ معاہدے کے لاک ہوتا ہی نہیں۔ یہ سہولت نہیں، شرط ہے۔">
+        Without a signed agreement, no lock is possible. That is a rule, not a setting.
+      </p>
+    </li>
+    <li class="surface p-5">
+      <span class="figure text-title">03</span>
+      <p class="mt-2 text-title font-semibold text-ink-900" data-ur="فون کیو آر اسکین کرتا ہے">The phone scans a QR</p>
+      <p class="mt-2 text-body text-ink-500" data-ur="نیا فون سیٹ اپ کے دوران کیو آر اسکین کرتا ہے اور مینجمنٹ میں آ جاتا ہے۔ یہیں ایک لاک خرچ ہوتا ہے۔">
+        A new handset scans the code during setup and comes under management. This is the moment a
+        lock is spent.
+      </p>
+    </li>
+  </ol>
+</section>
+
+<!-- ------------------------------------------------------------------ -->
+<!-- Consent                                                             -->
+<!-- ------------------------------------------------------------------ -->
+<section class="border-y border-paper-300 bg-paper-50">
+  <div class="band">
+    <div class="grid gap-10 lg:grid-cols-2 lg:items-center">
+      <div>
+        <p class="eyebrow reveal" data-ur="رضامندی">Consent</p>
+        <h2 class="reveal reveal-1 mt-2 font-serif text-section text-ink-900" data-ur="بغیر دستخط کے کوئی فون لاک نہیں ہوتا۔">
+          No phone is locked without a signature.
+        </h2>
+        <div class="prose-block mt-4">
+          <p data-ur="ہر قسط والے سودے پر ایک معاہدہ بنتا ہے جس میں فون، آئی ایم ای آئی، پوری رقم، ہر قسط کی تاریخ، مہلت کے دن، اور یہ صاف لکھا ہوتا ہے کہ ادائیگی رک جانے پر فون محدود کیا جا سکتا ہے۔">
+            Every financed sale produces an agreement naming the handset, its IMEI, the total, each
+            instalment date, the grace period, and — in plain words — that the phone may be
+            restricted if payment stops.
+          </p>
+          <p data-ur="گاہک اسکرین پر دستخط کرتا ہے۔ اس کے بعد معاہدہ منجمد ہو جاتا ہے: اگر منصوبہ بدلا جائے تو پرانے دستخط پر لاک نہیں ہوتا، نیا معاہدہ کرنا پڑتا ہے۔">
+            The customer signs on screen. The agreement then freezes: change the plan afterwards and
+            the old signature no longer authorises a lock — a fresh agreement is required.
+          </p>
+        </div>
+      </div>
+
+      <div class="surface p-6">
+        <p class="eyebrow reveal">Agreement · معاہدہ</p>
+        <p class="mt-3 text-body text-ink-700">Infinix Note 30 Pro · IMEI 3569 3803 5643 809</p>
+        <dl class="mt-4 space-y-2 border-t border-paper-300 pt-4 text-body">
+          <div class="flex justify-between gap-4">
+            <dt class="text-ink-500">Financed</dt>
+            <dd class="text-ink-900" style="font-variant-numeric: tabular-nums">Rs 62,000</dd>
+          </div>
+          <div class="flex justify-between gap-4">
+            <dt class="text-ink-500">Instalments</dt>
+            <dd class="text-ink-900" style="font-variant-numeric: tabular-nums">8 × Rs 7,750</dd>
+          </div>
+          <div class="flex justify-between gap-4">
+            <dt class="text-ink-500">Grace period</dt>
+            <dd class="text-ink-900">3 days</dd>
+          </div>
+        </dl>
+        <div class="mt-4 border-t border-paper-300 pt-4">
+          <svg viewBox="0 0 200 40" class="h-10 w-40 text-ink-900" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <path d="M4 30c14-4 18-22 26-22s2 24 12 24 16-26 26-26 4 22 14 22 14-16 22-16 8 12 18 12 20-6 24-10" stroke-linecap="round" />
+          </svg>
+          <p class="mt-2 text-caption text-ink-400">Signed by the customer · 19 August 2026</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ------------------------------------------------------------------ -->
+<!-- Honesty                                                             -->
+<!-- ------------------------------------------------------------------ -->
+<section class="band">
+  <p class="eyebrow reveal" data-ur="جو ہم نہیں کہیں گے">What we will not claim</p>
+  <h2 class="reveal reveal-1 mt-2 max-w-2xl font-serif text-section text-ink-900" data-ur="ڈیش بورڈ کبھی یہ نہیں کہتا کہ فون لاک ہو گیا جب تک فون خود اس کی تصدیق نہ کرے۔">
+    The dashboard never says a phone is locked until the phone says so itself.
+  </h2>
+
+  <div class="reveal reveal-2 mt-8 grid gap-6 sm:grid-cols-2">
+    <div class="well p-5">
+      <p class="text-title font-semibold text-ink-900" data-ur="فون بند یا آف لائن ہو تو">If the phone is off or offline</p>
+      <p class="mt-2 text-body text-ink-500" data-ur="حکم قطار میں رہتا ہے اور فون کے دوبارہ رابطہ کرتے ہی لگتا ہے۔ اسکرین پر ’لاک ہو گیا‘ نہیں، ’لاک زیرِ التوا‘ لکھا آتا ہے۔">
+        The command waits in a queue and applies when the handset next checks in. The screen reads
+        “lock pending”, not “locked”.
+      </p>
+    </div>
+    <div class="well p-5">
+      <p class="text-title font-semibold text-ink-900" data-ur="ابتدائی مرحلہ">Early access</p>
+      <p class="mt-2 text-body text-ink-500" data-ur="ہینڈسیٹ ایپ لکھی جا چکی ہے اور مکمل ٹیسٹ شدہ ہے، مگر ابھی سینکڑوں اصلی فونوں پر نہیں چلائی گئی۔ ہم اسے آزمایا ہوا نہیں کہیں گے جب تک وہ واقعی نہ ہو۔">
+        The handset app is written and tested, but has not yet run on a fleet of real phones. We
+        will not call it proven until it is.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ------------------------------------------------------------------ -->
+<!-- Pricing                                                             -->
+<!-- ------------------------------------------------------------------ -->
+<section class="border-y border-paper-300 bg-paper-50">
+  <div class="band">
+    <p class="eyebrow reveal" data-ur="قیمت">Pricing</p>
+    <h2 class="reveal reveal-1 mt-2 font-serif text-section text-ink-900" data-ur="ایک فون، ایک لاک۔ کوئی ماہانہ فیس نہیں۔">
+      One phone, one lock. No monthly fee.
+    </h2>
+    <p class="mt-3 max-w-xl text-lede text-ink-700" data-ur="لاک پیکٹ میں خریدے جاتے ہیں اور ایک ہی ہینڈسیٹ پر خرچ ہوتے ہیں۔ قسطیں پوری ہو جائیں تو لاک واپس نہیں آتا — آپ نے ایک فون رکھنے کا حق خریدا تھا، ایک بار۔">
+      Locks are bought in packs and spent on one handset each. When a plan is paid off the lock does
+      not come back — you bought the right to hold one phone, once.
+    </p>
+
+    <div class="reveal reveal-2 mt-8 grid gap-4 sm:grid-cols-3">
+      <div class="surface p-5">
+        <p class="figure text-title">30 locks</p>
+        <p class="mt-2 text-figure font-serif text-ink-900" style="font-variant-numeric: tabular-nums">Rs 24,000</p>
+        <p class="mt-1 text-caption text-ink-400" data-ur="آٹھ سو روپے فی ہینڈسیٹ">Rs 800 per handset</p>
+      </div>
+      <div class="surface border-accent-200 bg-accent-50/40 p-5">
+        <p class="figure text-title">50 locks</p>
+        <p class="mt-2 text-figure font-serif text-ink-900" style="font-variant-numeric: tabular-nums">Rs 35,000</p>
+        <p class="mt-1 text-caption text-ink-400" data-ur="سات سو روپے فی ہینڈسیٹ">Rs 700 per handset</p>
+      </div>
+      <div class="surface p-5">
+        <p class="figure text-title">100 locks</p>
+        <p class="mt-2 text-figure font-serif text-ink-900" style="font-variant-numeric: tabular-nums">Rs 60,000</p>
+        <p class="mt-1 text-caption text-ink-400" data-ur="چھ سو روپے فی ہینڈسیٹ">Rs 600 per handset</p>
+      </div>
+    </div>
+
+    <a href="/pricing.html" class="btn-secondary mt-6" data-ur="تفصیل دیکھیں">See the detail</a>
+  </div>
+</section>
+
+<!-- ------------------------------------------------------------------ -->
+<!-- FAQ                                                                 -->
+<!-- ------------------------------------------------------------------ -->
+<section class="band">
+  <p class="eyebrow reveal" data-ur="عام سوالات">Common questions</p>
+  <h2 class="reveal reveal-1 mt-2 font-serif text-section text-ink-900" data-ur="وہ سوال جو ہر دکاندار پوچھتا ہے۔">
+    The questions every shop asks.
+  </h2>
+
+  <div class="reveal reveal-2 mt-8 grid gap-8 sm:grid-cols-2">
+    <div>
+      <p class="text-title font-semibold text-ink-900" data-ur="کیا یہ قانونی ہے؟">Is this legal?</p>
+      <p class="faq-a" data-ur="لاک اُسی صورت لگتا ہے جب گاہک نے دستخط شدہ معاہدے میں اس کی اجازت دی ہو، اور معاہدے میں یہ بات صاف لکھی ہوتی ہے۔ بغیر دستخط کے سسٹم لاک کرنے سے انکار کر دیتا ہے۔">
+        A lock only ever follows a signed agreement in which the customer allowed it, and the
+        agreement says so plainly. Without that signature the system refuses.
+      </p>
+    </div>
+    <div>
+      <p class="text-title font-semibold text-ink-900" data-ur="گاہک فون ری سیٹ کر دے تو؟">What if the customer factory-resets the phone?</p>
+      <p class="faq-a" data-ur="ایپ ڈیوائس اونر کے طور پر سیٹ اپ کے وقت لگتی ہے، اس لیے ری سیٹ سے ختم نہیں ہوتی۔ یہی وجہ ہے کہ اندراج نئے یا ری سیٹ کیے ہوئے فون پر ہوتا ہے۔">
+        The app is installed as device owner during setup, so a reset does not remove it. That is
+        why enrolment happens on a new or freshly reset handset.
+      </p>
+    </div>
+    <div>
+      <p class="text-title font-semibold text-ink-900" data-ur="لاک ہونے پر کیا فون بالکل بےکار ہو جاتا ہے؟">Is a locked phone useless?</p>
+      <p class="faq-a" data-ur="نہیں۔ اسکرین پر باقی رقم اور ادائیگی کا طریقہ لکھا ہوتا ہے، اور ایمرجنسی کالیں چلتی رہتی ہیں۔ مقصد گاہک کو سزا دینا نہیں، ادائیگی تک پہنچانا ہے۔">
+        No. The screen shows what is owed and how to pay, and emergency calls keep working. The
+        point is to get the payment made, not to punish anyone.
+      </p>
+    </div>
+    <div>
+      <p class="text-title font-semibold text-ink-900" data-ur="کیا آپ ادائیگی خود وصول کرتے ہیں؟">Do you collect the payments?</p>
+      <p class="faq-a" data-ur="نہیں۔ پیسہ آپ کے اپنے اکاؤنٹ میں آتا ہے۔ گاہک گھر سے ٹرانزیکشن آئی ڈی بھیج سکتا ہے، مگر جب تک آپ کا بندہ تصدیق نہ کرے، کوئی رقم منصوبے پر نہیں لگتی۔">
+        No. The money goes to your own account. A customer can report a transfer from home, but
+        nothing is applied to a plan until your staff confirm it.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ------------------------------------------------------------------ -->
+<!-- CTA                                                                 -->
+<!-- ------------------------------------------------------------------ -->
+<section class="border-t border-paper-300 bg-accent-950">
+  <div class="band text-center">
+    <h2 class="mx-auto max-w-2xl font-serif text-section text-white" data-ur="اپنی دکان پر آزما کر دیکھیں۔">
+      Try it on your own counter.
+    </h2>
+    <p class="mx-auto mt-3 max-w-xl text-lede text-paper-300" data-ur="تیس لاک کے پیکٹ سے شروع کریں۔ کوئی ماہانہ فیس نہیں، کوئی معاہدہ نہیں جس سے نکلنا مشکل ہو۔">
+      Start with a pack of thirty locks. No monthly fee, and no contract to get out of.
+    </p>
+    <div class="mt-7 flex flex-wrap items-center justify-center gap-3">
+      <a href="/pricing.html" class="btn bg-paper-50 text-ink-900 hover:bg-paper-200" data-ur="قیمت دیکھیں">See pricing</a>
+      <a href="/dpc.html" class="btn border border-paper-100/25 text-paper-100 hover:bg-paper-100/10" data-ur="ہینڈسیٹ ایپ">Handset app</a>
+    </div>
+  </div>
+</section>

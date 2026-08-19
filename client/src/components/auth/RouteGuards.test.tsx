@@ -29,7 +29,7 @@ function mockSession(user: { role: UserRole; mustChangePassword?: boolean } | nu
             user: {
               id: 'user-1',
               name: 'Test User',
-              email: 'test@emishield.pk',
+              email: 'test@almassdm.pk',
               role: user.role,
               mustChangePassword: user.mustChangePassword ?? false,
             },

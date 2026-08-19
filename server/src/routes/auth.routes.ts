@@ -13,6 +13,7 @@ import { AppError } from '../utils/AppError.js';
 import { hashPassword, validatePasswordStrength } from '../utils/password.js';
 import { pakistaniPhoneSchema, normalizePhone } from '../utils/validators.js';
 import { AuditService } from '../services/AuditService.js';
+import { LicenseService, PACK_OPTIONS } from '../services/LicenseService.js';
 
 export const authRouter = Router();
 
@@ -43,15 +44,15 @@ const registerDealerSchema = z.object({
   city: z.string().trim().min(2).max(60),
   address: z.string().trim().min(5, 'Please enter a complete shop address.').max(300),
   password: z.string().min(8, 'Password must be at least 8 characters.').max(128),
-  plan: z.enum(['STARTER', 'PROFESSIONAL', 'BUSINESS', 'ENTERPRISE']).default('PROFESSIONAL'),
+  /** The pack of device locks the shop is signing up with. */
+  packSize: z
+    .number()
+    .int()
+    .refine((n) => PACK_OPTIONS.some((p) => p.size === n), {
+      message: `Packs are sold in ${PACK_OPTIONS.map((p) => p.size).join(', ')} locks.`,
+    })
+    .default(30),
 });
-
-const PLAN_DEVICE_LIMITS: Record<string, number> = {
-  STARTER: 25,
-  PROFESSIONAL: 100,
-  BUSINESS: 500,
-  ENTERPRISE: 2000,
-};
 
 authRouter.post(
   '/register-dealer',
@@ -72,17 +73,13 @@ authRouter.post(
     }
 
     const dealerId = `dealer-${uuidv4().substring(0, 8)}`;
-    const licenseId = `lic-${uuidv4().substring(0, 8)}`;
     const cityCode = body.city.substring(0, 3).toUpperCase();
     const nowIso = new Date().toISOString();
 
-    const expiry = new Date();
-    expiry.setFullYear(expiry.getFullYear() + 1);
-
-    // A dealer without its licence, policy or owner login is not a usable
-    // account. All four rows land together or none of them do.
+    // A dealer without its locks, policy or owner login is not a usable
+    // account. Every row lands together or none of them do.
     const session = await runInTransaction(async (tx) => {
-      // The dealer row comes first: the licence references it.
+      // The dealer row comes first: the pack of locks references it.
       await repo.dealers.create(
         {
           id: dealerId,
@@ -93,24 +90,11 @@ authRouter.post(
           phone: normalizePhone(body.phone),
           city: body.city,
           address: body.address,
-          licenseKeyId: licenseId,
           active: true,
           createdAt: nowIso,
         },
         tx
       );
-
-      await repo.licenseKeys.create({
-        id: licenseId,
-        dealerId,
-        licenseKey: `EMIS-${body.plan.substring(0, 3)}-${Math.floor(1000 + Math.random() * 9000)}-${cityCode}`,
-        plan: body.plan,
-        deviceLimit: PLAN_DEVICE_LIMITS[body.plan] ?? 100,
-        usedDevices: 0,
-        expiryDate: expiry.toISOString().split('T')[0],
-        status: 'ACTIVE',
-        createdAt: nowIso,
-      }, tx);
 
       const user = await repo.users.create({
         id: `user-${uuidv4().substring(0, 8)}`,
@@ -124,6 +108,15 @@ authRouter.post(
         passwordChangedAt: nowIso,
         createdAt: nowIso,
       }, tx);
+
+      // The pack the shop signed up for. Minted here rather than after the
+      // commit so a dealer can never exist with no locks and no record of why.
+      const { pack } = await LicenseService.issuePack({
+        dealerId,
+        size: body.packSize,
+        actor: { id: user.id, name: user.name },
+        tx,
+      });
 
       await repo.devicePolicies.create({
         id: `pol-${dealerId}`,
@@ -147,7 +140,9 @@ authRouter.post(
         action: 'DEALER_REGISTERED',
         targetType: 'DEALER',
         targetId: dealerId,
-        details: `New dealer "${body.name}" registered in ${body.city} on the ${body.plan} plan.`,
+        details:
+          `New dealer "${body.name}" registered in ${body.city} with a pack of ` +
+          `${pack.size} device locks (Rs ${pack.totalPrice}).`,
         ipAddress: clientIp(req),
       }, tx);
 

@@ -14,12 +14,12 @@ class DpcApiEndpointTest {
     @Test
     fun `joins with and without a trailing slash`() {
         assertEquals(
-            "https://api.emishield.pk/api/dpc/check-in",
-            DpcApi.endpoint("https://api.emishield.pk/api/dpc", "check-in")
+            "https://api.almassdm.pk/api/dpc/check-in",
+            DpcApi.endpoint("https://api.almassdm.pk/api/dpc", "check-in")
         )
         assertEquals(
-            "https://api.emishield.pk/api/dpc/check-in",
-            DpcApi.endpoint("https://api.emishield.pk/api/dpc/", "check-in")
+            "https://api.almassdm.pk/api/dpc/check-in",
+            DpcApi.endpoint("https://api.almassdm.pk/api/dpc/", "check-in")
         )
     }
 

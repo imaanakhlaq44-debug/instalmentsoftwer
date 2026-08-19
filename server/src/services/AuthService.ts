@@ -99,7 +99,7 @@ export class AuthService {
     const dealer = current.dealerId ? await repo.dealers.findById(current.dealerId) : undefined;
 
     if (dealer && !dealer.active) {
-      throw new AppError('Your dealer account is suspended. Please contact EMI Shield support.', 403);
+      throw new AppError('Your dealer account is suspended. Please contact Almas SDM support.', 403);
     }
 
     await AuditService.log({

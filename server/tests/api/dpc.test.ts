@@ -81,7 +81,7 @@ describe('POST /api/dpc/enroll', () => {
   });
 
   it('refuses an invented code', async () => {
-    const res = await anonymous().post('/api/dpc/enroll').send({ token: 'EMIS-STA-NOTAREALTOKEN0000' });
+    const res = await anonymous().post('/api/dpc/enroll').send({ token: 'ALMAS-STA-NOTAREALTOKEN0000' });
     expect(res.status).toBe(400);
   });
 

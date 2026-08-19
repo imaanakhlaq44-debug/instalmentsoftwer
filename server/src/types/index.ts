@@ -59,7 +59,6 @@ export interface Dealer {
   phone: string;
   city: string;
   address: string;
-  licenseKeyId: string;
   active: boolean;
   createdAt: string;
 }
@@ -305,15 +304,35 @@ export interface AuditLog {
   createdAt: string;
 }
 
-export interface LicenseKey {
+export type DeviceLicenseStatus = 'AVAILABLE' | 'CONSUMED' | 'VOID';
+
+/** One purchase of locks. */
+export interface LicensePack {
   id: string;
   dealerId: string;
+  size: number;
+  /** Rupees per lock at the moment of sale, not today's rate. */
+  unitPrice: number;
+  totalPrice: number;
+  reference?: string | null;
+  issuedById?: string | null;
+  issuedByName: string;
+  createdAt: string;
+}
+
+/**
+ * One lock for one handset. Spent at enrolment onto a single IMEI, and never
+ * returned — see the model comment in schema.prisma.
+ */
+export interface DeviceLicense {
+  id: string;
+  dealerId: string;
+  packId: string;
   licenseKey: string;
-  plan: 'STARTER' | 'PROFESSIONAL' | 'BUSINESS' | 'ENTERPRISE';
-  deviceLimit: number;
-  usedDevices: number;
-  expiryDate: string;
-  status: 'ACTIVE' | 'EXPIRED' | 'SUSPENDED';
+  status: DeviceLicenseStatus;
+  deviceId?: string | null;
+  imei?: string | null;
+  consumedAt?: string | null;
   createdAt: string;
 }
 

@@ -1,0 +1,150 @@
+<!-- meta
+title: The handset app
+titleUr: ہینڈسیٹ ایپ
+description: The Almas SDM device policy controller — what it is, what it can and cannot do, and where the signed APK and its checksum live for QR provisioning.
+page: dpc
+-->
+
+<section class="band pb-8">
+  <p class="eyebrow reveal" data-ur="ہینڈسیٹ ایپ">Handset app</p>
+  <h1 class="mt-2 max-w-2xl font-serif text-hero text-ink-900" data-ur="وہ ایپ جو گاہک کے فون پر رہتی ہے۔">
+    The app that lives on the customer's phone.
+  </h1>
+  <p class="mt-4 max-w-2xl text-lede text-ink-700" data-ur="یہ صفحہ اُن دکانوں اور تکنیکی عملے کے لیے ہے جو فون سیٹ اپ کرتے ہیں۔ یہاں ایپ کی فائل، اُس کا چیک سم، اور اندراج کا طریقہ ہے۔">
+    This page is for the shops and technicians who set the phones up: the app file, its checksum,
+    and how enrolment works.
+  </p>
+</section>
+
+<!-- Provisioning is the one part of the product that cannot work without a
+     public HTTPS URL, so it gets the top of the page rather than a footnote. -->
+<section class="band-tight pt-0">
+  <div class="surface p-6">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <p class="eyebrow reveal" data-ur="ڈاؤن لوڈ">Download</p>
+        <p class="mt-2 text-title font-semibold text-ink-900">Almas SDM DPC</p>
+        <p class="mt-1 text-caption text-ink-400">Android 8.0 and above · device owner</p>
+      </div>
+      <span class="rounded-full border border-caution-200 bg-caution-50 px-2.5 py-1 text-micro font-semibold text-caution-700" data-ur="ابھی شائع نہیں ہوئی">Not published yet</span>
+    </div>
+
+    <div class="mt-5 border-t border-paper-300 pt-5">
+      <p class="text-body text-ink-500" data-ur="دستخط شدہ ریلیز فائل ابھی شائع نہیں کی گئی۔ جب ہو جائے گی، فائل اور اُس کا ایس ایچ اے-256 چیک سم بالکل یہیں ہوں گے — کیونکہ فیکٹری ری سیٹ فون سیٹ اپ کے دوران ایپ اِسی پتے سے اتارتا ہے اور چیک سم سے اُس کی تصدیق کرتا ہے۔">
+        The signed release build has not been published. When it is, the file and its SHA-256
+        checksum will be here — a factory-reset phone downloads the app from this address during
+        setup and verifies it against that checksum.
+      </p>
+
+      <dl class="mt-5 space-y-3">
+        <div>
+          <dt class="eyebrow">APK URL</dt>
+          <dd class="mt-1 break-all rounded-md bg-paper-200/70 px-3 py-2 font-mono text-caption text-ink-700">
+            https://almassdm.pk/dpc/almas-sdm-dpc.apk
+          </dd>
+        </div>
+        <div>
+          <dt class="eyebrow">Signature checksum (SHA-256, base64url)</dt>
+          <dd class="mt-1 break-all rounded-md bg-paper-200/70 px-3 py-2 font-mono text-caption text-ink-400">
+            — published with the first signed release —
+          </dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  <h2 class="reveal font-serif text-section text-ink-900" data-ur="یہ ایپ کیا کر سکتی ہے">What the app can do</h2>
+
+  <div class="reveal reveal-2 mt-6 grid gap-6 sm:grid-cols-2">
+    <div>
+      <ul class="space-y-3">
+        <li class="flex gap-3">
+          <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent-600"></span>
+          <span class="text-body text-ink-700" data-ur="سیٹ اپ کے دوران کیو آر سے اندراج، ڈیوائس اونر کے طور پر">Enrol from a QR during setup, as device owner</span>
+        </li>
+        <li class="flex gap-3">
+          <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent-600"></span>
+          <span class="text-body text-ink-700" data-ur="وقفے وقفے سے سرور سے رابطہ، تاکہ قطار میں پڑا حکم مل سکے">Check in on a schedule, so a queued command can reach it</span>
+        </li>
+        <li class="flex gap-3">
+          <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent-600"></span>
+          <span class="text-body text-ink-700" data-ur="ادائیگی کی تفصیل کے ساتھ کِیوسک لاک اسکرین دکھانا">Show a kiosk lock screen carrying the payment details</span>
+        </li>
+        <li class="flex gap-3">
+          <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent-600"></span>
+          <span class="text-body text-ink-700" data-ur="فون دوبارہ آن ہونے پر لاک کی حالت بحال کرنا">Restore the lock state after a reboot</span>
+        </li>
+      </ul>
+    </div>
+
+    <div>
+      <ul class="space-y-3">
+        <li class="flex gap-3">
+          <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-paper-400"></span>
+          <span class="text-body text-ink-700" data-ur="ذاتی پیغامات، تصاویر یا کالیں نہیں پڑھتی">It does not read messages, photos or calls</span>
+        </li>
+        <li class="flex gap-3">
+          <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-paper-400"></span>
+          <span class="text-body text-ink-700" data-ur="لاک کے دوران بھی ایمرجنسی کالیں نہیں روکتی">It does not block emergency calls, even while locked</span>
+        </li>
+        <li class="flex gap-3">
+          <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-paper-400"></span>
+          <span class="text-body text-ink-700" data-ur="ایسا لاک نہیں بتاتی جو اُس نے حقیقت میں لگایا نہ ہو">It does not report a lock it did not actually apply</span>
+        </li>
+        <li class="flex gap-3">
+          <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-paper-400"></span>
+          <span class="text-body text-ink-700" data-ur="بغیر دستخط شدہ معاہدے کے لاک نہیں ہوتا — یہ سرور کی طرف سے روکا جاتا ہے">It cannot lock a phone with no signed agreement — the server refuses</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="border-y border-paper-300 bg-paper-50">
+  <div class="band">
+    <h2 class="reveal font-serif text-section text-ink-900" data-ur="فون کیسے جوڑا جاتا ہے">How a phone is enrolled</h2>
+    <ol class="mt-6 space-y-4">
+      <li class="flex gap-4">
+        <span class="font-serif text-title text-ink-400">1</span>
+        <p class="text-body text-ink-700" data-ur="فون بالکل نیا ہو یا فیکٹری ری سیٹ کیا ہوا ہو۔ ڈیوائس اونر صرف سیٹ اپ کے دوران ہی لگ سکتا ہے۔">
+          The phone must be new or factory reset. Device owner can only be granted during setup.
+        </p>
+      </li>
+      <li class="flex gap-4">
+        <span class="font-serif text-title text-ink-400">2</span>
+        <p class="text-body text-ink-700" data-ur="خوش آمدید اسکرین پر چھ بار ٹیپ کریں — اینڈرائیڈ کیو آر اسکینر کھول دیتا ہے۔">
+          Tap the welcome screen six times — Android opens its QR scanner.
+        </p>
+      </li>
+      <li class="flex gap-4">
+        <span class="font-serif text-title text-ink-400">3</span>
+        <p class="text-body text-ink-700" data-ur="ڈیش بورڈ سے بنایا ہوا کیو آر اسکین کریں۔ فون ایپ اتارتا ہے، چیک سم سے تصدیق کرتا ہے، اور ڈیوائس اونر کے طور پر لگا دیتا ہے۔">
+          Scan the QR generated in the dashboard. The phone downloads the app, verifies it against
+          the checksum, and installs it as device owner.
+        </p>
+      </li>
+      <li class="flex gap-4">
+        <span class="font-serif text-title text-ink-400">4</span>
+        <p class="text-body text-ink-700" data-ur="ایپ اپنے لیے الگ کریڈنشل لیتی ہے اور فون مینجمنٹ میں آ جاتا ہے۔ کیو آر ایک ہی بار چلتا ہے۔">
+          The app takes credentials of its own and the handset comes under management. The QR works
+          exactly once.
+        </p>
+      </li>
+    </ol>
+
+    <p class="mt-8 max-w-2xl border-s-2 border-paper-400 ps-4 text-body text-ink-500" data-ur="جس فون پر ایپ پہلے سے موجود ہو، وہ ایپ کھول کر کوڈ خود بھی درج کر سکتا ہے — تب فائل اور چیک سم کی ضرورت نہیں پڑتی۔">
+      A handset that already has the app installed can redeem the code from inside the app instead,
+      which needs neither the file nor the checksum.
+    </p>
+  </div>
+</section>
+
+<section class="band">
+  <h2 class="reveal font-serif text-section text-ink-900" data-ur="دکان کے کاؤنٹر والا فون">The shop's own counter phone</h2>
+  <p class="mt-3 max-w-2xl text-lede text-ink-700" data-ur="ایک دوسری، بہت چھوٹی ایپ ہے جو آپ اپنی دکان کے کسی فون پر لگاتے ہیں۔ یہ یاد دہانیوں کی قطار لے کر اُسی فون کی سم سے بھیجتی ہے۔ گاہک کے فون سے اس کا کوئی تعلق نہیں۔">
+    A second, much smaller app runs on a phone of your own. It takes the queue of reminders and
+    sends them from that handset's SIM. It has nothing to do with the customer's phone.
+  </p>
+</section>

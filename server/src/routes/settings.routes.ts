@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { repo } from '../db/repositories/index.js';
 import { DevicePolicy, Dealer } from '../types/index.js';
 import { AuditService } from '../services/AuditService.js';
+import { LicenseService } from '../services/LicenseService.js';
 import { toPublicUser } from '../services/AuthService.js';
 import { DEFAULT_POLICY } from '../services/InstallmentMath.js';
 import {
@@ -49,13 +50,13 @@ settingsRouter.get(
   const dealer = await repo.dealers.findById(dealerId);
   if (!dealer) throw AppError.notFound('Dealer');
 
-  const [policy, license, staff] = await Promise.all([
+  const [policy, licences, staff] = await Promise.all([
     ensurePolicy(dealer.id),
-    repo.licenseKeys.findByDealer(dealer.id),
+    LicenseService.summaryFor(dealer.id),
     repo.users.findMany({ where: { dealerId: dealer.id }, orderBy: { createdAt: 'desc' } }),
   ]);
 
-  res.json({ dealer, policy, license: license ?? null, staffUsers: staff.map(toPublicUser) });
+  res.json({ dealer, policy, licences, staffUsers: staff.map(toPublicUser) });
   })
 );
 

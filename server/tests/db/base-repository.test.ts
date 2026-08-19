@@ -17,7 +17,6 @@ const DEALER: Dealer = {
   phone: '0300-1112233',
   city: 'Lahore',
   address: 'Shop 1, Test Plaza, Lahore',
-  licenseKeyId: 'repo-lic-1',
   active: true,
   createdAt: '2026-01-10T10:00:00.000Z',
 };
@@ -44,7 +43,8 @@ async function resetTables(): Promise<void> {
     TRUNCATE TABLE
       installments, installment_plans, payments, transactions,
       device_action_logs, devices, enrollment_tokens, notifications,
-      audit_logs, customers, users, device_policies, license_keys, dealers
+      audit_logs, customers, users, device_policies,
+      device_licenses, license_packs, dealers
     RESTART IDENTITY CASCADE
   `);
   await dealers.create(DEALER);

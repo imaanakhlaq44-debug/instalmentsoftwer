@@ -51,7 +51,6 @@ export interface Dealer {
   phone: string;
   city: string;
   address: string;
-  licenseKeyId: string;
   active: boolean;
   createdAt: string;
 }

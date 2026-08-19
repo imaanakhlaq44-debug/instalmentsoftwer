@@ -24,7 +24,7 @@
         android:label="@string/app_name"
         android:networkSecurityConfig="${networkSecurityConfig}"
         android:supportsRtl="true"
-        android:theme="@style/Theme.EmiRelay">
+        android:theme="@style/Theme.AlmasRelay">
 
         <activity
             android:name=".MainActivity"

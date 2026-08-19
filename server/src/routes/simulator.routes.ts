@@ -67,7 +67,7 @@ simulatorRouter.get('/devices', asyncHandler(async (req, res) => {
       ...sanitizeDevice(d, user.role),
       customerName: customer?.name ?? 'Unknown Customer',
       customerPhone: customer?.phone ?? 'N/A',
-      dealerName: dealer?.name ?? 'EMI Shield Dealer',
+      dealerName: dealer?.name ?? 'Almas SDM Dealer',
       dealerPhone: dealer?.phone ?? 'N/A',
 
       // These drive the lock screen. They must be the real figures — showing a

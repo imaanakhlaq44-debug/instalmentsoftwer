@@ -9,6 +9,7 @@ import {
 } from '../types/index.js';
 import { EnrollmentService } from '../services/EnrollmentService.js';
 import { ContractService } from '../services/ContractService.js';
+import { LicenseService } from '../services/LicenseService.js';
 import { AuditService } from '../services/AuditService.js';
 import { buildInstallmentSchedule } from '../services/InstallmentMath.js';
 import {
@@ -218,21 +219,20 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
       throw AppError.conflict(`A device with this IMEI is already registered in the system.`);
     }
 
-    // Enforce the dealer's licensed device limit.
-    const license = await repo.licenseKeys.findByDealer(dealerId);
-    if (license) {
-      if (license.status !== 'ACTIVE') {
-        throw AppError.forbidden(`Your license is ${license.status}. Please renew it to register new devices.`);
-      }
-      if (license.expiryDate < new Date().toISOString().split('T')[0]) {
-        throw AppError.forbidden('Your license has expired. Please renew it to register new devices.');
-      }
-      const inUse = await repo.devices.countActiveForDealer(dealerId);
-      if (inUse >= license.deviceLimit) {
-        throw AppError.forbidden(
-          `Your ${license.plan} plan allows ${license.deviceLimit} devices and ${inUse} are already registered. Please upgrade to add more.`
-        );
-      }
+    /**
+     * A phone that cannot be locked is not a financed sale, so the counter is
+     * stopped here rather than at enrolment — sending the customer home with a
+     * handset and discovering the shop is out of locks when the QR is scanned
+     * is the worst possible moment to find out.
+     *
+     * The lock is not spent yet. It is claimed when the handset actually
+     * enrols, so a sale that falls through costs the dealer nothing.
+     */
+    const locksLeft = await LicenseService.countAvailable(dealerId);
+    if (locksLeft <= 0) {
+      throw AppError.forbidden(
+        'You have no device locks left. Each handset needs its own lock, and a lock is not returned when a plan is paid off. Buy a pack before registering another financed sale.'
+      );
     }
   }
 

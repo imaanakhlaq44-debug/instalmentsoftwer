@@ -113,6 +113,32 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: emi-shield-android-debug
+          name: almas-sdm-android-debug
           path: android/*/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+  site:
+    name: Site — build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      # The marketing site reads the dashboard's design tokens, so its build is
+      # also the check that those two have not drifted apart.
+      - name: Install
+        run: npm install --prefix site --no-audit --no-fund
+
+      - name: Build
+        run: npm run --prefix site build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: almas-sdm-site
+          path: site/dist
           if-no-files-found: error

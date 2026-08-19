@@ -169,7 +169,7 @@ export const NotificationsPage: React.FC = () => {
             </p>
             <p className="font-mono text-xs font-bold text-emerald-400 break-all">{pairingCode}</p>
             <p className="text-[11px] text-slate-300">
-              Enter this in the EMI Shield Relay app on the phone. It cannot be retrieved again; if it is lost,
+              Enter this in the Almas SDM Relay app on the phone. It cannot be retrieved again; if it is lost,
               unpair the phone and pair it afresh.
             </p>
             <button

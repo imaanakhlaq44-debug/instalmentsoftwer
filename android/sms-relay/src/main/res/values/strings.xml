@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">EMI Shield Relay</string>
+    <string name="app_name">Almas SDM Relay</string>
 
     <string name="pair_title">Pair this phone</string>
     <string name="pair_subtitle">This phone will send your shop\'s payment reminders from its own SIM. Paste the pairing code from the dashboard.</string>
@@ -24,7 +24,7 @@
     <string name="grant_permission">Grant SMS permission</string>
 
     <string name="notification_channel">SMS relay</string>
-    <string name="notification_title">EMI Shield is sending messages</string>
+    <string name="notification_title">Almas SDM is sending messages</string>
     <string name="notification_text">This phone sends your shop\'s payment reminders.</string>
 
     <string name="error_network">Could not reach the server. Retrying.</string>

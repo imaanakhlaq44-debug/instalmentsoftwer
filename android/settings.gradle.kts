@@ -14,7 +14,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "EMI Shield Android"
+rootProject.name = "Almas SDM Android"
 
 // Two apps, on two different phones.
 //   :dpc       — the customer's handset. Enforces the lock.

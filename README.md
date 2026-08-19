@@ -1,4 +1,4 @@
-# EMI Shield — Mobile EMI Device Management & Installment Platform
+# Almas SDM — Mobile EMI Device Management & Installment Platform
 
 [![CI](https://github.com/imaanakhlaq44-debug/instalmentsoftwer/actions/workflows/ci.yml/badge.svg)](https://github.com/imaanakhlaq44-debug/instalmentsoftwer/actions/workflows/ci.yml)
 
@@ -22,7 +22,8 @@ This codebase is **not yet a production system**, and the README should not pret
 | WhatsApp delivery | ❌ Not connected |
 | Payments | ⚠️ **No gateway, but a customer can report a transfer.** Counter payments work fully; a customer who has sent money by JazzCash/Easypaisa/Raast can submit the transaction ID from home, and the shop confirms it against their own account. Nothing is applied until a person confirms. See [Customer-reported payments](#-customer-reported-payments) |
 | Payment gateways (JazzCash / Easypaisa / Raast) | ❌ Not integrated — that needs a merchant account. The seam where one attaches is in place |
-| Automated tests | ✅ **356 tests** — 264 backend against a real PostgreSQL instance, 82 on the React client, 10 on the two Android apps. All run on every push via GitHub Actions. See [Testing](#-testing) |
+| Commercial model | ✅ **A lock per handset, not a subscription.** Locks are bought in packs, spent on one IMEI at enrolment, and never returned. See [Licensing](#-licensing-one-lock-one-handset) |
+| Automated tests | ✅ **385 tests** — 277 backend against a real PostgreSQL instance, 98 on the React client, 10 on the two Android apps. All run on every push via GitHub Actions. See [Testing](#-testing) |
 
 What is left before this is a real product is **signing and distributing the DPC, then proving it on real handsets**. The protocol is complete on both sides and the app refuses to claim a lock it did not apply, so a phone that cannot be held says so on the dashboard rather than silently pretending.
 
@@ -79,6 +80,7 @@ What is left before this is a real product is **signing and distributing the DPC
 - **Frontend** — React 18, TypeScript, Tailwind, Vite, React Router 7
 - **Backend** — Node.js, Express, TypeScript, Zod, JWT, bcryptjs, helmet, node-cron
 - **Data** — PostgreSQL 17 via Prisma 7, behind a repository layer in `server/src/db/repositories/`. `embedded-postgres` runs the real server binaries locally with nothing to install.
+- **Marketing site** — plain HTML and Tailwind in [`site/`](site/), built by a forty-line script. It reads the dashboard's own `tailwind.config.js`, so the page that sells the product and the product itself cannot drift apart. English and Urdu, with the Urdu setting `dir="rtl"` on the document.
 - **Handsets** — Kotlin, Android 8+ ([`android/`](android/README.md)). Two apps: `dpc` on the customer's phone (device owner via QR provisioning, WorkManager heartbeat) and `sms-relay` on the shop's counter phone. No Compose and no HTTP library in either: a handful of endpoints and a couple of screens do not justify them.
 
 ---
@@ -139,7 +141,7 @@ All seeded accounts share the password from `SEED_DEFAULT_PASSWORD` in `server/.
 
 | Email | Role |
 |---|---|
-| `admin@emishield.pk` | Super Admin |
+| `admin@almassdm.pk` | Super Admin |
 | `tariq@almadinamobiles.pk` | Dealer Admin |
 | `usman@almadinamobiles.pk` | Dealer Staff |
 | `ali.customer@gmail.com` | Customer |
@@ -172,11 +174,49 @@ different scheme entirely — see [Device Policy Controller API](#-device-policy
 | `/api/payments/:id/receipt` | GET | any | Printable receipt |
 | `/api/enrollment/generate` | POST | staff | Single-use provisioning QR |
 | `/api/users` | GET/POST/PATCH/DELETE | dealer admin | Staff management |
+| `/api/licenses` | GET | dealer admin | Locks bought, spent and left |
+| `/api/licenses/packs` | POST | super admin | Record a pack purchase and mint its locks |
 | `/api/audit-logs` | GET | dealer admin | Immutable action trail |
 | `/api/dpc/enroll` | POST | public | Redeem an enrollment QR, receive device credentials |
 | `/api/dpc/check-in` | POST | device | Heartbeat; returns any waiting command |
 | `/api/dpc/commands/ack` | POST | device | Confirm a command was applied |
 | `/api/dpc/policy` | GET | device | Current lock state and lock-screen figures |
+
+---
+
+## 🔑 Licensing — one lock, one handset
+
+A licence is not a subscription tier. It is **one lock for one phone**, and it is
+spent for good.
+
+| Pack | Price | Per handset |
+|---|---|---|
+| 30 locks | Rs 24,000 | Rs 800 |
+| 50 locks | Rs 35,000 | Rs 700 |
+| 100 locks | Rs 60,000 | Rs 600 |
+
+**A lock is claimed at enrolment, not at the counter.** The moment a handset
+completes provisioning, one lock is stamped with that phone's IMEI and moves to
+`CONSUMED`. A sale that falls through before the customer ever scans the QR
+therefore costs the dealer nothing, while a phone that is genuinely under
+management always has a lock behind it.
+
+**It never comes back.** A device that is paid off, deactivated or replaced does
+not return its lock to the pool. That is the commercial model rather than an
+oversight: the shop bought the right to hold one particular phone, once.
+
+**Re-enrolment is free.** `device_licenses.device_id` carries a unique index, so
+a factory reset, a reinstalled DPC or a re-scanned QR reattaches the lock the
+handset already holds instead of quietly spending a second one.
+
+**Running out stops the counter, not the customer.** Registering a financed sale
+is refused when no locks remain — better at the counter than after the phone has
+left the shop. If a dealer does run out mid-enrolment, the QR stays valid: buy a
+pack and the same code completes.
+
+Locks are minted only by `POST /api/licenses/packs`, which is super-admin only.
+There is no payment gateway, so that endpoint *is* the platform confirming money
+arrived; a dealer who could call it could mint themselves free stock.
 
 ---
 
@@ -468,12 +508,15 @@ committed, then typechecks, tests and builds both halves of the app.
 | `tests/api/sms-relay.test.ts` | Pairing, the claim lease, sending the same message twice, cross-dealer isolation, retry and give-up, honest delivery reporting |
 | `tests/api/contracts.test.ts` | Drafting with the sale, the frozen snapshot, signing, refusing to lock an unsigned or voided agreement, and refusing when the plan was changed after signing |
 | `tests/api/customer-payments.test.ts` | A reported transfer stays unverified and moves no money, applies on confirmation, cannot name another customer's plan, and the queue's scoping and limits |
+| `tests/api/licenses.test.ts` | A lock is spent once at enrolment and stamped with the IMEI, re-enrolment spends nothing, a paid-off device never returns its lock, running out stops the counter but leaves the QR valid, and only the platform can mint stock |
 
 **Client** (`client/src/**/*.test.ts(x)`)
 
 | File | Covers |
 |---|---|
 | `components/auth/RouteGuards.test.tsx` | Session gate, the change-password redirect, per-role page and button access |
+| `components/dashboard/CollectionQueue.test.ts` | Collapsing a customer's arrears into one call, worst-first ordering, and surfacing the locked handset |
+| `utils/format.test.ts` | Rupee formatting, lakh/crore shorthand, and the overdue wording |
 | `context/AuthContext.test.tsx` | Token restore, login, logout, dealer switching, the 401 teardown |
 | `services/api.test.ts` | Auth header, query building, error mapping, why a failed sign-in is not an expired session |
 | `utils/csv.test.ts` | Quoting, the UTF-8 BOM, spreadsheet formula injection |

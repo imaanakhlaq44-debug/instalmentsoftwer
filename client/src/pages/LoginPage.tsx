@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { Shield, Eye, EyeOff, Loader2, LogIn } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { ApiError } from '../services/api.js';
 
+/**
+ * Sign-in.
+ *
+ * This used to be a dark screen in front of a light application — the first
+ * thing a new user saw was a product that could not decide what it was. It is
+ * the same paper as the dashboard now, and it says plainly what the tool is for
+ * before asking anyone to identify themselves.
+ */
 export const LoginPage: React.FC = () => {
   const { login, isAuthenticated, isBootstrapping } = useAuth();
   const location = useLocation();
@@ -16,8 +24,8 @@ export const LoginPage: React.FC = () => {
 
   if (isBootstrapping) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
-        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" aria-label="Loading" />
+      <div className="flex min-h-screen items-center justify-center bg-paper-100">
+        <Loader2 className="h-6 w-6 animate-spin text-ink-400" aria-label="Loading" />
       </div>
     );
   }
@@ -49,34 +57,37 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600/20 border border-blue-500/40 mb-4">
-            <Shield className="w-8 h-8 text-blue-400" aria-hidden="true" />
-          </div>
-          <h1 className="text-2xl font-bold text-white">EMI Shield</h1>
-          <p className="text-sm text-slate-400 mt-1">Device Management &amp; Installment Platform</p>
+    <div className="flex min-h-screen items-center justify-center bg-paper-100 p-4">
+      <div className="w-full max-w-sm">
+        <div className="mb-8 text-center">
+          {/* The full lockup, because this is the one screen where the product
+              introduces itself. The name is inside the artwork, so the heading
+              below it would only repeat itself. */}
+          <img
+            src="/logo-lockup.webp"
+            alt="Almas SDM"
+            width={720}
+            height={629}
+            className="mx-auto mb-5 h-24 w-auto"
+          />
+          <h1 className="sr-only">Almas SDM</h1>
+          <p className="text-body text-ink-500">
+            Installments, devices and collections for your shop
+          </p>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl"
-          noValidate
-        >
-          <h2 className="text-lg font-semibold text-white mb-6">Sign in to your dashboard</h2>
-
+        <form onSubmit={handleSubmit} className="surface p-6 shadow-hairline sm:p-7" noValidate>
           {error && (
             <div
               role="alert"
-              className="mb-5 px-4 py-3 rounded-lg bg-rose-950/60 border border-rose-800 text-rose-200 text-sm"
+              className="mb-5 rounded-md border border-critical-200 bg-critical-50 px-3.5 py-2.5 text-body text-critical-700"
             >
               {error}
             </div>
           )}
 
           <div className="mb-4">
-            <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
+            <label htmlFor="email" className="field-label">
               Email address
             </label>
             <input
@@ -87,13 +98,13 @@ export const LoginPage: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={submitting}
-              className="w-full px-4 py-2.5 rounded-lg bg-slate-950 border border-slate-700 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-60"
+              className="input"
               placeholder="you@yourshop.pk"
             />
           </div>
 
           <div className="mb-6">
-            <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
+            <label htmlFor="password" className="field-label">
               Password
             </label>
             <div className="relative">
@@ -104,44 +115,35 @@ export const LoginPage: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={submitting}
-                className="w-full px-4 py-2.5 pr-11 rounded-lg bg-slate-950 border border-slate-700 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-60"
+                className="input pr-11"
                 placeholder="••••••••"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-ink-400 transition-colors hover:text-ink-700"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" aria-hidden="true" />
+                ) : (
+                  <Eye className="h-4 w-4" aria-hidden="true" />
+                )}
               </button>
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-semibold transition-colors"
-          >
-            {submitting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-                Signing in…
-              </>
-            ) : (
-              <>
-                <LogIn className="w-4 h-4" aria-hidden="true" />
-                Sign in
-              </>
-            )}
+          <button type="submit" disabled={submitting} className="btn-primary w-full py-2.5">
+            {submitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+            {submitting ? 'Signing in…' : 'Sign in'}
           </button>
 
-          <p className="mt-6 text-xs text-slate-500 text-center">
-            Forgot your password? Ask your shop administrator to reset it for you.
+          <p className="mt-5 text-center text-caption text-ink-400">
+            Forgotten your password? Your shop administrator can reset it.
           </p>
         </form>
 
-        <p className="mt-6 text-center text-xs text-slate-600">
+        <p className="mt-6 text-center text-caption text-ink-400">
           Access is logged. Unauthorised use is prohibited.
         </p>
       </div>
