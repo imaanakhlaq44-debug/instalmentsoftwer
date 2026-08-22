@@ -54,6 +54,7 @@ class DpcSync(context: Context) {
 
         lockController.protectInstallation()
         CheckInScheduler.schedule(appContext, result.checkInIntervalSeconds)
+        OfflineWatchdogWorker.schedule(appContext)
 
         // A phone can be enrolled while already overdue — the shop re-registers
         // a handset that was reset while behind on payments. Honour that state
@@ -78,6 +79,7 @@ class DpcSync(context: Context) {
                 lockController.releaseFromManagement()
                 prefs.clear()
                 CheckInScheduler.cancel(appContext)
+                OfflineWatchdogWorker.cancel(appContext)
                 return Outcome.Released
             }
             return Outcome.Failed(e.message ?: "The check-in failed.", e.retryable && !e.isCredentialRejected)
@@ -87,6 +89,7 @@ class DpcSync(context: Context) {
         prefs.checkInIntervalSeconds = result.checkInIntervalSeconds
         prefs.lastCheckInAt = System.currentTimeMillis()
         CheckInScheduler.schedule(appContext, result.checkInIntervalSeconds)
+        OfflineWatchdogWorker.schedule(appContext)
 
         val command = result.command
         if (command != null) {
@@ -115,6 +118,11 @@ class DpcSync(context: Context) {
 
         val applied = outcome is LockController.Outcome.Applied
         val reason = (outcome as? LockController.Outcome.Refused)?.reason
+
+        // A commanded lock supersedes a self-applied one: from here the shop
+        // issued this restriction, and the dashboard should stop describing it
+        // as something the handset did on its own.
+        if (applied && command == "LOCK") prefs.offlineLockSince = 0L
 
         return try {
             DpcApi(prefs).acknowledge(command, applied, reason)
@@ -146,7 +154,9 @@ class DpcSync(context: Context) {
     private fun applyAndAcknowledgeSilently(policy: PolicyView) {
         // The server already considers this device LOCKED, so there is no
         // command to acknowledge — just enforcement to catch up on.
-        lockController.applyLock(policy.emergencyCallsAllowed)
+        if (lockController.applyLock(policy.emergencyCallsAllowed) is LockController.Outcome.Applied) {
+            prefs.offlineLockSince = 0L
+        }
     }
 
     companion object {

@@ -125,6 +125,7 @@ class LockController(context: Context) {
             // Nothing was ever enforced, so there is nothing to undo and the
             // phone is already in the state the server wants it in.
             prefs.lockApplied = false
+            prefs.offlineLockSince = 0L
             dismissLockScreen()
             return Outcome.Applied
         }
@@ -135,6 +136,9 @@ class LockController(context: Context) {
             runCatching { dpm.setLockTaskPackages(admin, emptyArray()) }
 
             prefs.lockApplied = false
+            // Whatever put the restriction there, it is gone — including a
+            // self-lock the phone applied while it could not ask anybody.
+            prefs.offlineLockSince = 0L
             dismissLockScreen()
             Outcome.Applied
         } catch (e: Exception) {

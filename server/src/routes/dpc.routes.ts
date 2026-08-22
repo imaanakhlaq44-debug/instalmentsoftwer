@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { repo } from '../db/repositories/index.js';
 import { EnrollmentService } from '../services/EnrollmentService.js';
+import { offlineLockDaysFor } from '../services/OfflineLockPolicy.js';
 import { deviceManagementService } from '../services/DeviceManagementService.js';
 import { AuditService } from '../services/AuditService.js';
 import { amountOutstanding, DEFAULT_POLICY } from '../services/InstallmentMath.js';
@@ -40,6 +41,14 @@ interface DevicePolicyView {
   /** Figures for the lock screen. Real ones — a fabricated amount here would be indefensible. */
   amountDue: number;
   nextDueDate: string | null;
+  /**
+   * The two numbers the offline rule is made of. `offlineLockAfterDays` is 0
+   * whenever the handset is not permitted to restrict itself, so a phone never
+   * has to reason about consent, policy or contract versions — it is told the
+   * answer or it is told zero.
+   */
+  offlineLockAfterDays: number;
+  gracePeriodDays: number;
   contact: { dealerName: string; dealerPhone: string } | null;
 }
 
@@ -62,6 +71,8 @@ async function buildPolicyView(device: Device): Promise<DevicePolicyView> {
     paymentMethods: policy.paymentMethodsOnLock ?? ['CASH'],
     amountDue: overdue.reduce((sum, i) => sum + amountOutstanding(i), 0),
     nextDueDate: unpaid[0]?.dueDate ?? null,
+    offlineLockAfterDays: await offlineLockDaysFor(device, policy),
+    gracePeriodDays: policy.gracePeriodDays ?? DEFAULT_POLICY.gracePeriodDays,
     contact: dealer ? { dealerName: dealer.name, dealerPhone: dealer.phone } : null,
   };
 }
@@ -113,6 +124,13 @@ const checkInSchema = z.object({
   simCarrier: z.string().trim().max(40).optional(),
   wifiSsid: z.string().trim().max(60).optional(),
   dpcVersion: z.string().trim().max(20).optional(),
+  /**
+   * The handset reporting that it restricted itself under the offline rule
+   * while it could not reach anybody. It is a report of something already done,
+   * not a request — the phone was the only party present when it happened.
+   */
+  offlineLockActive: z.boolean().optional(),
+  offlineLockSince: z.string().datetime().optional(),
   location: z
     .object({
       lat: z.number().min(-90).max(90),
@@ -130,10 +148,19 @@ dpcRouter.post(
     const body = req.body as z.infer<typeof checkInSchema>;
     const nowIso = new Date().toISOString();
 
+    const offlineLockActive = body.offlineLockActive === true;
+    const wasOfflineLocked = device.offlineLockActive === true;
+
     const updated = await repo.devices.update(device.id, {
       isOnline: true,
       lastSeen: nowIso,
       lastCheckInAt: nowIso,
+      offlineLockActive,
+      // Preserve the moment the phone says it started, not the moment the news
+      // arrived — the gap between them is the whole point of the rule.
+      offlineLockSince: offlineLockActive
+        ? body.offlineLockSince ?? device.offlineLockSince ?? nowIso
+        : undefined,
       batteryLevel: body.batteryLevel ?? device.batteryLevel,
       osVersion: body.osVersion ?? device.osVersion,
       securityPatch: body.securityPatch ?? device.securityPatch,
@@ -144,6 +171,30 @@ dpcRouter.post(
       locationLng: body.location?.lng ?? device.locationLng,
       updatedAt: nowIso,
     });
+
+    /**
+     * A self-lock is written to the device's timeline the moment the shop first
+     * hears of it, and again when it ends. Neither is a status change: the
+     * handset restricted itself, nobody issued a command, and folding that into
+     * LOCKED would make the dashboard claim an authority it did not exercise.
+     */
+    if (offlineLockActive !== wasOfflineLocked) {
+      const since = offlineLockActive ? body.offlineLockSince ?? device.offlineLockSince : undefined;
+      await deviceManagementService.recordAction({
+        deviceId: device.id,
+        dealerId: device.dealerId,
+        userId: 'system',
+        userName: 'Device DPC Client',
+        action: 'STATUS_CHANGE',
+        reason: offlineLockActive
+          ? 'The handset restricted itself under the offline rule: it could not reach this server for ' +
+            `longer than the dealer's limit${since ? `, since ${since}` : ''}.`
+          : 'The handset lifted the restriction it had applied under the offline rule, having reached ' +
+            'this server again.',
+        deviceAck: true,
+        ipAddress: clientIp(req),
+      });
+    }
 
     /**
      * The waiting command is reported, not applied.

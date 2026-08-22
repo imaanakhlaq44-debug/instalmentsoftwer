@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { money, moneyExact, moneyShort, overdueLabel, greeting, firstName } from './format.js';
+import { describe, it, expect, vi } from 'vitest';
+import { money, moneyExact, moneyShort, overdueLabel, greeting, firstName, relativeTime } from './format.js';
 
 /**
  * Intl separates the symbol from the figure with a non-breaking space, which is
@@ -72,5 +72,31 @@ describe('firstName', () => {
   it('falls back to something addressable when the name is missing', () => {
     expect(firstName(null)).toBe('there');
     expect(firstName('   ')).toBe('there');
+  });
+});
+
+describe('relativeTime', () => {
+  const now = new Date('2026-08-21T12:00:00Z').getTime();
+  const ago = (ms: number) => new Date(now - ms).toISOString();
+
+  it('says how long ago, in the largest unit that still reads naturally', () => {
+    vi.setSystemTime(now);
+
+    expect(relativeTime(ago(30_000))).toBe('Just now');
+    expect(relativeTime(ago(15 * 60_000))).toBe('15 minutes ago');
+    expect(relativeTime(ago(3 * 3_600_000))).toBe('3 hours ago');
+    expect(relativeTime(ago(1 * 3_600_000))).toBe('1 hour ago');
+    expect(relativeTime(ago(4 * 86_400_000))).toBe('4 days ago');
+    expect(relativeTime(ago(86_400_000))).toBe('1 day ago');
+
+    vi.useRealTimers();
+  });
+
+  it('says Never rather than inventing a time for a handset that has not reported', () => {
+    // This number is what the offline rule counts. A blank or a guess here
+    // would contradict what the phone is actually doing.
+    expect(relativeTime(null)).toBe('Never');
+    expect(relativeTime(undefined)).toBe('Never');
+    expect(relativeTime('not a date')).toBe('Never');
   });
 });

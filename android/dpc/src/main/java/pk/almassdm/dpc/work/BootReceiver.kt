@@ -32,5 +32,9 @@ class BootReceiver : BroadcastReceiver() {
 
         CheckInScheduler.schedule(context, prefs.checkInIntervalSeconds)
         CheckInScheduler.checkNow(context)
+
+        // The offline rule outlives a restart too. A phone rebooted on the
+        // fourth day of silence must not have its count start again from zero.
+        OfflineWatchdogWorker.schedule(context)
     }
 }

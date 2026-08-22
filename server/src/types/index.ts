@@ -153,6 +153,16 @@ export interface Device {
   /** Last successful DPC check-in, as distinct from any dashboard activity. */
   lastCheckInAt?: string;
 
+  // --- The offline rule ------------------------------------------------------
+  /**
+   * The handset restricted itself because it could not reach the server for the
+   * dealer's configured number of days. Deliberately not folded into `status`:
+   * `LOCKED` means a lock this server issued and the phone confirmed, and this
+   * means one the phone applied on its own authority while it could not ask.
+   */
+  offlineLockActive?: boolean;
+  offlineLockSince?: string;
+
   createdAt: string;
   updatedAt: string;
 }
@@ -343,6 +353,12 @@ export interface DevicePolicy {
   autoLockEnabled: boolean;
   autoUnlockEnabled: boolean;
   lockWarningDays: number;
+  /**
+   * How many days a handset may go without reaching the server before it
+   * restricts itself. 0 turns the rule off. Enforced on the phone, because a
+   * phone that is off the network is exactly what the server cannot act on.
+   */
+  offlineLockAfterDays?: number;
   customerReminderEnabled: boolean;
   emergencyCallsAllowed: boolean;
   paymentMethodsOnLock: string[];

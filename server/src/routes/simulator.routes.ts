@@ -5,6 +5,7 @@ import { repo, indexBy, groupBy, dealerScope } from '../db/repositories/index.js
 import { Customer, InstallmentPlan, Installment, Dealer, DevicePolicy } from '../types/index.js';
 import { deviceManagementService } from '../services/DeviceManagementService.js';
 import { EnrollmentService } from '../services/EnrollmentService.js';
+import { offlineLockDaysFor } from '../services/OfflineLockPolicy.js';
 import { amountOutstanding, DEFAULT_POLICY } from '../services/InstallmentMath.js';
 import {
   requireDealerStaff, getAuthUser, resolveDealerScope, assertDealerAccess, clientIp,
@@ -98,6 +99,12 @@ const updateStateSchema = z.object({
     'FORCE_UNLOCK',
     'SCAN_QR_TOKEN',
     'SIMULATE_REBOOT',
+    /**
+     * The handset applying the offline rule on its own, which is otherwise only
+     * observable by taking a real phone off the network for days. It stands in
+     * for the phone the same way every other action here does.
+     */
+    'SIMULATE_OFFLINE_SELF_LOCK',
   ]),
   // Defaulted to an empty object so a missing payload can no longer throw a
   // TypeError inside the handler.
@@ -234,6 +241,51 @@ simulatorRouter.post(
           const applied = await deviceManagementService.acknowledgeCommand(device.id);
           merge({ pendingCommandApplied: applied });
         }
+        break;
+      }
+
+      case 'SIMULATE_OFFLINE_SELF_LOCK': {
+        const dealerPolicy = await repo.devicePolicies.findByDealer(device.dealerId);
+        const policy =
+          dealerPolicy ?? ({ ...DEFAULT_POLICY, dealerId: device.dealerId } as DevicePolicy);
+
+        // The simulator stands in for the handset, so it obeys the same
+        // permission the handset would have been given. A simulator that could
+        // restrict a phone the real rule would never touch would be a way of
+        // testing something the product does not do.
+        const days = await offlineLockDaysFor(device, policy);
+        if (days <= 0) {
+          throw AppError.badRequest(
+            'This handset is not permitted to restrict itself. The offline rule needs automatic locking ' +
+              'on, a limit set in settings, and a signed agreement that discloses it.'
+          );
+        }
+
+        const since = new Date(Date.now() - days * 86_400_000).toISOString();
+        await repo.devices.update(device.id, {
+          isOnline: false,
+          offlineLockActive: true,
+          offlineLockSince: since,
+          updatedAt: nowIso,
+        });
+
+        await deviceManagementService.recordAction({
+          deviceId: device.id,
+          dealerId: device.dealerId,
+          userId: user.userId,
+          userName: `${user.name} (Simulator)`,
+          action: 'STATUS_CHANGE',
+          reason:
+            `Simulated: the handset restricted itself under the offline rule after ${days} day(s) ` +
+            'without reaching this server.',
+          deviceAck: true,
+          ipAddress: clientIp(req),
+        });
+
+        // Deliberately not a status change. LOCKED means a lock this server
+        // issued and the phone confirmed, and the simulator does not get to
+        // blur that line either.
+        merge({ offlineLockAfterDays: days, offlineLockSince: since });
         break;
       }
     }

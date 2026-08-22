@@ -94,8 +94,20 @@ class LockActivity : AppCompatActivity() {
     }
 
     private fun render(policy: PolicyView) {
-        binding.lockMessage.text = policy.lockMessage?.takeIf { it.isNotBlank() }
-            ?: getString(R.string.lock_default_message)
+        /*
+         * A self-lock says so. The server sends no lock message for one — it
+         * did not issue the restriction and has probably not heard of it yet —
+         * and the default text ("the phone will unlock as soon as the payment is
+         * recorded") would be wrong here: recording the payment is not enough
+         * on its own, the handset also has to reach the shop's system again.
+         * Somebody standing in front of a locked phone needs to be told the
+         * thing that will actually get it back.
+         */
+        binding.lockMessage.text = when {
+            prefs.offlineLockActive -> getString(R.string.lock_offline_message)
+            !policy.lockMessage.isNullOrBlank() -> policy.lockMessage
+            else -> getString(R.string.lock_default_message)
+        }
         binding.lockAmount.text = Formatting.amount(this, policy.amountDue)
         binding.lockDueDate.text = Formatting.date(policy.nextDueDate)
         binding.lockShop.text = policy.dealerName ?: "—"

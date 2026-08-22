@@ -23,7 +23,7 @@ This codebase is **not yet a production system**, and the README should not pret
 | Payments | ⚠️ **No gateway, but a customer can report a transfer.** Counter payments work fully; a customer who has sent money by JazzCash/Easypaisa/Raast can submit the transaction ID from home, and the shop confirms it against their own account. Nothing is applied until a person confirms. See [Customer-reported payments](#-customer-reported-payments) |
 | Payment gateways (JazzCash / Easypaisa / Raast) | ❌ Not integrated — that needs a merchant account. The seam where one attaches is in place |
 | Commercial model | ✅ **A lock per handset, not a subscription.** Locks are bought in packs, spent on one IMEI at enrolment, and never returned. See [Licensing](#-licensing-one-lock-one-handset) |
-| Automated tests | ✅ **385 tests** — 277 backend against a real PostgreSQL instance, 98 on the React client, 10 on the two Android apps. All run on every push via GitHub Actions. See [Testing](#-testing) |
+| Automated tests | ✅ **421 tests** — 300 backend against a real PostgreSQL instance, 100 on the React client, 21 on the two Android apps. All run on every push via GitHub Actions. See [Testing](#-testing) |
 
 What is left before this is a real product is **signing and distributing the DPC, then proving it on real handsets**. The protocol is complete on both sides and the app refuses to claim a lock it did not apply, so a phone that cannot be held says so on the dashboard rather than silently pretending.
 
@@ -68,6 +68,7 @@ What is left before this is a real product is **signing and distributing the DPC
 - Pluggable `IDeviceManagementService` with a working mock and stub adapters for Android Enterprise DPC and Samsung Knox Guard (which throw rather than silently pretending to work).
 - Full state machine: `PENDING → ENROLLED → ACTIVE → OVERDUE → LOCK_PENDING → LOCKED → UNLOCK_PENDING → ACTIVE`.
 - **Offline command queue** — a lock issued to an offline phone becomes `LOCK_PENDING` and is applied when the device next checks in. The dashboard never claims a lock took effect when it hasn't.
+- **The offline rule** — a handset kept off the network restricts itself once it has been out of contact past the dealer's limit *and* an installment is genuinely past its grace period. Off by default, and refused for any customer whose signed agreement does not disclose it. See [The offline rule](#-the-offline-rule-a-phone-that-cannot-be-reached).
 - Single-use, device-bound, cryptographically random enrollment tokens.
 
 ### Automation
@@ -178,7 +179,7 @@ different scheme entirely — see [Device Policy Controller API](#-device-policy
 | `/api/licenses/packs` | POST | super admin | Record a pack purchase and mint its locks |
 | `/api/audit-logs` | GET | dealer admin | Immutable action trail |
 | `/api/dpc/enroll` | POST | public | Redeem an enrollment QR, receive device credentials |
-| `/api/dpc/check-in` | POST | device | Heartbeat; returns any waiting command |
+| `/api/dpc/check-in` | POST | device | Heartbeat; returns any waiting command, and carries any self-lock the handset applied while out of contact |
 | `/api/dpc/commands/ack` | POST | device | Confirm a command was applied |
 | `/api/dpc/policy` | GET | device | Current lock state and lock-screen figures |
 
@@ -293,6 +294,84 @@ customer's phone never received.
 The **Simulator** page drives all of this against real records — it stands in
 for the handset, so `TOGGLE_ONLINE` performs the check-in and the acknowledgement
 in one step rather than the two round trips a real DPC makes.
+
+---
+
+## 📴 The offline rule: a phone that cannot be reached
+
+Everything above assumes the handset eventually connects. A customer who keeps
+one off the network breaks that assumption entirely: the lock command sits in
+`LOCK_PENDING` forever, which is honest and useless. Turning off mobile data
+must not be a way to opt out of management.
+
+So the phone carries the rule itself.
+
+```
+day 0   phone checks in normally
+day 1   customer removes the SIM and disables Wi-Fi
+day 5   an installment falls due; nothing can tell the phone
+day 8   the handset's own watchdog: 8 days silent, and by the schedule it
+        already holds, that installment is past its grace period → it locks
+        itself and says so on screen
+day 12  the phone connects → check-in reports the self-lock → the shop sees it
+        → the server's answer now governs: still overdue, it stays held; paid,
+        it releases immediately
+```
+
+### Two conditions, never one
+
+Silence alone is not evidence of anything. The handset restricts itself only
+when **both** hold:
+
+1. it has not reached the server for the dealer's configured number of days, and
+2. by the last schedule it was given, an installment is genuinely past its
+   grace period — either the server had already marked money overdue, or the
+   next due date plus the grace days is now in the past.
+
+A customer who is paid up and spends a month somewhere without signal keeps a
+working phone. Only the one whose installment came due during that silence
+does not.
+
+### Where each half lives
+
+| | |
+|---|---|
+| **The server decides permission** | `offlineLockDaysFor` in [`OfflineLockPolicy.ts`](server/src/services/OfflineLockPolicy.ts) answers one number, sent to the phone on every check-in. The handset never reasons about consent, policy or contract versions — it is told the answer, or it is told zero. |
+| **The phone decides the moment** | [`OfflineLockRule`](android/dpc/src/main/java/pk/almassdm/dpc/work/OfflineLockRule.kt) is pure and takes its clock as a parameter, so the whole rule is unit-tested without a device. [`OfflineWatchdogWorker`](android/dpc/src/main/java/pk/almassdm/dpc/work/OfflineWatchdogWorker.kt) runs it every six hours with **no network constraint** — the heartbeat is constrained to `CONNECTED`, so it never runs in the one situation this rule is about. |
+| **The shop hears afterwards** | The next check-in carries `offlineLockActive`, which lands on the device's timeline and as its own notice on the device page. It is **not** a status change: `LOCKED` still means a lock this server issued and the phone confirmed. |
+
+### Permission is refused unless everything agrees
+
+`offlineLockDaysFor` returns 0 — never — unless all of these hold:
+
+- the dealer set a limit (0 is the default; the minimum otherwise is 3 days,
+  because a weekend in a village with no signal is not evidence of non-payment),
+- automatic locking is on, so a shop that locks by hand does not get a rule that
+  fires with nobody deciding,
+- the device has valid consent, the same check `lockDevice` makes, and
+- **the signed terms actually describe the rule.** A contract signed under terms
+  v1.0 says a handset may be restricted for non-payment; it does not say the
+  phone has to keep reporting in. Clause 4 of **v1.1** does, in both languages,
+  with the real day count — and only contracts carrying it grant this.
+
+The limit is also never shortened below the figure printed on the contract in
+the customer's hand. A dealer may relax the rule for everybody at any time;
+tightening it afterwards applies to new agreements, not to somebody who signed
+for fourteen days.
+
+### What it cannot do
+
+It reads the system clock, and a device owner can move that. Rolling the clock
+back stalls the count — it does not reverse it, and the lock still lands the
+moment the phone reaches the server. So the rule delays enforcement for a
+determined customer rather than escaping it, and a handset showing "last
+contact: three weeks ago" is visible on the dashboard the entire time.
+
+### Trying it
+
+The Simulator's **Self-Lock Offline** button stands in for the handset. It
+refuses on any device the real rule would never have touched, so it cannot be
+used to test something the product does not do.
 
 ---
 
@@ -508,6 +587,7 @@ committed, then typechecks, tests and builds both halves of the app.
 | `tests/api/sms-relay.test.ts` | Pairing, the claim lease, sending the same message twice, cross-dealer isolation, retry and give-up, honest delivery reporting |
 | `tests/api/contracts.test.ts` | Drafting with the sale, the frozen snapshot, signing, refusing to lock an unsigned or voided agreement, and refusing when the plan was changed after signing |
 | `tests/api/customer-payments.test.ts` | A reported transfer stays unverified and moves no money, applies on confirmation, cannot name another customer's plan, and the queue's scoping and limits |
+| `tests/api/offline-rule.test.ts` | Who is permitted to restrict themselves and who is refused — no limit, manual locking, an unsigned, voided or pre-v1.1 agreement — the limit never shortening below the signed figure, a self-lock recorded without becoming `LOCKED`, and the clause printed in both languages |
 | `tests/api/licenses.test.ts` | A lock is spent once at enrolment and stamped with the IMEI, re-enrolment spends nothing, a paid-off device never returns its lock, running out stops the counter but leaves the QR valid, and only the platform can mint stock |
 
 **Client** (`client/src/**/*.test.ts(x)`)
@@ -516,7 +596,7 @@ committed, then typechecks, tests and builds both halves of the app.
 |---|---|
 | `components/auth/RouteGuards.test.tsx` | Session gate, the change-password redirect, per-role page and button access |
 | `components/dashboard/CollectionQueue.test.ts` | Collapsing a customer's arrears into one call, worst-first ordering, and surfacing the locked handset |
-| `utils/format.test.ts` | Rupee formatting, lakh/crore shorthand, and the overdue wording |
+| `utils/format.test.ts` | Rupee formatting, lakh/crore shorthand, the overdue wording, and "last contact" reading Never rather than a guess |
 | `context/AuthContext.test.tsx` | Token restore, login, logout, dealer switching, the 401 teardown |
 | `services/api.test.ts` | Auth header, query building, error mapping, why a failed sign-in is not an expired session |
 | `utils/csv.test.ts` | Quoting, the UTF-8 BOM, spreadsheet formula injection |
@@ -527,6 +607,7 @@ committed, then typechecks, tests and builds both halves of the app.
 | File | Covers |
 |---|---|
 | `PolicyViewTest.kt` | Parsing the policy a lock screen renders — a JSON null must not become the word "null" in front of a customer, an absent `emergencyCallsAllowed` means permitted, and a command the app cannot carry out is rejected rather than acknowledged |
+| `OfflineLockRuleTest.kt` | The only decision the app makes without asking anybody: locking after the limit when money is genuinely late, and *not* locking a paid-up phone however long it stays silent, before the grace period is out, on a limit of zero, on a handset that never reported, or on a clock moved backwards |
 | `DpcApiEndpointTest.kt` | Joining the base URL from the QR to an endpoint. Getting this wrong produces a phone that provisions cleanly and never checks in again |
 
 **Android SMS relay** (`android/sms-relay/src/test/`)
@@ -598,5 +679,5 @@ Two operations deliberately run *after* their transaction commits, because they 
 2. **An SMS aggregator account** (Jazz / Telenor / Zong corporate, or Twilio) with a PTA-approved sender mask. A paired phone gets reminders moving today, but a consumer SIM is not a delivery channel for a shop at volume — and a reminder that arrives from a random mobile number is a reminder customers ignore.
 3. **A payment gateway.** JazzCash's hosted checkout is the simplest of the real ones — an HMAC-signed form POST, no OAuth, no SDK — and the blocker is not code but a merchant account, which needs business registration and a bank account. Customers can already report transfers ([above](#-customer-reported-payments)); a gateway removes the manual confirmation, not the capability.
 4. **Deeper client coverage** — guards, auth, the API client, CSV export and pagination are tested; the page components and modals are not.
-5. **Legal review of the contract terms** — the agreement is written, bilingual, signed and enforced ([Consent](#-consent-the-contract-a-lock-rests-on)), but it was drafted by engineers. A Pakistani lawyer should read it before a shop relies on it. A server-rendered PDF is the other open piece, and needs headless Chrome for the Urdu to shape correctly.
+5. **Legal review of the contract terms** — the agreement is written, bilingual, signed and enforced ([Consent](#-consent-the-contract-a-lock-rests-on)), but it was drafted by engineers. A Pakistani lawyer should read it before a shop relies on it — clause 4 of terms v1.1, which permits a handset to restrict itself when it cannot reach the shop, is the paragraph to put in front of them first. A server-rendered PDF is the other open piece, and needs headless Chrome for the Urdu to shape correctly.
 6. Urdu localisation and RTL for the dashboard itself, PWA offline mode.

@@ -67,6 +67,35 @@ export const overdueLabel = (days: number): string => {
   return `due in ${Math.abs(days)} days`;
 };
 
+/**
+ * `4 minutes ago` / `3 days ago` / `Never` — how long ago something last
+ * happened.
+ *
+ * Written for "last contact with the handset", where the number is not
+ * decoration: the offline rule counts these same days, so a screen that guessed
+ * would contradict what the phone is doing. An absent timestamp says so plainly
+ * rather than being rendered as "a long time ago".
+ */
+export const relativeTime = (iso: string | Date | null | undefined): string => {
+  if (!iso) return 'Never';
+
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return 'Never';
+
+  const seconds = Math.round((Date.now() - then) / 1000);
+  if (seconds < 0) return 'Just now';
+  if (seconds < 90) return 'Just now';
+
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} minutes ago`;
+
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return hours === 1 ? '1 hour ago' : `${hours} hours ago`;
+
+  const days = Math.round(hours / 24);
+  return days === 1 ? '1 day ago' : `${days} days ago`;
+};
+
 /** Greeting keyed to the shop's own clock, not the server's. */
 export const greeting = (date: Date = new Date()): string => {
   const h = date.getHours();

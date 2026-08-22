@@ -19,6 +19,7 @@ else's phone for no reason.
 | **Checks in** | Every fifteen minutes via WorkManager: battery, OS build, patch level, carrier. Collects any waiting command. |
 | **Applies commands** | `LOCK` pins the phone to the lock screen as device owner; `UNLOCK` releases it. |
 | **Acknowledges honestly** | Reports `applied: true` only when the restriction actually took hold. |
+| **Holds itself when nobody can reach it** | If it has not reached the server for the dealer's limit *and* an installment is past its grace period by the schedule it already holds, it restricts itself. See [The offline rule](#the-offline-rule). |
 | **Survives restarts** | The lock is restored from the last state the phone *enforced*, before the network is consulted. |
 | **Gives the phone back** | When the server answers 403 — device removed or retired — it unwinds every restriction and erases its own credential. |
 
@@ -36,6 +37,37 @@ else's phone for no reason.
 - **No hiding.** The app has a launcher icon and a status screen showing what is
   owed, when it is due and who to call. Somebody paying for this phone is
   entitled to see what is on it.
+
+---
+
+## The offline rule
+
+Everything else here is the server deciding and this app reporting. This is the
+one decision the app makes alone, because it only ever arises when there is
+nobody to ask: a customer who keeps the phone off the network would otherwise
+sit out an entire plan with a lock command queued behind them forever.
+
+**Two conditions, never one.** Silence alone is not evidence of anything. The
+handset restricts itself only when it has been out of contact for the dealer's
+number of days **and**, by the last schedule it was given, an installment is
+genuinely past its grace period. Somebody paid up who spends a month somewhere
+without signal keeps a working phone.
+
+| | |
+|---|---|
+| `OfflineLockRule` | The decision. Pure, and it takes its clock as a parameter, so the whole rule is unit-tested without a device, a network or a WorkManager. |
+| `OfflineWatchdogWorker` | Runs it every six hours with **no network constraint**. `CheckInWorker` is constrained to `CONNECTED`, which is right for a heartbeat and means it never runs in the one situation this rule is about. |
+| `Prefs.offlineLockSince` | Stamped only if the restriction actually took hold, and cleared by any release. The next check-in carries it to the server, which is how the shop finds out. |
+
+The number of days comes from the server, on every check-in. It is 0 — never —
+unless the dealer configured it, automatic locking is on, the device has valid
+consent, and the terms the customer signed actually describe the rule. The app
+never reasons about any of that: it is told the answer, or it is told zero.
+
+**What it cannot do.** It reads the system clock, and a device owner can move
+that. Rolling the clock back stalls the count; it does not reverse it, and the
+lock still lands the moment the phone reaches the server. The rule delays
+enforcement for a determined customer rather than escaping it.
 
 ---
 

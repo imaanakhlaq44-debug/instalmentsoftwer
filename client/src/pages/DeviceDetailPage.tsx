@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ApiService } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.js';
 import { EditDeviceModal } from '../components/modals/EditDeviceModal.js';
+import { relativeTime } from '../utils/format.js';
 import {
   Smartphone,
   User,
@@ -249,6 +250,27 @@ export const DeviceDetailPage: React.FC = () => {
         </div>
       </div>
 
+      {/*
+        A self-lock is not a status change, so it gets its own notice rather
+        than being folded into the status badge. The shop needs to know the
+        difference: nobody at the counter issued this, and the phone is holding
+        itself until it can reach the server again.
+      */}
+      {device.offlineLockActive && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl">
+          <p className="text-xs font-extrabold text-amber-900">
+            This handset restricted itself under the offline rule
+          </p>
+          <p className="text-[11px] text-amber-800 mt-1">
+            It could not reach the server for longer than the configured limit while an installment was
+            overdue, so it applied the restriction on its own
+            {device.offlineLockSince ? ` on ${new Date(device.offlineLockSince).toLocaleString()}` : ''}. It
+            lifts itself once the phone reaches the server and the account is clear — no unlock command is
+            needed for that. Nobody at the counter issued this lock.
+          </p>
+        </div>
+      )}
+
       {/* 5 Health Status Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {/* Connectivity */}
@@ -283,10 +305,18 @@ export const DeviceDetailPage: React.FC = () => {
             <span>Last Sync</span>
             <Clock className="w-4 h-4 text-slate-400" />
           </div>
+          {/*
+            The real timestamp. This card used to print "2 mins ago" or
+            "2 days ago" from `isOnline` alone, which was invented — and it is
+            the very number the offline rule counts, so a made-up one here would
+            contradict what the handset is doing.
+          */}
           <p className="text-sm font-extrabold text-slate-900 mt-2">
-            {device.isOnline ? '2 mins ago' : '2 days ago'}
+            {relativeTime(device.lastCheckInAt)}
           </p>
-          <span className="text-[10px] text-slate-400">Heartbeat OK</span>
+          <span className="text-[10px] text-slate-400">
+            {device.lastCheckInAt ? 'Last DPC check-in' : 'The handset has never reported'}
+          </span>
         </div>
 
         {/* OS & Version */}

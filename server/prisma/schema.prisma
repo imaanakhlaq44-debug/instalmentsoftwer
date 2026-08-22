@@ -398,6 +398,14 @@ model Device {
   /** Last successful DPC check-in, as distinct from any dashboard activity. */
   lastCheckInAt    DateTime? @map("last_check_in_at") @db.Timestamptz(3)
 
+  // --- The offline rule ------------------------------------------------------
+  // The handset restricted itself because it had not reached the server for the
+  // dealer's configured number of days. Nobody commanded it, so it is kept apart
+  // from `status`: LOCKED still means a lock this server issued and the phone
+  // confirmed, and this means a lock the phone applied on its own authority.
+  offlineLockActive Boolean   @default(false) @map("offline_lock_active")
+  offlineLockSince  DateTime? @map("offline_lock_since") @db.Timestamptz(3)
+
   createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime        @default(now()) @map("updated_at") @db.Timestamptz(3)
 
@@ -619,6 +627,13 @@ model DevicePolicy {
   autoLockEnabled          Boolean           @default(false) @map("auto_lock_enabled")
   autoUnlockEnabled        Boolean           @default(true) @map("auto_unlock_enabled")
   lockWarningDays          Int               @default(2) @map("lock_warning_days")
+  /**
+   * How many days a handset may go without reaching this server before it
+   * restricts itself. 0 turns the rule off. The phone enforces it, not the
+   * server — a handset that is off the network is precisely the case the
+   * server cannot act on.
+   */
+  offlineLockAfterDays     Int               @default(0) @map("offline_lock_after_days")
   customerReminderEnabled  Boolean           @default(true) @map("customer_reminder_enabled")
   emergencyCallsAllowed    Boolean           @default(true) @map("emergency_calls_allowed")
   paymentMethodsOnLock     String[]          @map("payment_methods_on_lock")

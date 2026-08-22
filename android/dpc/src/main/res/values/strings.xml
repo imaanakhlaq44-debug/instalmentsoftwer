@@ -26,6 +26,7 @@
     <string name="status_shop">Shop</string>
     <string name="status_call_shop">Call the shop</string>
     <string name="status_no_dues">Nothing is overdue. Thank you.</string>
+    <string name="status_offline_rule">This phone needs to reach the shop\'s system at least once every %1$d days. If it cannot, and an installment is past its due date, it will restrict itself until it can.</string>
     <string name="status_owner_warning">This app does not hold device-owner rights, so it cannot apply a restriction. Ask the shop to re-provision the phone.</string>
 
     <!-- Lock screen -->
@@ -38,6 +39,7 @@
     <string name="lock_call_shop">Call the shop</string>
     <string name="lock_emergency">Emergency call</string>
     <string name="lock_refresh">I have paid — check again</string>
+    <string name="lock_offline_message">This phone could not reach the shop\'s system for several days while an installment was overdue, so it restricted itself. Connect it to the internet: it checks again on its own, and unlocks as soon as the shop\'s system confirms the payment.</string>
     <string name="lock_checking">Contacting the shop…</string>
     <string name="lock_still_locked">The payment has not reached the shop yet.</string>
 

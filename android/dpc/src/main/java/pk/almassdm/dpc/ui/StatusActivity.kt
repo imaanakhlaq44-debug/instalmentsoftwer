@@ -84,6 +84,17 @@ class StatusActivity : AppCompatActivity() {
         // than at the moment the restriction was supposed to take hold.
         binding.ownerWarning.visibility =
             if (LockController(this).isDeviceOwner) View.GONE else View.VISIBLE
+
+        // The offline rule is shown only when it is actually in force for this
+        // handset, and it names the real number of days. A customer finding out
+        // about it from a locked screen would be finding out too late.
+        if (policy.offlineLockAfterDays > 0) {
+            binding.offlineRule.text =
+                getString(R.string.status_offline_rule, policy.offlineLockAfterDays)
+            binding.offlineRule.visibility = View.VISIBLE
+        } else {
+            binding.offlineRule.visibility = View.GONE
+        }
     }
 
     private fun checkNow() {

@@ -521,6 +521,21 @@ export const SimulatorPage: React.FC = () => {
                   <RotateCw className="w-4 h-4" />
                   <span>Reboot OS</span>
                 </button>
+
+                {/*
+                  The offline rule. Otherwise only observable by taking a real
+                  handset off the network for days, which is not a test anybody
+                  will run. The server refuses this unless the phone would
+                  genuinely have been permitted to do it.
+                */}
+                <button
+                  onClick={() => handleSimAction('SIMULATE_OFFLINE_SELF_LOCK')}
+                  disabled={actionLoading}
+                  className="p-3 bg-amber-50 hover:bg-amber-100/80 border border-amber-200 text-amber-700 rounded-2xl text-xs font-bold flex flex-col items-center gap-1.5 transition-all"
+                >
+                  <WifiOff className="w-4 h-4" />
+                  <span>Self-Lock Offline</span>
+                </button>
               </div>
             </div>
 

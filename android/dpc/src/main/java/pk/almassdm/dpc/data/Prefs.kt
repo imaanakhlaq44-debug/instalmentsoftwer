@@ -57,6 +57,19 @@ class Prefs(context: Context) {
         get() = prefs.getLong(KEY_LAST_CHECK_IN, 0L)
         set(value) = prefs.edit().putLong(KEY_LAST_CHECK_IN, value).apply()
 
+    /**
+     * When this handset restricted itself under the offline rule, or 0 if it
+     * has not. Kept apart from [lockApplied], which is true for any restriction
+     * however it arrived: the server needs to be told which of the two it is
+     * looking at, and the lock screen says something different for each.
+     */
+    var offlineLockSince: Long
+        get() = prefs.getLong(KEY_OFFLINE_LOCK_SINCE, 0L)
+        set(value) = prefs.edit().putLong(KEY_OFFLINE_LOCK_SINCE, value).apply()
+
+    val offlineLockActive: Boolean
+        get() = offlineLockSince > 0L && lockApplied
+
     fun saveCredentials(deviceId: String, deviceToken: String) {
         prefs.edit()
             .putString(KEY_DEVICE_ID, deviceId)
@@ -76,6 +89,8 @@ class Prefs(context: Context) {
             .putString(KEY_P_DUE, policy.nextDueDate)
             .putString(KEY_P_DEALER, policy.dealerName)
             .putString(KEY_P_PHONE, policy.dealerPhone)
+            .putInt(KEY_P_OFFLINE_DAYS, policy.offlineLockAfterDays)
+            .putInt(KEY_P_GRACE_DAYS, policy.gracePeriodDays)
             .apply()
     }
 
@@ -87,6 +102,8 @@ class Prefs(context: Context) {
             .orEmpty().split("|").filter { it.isNotBlank() },
         amountDue = prefs.getFloat(KEY_P_AMOUNT, 0f).toDouble(),
         nextDueDate = prefs.getString(KEY_P_DUE, null),
+        offlineLockAfterDays = prefs.getInt(KEY_P_OFFLINE_DAYS, 0),
+        gracePeriodDays = prefs.getInt(KEY_P_GRACE_DAYS, 0),
         dealerName = prefs.getString(KEY_P_DEALER, null),
         dealerPhone = prefs.getString(KEY_P_PHONE, null),
     )
@@ -110,6 +127,7 @@ class Prefs(context: Context) {
         private const val KEY_LOCK_APPLIED = "lock_applied"
         private const val KEY_INTERVAL = "check_in_interval"
         private const val KEY_LAST_CHECK_IN = "last_check_in"
+        private const val KEY_OFFLINE_LOCK_SINCE = "offline_lock_since"
         private const val KEY_P_LOCKED = "policy_locked"
         private const val KEY_P_MESSAGE = "policy_message"
         private const val KEY_P_EMERGENCY = "policy_emergency"
@@ -118,5 +136,7 @@ class Prefs(context: Context) {
         private const val KEY_P_DUE = "policy_due"
         private const val KEY_P_DEALER = "policy_dealer"
         private const val KEY_P_PHONE = "policy_phone"
+        private const val KEY_P_OFFLINE_DAYS = "policy_offline_lock_days"
+        private const val KEY_P_GRACE_DAYS = "policy_grace_days"
     }
 }

@@ -16,7 +16,24 @@
  * presenting only one of them would make "the customer agreed" a technicality.
  */
 
-export const CURRENT_TERMS_VERSION = '1.0';
+/**
+ * v1.1 adds the offline rule to clause 4: a handset that stops reporting in may
+ * restrict itself. v1.0 said only that non-payment could lead to a restriction,
+ * which does not describe a phone locking itself while it is out of signal, so
+ * `termsDiscloseOfflineLock` refuses that version and contracts signed under it
+ * keep rendering — and keep meaning — exactly what they said.
+ */
+export const CURRENT_TERMS_VERSION = '1.1';
+
+/**
+ * Whether the version somebody signed under actually tells them about the
+ * offline rule. Asked by the DPC route before it will hand a handset a
+ * non-zero offline limit.
+ */
+export function termsDiscloseOfflineLock(termsVersion: string): boolean {
+  const [major = 0, minor = 0] = termsVersion.split('.').map((part) => Number(part) || 0);
+  return major > 1 || (major === 1 && minor >= 1);
+}
 
 /** The facts the document is rendered from, frozen at signing. */
 export interface ContractSnapshot {
@@ -39,6 +56,12 @@ export interface ContractSnapshot {
     frequency: 'ONE_TIME' | 'DAILY';
     maxPerInstallment?: number;
   };
+  /**
+   * The offline rule as it stood when this was signed. Absent on snapshots
+   * frozen before terms v1.1, which is why every reader treats it as optional
+   * rather than defaulting it to something the customer never saw.
+   */
+  offlineLock?: { enabled: boolean; afterDays: number };
   schedule: { installmentNumber: number; amountDue: number; dueDate: string }[];
   preparedAt: string;
 }
@@ -53,13 +76,63 @@ export interface ContractClause {
 const rs = (amount: number) => 'Rs. ' + Math.round(amount).toLocaleString('en-PK');
 
 /**
- * The clauses, rendered against one customer's figures.
+ * The clauses, rendered against one customer's figures, under the version the
+ * contract was signed with.
  *
  * Every number here is the real one from the plan. A contract that said
  * "as per the schedule" while the schedule lived only in a database would be
  * worth nothing to the person signing it.
+ *
+ * Newer versions are expressed as changes to the v1.0 text rather than as a
+ * second copy of it. Two full copies of seven clauses would drift, and the
+ * whole point of versioning is that what somebody signed cannot drift.
  */
-export function renderClauses(snapshot: ContractSnapshot): ContractClause[] {
+export function renderClauses(
+  snapshot: ContractSnapshot,
+  termsVersion: string = CURRENT_TERMS_VERSION
+): ContractClause[] {
+  const clauses = clausesV1_0(snapshot);
+  return termsDiscloseOfflineLock(termsVersion) ? withOfflineRule(clauses, snapshot) : clauses;
+}
+
+/**
+ * Clause 4, extended for terms v1.1.
+ *
+ * The customer is told the two things the rule actually means for them: the
+ * phone has to reach the shop from time to time, and keeping it off the network
+ * is not a way around a restriction. Stated in the same clause as the lock
+ * itself, because it is the same power.
+ */
+function withOfflineRule(clauses: ContractClause[], snapshot: ContractSnapshot): ContractClause[] {
+  const offline = snapshot.offlineLock;
+  if (!offline?.enabled || offline.afterDays <= 0) return clauses;
+
+  const days = offline.afterDays;
+
+  return clauses.map((clause) =>
+    !clause.heading.startsWith('4.')
+      ? clause
+      : {
+          ...clause,
+          body:
+            `${clause.body}\n\n` +
+            `This handset contacts ${snapshot.dealer.name}'s system automatically from time to time. If it is ` +
+            `unable to do so for ${days} days in a row while an installment is overdue, it will restrict itself ` +
+            `until it can. Turning off mobile data, removing the SIM or keeping the phone offline therefore does ` +
+            `not prevent a restriction. It lifts as soon as the handset reaches the system again and the ` +
+            `installment has been paid.`,
+          bodyUr:
+            `${clause.bodyUr}\n\n` +
+            `یہ موبائل وقتاً فوقتاً خود بخود ${snapshot.dealer.name} کے سسٹم سے رابطہ کرتا ہے۔ اگر قسط بقایا ہونے کی حالت میں ` +
+            `مسلسل ${days} دن تک یہ رابطہ نہ ہو سکے، تو موبائل خود کو محدود کر دے گا جب تک رابطہ بحال نہ ہو۔ اس لیے موبائل ڈیٹا بند ` +
+            `کرنے، سم نکالنے یا فون کو آف لائن رکھنے سے پابندی سے بچا نہیں جا سکتا۔ رابطہ بحال ہوتے ہی اور قسط ادا ہو جانے پر ` +
+            `پابندی ختم ہو جائے گی۔`,
+        }
+  );
+}
+
+/** The original terms, frozen. Nothing in here may be edited — add a version. */
+function clausesV1_0(snapshot: ContractSnapshot): ContractClause[] {
   const { plan, lateFee, device, dealer } = snapshot;
 
   const lateFeeDescription = !lateFee.enabled

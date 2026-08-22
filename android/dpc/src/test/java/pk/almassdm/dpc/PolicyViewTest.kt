@@ -68,6 +68,22 @@ class PolicyViewTest {
     }
 
     @Test
+    fun `a server that says nothing about the offline rule does not get one inferred`() {
+        // An older server, or one whose dealer has the rule off, sends no such
+        // field. Reading that as anything but "never" would have a handset
+        // restrict itself on a rule nobody configured.
+        val silent = PolicyView.fromJson(JSONObject("""{ "locked": false }"""))
+        assertEquals(0, silent.offlineLockAfterDays)
+        assertEquals(0, silent.gracePeriodDays)
+
+        val configured = PolicyView.fromJson(
+            JSONObject("""{ "locked": false, "offlineLockAfterDays": 7, "gracePeriodDays": 3 }""")
+        )
+        assertEquals(7, configured.offlineLockAfterDays)
+        assertEquals(3, configured.gracePeriodDays)
+    }
+
+    @Test
     fun `a contact-less policy does not invent a shop`() {
         val policy = PolicyView.fromJson(JSONObject("""{ "locked": true }"""))
 

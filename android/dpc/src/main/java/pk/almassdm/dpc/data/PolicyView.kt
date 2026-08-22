@@ -18,6 +18,16 @@ data class PolicyView(
     val paymentMethods: List<String>,
     val amountDue: Double,
     val nextDueDate: String?,
+    /**
+     * Days this handset may go without reaching the server before it restricts
+     * itself, or 0 for never. The server has already weighed the dealer's
+     * policy, the customer's consent and the version of the terms they signed;
+     * the phone is handed the answer, so it never has to reason about any of
+     * that offline. See [pk.almassdm.dpc.work.OfflineLockRule].
+     */
+    val offlineLockAfterDays: Int,
+    /** The same grace the server allows after a due date, applied offline too. */
+    val gracePeriodDays: Int,
     val dealerName: String?,
     val dealerPhone: String?,
 ) {
@@ -36,6 +46,10 @@ data class PolicyView(
                 },
                 amountDue = json.optDouble("amountDue", 0.0).let { if (it.isNaN()) 0.0 else it },
                 nextDueDate = json.optStringOrNull("nextDueDate"),
+                // Absent means off. An older server that does not know about the
+                // offline rule must not have one inferred for it.
+                offlineLockAfterDays = json.optInt("offlineLockAfterDays", 0).coerceAtLeast(0),
+                gracePeriodDays = json.optInt("gracePeriodDays", 0).coerceAtLeast(0),
                 dealerName = contact?.optStringOrNull("dealerName"),
                 dealerPhone = contact?.optStringOrNull("dealerPhone"),
             )
