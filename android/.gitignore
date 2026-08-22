@@ -8,4 +8,10 @@ captures/
 .externalNativeBuild/
 .cxx/
 *.apk
+
+# The release signing key and everything that unlocks it. Losing this key means
+# no future build can update an installed DPC; leaking it means somebody else
+# can sign one that a factory-reset phone will accept as device owner.
 *.keystore
+*.jks
+keystore.properties

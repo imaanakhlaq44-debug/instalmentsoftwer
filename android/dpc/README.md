@@ -89,12 +89,15 @@ truth can come from.
 
 ## Building
 
+For a signed release build and how it reaches a handset, see
+**[RELEASE.md](../RELEASE.md)**. What follows is the local debug loop.
+
 ```bash
 cd android
 ./gradlew testDebugUnitTest assembleDebug
 ```
 
-The debug APK lands in `app/build/outputs/apk/debug/`. `local.properties` needs
+The debug APK lands in `dpc/build/outputs/apk/debug/`. `local.properties` needs
 `sdk.dir` pointing at your Android SDK; Android Studio writes it for you, and CI
 gets it from `ANDROID_HOME`.
 
@@ -124,11 +127,12 @@ provisioned from the QR, which is exactly why it is worth doing: an app the
 customer merely installed can be uninstalled on the first missed payment, and a
 device owner survives until a factory reset — which the app then blocks.
 
-1. Host the release APK somewhere the phone can reach, and configure the server:
+1. Build, sign and publish the APK — [RELEASE.md](../RELEASE.md) is the runbook
+   for that — and configure the server with where it lives:
 
    ```bash
    DPC_SERVER_URL=https://api.your-domain.pk/api/dpc
-   DPC_APK_URL=https://your-domain.pk/dpc/emi-shield-dpc.apk
+   DPC_APK_URL=https://github.com/<owner>/<repo>/releases/download/dpc-v1.0.0/almas-sdm-dpc-v1.0.0.apk
    DPC_APK_SIGNATURE_CHECKSUM=<base64url SHA-256 of the signing certificate>
    ```
 
@@ -141,7 +145,7 @@ device owner survives until a factory reset — which the app then blocks.
 3. On the factory-reset handset, tap the welcome screen six times to open the
    scanner, and scan it. The wizard downloads the APK, verifies its signing
    certificate against the checksum, installs it as device owner and hands the
-   enrolment code to `EmiDeviceAdminReceiver`.
+   enrolment code to `AlmasDeviceAdminReceiver`.
 
 4. The app redeems the code, hardens the installation — no factory reset, no
    safe boot, no added users, cannot be uninstalled — and starts checking in.
@@ -149,12 +153,16 @@ device owner survives until a factory reset — which the app then blocks.
 ### The signature checksum
 
 ```bash
-keytool -printcert -jarfile app-release.apk | grep SHA256
+cd android && ./gradlew :dpc:printSigningCertChecksum
 ```
 
-Take those bytes, base64url-encode them without padding. A wrong checksum makes
-the wizard refuse the download, which is the point: it is what stops a
-lookalike APK being provisioned as owner of somebody's phone.
+That prints the line to paste into the server's environment. It is computed from
+the key that will sign the build rather than derived by hand, because the value
+the wizard wants — the SHA-256 of the signing *certificate*, base64url encoded
+without padding — is easy to confuse with the colon-separated SHA-1 fingerprint
+`keytool` prints most prominently, and a wrong checksum makes the wizard refuse
+the download. That refusal is the point: it is what stops a lookalike APK being
+provisioned as owner of somebody's phone.
 
 ---
 
