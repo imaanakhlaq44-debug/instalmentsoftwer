@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ای ایم آئی شیلڈ ریلے</string>
+    <string name="app_name">الماس ایس ڈی ایم ریلے</string>
 
     <string name="pair_title">یہ فون منسلک کریں</string>
     <string name="pair_subtitle">یہ فون آپ کی دکان کے قسط یاد دہانی پیغامات اپنی سم سے بھیجے گا۔ ڈیش بورڈ سے ملا ہوا کوڈ یہاں لگائیں۔</string>
@@ -24,7 +24,7 @@
     <string name="grant_permission">اجازت دیں</string>
 
     <string name="notification_channel">ایس ایم ایس ریلے</string>
-    <string name="notification_title">ای ایم آئی شیلڈ پیغامات بھیج رہا ہے</string>
+    <string name="notification_title">الماس ایس ڈی ایم پیغامات بھیج رہا ہے</string>
     <string name="notification_text">یہ فون آپ کی دکان کی یاد دہانیاں بھیجتا ہے۔</string>
 
     <string name="error_network">سرور تک رسائی نہیں ہو سکی۔ دوبارہ کوشش جاری ہے۔</string>

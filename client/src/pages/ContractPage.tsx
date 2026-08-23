@@ -73,7 +73,7 @@ export const ContractPage: React.FC = () => {
   if (loading) return <div className="p-8 text-sm text-slate-500">Loading agreement…</div>;
   if (!document) return <div className="p-8 text-sm text-slate-500">This agreement could not be loaded.</div>;
 
-  const { contract, snapshot, clauses, declaration, hashMatches } = document;
+  const { contract, snapshot, clauses, declaration, hashMatches, planMatches, planChanges } = document;
   const canSign = contract.status === 'DRAFT' && user?.role !== 'CUSTOMER';
 
   return (
@@ -139,12 +139,35 @@ export const ContractPage: React.FC = () => {
           </div>
         )}
 
+        {/*
+          Two different failures, said in two different ways. An altered record
+          is a data-integrity problem for the shop to investigate; a changed
+          plan is an ordinary consequence of restructuring, and the fix is a
+          fresh signature. Telling somebody the plan changed when the record was
+          tampered with would send them looking in the wrong place.
+        */}
         {contract.status === 'SIGNED' && hashMatches === false && (
+          <div className="flex items-start gap-3 p-4 rounded-2xl bg-rose-50 border border-rose-200">
+            <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" aria-hidden="true" />
+            <div>
+              <p className="text-sm font-bold text-rose-900">This record no longer matches its own signature</p>
+              <p className="text-xs text-rose-800 mt-0.5">
+                The stored agreement has been altered since it was signed, so what is shown below is not what the
+                customer accepted. The device cannot be restricted until a fresh agreement is issued and signed.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {contract.status === 'SIGNED' && hashMatches !== false && planMatches === false && (
           <div className="flex items-start gap-3 p-4 rounded-2xl bg-rose-50 border border-rose-200">
             <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" aria-hidden="true" />
             <div>
               <p className="text-sm font-bold text-rose-900">The plan has changed since this was signed</p>
               <p className="text-xs text-rose-800 mt-0.5">
+                {planChanges.length > 0
+                  ? `${planChanges.join(', ')} — changed after signing. `
+                  : ''}
                 The figures below are no longer the ones in force, so the customer has not agreed to the current
                 terms. The device cannot be restricted until a fresh agreement is signed.
               </p>
@@ -152,7 +175,7 @@ export const ContractPage: React.FC = () => {
           </div>
         )}
 
-        {contract.status === 'SIGNED' && hashMatches && (
+        {contract.status === 'SIGNED' && hashMatches && planMatches && (
           <div className="flex items-start gap-3 p-4 rounded-2xl bg-emerald-50 border border-emerald-200">
             <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" aria-hidden="true" />
             <div>

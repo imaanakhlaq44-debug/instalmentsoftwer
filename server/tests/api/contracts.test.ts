@@ -215,11 +215,102 @@ describe('a lock rests on the signature', () => {
     expect(res.body.error).toMatch(/voided/i);
   });
 
-  it('refuses when the plan has been changed since signing', async () => {
+  it('is not tripped by a customer simply paying', async () => {
     /**
-     * The case the hash exists for. A shop that re-signs is fine; a shop that
-     * quietly raises the installments on an already-signed agreement and then
-     * locks the phone for non-payment of the new figure is not.
+     * The failure that would matter most in a shop: a drift check that fired on
+     * ordinary repayment would refuse every lock on every plan anybody had ever
+     * paid into, and the shop would learn to ignore the warning.
+     *
+     * Payments, late fees and status changes move constantly. None of them is a
+     * term the customer agreed to, so none of them counts as drift.
+     */
+    const { deviceId, contract } = await registerSale();
+    await as(ACCOUNTS.dealerStaff)
+      .post(`/api/contracts/${contract.id}/sign`)
+      .send({ signerName: 'Test Buyer', signatureImage: SIGNATURE, declarationAccepted: true });
+
+    const plan = (await repo.installmentPlans.findByDevice(deviceId))!;
+    const [first, second] = await repo.installments.findByPlan(plan.id);
+
+    // One paid in full, one paid in part — the two shapes an installment can
+    // be left in.
+    const full = await as(ACCOUNTS.dealerStaff).post('/api/payments').send({
+      customerId: plan.customerId,
+      installmentId: first.id,
+      amount: first.amountDue,
+      paymentMethod: 'CASH',
+      referenceNumber: 'DRIFT-FULL',
+    });
+    expect(full.status).toBeLessThan(300);
+
+    const partial = await as(ACCOUNTS.dealerStaff).post('/api/payments').send({
+      customerId: plan.customerId,
+      installmentId: second.id,
+      amount: Math.floor(second.amountDue / 3),
+      paymentMethod: 'CASH',
+      referenceNumber: 'DRIFT-PARTIAL',
+    });
+    expect(partial.status).toBeLessThan(300);
+
+    const document = await as(ACCOUNTS.dealerAdmin).get(`/api/contracts/${contract.id}`);
+    expect(document.body.planMatches).toBe(true);
+    expect(document.body.planChanges).toEqual([]);
+
+    await makeLockable(deviceId);
+    const res = await as(ACCOUNTS.dealerAdmin)
+      .post(`/api/devices/${deviceId}/lock`)
+      .send({ reason: 'A later installment is overdue.' });
+
+    expect(res.status).toBe(200);
+  });
+
+  it('refuses to lock after the plan is genuinely restructured', async () => {
+    /**
+     * The abuse the whole feature exists to stop, done the way it would
+     * actually happen: not by editing the contract row, but by restructuring
+     * the plan through the ordinary endpoint and then locking the phone for
+     * non-payment of a figure the customer never agreed to.
+     *
+     * The hash cannot see this. It is computed over the snapshot as stored, so
+     * a rewritten plan leaves it matching perfectly — which is why the drift
+     * check compares the signed figures against the plan in force.
+     */
+    const { deviceId, contract } = await registerSale();
+    await as(ACCOUNTS.dealerStaff)
+      .post(`/api/contracts/${contract.id}/sign`)
+      .send({ signerName: 'Test Buyer', signatureImage: SIGNATURE, declarationAccepted: true });
+
+    const plan = (await repo.installmentPlans.findByDevice(deviceId))!;
+    const reschedule = await as(ACCOUNTS.dealerAdmin)
+      .post(`/api/installments/plans/${plan.id}/reschedule`)
+      .send({
+        totalInstallments: 4,
+        firstDueDate: '2026-10-05',
+        reason: 'Customer asked for a shorter plan at a higher monthly figure.',
+      });
+    expect(reschedule.status).toBe(200);
+
+    const document = await as(ACCOUNTS.dealerAdmin).get(`/api/contracts/${contract.id}`);
+    // The record is untouched, so the hash still matches — and on its own it
+    // would have let this lock through.
+    expect(document.body.hashMatches).toBe(true);
+    expect(document.body.planMatches).toBe(false);
+    expect(document.body.planChanges.length).toBeGreaterThan(0);
+
+    await makeLockable(deviceId);
+    const res = await as(ACCOUNTS.dealerAdmin)
+      .post(`/api/devices/${deviceId}/lock`)
+      .send({ reason: 'Installment overdue.' });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/no longer describes this plan/i);
+    expect((await repo.devices.findById(deviceId))!.status).toBe('ACTIVE');
+  });
+
+  it('still refuses when the stored record itself has been altered', async () => {
+    /**
+     * The other failure, and a different message: this is not a restructure,
+     * it is a row that no longer matches its own signature.
      */
     const { deviceId, contract } = await registerSale();
     await as(ACCOUNTS.dealerStaff)
@@ -249,6 +340,8 @@ describe('a lock rests on the signature', () => {
 
     const before = await as(ACCOUNTS.dealerAdmin).get(`/api/contracts/${contract.id}`);
     expect(before.body.hashMatches).toBe(true);
+    expect(before.body.planMatches).toBe(true);
+    expect(before.body.planChanges).toEqual([]);
 
     const signed = (await repo.contracts.findById(contract.id))!;
     const tampered = JSON.parse(signed.snapshot);
