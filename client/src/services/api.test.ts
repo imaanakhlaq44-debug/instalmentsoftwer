@@ -198,21 +198,21 @@ describe('mutations', () => {
   it('posts a login as JSON', async () => {
     const spy = stubFetch(() => json({ token: 't' }));
 
-    await ApiService.login('tariq@almadinamobiles.pk', 'Emishield#2026');
+    await ApiService.login('tariq@almadinamobiles.pk', 'AlmasSdm#2026');
 
     const init = spy.mock.calls[0][1]!;
     expect(init.method).toBe('POST');
     expect(JSON.parse(String(init.body))).toEqual({
       email: 'tariq@almadinamobiles.pk',
-      password: 'Emishield#2026',
+      password: 'AlmasSdm#2026',
     });
   });
 
   it('never puts a password in the URL', async () => {
     const spy = stubFetch(() => json({ token: 't' }));
 
-    await ApiService.login('tariq@almadinamobiles.pk', 'Emishield#2026');
+    await ApiService.login('tariq@almadinamobiles.pk', 'AlmasSdm#2026');
 
-    expect(String(spy.mock.calls[0][0])).not.toContain('Emishield');
+    expect(String(spy.mock.calls[0][0])).not.toContain('AlmasSdm');
   });
 });

@@ -1,4 +1,4 @@
-# EMI Shield — the Android side
+# Almas SDM — the Android side
 
 Two apps, on two different phones. They share this Gradle build and nothing
 else, which is deliberate: the relay must never end up on a financed handset,

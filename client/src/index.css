@@ -3,71 +3,146 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
-    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
-    background-color: #F8FAFC;
-    color: #0F172A;
+    @apply bg-paper-100 text-ink-700 font-sans text-body;
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Figures line up in columns and stop twitching as they change. */
+  .tabular,
+  table td,
+  table th {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+
+  /* One focus ring for the whole app, on the accent, never removed. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent-600/40 ring-offset-2 ring-offset-paper-100 rounded;
+  }
+
+  ::selection {
+    @apply bg-accent-100 text-accent-900;
   }
 }
 
-/* Custom scrollbars */
+/* Scrollbars are present, but they are not part of the design. */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #F1F5F9;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
-  border-radius: 9999px;
+  @apply bg-paper-400/70 rounded-full;
+  border: 3px solid transparent;
+  background-clip: content-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+  @apply bg-ink-400/60;
+  background-clip: content-box;
 }
 
-/* Badge & Card utilities */
-.status-pill {
-  @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider;
-}
+@layer components {
+  /* -------------------------------------------------------------------------
+     Surfaces
+     A card is a hairline and a radius. If it needs a shadow to be seen, the
+     spacing around it is wrong.
+     ------------------------------------------------------------------------- */
+  .surface {
+    @apply bg-paper-50 border border-paper-300 rounded-lg;
+  }
 
-.status-active {
-  @apply bg-emerald-50 text-emerald-700 border border-emerald-200/80;
-}
+  .surface-interactive {
+    @apply surface transition-shadow hover:shadow-raised hover:border-paper-400;
+  }
 
-.status-pending {
-  @apply bg-amber-50 text-amber-700 border border-amber-200/80;
-}
+  /* Recessed area inside a card — meters, wells, empty states. */
+  .well {
+    @apply bg-paper-200/60 border border-paper-300/70 rounded-md;
+  }
 
-.status-overdue {
-  @apply bg-orange-50 text-orange-700 border border-orange-200/80;
-}
+  /* -------------------------------------------------------------------------
+     Labels
+     The small-caps label names the thing; the figure below it carries the
+     weight. Nothing in this app shouts in bold except a number.
+     ------------------------------------------------------------------------- */
+  .eyebrow {
+    @apply text-micro font-semibold uppercase tracking-[0.08em] text-ink-400;
+  }
 
-.status-locked {
-  @apply bg-rose-50 text-rose-700 border border-rose-200/80 animate-pulse;
-}
+  .field-label {
+    @apply block text-caption font-medium text-ink-500 mb-1.5;
+  }
 
-.status-enrolled {
-  @apply bg-blue-50 text-blue-700 border border-blue-200/80;
-}
+  /* -------------------------------------------------------------------------
+     Status
+     Every state pairs its colour with a word — colour is never the only
+     carrier of meaning.
+     ------------------------------------------------------------------------- */
+  .status-pill {
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-micro font-semibold
+           border normal-case tracking-normal;
+  }
 
-.status-inactive {
-  @apply bg-slate-100 text-slate-600 border border-slate-200;
-}
+  .status-active,
+  .status-enrolled {
+    @apply bg-positive-50 text-positive-700 border-positive-200;
+  }
 
-/* Glassmorphic elements */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(226, 232, 240, 0.8);
-}
+  .status-pending,
+  .status-overdue {
+    @apply bg-caution-50 text-caution-700 border-caution-200;
+  }
 
-.phone-screen-frame {
-  box-shadow: 0 25px 50px -12px rgba(11, 25, 44, 0.25), 0 0 0 12px #0f172a, 0 0 0 14px #334155;
+  .status-locked {
+    @apply bg-critical-50 text-critical-700 border-critical-200;
+  }
+
+  .status-inactive {
+    @apply bg-paper-200 text-ink-500 border-paper-300;
+  }
+
+  /* -------------------------------------------------------------------------
+     Controls
+     ------------------------------------------------------------------------- */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2 text-body
+           font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-primary {
+    @apply btn bg-accent-800 text-white hover:bg-accent-900;
+  }
+
+  .btn-secondary {
+    @apply btn bg-paper-50 text-ink-700 border border-paper-300 hover:bg-paper-200;
+  }
+
+  .btn-ghost {
+    @apply btn text-ink-500 hover:text-ink-900 hover:bg-paper-200;
+  }
+
+  .input {
+    @apply w-full rounded-md border border-paper-300 bg-paper-50 px-3 py-2 text-body text-ink-900
+           placeholder:text-ink-400 transition-colors
+           focus:border-accent-600 focus:outline-none focus:ring-0 focus:shadow-focus;
+  }
+
+  /* A number that is the point of its card. Serif, because it is being said to
+     someone rather than tabulated at them. */
+  .figure {
+    @apply font-serif text-figure text-ink-900 tabular;
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -116,4 +191,9 @@
   .print\:hidden {
     display: none !important;
   }
+}
+
+/* Legacy — the simulator's handset bezel. Migrates with that page. */
+.phone-screen-frame {
+  box-shadow: 0 25px 50px -12px rgba(23, 22, 20, 0.25), 0 0 0 12px #171614, 0 0 0 14px #3D3B36;
 }

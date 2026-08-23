@@ -1,15 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Search, Bell, Smartphone, ChevronDown, LogOut, Building2, KeyRound, ShieldCheck,
+  Search, Bell, ChevronDown, LogOut, Building2, KeyRound, ShieldCheck, Check,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.js';
 import { ApiService } from '../../services/api.js';
 
+/**
+ * The top bar: search, whose books you are looking at, what is waiting, who you
+ * are. Nothing else earns a permanent slot at the top of every screen — the
+ * gradient "Phone Simulator" button that used to live here is a page in the
+ * navigation like any other.
+ */
+
 const ROLE_LABELS: Record<string, string> = {
-  SUPER_ADMIN: 'Super Admin',
-  DEALER_ADMIN: 'Shop Owner',
-  DEALER_STAFF: 'Counter Staff',
+  SUPER_ADMIN: 'Super admin',
+  DEALER_ADMIN: 'Shop owner',
+  DEALER_STAFF: 'Counter staff',
   CUSTOMER: 'Customer',
 };
 
@@ -27,7 +34,8 @@ function useOutsideClick(onOutside: () => void) {
 }
 
 export const Navbar: React.FC = () => {
-  const { user, dealer, role, logout, selectedDealerId, setSelectedDealerId, isSuperAdmin, isStaff } = useAuth();
+  const { user, dealer, role, logout, selectedDealerId, setSelectedDealerId, isSuperAdmin } =
+    useAuth();
   const navigate = useNavigate();
 
   const [showProfile, setShowProfile] = useState(false);
@@ -43,9 +51,13 @@ export const Navbar: React.FC = () => {
   useEffect(() => {
     if (!isSuperAdmin) return;
     ApiService.getLicenses()
-      .then((rows) =>
+      .then((res) =>
         setDealers(
-          rows.map((l: any) => ({ id: l.dealerId, name: l.dealerName, city: l.dealerCity }))
+          (res.dealers ?? []).map((d: any) => ({
+            id: d.dealerId,
+            name: d.dealerName,
+            city: d.dealerCity,
+          }))
         )
       )
       .catch(() => setDealers([]));
@@ -67,22 +79,28 @@ export const Navbar: React.FC = () => {
   const activeDealerLabel = isSuperAdmin
     ? selectedDealerId
       ? dealers.find((d) => d.id === selectedDealerId)?.name ?? selectedDealerId
-      : 'All Dealers'
+      : 'All dealers'
     : dealer?.name ?? '—';
 
+  const menuItem =
+    'flex w-full items-center gap-2.5 px-3 py-2 text-body text-ink-700 transition-colors hover:bg-paper-200';
+
   return (
-    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 lg:px-8 py-3">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex-1 max-w-md hidden sm:block">
+    <header className="sticky top-0 z-30 border-b border-paper-300 bg-paper-100/90 px-4 py-2.5 backdrop-blur-sm lg:px-8">
+      <div className="flex items-center gap-3">
+        <div className="hidden max-w-sm flex-1 sm:block">
           <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" aria-hidden="true" />
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
+              aria-hidden="true"
+            />
             <input
               type="search"
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               placeholder="Search IMEI, customer, phone or model…"
               aria-label="Search devices"
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 hover:bg-slate-100/80 focus:bg-white text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
+              className="input py-1.5 pl-9"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && searchValue.trim()) {
                   navigate(`/devices?search=${encodeURIComponent(searchValue.trim())}`);
@@ -92,60 +110,59 @@ export const Navbar: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 sm:gap-4 ml-auto">
-          {isStaff && (
-            <button
-              onClick={() => navigate('/simulator')}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all"
-            >
-              <Smartphone className="w-3.5 h-3.5" aria-hidden="true" />
-              <span className="hidden sm:inline">Phone Simulator</span>
-            </button>
-          )}
-
+        <div className="ml-auto flex items-center gap-1.5">
           {/* Dealer switcher — super admin only. A dealer user has exactly one
               dealership and the server ignores the parameter for them anyway. */}
           {isSuperAdmin && (
             <div className="relative" ref={dealerRef}>
               <button
+                type="button"
                 onClick={() => setShowDealerMenu((v) => !v)}
                 aria-expanded={showDealerMenu}
-                className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200/70 rounded-lg text-xs font-medium text-slate-700 border border-slate-200/60 transition-all"
+                className="btn-secondary py-1.5 text-caption"
               >
-                <Building2 className="w-3.5 h-3.5 text-blue-600" aria-hidden="true" />
-                <span className="hidden md:inline font-semibold max-w-[10rem] truncate">{activeDealerLabel}</span>
-                <ChevronDown className="w-3 h-3 text-slate-500" aria-hidden="true" />
+                <Building2 className="h-3.5 w-3.5 text-ink-400" aria-hidden="true" />
+                <span className="hidden max-w-[10rem] truncate md:inline">{activeDealerLabel}</span>
+                <ChevronDown className="h-3 w-3 text-ink-400" aria-hidden="true" />
               </button>
 
               {showDealerMenu && (
-                <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-100 py-1.5 z-50 max-h-80 overflow-y-auto">
-                  <div className="px-3 py-2 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                    View dealership
-                  </div>
+                <div className="absolute right-0 z-50 mt-1.5 max-h-80 w-72 overflow-y-auto rounded-lg border border-paper-300 bg-paper-50 py-1 shadow-overlay">
+                  <p className="eyebrow px-3 py-1.5">View dealership</p>
                   <button
+                    type="button"
                     onClick={() => {
                       setSelectedDealerId(undefined);
                       setShowDealerMenu(false);
                     }}
-                    className={`w-full text-left px-3 py-2 text-xs hover:bg-slate-50 ${
-                      !selectedDealerId ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-700'
-                    }`}
+                    className={menuItem}
                   >
-                    All Dealers (platform-wide)
+                    <Check
+                      className={`h-3.5 w-3.5 ${selectedDealerId ? 'invisible' : 'text-accent-700'}`}
+                      aria-hidden="true"
+                    />
+                    All dealers
                   </button>
                   {dealers.map((d) => (
                     <button
                       key={d.id}
+                      type="button"
                       onClick={() => {
                         setSelectedDealerId(d.id);
                         setShowDealerMenu(false);
                       }}
-                      className={`w-full text-left px-3 py-2 text-xs hover:bg-slate-50 ${
-                        selectedDealerId === d.id ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-700'
-                      }`}
+                      className={menuItem}
                     >
-                      {d.name}
-                      <span className="block text-[10px] text-slate-400">{d.city}</span>
+                      <Check
+                        className={`h-3.5 w-3.5 shrink-0 ${
+                          selectedDealerId === d.id ? 'text-accent-700' : 'invisible'
+                        }`}
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0 flex-1 text-left">
+                        <span className="block truncate">{d.name}</span>
+                        <span className="block truncate text-caption text-ink-400">{d.city}</span>
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -154,13 +171,14 @@ export const Navbar: React.FC = () => {
           )}
 
           <button
+            type="button"
             onClick={() => navigate('/notifications')}
-            className="p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-xl relative transition-colors"
+            className="btn-ghost relative h-9 w-9 rounded-md p-0"
             aria-label={unreadCount > 0 ? `${unreadCount} pending notifications` : 'Notifications'}
           >
-            <Bell className="w-4 h-4" aria-hidden="true" />
+            <Bell className="h-4 w-4" aria-hidden="true" />
             {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-rose-500 text-white text-[9px] font-bold rounded-full ring-2 ring-white flex items-center justify-center">
+              <span className="absolute right-1 top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-critical-600 px-1 text-[10px] font-medium tabular text-white ring-2 ring-paper-100">
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
@@ -168,55 +186,60 @@ export const Navbar: React.FC = () => {
 
           {/* Profile menu — the old role switcher lived here. It rewrote the
               user's role in the database, letting anyone become super admin. */}
-          <div className="relative pl-2 border-l border-slate-200" ref={profileRef}>
+          <div className="relative" ref={profileRef}>
             <button
+              type="button"
               onClick={() => setShowProfile((v) => !v)}
               aria-expanded={showProfile}
-              className="flex items-center gap-2.5 hover:bg-slate-50 rounded-lg px-1.5 py-1 transition-colors"
+              className="flex items-center gap-2 rounded-md px-1.5 py-1 transition-colors hover:bg-paper-200"
             >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-navy-900 to-blue-700 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent-800 text-caption font-medium text-white">
                 {user?.name.charAt(0).toUpperCase() ?? '?'}
-              </div>
-              <div className="hidden xl:block text-left">
-                <div className="text-xs font-bold text-slate-800 leading-tight">{user?.name}</div>
-                <div className="text-[10px] text-slate-500">{role ? ROLE_LABELS[role] ?? role : ''}</div>
-              </div>
-              <ChevronDown className="w-3 h-3 text-slate-500 hidden xl:block" aria-hidden="true" />
+              </span>
+              <span className="hidden text-left xl:block">
+                <span className="block text-caption font-medium leading-tight text-ink-900">
+                  {user?.name}
+                </span>
+                <span className="block text-micro normal-case tracking-normal text-ink-400">
+                  {role ? ROLE_LABELS[role] ?? role : ''}
+                </span>
+              </span>
+              <ChevronDown className="hidden h-3 w-3 text-ink-400 xl:block" aria-hidden="true" />
             </button>
 
             {showProfile && (
-              <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 py-2 z-50">
-                <div className="px-4 py-2.5 border-b border-slate-100">
-                  <p className="text-xs font-bold text-slate-800 truncate">{user?.name}</p>
-                  <p className="text-[11px] text-slate-500 truncate">{user?.email}</p>
-                  <div className="flex items-center gap-1.5 mt-2">
-                    <ShieldCheck className="w-3 h-3 text-blue-600" aria-hidden="true" />
-                    <span className="text-[10px] font-semibold text-blue-700 uppercase tracking-wide">
-                      {role ? ROLE_LABELS[role] ?? role : ''}
-                    </span>
-                  </div>
-                  {dealer && <p className="text-[10px] text-slate-400 mt-1 truncate">{dealer.name}</p>}
+              <div className="absolute right-0 z-50 mt-1.5 w-64 rounded-lg border border-paper-300 bg-paper-50 py-1 shadow-overlay">
+                <div className="border-b border-paper-300 px-3 pb-2.5 pt-2">
+                  <p className="truncate text-body font-medium text-ink-900">{user?.name}</p>
+                  <p className="truncate text-caption text-ink-400">{user?.email}</p>
+                  <p className="mt-1.5 flex items-center gap-1.5 text-caption text-ink-500">
+                    <ShieldCheck className="h-3.5 w-3.5 text-accent-700" aria-hidden="true" />
+                    {role ? ROLE_LABELS[role] ?? role : ''}
+                    {dealer && <span className="truncate text-ink-400">· {dealer.name}</span>}
+                  </p>
                 </div>
 
                 <button
+                  type="button"
                   onClick={() => {
                     setShowProfile(false);
                     navigate('/change-password');
                   }}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs text-slate-700 hover:bg-slate-50 transition-colors"
+                  className={menuItem}
                 >
-                  <KeyRound className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
+                  <KeyRound className="h-3.5 w-3.5 text-ink-400" aria-hidden="true" />
                   Change password
                 </button>
 
                 <button
+                  type="button"
                   onClick={() => {
                     setShowProfile(false);
                     logout();
                   }}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs text-rose-600 hover:bg-rose-50 transition-colors border-t border-slate-100"
+                  className={`${menuItem} text-critical-600 hover:bg-critical-50`}
                 >
-                  <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
+                  <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
                   Sign out
                 </button>
               </div>

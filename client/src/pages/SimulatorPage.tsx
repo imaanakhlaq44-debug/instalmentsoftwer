@@ -288,11 +288,11 @@ export const SimulatorPage: React.FC = () => {
                 <div className="flex-1 flex flex-col justify-between p-5 bg-gradient-to-b from-blue-950/60 via-slate-900 to-slate-950 animate-fade-in">
                   {/* Top Notification Widget */}
                   <div className="space-y-3 pt-2">
-                    {/* EMI Shield Service Indicator */}
+                    {/* Almas SDM Service Indicator */}
                     <div className="p-3 bg-slate-900/80 border border-slate-800 rounded-2xl flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-emerald-400 ring-4 ring-emerald-400/20"></div>
-                        <span className="font-semibold text-slate-200">EMI Shield Active</span>
+                        <span className="font-semibold text-slate-200">Almas SDM Active</span>
                       </div>
                       <span className="text-[10px] text-slate-400">Policy Compliant</span>
                     </div>
@@ -370,7 +370,7 @@ export const SimulatorPage: React.FC = () => {
                     <div>
                       <h2 className="text-lg font-bold text-white">Enrollment Required</h2>
                       <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
-                        This financed device has not been provisioned with EMI Shield DPC yet.
+                        This financed device has not been provisioned with Almas SDM DPC yet.
                       </p>
                     </div>
 
@@ -381,7 +381,7 @@ export const SimulatorPage: React.FC = () => {
 
                   <div className="pb-4">
                     <span className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider">
-                      EMI Shield DPC Client v2.4
+                      Almas SDM DPC Client v2.4
                     </span>
                   </div>
                 </div>
@@ -521,6 +521,21 @@ export const SimulatorPage: React.FC = () => {
                   <RotateCw className="w-4 h-4" />
                   <span>Reboot OS</span>
                 </button>
+
+                {/*
+                  The offline rule. Otherwise only observable by taking a real
+                  handset off the network for days, which is not a test anybody
+                  will run. The server refuses this unless the phone would
+                  genuinely have been permitted to do it.
+                */}
+                <button
+                  onClick={() => handleSimAction('SIMULATE_OFFLINE_SELF_LOCK')}
+                  disabled={actionLoading}
+                  className="p-3 bg-amber-50 hover:bg-amber-100/80 border border-amber-200 text-amber-700 rounded-2xl text-xs font-bold flex flex-col items-center gap-1.5 transition-all"
+                >
+                  <WifiOff className="w-4 h-4" />
+                  <span>Self-Lock Offline</span>
+                </button>
               </div>
             </div>
 
@@ -535,7 +550,7 @@ export const SimulatorPage: React.FC = () => {
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="e.g. EMIS-STA-XXXX-XXXX"
+                  placeholder="e.g. ALMAS-STA-XXXX-XXXX"
                   value={enrollTokenInput}
                   onChange={(e) => setEnrollTokenInput(e.target.value)}
                   className="flex-1 px-3.5 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs font-mono text-white focus:outline-none focus:ring-2 focus:ring-blue-500"

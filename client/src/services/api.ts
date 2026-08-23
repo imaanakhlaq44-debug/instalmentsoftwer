@@ -327,7 +327,20 @@ export class ApiService {
   // -------------------------------------------------------------------------
 
   static getLicenses(dealerId?: string) {
-    return this.request<any[]>(`/licenses${buildQuery({ dealerId })}`);
+    return this.request<{
+      dealers: any[];
+      packs: any[];
+      catalogue: { size: number; unitPrice: number; totalPrice: number }[];
+    }>(`/licenses${buildQuery({ dealerId })}`);
+  }
+
+  static getLicensePack(packId: string) {
+    return this.request<any>(`/licenses/packs/${packId}`);
+  }
+
+  /** Super admin only — records a purchase and mints its locks. */
+  static issueLicensePack(body: { dealerId: string; size: number; reference?: string }) {
+    return this.request<any>('/licenses/packs', { method: 'POST', body: JSON.stringify(body) });
   }
 
   static getNotifications(params: Record<string, unknown> = {}) {

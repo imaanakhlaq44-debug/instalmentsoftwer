@@ -51,7 +51,6 @@ export interface Dealer {
   phone: string;
   city: string;
   address: string;
-  licenseKeyId: string;
   active: boolean;
   createdAt: string;
 }
@@ -115,6 +114,14 @@ export interface Device {
   locationLng?: number;
   simCarrier?: string;
   wifiSsid?: string;
+  /** Last successful DPC check-in. Absent on a handset that has never reported. */
+  lastCheckInAt?: string;
+  /**
+   * The handset restricted itself after too long without reaching the server.
+   * Kept apart from `status`, which still means a lock the shop issued.
+   */
+  offlineLockActive?: boolean;
+  offlineLockSince?: string;
   customerName?: string;
   customerPhone?: string;
   monthlyAmount?: number;
@@ -251,6 +258,8 @@ export interface DevicePolicy {
   autoLockEnabled: boolean;
   autoUnlockEnabled: boolean;
   lockWarningDays: number;
+  /** Days a handset may go without reaching the server before it restricts itself. 0 = off. */
+  offlineLockAfterDays?: number;
   customerReminderEnabled: boolean;
   emergencyCallsAllowed: boolean;
   paymentMethodsOnLock: string[];

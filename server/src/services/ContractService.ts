@@ -207,7 +207,9 @@ export class ContractService {
     return {
       contract,
       snapshot,
-      clauses: renderClauses(snapshot),
+      // Rendered under the version this contract was signed with, not the
+      // current one — that is what makes an old signature keep its meaning.
+      clauses: renderClauses(snapshot, contract.termsVersion),
       declaration: DECLARATION,
       hashMatches: contract.documentHash
         ? contract.documentHash === this.hash(contract.termsVersion, contract.snapshot)
@@ -338,6 +340,14 @@ export class ContractService {
         totalInstallments: params.plan.totalInstallments,
         firstDueDate: params.plan.firstDueDate,
         gracePeriodDays: params.plan.gracePeriodDays,
+      },
+      // Frozen with everything else, and clause 4 of terms v1.1 prints the day
+      // count from here. It is what the customer actually agreed to, so the DPC
+      // route will not hand a handset a shorter limit than this one however the
+      // dealer's live policy is edited afterwards.
+      offlineLock: {
+        enabled: effective.autoLockEnabled === true && (effective.offlineLockAfterDays ?? 0) > 0,
+        afterDays: effective.offlineLockAfterDays ?? 0,
       },
       lateFee: {
         enabled: effective.lateFeeEnabled !== false,

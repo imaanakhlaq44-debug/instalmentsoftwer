@@ -12,7 +12,8 @@ import { makeRepository, delegate, toSkipTake, Page, PageArgs } from './base.js'
 import { toDomainList } from '../mappers.js';
 import {
   Dealer, User, Customer, Device, EnrollmentToken, InstallmentPlan, Installment,
-  Payment, Transaction, DeviceActionLog, AuditLog, LicenseKey, DevicePolicy,
+  Payment, Transaction, DeviceActionLog, AuditLog, DevicePolicy,
+  LicensePack, DeviceLicense, DeviceLicenseStatus,
   Notification, NotificationTemplate, SmsRelay, Contract,
 } from '../../types/index.js';
 
@@ -136,11 +137,57 @@ export const devicePolicies = {
   },
 };
 
-export const licenseKeys = {
-  ...makeRepository<LicenseKey>('licenseKey'),
+export const licensePacks = {
+  ...makeRepository<LicensePack>('licensePack'),
 
-  findByDealer(dealerId: string, tx?: Tx): Promise<LicenseKey | undefined> {
-    return this.findFirst({ dealerId }, tx);
+  findByDealer(dealerId: string, tx?: Tx): Promise<LicensePack[]> {
+    return this.findMany({ where: { dealerId }, orderBy: { createdAt: 'desc' } }, tx);
+  },
+};
+
+export const deviceLicenses = {
+  ...makeRepository<DeviceLicense>('deviceLicense'),
+
+  /** The question the counter asks constantly: have we got a lock left? */
+  countAvailable(dealerId: string, tx?: Tx): Promise<number> {
+    return this.count({ dealerId, status: 'AVAILABLE' }, tx);
+  },
+
+  countByStatus(dealerId: string, status: DeviceLicenseStatus, tx?: Tx): Promise<number> {
+    return this.count({ dealerId, status }, tx);
+  },
+
+  findByDevice(deviceId: string, tx?: Tx): Promise<DeviceLicense | undefined> {
+    return this.findFirst({ deviceId }, tx);
+  },
+
+  /** Oldest first, so a dealer spends the locks they paid for first. */
+  findFirstAvailable(dealerId: string, tx?: Tx): Promise<DeviceLicense | undefined> {
+    return this.findMany(
+      { where: { dealerId, status: 'AVAILABLE' }, orderBy: { createdAt: 'asc' }, take: 1 },
+      tx
+    ).then((rows) => rows[0]);
+  },
+
+  /**
+   * Compare-and-set: spends a licence only if it is still unspent.
+   *
+   * Returns undefined when somebody else got there first, which is the signal
+   * for the caller to try the next free lock rather than to fail — see
+   * LicenseService.claimForDevice.
+   */
+  async claim(
+    id: string,
+    updates: Partial<DeviceLicense>,
+    tx?: Tx
+  ): Promise<DeviceLicense | undefined> {
+    const won = await this.updateMany({ id, status: 'AVAILABLE' }, updates, tx);
+    return won === 0 ? undefined : this.findById(id, tx);
+  },
+
+  /** Every lock in a pack, for the pack's detail view. */
+  findByPack(packId: string, tx?: Tx): Promise<DeviceLicense[]> {
+    return this.findMany({ where: { packId }, orderBy: { createdAt: 'asc' } }, tx);
   },
 };
 
@@ -826,7 +873,8 @@ export const repo = {
   transactions,
   deviceActionLogs,
   auditLogs,
-  licenseKeys,
+  licensePacks,
+  deviceLicenses,
   devicePolicies,
   notifications,
   notificationTemplates,

@@ -1,4 +1,4 @@
-// EMI Shield — PostgreSQL schema
+// Almas SDM — PostgreSQL schema
 //
 // Design notes that matter:
 //
@@ -135,17 +135,18 @@ enum DeviceAction {
   STATUS_CHANGE
 }
 
-enum LicensePlan {
-  STARTER
-  PROFESSIONAL
-  BUSINESS
-  ENTERPRISE
-}
-
-enum LicenseStatus {
-  ACTIVE
-  EXPIRED
-  SUSPENDED
+/**
+ * A lock's whole life.
+ *
+ * AVAILABLE — bought and unused. CONSUMED — burned onto one handset at
+ * enrolment, permanently: it names the IMEI it was spent on and can never be
+ * spent again. VOID — written off by the platform (a refunded pack, a pack
+ * issued by mistake); it was never spent and never can be.
+ */
+enum DeviceLicenseStatus {
+  AVAILABLE
+  CONSUMED
+  VOID
 }
 
 enum LateFeeType {
@@ -215,7 +216,6 @@ model Dealer {
   phone        String   @db.VarChar(20)
   city         String   @db.VarChar(60)
   address      String   @db.VarChar(300)
-  licenseKeyId String?  @map("license_key_id")
   active       Boolean  @default(true)
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
@@ -229,7 +229,8 @@ model Dealer {
   transactions     Transaction[]
   deviceActionLogs DeviceActionLog[]
   auditLogs        AuditLog[]
-  licenseKeys      LicenseKey[]
+  licensePacks     LicensePack[]
+  deviceLicenses   DeviceLicense[]
   devicePolicy     DevicePolicy?
   notifications    Notification[]
   smsRelays        SmsRelay[]
@@ -239,21 +240,64 @@ model Dealer {
   @@map("dealers")
 }
 
-model LicenseKey {
-  id          String        @id
-  dealerId    String        @map("dealer_id")
-  licenseKey  String        @unique @map("license_key") @db.VarChar(60)
-  plan        LicensePlan
-  deviceLimit Int           @map("device_limit")
-  usedDevices Int           @default(0) @map("used_devices")
-  expiryDate  DateTime      @map("expiry_date") @db.Date
-  status      LicenseStatus @default(ACTIVE)
-  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+/**
+ * A purchase: one pack of locks, bought once.
+ *
+ * The unit price is stored on the pack rather than read from a catalogue at
+ * display time, because a pack sold last year at last year's rate must keep
+ * showing what the dealer actually paid — a price list is a thing that changes.
+ */
+model LicensePack {
+  id         String   @id
+  dealerId   String   @map("dealer_id")
+  size       Int
+  unitPrice  Int      @map("unit_price")
+  totalPrice Int      @map("total_price")
+  /** The shop's own payment reference — bank slip, JazzCash TID, receipt no. */
+  reference  String?  @db.VarChar(80)
+  issuedById String?  @map("issued_by_id")
+  issuedByName String @map("issued_by_name") @db.VarChar(120)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  dealer Dealer @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  dealer   Dealer          @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  licenses DeviceLicense[]
 
   @@index([dealerId])
-  @@map("license_keys")
+  @@map("license_packs")
+}
+
+/**
+ * One lock for one handset.
+ *
+ * This is the unit the product is actually sold in. It is minted unused as part
+ * of a pack, and at enrolment it is claimed by exactly one device and stamped
+ * with that handset's IMEI. Nothing gives it back: a device that is paid off,
+ * removed or replaced does not return its lock to the pool, which is the whole
+ * commercial point — the shop bought the right to hold one phone, once.
+ *
+ * `deviceId` is unique, so a second lock can never attach to a device that
+ * already has one. That constraint, not application code, is what makes
+ * re-enrolment after a factory reset free.
+ */
+model DeviceLicense {
+  id         String              @id
+  dealerId   String              @map("dealer_id")
+  packId     String              @map("pack_id")
+  licenseKey String              @unique @map("license_key") @db.VarChar(40)
+  status     DeviceLicenseStatus @default(AVAILABLE)
+  deviceId   String?             @unique @map("device_id")
+  /** The handset it was spent on, kept even if the device row is later edited. */
+  imei       String?             @db.VarChar(20)
+  consumedAt DateTime?           @map("consumed_at") @db.Timestamptz(3)
+  createdAt  DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  dealer Dealer      @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  pack   LicensePack @relation(fields: [packId], references: [id], onDelete: Cascade)
+
+  // The one query the counter runs constantly: have we got a lock left?
+  @@index([dealerId, status])
+  @@index([packId])
+  @@map("device_licenses")
 }
 
 model User {
@@ -353,6 +397,14 @@ model Device {
   dpcVersion       String?   @map("dpc_version") @db.VarChar(20)
   /** Last successful DPC check-in, as distinct from any dashboard activity. */
   lastCheckInAt    DateTime? @map("last_check_in_at") @db.Timestamptz(3)
+
+  // --- The offline rule ------------------------------------------------------
+  // The handset restricted itself because it had not reached the server for the
+  // dealer's configured number of days. Nobody commanded it, so it is kept apart
+  // from `status`: LOCKED still means a lock this server issued and the phone
+  // confirmed, and this means a lock the phone applied on its own authority.
+  offlineLockActive Boolean   @default(false) @map("offline_lock_active")
+  offlineLockSince  DateTime? @map("offline_lock_since") @db.Timestamptz(3)
 
   createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime        @default(now()) @map("updated_at") @db.Timestamptz(3)
@@ -575,6 +627,13 @@ model DevicePolicy {
   autoLockEnabled          Boolean           @default(false) @map("auto_lock_enabled")
   autoUnlockEnabled        Boolean           @default(true) @map("auto_unlock_enabled")
   lockWarningDays          Int               @default(2) @map("lock_warning_days")
+  /**
+   * How many days a handset may go without reaching this server before it
+   * restricts itself. 0 turns the rule off. The phone enforces it, not the
+   * server — a handset that is off the network is precisely the case the
+   * server cannot act on.
+   */
+  offlineLockAfterDays     Int               @default(0) @map("offline_lock_after_days")
   customerReminderEnabled  Boolean           @default(true) @map("customer_reminder_enabled")
   emergencyCallsAllowed    Boolean           @default(true) @map("emergency_calls_allowed")
   paymentMethodsOnLock     String[]          @map("payment_methods_on_lock")

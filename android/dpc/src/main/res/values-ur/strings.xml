@@ -24,6 +24,7 @@
     <string name="status_shop">دکان</string>
     <string name="status_call_shop">دکان کو کال کریں</string>
     <string name="status_no_dues">کوئی قسط بقایا نہیں۔ شکریہ۔</string>
+    <string name="status_offline_rule">اس فون کا دکان کے سسٹم سے کم از کم ہر %1$d دن میں ایک بار رابطہ ضروری ہے۔ اگر رابطہ نہ ہو سکے اور قسط کی تاریخ گزر چکی ہو، تو فون رابطہ بحال ہونے تک خود کو محدود کر دے گا۔</string>
     <string name="status_owner_warning">اس ایپ کے پاس ڈیوائس اونر اختیارات نہیں، اس لیے پابندی لاگو نہیں ہو سکتی۔ دکان سے فون دوبارہ سیٹ کروائیں۔</string>
 
     <string name="lock_heading">یہ فون بند کر دیا گیا ہے</string>
@@ -35,6 +36,7 @@
     <string name="lock_call_shop">دکان کو کال کریں</string>
     <string name="lock_emergency">ایمرجنسی کال</string>
     <string name="lock_refresh">ادائیگی کر دی ہے — دوبارہ چیک کریں</string>
+    <string name="lock_offline_message">قسط بقایا ہونے کی حالت میں یہ فون کئی دن تک دکان کے سسٹم سے رابطہ نہ کر سکا، اس لیے اس نے خود کو محدود کر لیا ہے۔ فون کو انٹرنیٹ سے جوڑیں: یہ خود دوبارہ رابطہ کرے گا، اور دکان کے سسٹم سے ادائیگی کی تصدیق ہوتے ہی کھل جائے گا۔</string>
     <string name="lock_checking">دکان سے رابطہ ہو رہا ہے…</string>
     <string name="lock_still_locked">ادائیگی ابھی تک دکان تک نہیں پہنچی۔</string>
 

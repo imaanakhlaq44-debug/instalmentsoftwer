@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { repo } from '../db/repositories/index.js';
 import { DevicePolicy, Dealer } from '../types/index.js';
 import { AuditService } from '../services/AuditService.js';
+import { LicenseService } from '../services/LicenseService.js';
 import { toPublicUser } from '../services/AuthService.js';
 import { DEFAULT_POLICY } from '../services/InstallmentMath.js';
 import {
@@ -49,13 +50,13 @@ settingsRouter.get(
   const dealer = await repo.dealers.findById(dealerId);
   if (!dealer) throw AppError.notFound('Dealer');
 
-  const [policy, license, staff] = await Promise.all([
+  const [policy, licences, staff] = await Promise.all([
     ensurePolicy(dealer.id),
-    repo.licenseKeys.findByDealer(dealer.id),
+    LicenseService.summaryFor(dealer.id),
     repo.users.findMany({ where: { dealerId: dealer.id }, orderBy: { createdAt: 'desc' } }),
   ]);
 
-  res.json({ dealer, policy, license: license ?? null, staffUsers: staff.map(toPublicUser) });
+  res.json({ dealer, policy, licences, staffUsers: staff.map(toPublicUser) });
   })
 );
 
@@ -70,6 +71,20 @@ const policySchema = z
     autoLockEnabled: z.boolean().optional(),
     autoUnlockEnabled: z.boolean().optional(),
     lockWarningDays: z.number().int().min(0).max(15).optional(),
+    /**
+     * 0 disables the offline rule. The floor of 3 on anything else is
+     * deliberate: below that, an ordinary weekend in a village with no signal
+     * would lock a handset whose owner has paid every installment on time.
+     */
+    offlineLockAfterDays: z
+      .number()
+      .int()
+      .min(0)
+      .max(90)
+      .refine((v) => v === 0 || v >= 3, {
+        message: 'The offline limit must be 0 (off) or at least 3 days.',
+      })
+      .optional(),
     customerReminderEnabled: z.boolean().optional(),
     emergencyCallsAllowed: z.boolean().optional(),
     paymentMethodsOnLock: z.array(z.string().trim().max(30)).max(10).optional(),
@@ -116,22 +131,32 @@ settingsRouter.put('/policy', (req, res, next) => {
   });
   if (!updated) throw AppError.notFound('Policy');
 
-  // Auto-lock is the setting that actually restricts someone's phone — it gets
-  // its own explicit line in the audit trail.
+  // The two settings that actually restrict someone's phone get their own
+  // explicit lines in the audit trail rather than a list of changed keys.
   const autoLockChanged =
     updates.autoLockEnabled !== undefined && updates.autoLockEnabled !== existing.autoLockEnabled;
+  const offlineLockChanged =
+    updates.offlineLockAfterDays !== undefined &&
+    updates.offlineLockAfterDays !== (existing.offlineLockAfterDays ?? 0);
+
+  const details = autoLockChanged
+    ? `${user.name} turned automatic device locking ${updates.autoLockEnabled ? 'ON' : 'OFF'}.`
+    : offlineLockChanged
+      ? updates.offlineLockAfterDays === 0
+        ? `${user.name} turned the offline lock rule OFF.`
+        : `${user.name} set handsets to restrict themselves after ${updates.offlineLockAfterDays} day(s) ` +
+          'without reaching the server.'
+      : `${user.name} updated the enforcement policy: ${Object.keys(updates).join(', ')}.`;
 
   await AuditService.log({
     dealerId,
     userId: user.userId,
     actorName: user.name,
     actorRole: user.role,
-    action: autoLockChanged ? 'AUTO_LOCK_POLICY_CHANGED' : 'POLICY_UPDATED',
+    action: autoLockChanged || offlineLockChanged ? 'AUTO_LOCK_POLICY_CHANGED' : 'POLICY_UPDATED',
     targetType: 'POLICY',
     targetId: existing.id,
-    details: autoLockChanged
-      ? `${user.name} turned automatic device locking ${updates.autoLockEnabled ? 'ON' : 'OFF'}.`
-      : `${user.name} updated the enforcement policy: ${Object.keys(updates).join(', ')}.`,
+    details,
     ipAddress: clientIp(req),
   });
 

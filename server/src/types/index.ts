@@ -59,7 +59,6 @@ export interface Dealer {
   phone: string;
   city: string;
   address: string;
-  licenseKeyId: string;
   active: boolean;
   createdAt: string;
 }
@@ -153,6 +152,16 @@ export interface Device {
   dpcVersion?: string;
   /** Last successful DPC check-in, as distinct from any dashboard activity. */
   lastCheckInAt?: string;
+
+  // --- The offline rule ------------------------------------------------------
+  /**
+   * The handset restricted itself because it could not reach the server for the
+   * dealer's configured number of days. Deliberately not folded into `status`:
+   * `LOCKED` means a lock this server issued and the phone confirmed, and this
+   * means one the phone applied on its own authority while it could not ask.
+   */
+  offlineLockActive?: boolean;
+  offlineLockSince?: string;
 
   createdAt: string;
   updatedAt: string;
@@ -305,15 +314,35 @@ export interface AuditLog {
   createdAt: string;
 }
 
-export interface LicenseKey {
+export type DeviceLicenseStatus = 'AVAILABLE' | 'CONSUMED' | 'VOID';
+
+/** One purchase of locks. */
+export interface LicensePack {
   id: string;
   dealerId: string;
+  size: number;
+  /** Rupees per lock at the moment of sale, not today's rate. */
+  unitPrice: number;
+  totalPrice: number;
+  reference?: string | null;
+  issuedById?: string | null;
+  issuedByName: string;
+  createdAt: string;
+}
+
+/**
+ * One lock for one handset. Spent at enrolment onto a single IMEI, and never
+ * returned — see the model comment in schema.prisma.
+ */
+export interface DeviceLicense {
+  id: string;
+  dealerId: string;
+  packId: string;
   licenseKey: string;
-  plan: 'STARTER' | 'PROFESSIONAL' | 'BUSINESS' | 'ENTERPRISE';
-  deviceLimit: number;
-  usedDevices: number;
-  expiryDate: string;
-  status: 'ACTIVE' | 'EXPIRED' | 'SUSPENDED';
+  status: DeviceLicenseStatus;
+  deviceId?: string | null;
+  imei?: string | null;
+  consumedAt?: string | null;
   createdAt: string;
 }
 
@@ -324,6 +353,12 @@ export interface DevicePolicy {
   autoLockEnabled: boolean;
   autoUnlockEnabled: boolean;
   lockWarningDays: number;
+  /**
+   * How many days a handset may go without reaching the server before it
+   * restricts itself. 0 turns the rule off. Enforced on the phone, because a
+   * phone that is off the network is exactly what the server cannot act on.
+   */
+  offlineLockAfterDays?: number;
   customerReminderEnabled: boolean;
   emergencyCallsAllowed: boolean;
   paymentMethodsOnLock: string[];

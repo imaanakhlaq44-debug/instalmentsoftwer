@@ -35,6 +35,7 @@ export const SettingsPage: React.FC = () => {
     autoLockEnabled: false,
     autoUnlockEnabled: true,
     lockWarningDays: 2,
+    offlineLockAfterDays: 0,
     customerReminderEnabled: true,
     emergencyCallsAllowed: true,
   });
@@ -58,6 +59,7 @@ export const SettingsPage: React.FC = () => {
           autoLockEnabled: data.policy.autoLockEnabled,
           autoUnlockEnabled: data.policy.autoUnlockEnabled,
           lockWarningDays: data.policy.lockWarningDays,
+          offlineLockAfterDays: data.policy.offlineLockAfterDays ?? 0,
           customerReminderEnabled: data.policy.customerReminderEnabled,
           emergencyCallsAllowed: data.policy.emergencyCallsAllowed,
         });
@@ -182,6 +184,43 @@ export const SettingsPage: React.FC = () => {
               onChange={(e) => setPolicy({ ...policy, autoLockEnabled: e.target.checked })}
               className="w-5 h-5 text-blue-600 rounded-lg focus:ring-blue-500 cursor-pointer"
             />
+          </div>
+
+          {/* Offline rule — enforced on the handset, so it is described as such */}
+          <div className="p-4 bg-slate-50 border rounded-2xl space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="font-bold text-slate-800 text-xs">Restrict a Handset That Stops Reporting</span>
+              <span className="font-extrabold text-amber-600 text-sm">
+                {policy.offlineLockAfterDays === 0 ? 'Off' : `${policy.offlineLockAfterDays} Days`}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500">
+              A phone kept offline cannot receive a lock command. With this on, the phone restricts itself
+              after this many days without reaching the server — but only while an installment is actually
+              past its grace period, and only for customers whose signed agreement says so. Requires
+              automated locking to be on. 0 turns it off; the minimum otherwise is 3 days.
+            </p>
+            <input
+              type="range"
+              min="0"
+              max="30"
+              step="1"
+              value={policy.offlineLockAfterDays}
+              onChange={(e) => {
+                // The server refuses 1 and 2 — a weekend with no signal is not
+                // evidence of anything. The slider skips them rather than
+                // letting somebody pick a value that will be rejected on save.
+                const raw = Number(e.target.value);
+                setPolicy({ ...policy, offlineLockAfterDays: raw > 0 && raw < 3 ? 3 : raw });
+              }}
+              disabled={!policy.autoLockEnabled}
+              className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-amber-600 mt-2 disabled:opacity-40 disabled:cursor-not-allowed"
+            />
+            {!policy.autoLockEnabled && policy.offlineLockAfterDays > 0 && (
+              <p className="text-[11px] font-bold text-amber-700">
+                Automated locking is off, so no handset will act on this.
+              </p>
+            )}
           </div>
 
           {/* Auto Unlock Toggle */}

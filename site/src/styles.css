@@ -1,0 +1,208 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Urdu is a different face at a different size: Naskh runs smaller than Inter
+     at the same nominal point size, and a paragraph set at the English size is
+     genuinely hard to read. */
+  .lang-ur body,
+  .lang-ur h1,
+  .lang-ur h2,
+  .lang-ur h3,
+  .lang-ur p,
+  .lang-ur li,
+  .lang-ur a,
+  .lang-ur button {
+    font-family: 'Noto Naskh Arabic', 'Noto Nastaliq Urdu', serif;
+    line-height: 1.9;
+  }
+
+  .lang-ur .font-serif {
+    font-family: 'Noto Naskh Arabic', serif;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent-600/40 ring-offset-2 ring-offset-paper-100 rounded;
+  }
+
+  ::selection {
+    @apply bg-accent-100 text-accent-900;
+  }
+}
+
+@layer components {
+  .surface {
+    @apply bg-paper-50 border border-paper-300 rounded-lg;
+  }
+
+  .well {
+    @apply bg-paper-200/60 border border-paper-300/70 rounded-md;
+  }
+
+  .eyebrow {
+    @apply text-micro font-semibold uppercase tracking-[0.08em] text-ink-400;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2 text-body
+           font-medium transition-colors;
+  }
+
+  .btn-primary {
+    @apply btn bg-accent-800 text-white hover:bg-accent-900;
+  }
+
+  .btn-secondary {
+    @apply btn bg-paper-50 text-ink-700 border border-paper-300 hover:bg-paper-200;
+  }
+
+  .site-link {
+    @apply rounded-md px-2.5 py-1.5 text-body text-ink-500 transition-colors hover:bg-paper-200 hover:text-ink-900;
+  }
+
+  /* One rhythm for every band on the site, so the pages feel like one document. */
+  .band {
+    @apply mx-auto max-w-5xl px-4 py-14 sm:px-6 sm:py-20;
+  }
+
+  .band-tight {
+    @apply mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12;
+  }
+
+  .prose-block p {
+    @apply mt-3 text-lede text-ink-700;
+  }
+
+  .prose-block p:first-child {
+    @apply mt-0;
+  }
+
+  .figure {
+    @apply font-serif text-ink-900;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The answer half of the FAQ. */
+  .faq-a {
+    @apply mt-2 text-body text-ink-500;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   The stage
+   ---------------------------------------------------------------------------
+   The hero is dark and the rest of the site is paper. That is deliberate: the
+   drama belongs where the product introduces itself, and clarity belongs where
+   a shop owner is deciding whether to trust it with their money. A site that is
+   dark all the way down looks expensive and reads badly under a shop's tube
+   light — which is where this one is actually opened.
+   --------------------------------------------------------------------------- */
+@layer components {
+  .stage {
+    background:
+      radial-gradient(120% 90% at 20% 0%, rgba(37, 106, 191, 0.28), transparent 60%),
+      radial-gradient(90% 70% at 85% 20%, rgba(18, 122, 84, 0.22), transparent 65%),
+      #0B0F16;
+    color: #F6F5F2;
+  }
+
+  /* A hairline of light along the bottom edge, so the dark block ends on a
+     drawn line rather than a sudden stop. */
+  .stage-edge {
+    background-image: linear-gradient(90deg, transparent, rgba(246, 245, 242, 0.22), transparent);
+    height: 1px;
+  }
+
+  .stage-eyebrow {
+    @apply text-micro font-semibold uppercase tracking-[0.14em];
+    color: rgba(246, 245, 242, 0.5);
+  }
+
+  /* The handset. Built from a border and two radii rather than an image, so it
+     costs nothing to download and stays sharp on any screen. */
+  .handset {
+    background: linear-gradient(160deg, #1B2029, #0D1117);
+    box-shadow:
+      0 0 0 1px rgba(246, 245, 242, 0.09),
+      0 40px 80px -20px rgba(0, 0, 0, 0.8),
+      0 0 120px -40px rgba(37, 106, 191, 0.5);
+  }
+
+  .handset-screen {
+    background: linear-gradient(170deg, #101722, #0A0D13);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Motion
+   ---------------------------------------------------------------------------
+   Everything here is CSS. The reveal is triggered by one IntersectionObserver
+   in the layout — about twenty lines — rather than by a scroll library. The
+   reference for this page runs GSAP, ScrollTrigger, SplitText, Lenis and jQuery
+   to do the same job; on the connection these shops actually have, that is the
+   difference between a site that opens and one that does not.
+   --------------------------------------------------------------------------- */
+@layer utilities {
+  .reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .reveal.is-in {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Stagger, so a group of lines arrives as a sentence rather than a block. */
+  .reveal-1 { transition-delay: 80ms; }
+  .reveal-2 { transition-delay: 160ms; }
+  .reveal-3 { transition-delay: 240ms; }
+  .reveal-4 { transition-delay: 320ms; }
+  .reveal-5 { transition-delay: 400ms; }
+
+  .float-slow {
+    animation: float 7s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  .marquee-track {
+    animation: marquee 38s linear infinite;
+  }
+
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  /* The lock screen's own pulse — slow, because it is a warning and not an alarm. */
+  .pulse-soft {
+    animation: pulse-soft 3.2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-soft {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+
+  /* Anyone who has asked their phone to stop moving things gets a still page. */
+  @media (prefers-reduced-motion: reduce) {
+    .reveal {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+
+    .float-slow,
+    .marquee-track,
+    .pulse-soft {
+      animation: none;
+    }
+  }
+}

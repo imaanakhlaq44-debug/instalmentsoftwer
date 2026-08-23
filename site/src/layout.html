@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{title}} · Almas SDM</title>
+    <meta name="description" content="{{description}}" />
+    <meta name="theme-color" content="#F6F5F2" />
+    <link rel="icon" href="/favicon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!--
+      Latin only. Noto Naskh Arabic is another 130 kB and is useless to a
+      reader who never switches language, so the toggle fetches it on demand.
+    -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="bg-paper-100 text-ink-700 font-sans text-body antialiased">
+    <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:m-3 focus:rounded focus:bg-paper-50 focus:px-3 focus:py-2">Skip to content</a>
+
+    <header class="sticky top-0 z-40 border-b border-paper-300 bg-paper-100/90 backdrop-blur-sm">
+      <div class="mx-auto flex h-14 max-w-5xl items-center gap-4 px-4 sm:px-6">
+        <a href="/" class="flex items-center gap-2 shrink-0">
+          <!-- WebP with a PNG beside it: the artwork is a third of the size in
+               WebP, and the fallback costs one line rather than a script. -->
+          <picture>
+            <source srcset="/logo-mark.webp" type="image/webp" />
+            <img src="/logo-mark.png" alt="" width="32" height="26" class="h-6 w-auto" />
+          </picture>
+          <span class="text-lede font-semibold tracking-[-0.01em] text-ink-900">Almas SDM</span>
+        </a>
+
+        <nav class="ms-auto hidden items-center gap-1 sm:flex" aria-label="Main">
+          <a href="/how-it-works.html" data-nav="how-it-works" class="site-link" data-ur="یہ کیسے چلتا ہے">How it works</a>
+          <a href="/pricing.html" data-nav="pricing" class="site-link" data-ur="قیمت">Pricing</a>
+          <a href="/dpc.html" data-nav="dpc" class="site-link" data-ur="ہینڈسیٹ ایپ">Handset app</a>
+        </nav>
+
+        <div class="ms-auto flex items-center gap-2 sm:ms-0">
+          <!-- The toggle writes to localStorage, so a shop that reads Urdu only
+               chooses once. -->
+          <button
+            type="button"
+            id="lang-toggle"
+            class="rounded-md border border-paper-300 px-2.5 py-1 text-caption text-ink-700 transition-colors hover:bg-paper-200"
+            aria-label="Switch language"
+          >
+            <span data-lang-label>اردو</span>
+          </button>
+          <a href="http://localhost:5173" class="btn-primary py-1.5 text-caption" data-ur="سائن اِن">Sign in</a>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">{{content}}</main>
+
+    <footer class="mt-20 border-t border-paper-300 bg-paper-50">
+      <div class="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+        <div class="flex flex-col gap-8 sm:flex-row sm:justify-between">
+          <div class="max-w-xs">
+            <picture>
+              <source srcset="/logo-lockup.webp" type="image/webp" />
+              <img src="/logo-lockup.png" alt="Almas SDM" width="720" height="629" loading="lazy" decoding="async" class="mb-3 h-16 w-auto" />
+            </picture>
+            <p class="mt-2 text-caption text-ink-500" data-ur="پاکستانی موبائل دکانوں کے لیے قسط اور ڈیوائس مینجمنٹ۔">
+              Instalment and device management for Pakistani mobile shops.
+            </p>
+          </div>
+
+          <div class="flex gap-10">
+            <div>
+              <p class="eyebrow" data-ur="پروڈکٹ">Product</p>
+              <ul class="mt-2.5 space-y-1.5">
+                <li><a href="/how-it-works.html" class="site-link px-0" data-ur="یہ کیسے چلتا ہے">How it works</a></li>
+                <li><a href="/pricing.html" class="site-link px-0" data-ur="قیمت">Pricing</a></li>
+                <li><a href="/dpc.html" class="site-link px-0" data-ur="ہینڈسیٹ ایپ">Handset app</a></li>
+              </ul>
+            </div>
+            <div>
+              <p class="eyebrow" data-ur="قانونی">Legal</p>
+              <ul class="mt-2.5 space-y-1.5">
+                <li><a href="/legal.html" class="site-link px-0" data-ur="معاہدہ اور ڈیٹا">Contract &amp; data</a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <p class="mt-10 border-t border-paper-300 pt-6 text-caption text-ink-400" data-ur="ایک فون تبھی لاک ہوتا ہے جب گاہک نے دستخط شدہ معاہدے میں اس کی اجازت دی ہو۔">
+          A phone is only ever locked where the customer has agreed to it in a signed contract.
+        </p>
+      </div>
+    </footer>
+
+    <script>
+      /**
+       * Language.
+       *
+       * Every translatable node carries its Urdu in `data-ur` and its English as
+       * its own text, so the page is readable with JavaScript switched off and
+       * search engines index the English. Switching swaps the two, flips the
+       * document direction, and remembers the choice.
+       */
+      (function () {
+        var KEY = 'almas-sdm-lang';
+        var root = document.documentElement;
+
+        var urduFontLoaded = false;
+        function loadUrduFont() {
+          if (urduFontLoaded) return;
+          urduFontLoaded = true;
+          var link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href =
+            'https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;600&display=swap';
+          document.head.appendChild(link);
+        }
+
+        function apply(lang) {
+          var toUrdu = lang === 'ur';
+          if (toUrdu) loadUrduFont();
+
+          document.querySelectorAll('[data-ur]').forEach(function (el) {
+            if (!el.hasAttribute('data-en')) el.setAttribute('data-en', el.textContent.trim());
+            el.textContent = toUrdu ? el.getAttribute('data-ur') : el.getAttribute('data-en');
+          });
+
+          root.lang = toUrdu ? 'ur' : 'en';
+          root.dir = toUrdu ? 'rtl' : 'ltr';
+          root.classList.toggle('lang-ur', toUrdu);
+
+          var label = document.querySelector('[data-lang-label]');
+          if (label) label.textContent = toUrdu ? 'English' : 'اردو';
+
+          try { localStorage.setItem(KEY, lang); } catch (e) {}
+        }
+
+        var saved = 'en';
+        try { saved = localStorage.getItem(KEY) || 'en'; } catch (e) {}
+        if (saved === 'ur') apply('ur');
+
+        var button = document.getElementById('lang-toggle');
+        if (button) {
+          button.addEventListener('click', function () {
+            apply(root.lang === 'ur' ? 'en' : 'ur');
+          });
+        }
+
+        // Marks the current page in the nav.
+        var page = '{{page}}';
+        var current = document.querySelector('[data-nav="' + page + '"]');
+        if (current) current.classList.add('text-ink-900', 'bg-paper-200');
+      })();
+
+      /**
+       * Motion.
+       *
+       * Two behaviours, both in about forty lines: sections arrive as they come
+       * into view, and the hero handset performs the one thing this product
+       * does. The reference site does the equivalent with GSAP, ScrollTrigger,
+       * SplitText, Lenis and jQuery — roughly two hundred kilobytes of
+       * JavaScript before a single pixel moves.
+       */
+      (function () {
+        var still =
+          window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        var revealed = document.querySelectorAll('.reveal');
+
+        if (still || !('IntersectionObserver' in window)) {
+          // No observer, or the reader asked for stillness: show everything.
+          for (var i = 0; i < revealed.length; i += 1) revealed[i].classList.add('is-in');
+        } else {
+          var observer = new IntersectionObserver(
+            function (entries) {
+              entries.forEach(function (entry) {
+                if (!entry.isIntersecting) return;
+                entry.target.classList.add('is-in');
+                observer.unobserve(entry.target);
+              });
+            },
+            { rootMargin: '0px 0px -12% 0px', threshold: 0.05 }
+          );
+          revealed.forEach(function (el) { observer.observe(el); });
+        }
+
+        /**
+         * The hero's lock.
+         *
+         * A phone that is paid up turns into a phone that is restricted, and the
+         * shop's dashboard changes with it. It runs once, eight seconds in —
+         * long enough to read the headline first, and it does not loop, because
+         * a shop owner should see this happen, not watch it flicker.
+         */
+        var phases = document.querySelectorAll('[data-phase]');
+        if (!still && phases.length) {
+          window.setTimeout(function () {
+            phases.forEach(function (el) {
+              // `hidden` is the last display utility Tailwind emits, so it wins
+              // over the `flex` each panel also carries. Removing it is enough.
+              el.classList.toggle('hidden', el.getAttribute('data-phase') !== 'locked');
+            });
+          }, 8000);
+        }
+      })();
+    </script>
+  </body>
+</html>

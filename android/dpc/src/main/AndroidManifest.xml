@@ -15,13 +15,13 @@
     -->
 
     <application
-        android:name=".EmiApp"
+        android:name=".AlmasApp"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:networkSecurityConfig="${networkSecurityConfig}"
         android:supportsRtl="true"
-        android:theme="@style/Theme.EmiShield">
+        android:theme="@style/Theme.AlmasSdm">
 
         <activity
             android:name=".ui.StatusActivity"
@@ -52,8 +52,8 @@
             android:excludeFromRecents="true"
             android:launchMode="singleInstance"
             android:showOnLockScreen="true"
-            android:taskAffinity="pk.emishield.dpc.lock"
-            android:theme="@style/Theme.EmiShield.Lock" />
+            android:taskAffinity="pk.almassdm.dpc.lock"
+            android:theme="@style/Theme.AlmasSdm.Lock" />
 
         <activity-alias
             android:name=".ui.LockHomeAlias"
@@ -68,7 +68,7 @@
         </activity-alias>
 
         <receiver
-            android:name=".admin.EmiDeviceAdminReceiver"
+            android:name=".admin.AlmasDeviceAdminReceiver"
             android:description="@string/admin_description"
             android:exported="true"
             android:label="@string/admin_label"

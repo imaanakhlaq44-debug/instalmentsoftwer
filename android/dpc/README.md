@@ -1,6 +1,6 @@
-# EMI Shield DPC — the app on the customer's phone
+# Almas SDM DPC — the app on the customer's phone
 
-The Android Device Policy Controller for [EMI Shield](../README.md). It is the
+The Android Device Policy Controller for [Almas SDM](../README.md). It is the
 half of the lock that actually holds a handset: the server decides *that* a
 phone should be restricted, this decides *whether the restriction is real*, and
 tells the server the truth either way.
@@ -19,6 +19,7 @@ else's phone for no reason.
 | **Checks in** | Every fifteen minutes via WorkManager: battery, OS build, patch level, carrier. Collects any waiting command. |
 | **Applies commands** | `LOCK` pins the phone to the lock screen as device owner; `UNLOCK` releases it. |
 | **Acknowledges honestly** | Reports `applied: true` only when the restriction actually took hold. |
+| **Holds itself when nobody can reach it** | If it has not reached the server for the dealer's limit *and* an installment is past its grace period by the schedule it already holds, it restricts itself. See [The offline rule](#the-offline-rule). |
 | **Survives restarts** | The lock is restored from the last state the phone *enforced*, before the network is consulted. |
 | **Gives the phone back** | When the server answers 403 — device removed or retired — it unwinds every restriction and erases its own credential. |
 
@@ -36,6 +37,37 @@ else's phone for no reason.
 - **No hiding.** The app has a launcher icon and a status screen showing what is
   owed, when it is due and who to call. Somebody paying for this phone is
   entitled to see what is on it.
+
+---
+
+## The offline rule
+
+Everything else here is the server deciding and this app reporting. This is the
+one decision the app makes alone, because it only ever arises when there is
+nobody to ask: a customer who keeps the phone off the network would otherwise
+sit out an entire plan with a lock command queued behind them forever.
+
+**Two conditions, never one.** Silence alone is not evidence of anything. The
+handset restricts itself only when it has been out of contact for the dealer's
+number of days **and**, by the last schedule it was given, an installment is
+genuinely past its grace period. Somebody paid up who spends a month somewhere
+without signal keeps a working phone.
+
+| | |
+|---|---|
+| `OfflineLockRule` | The decision. Pure, and it takes its clock as a parameter, so the whole rule is unit-tested without a device, a network or a WorkManager. |
+| `OfflineWatchdogWorker` | Runs it every six hours with **no network constraint**. `CheckInWorker` is constrained to `CONNECTED`, which is right for a heartbeat and means it never runs in the one situation this rule is about. |
+| `Prefs.offlineLockSince` | Stamped only if the restriction actually took hold, and cleared by any release. The next check-in carries it to the server, which is how the shop finds out. |
+
+The number of days comes from the server, on every check-in. It is 0 — never —
+unless the dealer configured it, automatic locking is on, the device has valid
+consent, and the terms the customer signed actually describe the rule. The app
+never reasons about any of that: it is told the answer, or it is told zero.
+
+**What it cannot do.** It reads the system clock, and a device owner can move
+that. Rolling the clock back stalls the count; it does not reverse it, and the
+lock still lands the moment the phone reaches the server. The rule delays
+enforcement for a determined customer rather than escaping it.
 
 ---
 
@@ -57,12 +89,15 @@ truth can come from.
 
 ## Building
 
+For a signed release build and how it reaches a handset, see
+**[RELEASE.md](../RELEASE.md)**. What follows is the local debug loop.
+
 ```bash
 cd android
 ./gradlew testDebugUnitTest assembleDebug
 ```
 
-The debug APK lands in `app/build/outputs/apk/debug/`. `local.properties` needs
+The debug APK lands in `dpc/build/outputs/apk/debug/`. `local.properties` needs
 `sdk.dir` pointing at your Android SDK; Android Studio writes it for you, and CI
 gets it from `ANDROID_HOME`.
 
@@ -76,7 +111,7 @@ The QR carries the address. `gradle.properties` only supplies the fallback that
 the typed enrolment form starts with:
 
 ```properties
-emishield.defaultServerUrl=http://10.0.2.2:5000/api/dpc
+almassdm.defaultServerUrl=http://10.0.2.2:5000/api/dpc
 ```
 
 `10.0.2.2` is the host machine as the emulator sees it. Debug builds permit
@@ -92,11 +127,12 @@ provisioned from the QR, which is exactly why it is worth doing: an app the
 customer merely installed can be uninstalled on the first missed payment, and a
 device owner survives until a factory reset — which the app then blocks.
 
-1. Host the release APK somewhere the phone can reach, and configure the server:
+1. Build, sign and publish the APK — [RELEASE.md](../RELEASE.md) is the runbook
+   for that — and configure the server with where it lives:
 
    ```bash
    DPC_SERVER_URL=https://api.your-domain.pk/api/dpc
-   DPC_APK_URL=https://your-domain.pk/dpc/emi-shield-dpc.apk
+   DPC_APK_URL=https://github.com/<owner>/<repo>/releases/download/dpc-v1.0.0/almas-sdm-dpc-v1.0.0.apk
    DPC_APK_SIGNATURE_CHECKSUM=<base64url SHA-256 of the signing certificate>
    ```
 
@@ -109,7 +145,7 @@ device owner survives until a factory reset — which the app then blocks.
 3. On the factory-reset handset, tap the welcome screen six times to open the
    scanner, and scan it. The wizard downloads the APK, verifies its signing
    certificate against the checksum, installs it as device owner and hands the
-   enrolment code to `EmiDeviceAdminReceiver`.
+   enrolment code to `AlmasDeviceAdminReceiver`.
 
 4. The app redeems the code, hardens the installation — no factory reset, no
    safe boot, no added users, cannot be uninstalled — and starts checking in.
@@ -117,12 +153,16 @@ device owner survives until a factory reset — which the app then blocks.
 ### The signature checksum
 
 ```bash
-keytool -printcert -jarfile app-release.apk | grep SHA256
+cd android && ./gradlew :dpc:printSigningCertChecksum
 ```
 
-Take those bytes, base64url-encode them without padding. A wrong checksum makes
-the wizard refuse the download, which is the point: it is what stops a
-lookalike APK being provisioned as owner of somebody's phone.
+That prints the line to paste into the server's environment. It is computed from
+the key that will sign the build rather than derived by hand, because the value
+the wizard wants — the SHA-256 of the signing *certificate*, base64url encoded
+without padding — is easy to confuse with the colon-separated SHA-1 fingerprint
+`keytool` prints most prominently, and a wrong checksum makes the wizard refuse
+the download. That refusal is the point: it is what stops a lookalike APK being
+provisioned as owner of somebody's phone.
 
 ---
 

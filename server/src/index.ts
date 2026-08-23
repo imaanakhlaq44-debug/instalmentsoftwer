@@ -55,7 +55,7 @@ app.use(
       if (!origin) return callback(null, true);
       if (config.corsOrigins.includes(origin)) return callback(null, true);
       console.warn(`[security] Blocked CORS request from disallowed origin: ${origin}`);
-      return callback(new Error('This origin is not allowed to access the EMI Shield API.'));
+      return callback(new Error('This origin is not allowed to access the Almas SDM API.'));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -142,7 +142,7 @@ if (!config.isTest) {
 app.get('/api/health', (_req, res) => {
   res.json({
     status: 'ok',
-    service: 'EMI Shield Backend API',
+    service: 'Almas SDM Backend API',
     version: '1.1.0',
     environment: config.env,
     timestamp: new Date().toISOString(),
@@ -220,7 +220,7 @@ export async function startServer() {
 
   const server = app.listen(config.port, () => {
     console.log('====================================================');
-    console.log(`  EMI Shield Server listening on port ${config.port}`);
+    console.log(`  Almas SDM Server listening on port ${config.port}`);
     console.log(`  REST API base : http://localhost:${config.port}/api`);
     console.log(`  Environment   : ${config.env}`);
     console.log(`  CORS origins  : ${config.corsOrigins.join(', ')}`);

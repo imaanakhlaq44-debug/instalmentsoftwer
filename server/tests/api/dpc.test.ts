@@ -81,7 +81,7 @@ describe('POST /api/dpc/enroll', () => {
   });
 
   it('refuses an invented code', async () => {
-    const res = await anonymous().post('/api/dpc/enroll').send({ token: 'EMIS-STA-NOTAREALTOKEN0000' });
+    const res = await anonymous().post('/api/dpc/enroll').send({ token: 'ALMAS-STA-NOTAREALTOKEN0000' });
     expect(res.status).toBe(400);
   });
 
@@ -401,7 +401,7 @@ describe('the enrollment QR a factory-reset phone scans', () => {
     // These exact keys are what the Android setup wizard reads. A payload of
     // our own design scans as unrecognised text and provisions nothing.
     expect(payload['android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME'])
-      .toMatch(/^pk\.emishield\.dpc\//);
+      .toMatch(/^pk\.almassdm\.dpc\//);
 
     const extras = payload['android.app.extra.PROVISIONING_ADMIN_EXTRAS_BUNDLE'];
     expect(extras.enrollmentToken).toBe(res.body.token.token);

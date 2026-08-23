@@ -6,19 +6,18 @@ import { BottomNav } from './BottomNav.js';
 
 export const AppLayout: React.FC = () => {
   return (
-    <div className="flex min-h-screen bg-slate-50">
-      {/* Desktop Left Sidebar */}
+    <div className="flex min-h-screen bg-paper-100">
       <Sidebar />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 pb-16 lg:pb-8">
+      <div className="flex min-w-0 flex-1 flex-col pb-20 lg:pb-0">
         <Navbar />
-        <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-7xl w-full mx-auto">
+        {/* 72rem keeps a line of table text inside a comfortable measure on the
+            wide monitors these shops increasingly have. */}
+        <main className="mx-auto w-full max-w-[72rem] flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
           <Outlet />
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation */}
       <BottomNav />
     </div>
   );
