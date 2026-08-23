@@ -1,0 +1,49 @@
+# One origin for everything.
+#
+# The dashboard calls the API at the relative path `/api`, so the two must be
+# served from the same host — that is what keeps the browser from ever seeing a
+# cross-origin request, and why there is no CORS conversation on this side.
+# The handset's DPC talks to the same `/api/dpc` prefix through the same
+# certificate.
+
+{
+	# Where Let's Encrypt sends expiry warnings. Set it: a certificate that fails
+	# to renew takes the whole fleet offline, and this is the only warning.
+	email {$ADMIN_EMAIL}
+}
+
+{$SITE_DOMAIN} {
+	encode zstd gzip
+
+	# The API, including the DPC endpoints the handsets use.
+	handle /api/* {
+		reverse_proxy server:5000 {
+			# The rate limiter and the audit log record who made a request, and
+			# without these every request would appear to come from Caddy.
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	# The dashboard: a single-page app, so any unknown path is its router's
+	# business rather than a 404.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+
+	# Long cache for fingerprinted assets, none for the entry point — otherwise a
+	# deployed fix sits behind a stale index.html in somebody's browser.
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+	header /index.html Cache-Control "no-cache"
+
+	log {
+		output file /var/log/caddy/access.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+	}
+}
