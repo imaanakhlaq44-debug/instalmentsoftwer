@@ -27,15 +27,48 @@ import {
  *  1. **The terms are versioned and never edited in place.** A contract renders
  *     from the version it was signed under, so an old signature keeps meaning
  *     what it meant.
- *  2. **The hash covers the figures, not just the words.** Restructuring a plan
- *     after signing breaks the hash rather than quietly changing what somebody
- *     agreed to — and a broken hash is surfaced, not swallowed.
+ *  2. **What is enforced is compared against what was signed.** The hash proves
+ *     the stored record has not been altered; `planDrift` proves the plan still
+ *     matches the one frozen into it. Restructuring after signing therefore
+ *     fails the second check rather than quietly changing what somebody agreed
+ *     to — and both failures are surfaced, not swallowed.
  */
 
 export interface ContractActor {
   userId: string;
   userName: string;
   userRole: UserRole;
+}
+
+/** `a`, `a and b`, `a, b and c` — the changed terms read as a sentence. */
+function listOf(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? '';
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+}
+
+/**
+ * The schedule reduced to what was promised: which installment, how much, and
+ * when. Amount *paid*, late fees and status are all left out — they change as
+ * a plan is repaid, and none of them is a term anybody agreed to.
+ */
+function currentSchedule(installments: Installment[]): ContractSnapshot['schedule'] {
+  return installments
+    .slice()
+    .sort((a, b) => a.installmentNumber - b.installmentNumber)
+    .map((i) => ({
+      installmentNumber: i.installmentNumber,
+      amountDue: i.amountDue,
+      dueDate: i.dueDate,
+    }));
+}
+
+/** One comparable string, so a reordered or resized schedule cannot slip past. */
+function scheduleKey(rows: ContractSnapshot['schedule']): string {
+  return rows
+    .slice()
+    .sort((a, b) => a.installmentNumber - b.installmentNumber)
+    .map((r) => `${r.installmentNumber}:${r.amountDue}:${r.dueDate}`)
+    .join('|');
 }
 
 export class ContractService {
@@ -189,8 +222,11 @@ export class ContractService {
   /**
    * The document, ready to render or print.
    *
-   * `hashMatches` is false when the plan has been changed since signing. It is
-   * reported rather than hidden: a contract whose figures no longer describe
+   * Two separate answers, because they are two separate failures.
+   * `hashMatches` is false when the stored record has been altered since
+   * signing. `planMatches` is false when the record is intact but the plan
+   * being enforced has moved away from it, and `planChanges` names what moved.
+   * Both are reported rather than hidden: a contract that no longer describes
    * the plan should be re-signed, and the shop needs to know that before it
    * relies on the old one.
    */
@@ -200,9 +236,12 @@ export class ContractService {
     clauses: ReturnType<typeof renderClauses>;
     declaration: typeof DECLARATION;
     hashMatches: boolean | null;
+    planMatches: boolean | null;
+    planChanges: string[];
   }> {
     const contract = await this.require(contractId);
     const snapshot = JSON.parse(contract.snapshot) as ContractSnapshot;
+    const planChanges = await this.planDrift(contract);
 
     return {
       contract,
@@ -214,6 +253,10 @@ export class ContractService {
       hashMatches: contract.documentHash
         ? contract.documentHash === this.hash(contract.termsVersion, contract.snapshot)
         : null,
+      // A draft has nothing signed to drift from, so the question does not
+      // apply rather than being answered "fine".
+      planMatches: contract.status === 'SIGNED' ? planChanges.length === 0 : null,
+      planChanges,
     };
   }
 
@@ -264,12 +307,90 @@ export class ContractService {
         allowed: false,
         contract,
         reason:
-          'The financing agreement no longer matches the plan it was signed against — the plan has been changed ' +
-          'since. It must be re-signed before the handset can be restricted.',
+          'The stored financing agreement no longer matches its own signature — the record has been altered ' +
+          'since it was signed. It must be re-issued and re-signed before the handset can be restricted.',
+      };
+    }
+
+    /**
+     * The check the hash cannot make.
+     *
+     * The hash is computed over the snapshot as stored, so it proves the row is
+     * intact and nothing more — rewrite the plan and the contract's own figures
+     * sit there unchanged, still hashing perfectly. What has to be asked is
+     * whether the plan being enforced is still the plan that was signed, and
+     * that means comparing the two.
+     *
+     * This is the abuse the whole consent feature exists to stop: sign somebody
+     * up at one figure, restructure upward afterwards, then lock the phone for
+     * non-payment of a number they never agreed to.
+     */
+    const drift = await this.planDrift(contract);
+    if (drift.length > 0) {
+      return {
+        allowed: false,
+        contract,
+        reason:
+          `The financing agreement no longer describes this plan — ${listOf(drift)} ` +
+          `${drift.length === 1 ? 'has' : 'have'} changed since it was signed. A fresh agreement must be ` +
+          'signed before the handset can be restricted.',
       };
     }
 
     return { allowed: true, contract };
+  }
+
+  /**
+   * What has changed in the plan since the contract was signed.
+   *
+   * Returns the human names of the terms that differ, or an empty list when the
+   * plan still matches. An unsigned contract has nothing to drift from.
+   *
+   * Only the figures the customer actually agreed to are compared. Payments,
+   * late fees, waivers and status changes move constantly and none of them
+   * alter what was promised, so none of them appear here — a customer paying an
+   * installment must never look like a plan that was rewritten behind them.
+   */
+  public static async planDrift(contract: Contract): Promise<string[]> {
+    if (contract.status !== 'SIGNED') return [];
+
+    const plan = await repo.installmentPlans.findById(contract.planId);
+    if (!plan) {
+      // The plan a signed agreement names has gone. Nothing can be shown to
+      // match it, so consent cannot rest on it.
+      return ['the repayment plan itself'];
+    }
+
+    const installments = await repo.installments.findByPlan(plan.id);
+
+    let signed: ContractSnapshot;
+    try {
+      signed = JSON.parse(contract.snapshot) as ContractSnapshot;
+    } catch {
+      return ['the agreement’s own record of the plan'];
+    }
+
+    const before = signed.plan;
+    const now = plan;
+    const changed: string[] = [];
+
+    const compare = (label: string, a: unknown, b: unknown) => {
+      if (a !== b) changed.push(label);
+    };
+
+    compare('the total price', before.totalAmount, now.totalAmount);
+    compare('the down payment', before.downPayment, now.downPayment);
+    compare('the financed amount', before.financedAmount, now.financedAmount);
+    compare('the monthly installment', before.monthlyInstallment, now.monthlyInstallment);
+    compare('the number of installments', before.totalInstallments, now.totalInstallments);
+    compare('the first due date', before.firstDueDate, now.firstDueDate);
+    compare('the grace period', before.gracePeriodDays, now.gracePeriodDays);
+
+    if (scheduleKey(signed.schedule) !== scheduleKey(currentSchedule(installments))) {
+      changed.push('the repayment schedule');
+    }
+
+    return changed;
   }
 
   // -----------------------------------------------------------------------

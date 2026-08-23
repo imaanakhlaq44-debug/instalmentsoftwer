@@ -62,7 +62,12 @@ export const DeviceDetailPage: React.FC = () => {
       // with no financing plan never had one. Neither is an error worth a toast.
       try {
         const doc = await ApiService.getContractForDevice(id);
-        setContract({ ...doc.contract, hashMatches: doc.hashMatches });
+        setContract({
+          ...doc.contract,
+          hashMatches: doc.hashMatches,
+          planMatches: doc.planMatches,
+          planChanges: doc.planChanges ?? [],
+        });
       } catch {
         setContract(null);
       }
@@ -423,14 +428,21 @@ export const DeviceDetailPage: React.FC = () => {
                 <FileText className="w-4 h-4 text-blue-600" /> Financing Agreement
               </h2>
 
-              {contract.status === 'SIGNED' && contract.hashMatches ? (
+              {contract.status === 'SIGNED' && contract.hashMatches && contract.planMatches ? (
                 <p className="text-xs text-emerald-700 font-bold">
                   Signed by {contract.signerName}
                   {contract.signedAt ? ` on ${new Date(contract.signedAt).toLocaleDateString()}` : ''}
                 </p>
+              ) : contract.status === 'SIGNED' && contract.hashMatches === false ? (
+                <p className="text-xs text-rose-700 font-bold">
+                  Signed, but the stored record has been altered since. It must be re-issued and re-signed before
+                  this device can be restricted.
+                </p>
               ) : contract.status === 'SIGNED' ? (
                 <p className="text-xs text-rose-700 font-bold">
-                  Signed, but the plan has changed since. It must be re-signed before this device can be restricted.
+                  Signed, but the plan has changed since
+                  {contract.planChanges?.length ? ` (${contract.planChanges.join(', ')})` : ''}. It must be
+                  re-signed before this device can be restricted.
                 </p>
               ) : contract.status === 'VOID' ? (
                 <p className="text-xs text-slate-600 font-bold">Voided — this device cannot be restricted.</p>
