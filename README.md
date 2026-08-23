@@ -23,7 +23,7 @@ This codebase is **not yet a production system**, and the README should not pret
 | Payments | ⚠️ **No gateway, but a customer can report a transfer.** Counter payments work fully; a customer who has sent money by JazzCash/Easypaisa/Raast can submit the transaction ID from home, and the shop confirms it against their own account. Nothing is applied until a person confirms. See [Customer-reported payments](#-customer-reported-payments) |
 | Payment gateways (JazzCash / Easypaisa / Raast) | ❌ Not integrated — that needs a merchant account. The seam where one attaches is in place |
 | Commercial model | ✅ **A lock per handset, not a subscription.** Locks are bought in packs, spent on one IMEI at enrolment, and never returned. See [Licensing](#-licensing-one-lock-one-handset) |
-| Automated tests | ✅ **421 tests** — 300 backend against a real PostgreSQL instance, 100 on the React client, 21 on the two Android apps. All run on every push via GitHub Actions. See [Testing](#-testing) |
+| Automated tests | ✅ **423 tests** — 302 backend against a real PostgreSQL instance, 100 on the React client, 21 on the two Android apps. All run on every push via GitHub Actions. See [Testing](#-testing) |
 
 What is left before this is a real product is **signing and distributing the DPC, then proving it on real handsets**. The protocol is complete on both sides and the app refuses to claim a lock it did not apply, so a phone that cannot be held says so on the dashboard rather than silently pretending.
 
@@ -410,16 +410,32 @@ A contract renders from the version it was signed under, which is the only way a
 old signature keeps meaning what it meant. Changing the terms means adding a
 version.
 
-### Why the hash covers the figures
+### Why the signed figures are compared, not just hashed
 
 The document freezes a snapshot — the customer, the handset, the price, the full
 schedule — and `documentHash` is SHA-256 over that snapshot together with the
 terms version.
 
-This closes a specific abuse: signing a customer up at one figure, quietly
-restructuring the plan upward, then locking the phone for non-payment of the new
-one. The hash stops matching, the dashboard says so in red, and the lock refuses
-until a fresh agreement is signed.
+That hash proves one thing: the stored record has not been altered since it was
+signed. It cannot prove that the plan being *enforced* is still the plan that
+was signed, because it is computed over the snapshot as stored — rewrite the
+plan through the ordinary reschedule endpoint and the contract's own figures sit
+there unchanged, hashing perfectly.
+
+So there is a second check. `ContractService.planDrift` compares the frozen
+figures against the plan in force — the price, the down payment, the financed
+amount, the monthly figure, the count, the first due date, the grace period and
+every row of the schedule — and names whatever has moved.
+
+Together they close the abuse the feature exists for: signing a customer up at
+one figure, quietly restructuring the plan upward, then locking the phone for
+non-payment of the new one. The dashboard says so in red, naming what changed,
+and the lock refuses until a fresh agreement is signed.
+
+**Repayment is not drift.** Payments, late fees, waivers and status changes move
+constantly and none of them is a term anybody agreed to, so none of them counts.
+A check that fired on ordinary repayment would refuse every lock on every plan
+that had ever been paid into, and a shop would learn to ignore it.
 
 ### What the lock checks
 
@@ -430,7 +446,8 @@ through it too. It refuses on:
 - no contract at all
 - a contract still in `DRAFT`
 - a contract that was voided
-- a contract whose hash no longer matches its plan
+- a contract whose stored record no longer matches its own signature
+- a contract whose signed figures no longer describe the plan in force
 
 ### The printed copy
 
@@ -585,7 +602,7 @@ committed, then typechecks, tests and builds both halves of the app.
 | `tests/db/queries.test.ts` | Dealer scoping, relation searches, SQL aggregates, receipt numbering |
 | `tests/api/dpc.test.ts` | Device credentials, rotation, revocation, the offline lock round trip, the Android provisioning QR |
 | `tests/api/sms-relay.test.ts` | Pairing, the claim lease, sending the same message twice, cross-dealer isolation, retry and give-up, honest delivery reporting |
-| `tests/api/contracts.test.ts` | Drafting with the sale, the frozen snapshot, signing, refusing to lock an unsigned or voided agreement, and refusing when the plan was changed after signing |
+| `tests/api/contracts.test.ts` | Drafting with the sale, the frozen snapshot, signing, refusing to lock an unsigned or voided agreement, refusing after a genuine restructure through the reschedule endpoint, and *not* refusing when a customer has simply been paying |
 | `tests/api/customer-payments.test.ts` | A reported transfer stays unverified and moves no money, applies on confirmation, cannot name another customer's plan, and the queue's scoping and limits |
 | `tests/api/offline-rule.test.ts` | Who is permitted to restrict themselves and who is refused — no limit, manual locking, an unsigned, voided or pre-v1.1 agreement — the limit never shortening below the signed figure, a self-lock recorded without becoming `LOCKED`, and the clause printed in both languages |
 | `tests/api/licenses.test.ts` | A lock is spent once at enrolment and stamped with the IMEI, re-enrolment spends nothing, a paid-off device never returns its lock, running out stops the counter but leaves the QR valid, and only the platform can mint stock |

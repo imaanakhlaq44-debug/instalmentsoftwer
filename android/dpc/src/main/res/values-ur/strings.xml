@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ای ایم آئی شیلڈ</string>
-    <string name="admin_label">ای ایم آئی شیلڈ ڈیوائس مینجمنٹ</string>
+    <string name="app_name">الماس ایس ڈی ایم</string>
+    <string name="admin_label">الماس ایس ڈی ایم ڈیوائس مینجمنٹ</string>
     <string name="admin_description">قسطوں کے معاہدے میں طے شدہ پابندیاں اس فون پر لاگو کرنے کی اجازت دیتا ہے۔</string>
 
     <string name="enroll_title">یہ فون رجسٹر کریں</string>
@@ -12,7 +12,7 @@
     <string name="enroll_working">رجسٹر ہو رہا ہے…</string>
     <string name="enroll_done">یہ فون رجسٹر ہو چکا ہے۔</string>
 
-    <string name="status_title">ای ایم آئی شیلڈ</string>
+    <string name="status_title">الماس ایس ڈی ایم</string>
     <string name="status_registered">رجسٹرڈ · محفوظ</string>
     <string name="status_not_registered">رجسٹرڈ نہیں</string>
     <string name="status_amount_due">واجب الادا رقم</string>
