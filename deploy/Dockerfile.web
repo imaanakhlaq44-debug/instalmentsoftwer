@@ -1,0 +1,33 @@
+# The dashboard, and the only thing on the VPS that faces the internet.
+#
+# Caddy rather than nginx for one reason: it obtains and renews the TLS
+# certificate by itself, given a domain name and an email address. That is not a
+# convenience here — the DPC's release build refuses plaintext HTTP outright, so
+# a handset cannot check in at all until the certificate is real. Taking the
+# most error-prone step of the deployment and making it automatic removes the
+# failure that would otherwise be discovered with a customer at the counter.
+#
+# The client is baked in rather than mounted. An image that carries its own
+# assets cannot be half-updated, and rolling back is `docker compose up` with
+# the previous tag.
+
+# --- build the dashboard -----------------------------------------------------
+FROM node:22-alpine AS build
+
+WORKDIR /app
+
+COPY client/package.json client/package-lock.json ./
+RUN npm ci
+
+# Merged over the two files above; node_modules survives because .dockerignore
+# keeps the host's copy out of the context entirely.
+COPY client/ ./
+# `vite build` runs `tsc -b` first, so a type error stops the deployment here
+# rather than shipping a blank page.
+RUN npm run build
+
+# --- serve -------------------------------------------------------------------
+FROM caddy:2-alpine
+
+COPY --from=build /app/dist /srv
+COPY deploy/Caddyfile /etc/caddy/Caddyfile

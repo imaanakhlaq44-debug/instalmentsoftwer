@@ -1,0 +1,93 @@
+# The whole system on one VPS: a database, the API, and a web server that
+# terminates TLS.
+#
+# Run from the repository root, not from this directory:
+#
+#     docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build
+#
+# The build context is the repository, because the web image builds the
+# dashboard out of `client/` and the API image builds out of `server/`.
+
+name: almas-sdm
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      # Without this, initdb inherits the host locale and can build a database
+      # that cannot store an Urdu customer name. The same flags the development
+      # and test clusters use.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      # Where backup.sh writes, and where a restore reads from.
+      - ./backups:/backups
+    # Deliberately not published to the host. Nothing outside this compose file
+    # has any business reaching the database, and a Postgres port open to the
+    # internet is how a customer database ends up for sale.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  server:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-12h}
+      # The dashboard is served from the same origin, so this list exists only
+      # to satisfy the config's insistence on being told. It is never used by a
+      # same-origin request.
+      CORS_ORIGINS: https://${SITE_DOMAIN}
+      # The config refuses to boot in production if this is anything but false.
+      AUTO_SEED: "false"
+      DB_POOL_MAX: ${DB_POOL_MAX:-20}
+      # What a factory-reset handset is told during provisioning.
+      DPC_SERVER_URL: https://${SITE_DOMAIN}/api/dpc
+      DPC_APK_URL: ${DPC_APK_URL}
+      DPC_APK_SIGNATURE_CHECKSUM: ${DPC_APK_SIGNATURE_CHECKSUM}
+    # Also not published. Caddy reaches it over the compose network; the host
+    # does not need port 5000 open at all.
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+    restart: unless-stopped
+    depends_on:
+      - server
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      # The certificate and its private key. Losing this volume means Caddy asks
+      # Let's Encrypt for a new certificate on the next start, which is fine
+      # until it is done often enough to hit the rate limit — so it is a named
+      # volume rather than something that disappears with the container.
+      - caddy-data:/data
+      - caddy-config:/config
+      - caddy-logs:/var/log/caddy
+
+volumes:
+  db-data:
+  caddy-data:
+  caddy-config:
+  caddy-logs:

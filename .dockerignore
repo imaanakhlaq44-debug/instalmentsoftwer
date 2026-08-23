@@ -1,0 +1,32 @@
+# Both images are built from the repository root, so this is the only
+# .dockerignore Docker reads. A file listed here is invisible to the build —
+# which is the point for the two categories below.
+
+# Never inside an image: secrets, keys, and anything holding customer data.
+.env
+.env.*
+deploy/.env
+deploy/backups/
+**/*.jks
+**/*.keystore
+android/keystore.properties
+android/local.properties
+server/data/
+
+# Rebuilt inside the image. Copying a host build in would ship whatever was
+# last compiled on somebody's laptop.
+**/node_modules
+**/dist
+**/build
+server/src/generated
+*.tsbuildinfo
+
+# Not part of either image, and large.
+.git
+.github
+.claude
+android
+site
+brand
+**/*.log
+**/coverage

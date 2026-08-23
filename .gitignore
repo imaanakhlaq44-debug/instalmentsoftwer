@@ -44,3 +44,8 @@ desktop.ini
 # Test / coverage
 coverage/
 .nyc_output/
+
+# Deployment secrets and database dumps. The dumps hold every customer's CNIC,
+# address and payment history — they are the database, in a file.
+deploy/.env
+deploy/backups/
