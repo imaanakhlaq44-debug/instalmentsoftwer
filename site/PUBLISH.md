@@ -29,45 +29,63 @@ site now blocks the dashboard later.
 
 ---
 
-## 2. Build
+## 2. Give GitHub the FTP account
 
-While the dashboard is not hosted anywhere yet, build with `APP_URL=none`. The
-"Sign in" button is then left out of the page entirely — a shop reading the
-site should not meet a dead link where the product is supposed to be.
+Publishing is done by [`.github/workflows/deploy-site.yml`](../.github/workflows/deploy-site.yml):
+every push to `main` that touches `site/` builds the site and uploads it. There
+is nothing to drag into File Manager, and nothing that can be forgotten — which
+matters more than it sounds, because the one file most likely to be left behind
+by hand is the dotfile `.htaccess`.
+
+**In hPanel: Files → FTP Accounts.** Use the account it already lists, or make
+one scoped to `public_html`. You need three values from that page: the server's
+hostname, the username, and the password.
+
+**In GitHub: Settings → Secrets and variables → Actions.** Under *Secrets*:
+
+| Secret | Value |
+|---|---|
+| `SITE_FTP_SERVER` | the FTP hostname from hPanel — a name, not `ftp://…` |
+| `SITE_FTP_USERNAME` | the FTP username |
+| `SITE_FTP_PASSWORD` | that account's password |
+
+Under *Variables*, both optional:
+
+| Variable | Default | Set it when |
+|---|---|---|
+| `SITE_APP_URL` | `none` | the dashboard is hosted — see below |
+| `SITE_FTP_DIR` | `/public_html/` | the site lives somewhere else on the host |
+
+The upload uses **FTPS**. Plain FTP would send that password across the
+internet in clear text, and it can write to your document root.
+
+If a secret is missing the run stops on its first step and says which one,
+rather than failing later with a connection error that explains nothing.
+
+---
+
+## 3. The "Sign in" button
+
+While the dashboard is not hosted anywhere, `SITE_APP_URL` stays unset. The
+button is then left out of the page entirely — a shop reading the site should
+not meet a dead link where the product is supposed to be.
+
+Once the dashboard is live, set the variable to `https://app.almassdm.pk` and
+run the workflow by hand from the **Actions** tab (a variable is not a commit,
+so nothing triggers a deploy on its own). The button comes back pointing at the
+real address.
+
+Every run logs the value it built with, so a deploy that published the wrong
+button is visible in the log rather than only in the page.
+
+To see either build locally:
 
 ```bash
 cd site
 npm install
-APP_URL=none npm run build
-```
-
-The build prints what it did with that button. Read the line; it is the one
-thing about this build that can be wrong without looking wrong.
-
-Once the dashboard is live, rebuild and re-upload with the real address:
-
-```bash
+APP_URL=none npm run build            # what is published today
 APP_URL=https://app.almassdm.pk npm run build
 ```
-
----
-
-## 3. Upload
-
-Everything that goes on the server is the **contents of `site/dist`** — not the
-folder itself. In hPanel: **Files → File Manager → `public_html`**.
-
-1. Delete Hostinger's placeholder `default.php` / `index.html` if one is there.
-2. Upload the contents of `site/dist`, including the dotfile `.htaccess`.
-   File Manager's uploader takes a zip and unpacks it, which is faster and
-   avoids missing a file; over FTP, turn on "show hidden files" first or
-   `.htaccess` will be silently left behind.
-3. Check the result: `public_html/index.html`, `styles.css`, the four images,
-   the other four pages, and `.htaccess` — thirteen entries.
-
-`.htaccess` forces HTTPS, compresses the pages and sets cache headers. Without
-it the site still works; a visitor who typed the bare domain just stays on
-plaintext HTTP.
 
 ---
 
@@ -96,6 +114,23 @@ the people this site is for will see it:
 
 ## Re-publishing
 
-There is no pipeline here and it does not need one: rebuild, upload the changed
-files, done. If a change does not show up, it is the cache — `.htaccess` holds
-a page for ten minutes.
+Edit a page, push to `main`, and the workflow does the rest — it uploads only
+what changed, so a wording fix is a few kilobytes. If a change does not show
+up, it is the cache before it is the deploy: `.htaccess` holds a page for ten
+minutes, and the run's own log says exactly which files it sent.
+
+---
+
+## Uploading by hand, if you ever have to
+
+The workflow is the normal path. If GitHub is down or the FTP account is being
+replaced, the same result is thirteen files: build as above, then in hPanel go
+to **Files → File Manager → `public_html`**, delete Hostinger's placeholder
+`default.php` / `index.html`, and upload the **contents of `site/dist`** — not
+the folder itself. Zip it first; File Manager unpacks a zip, and that is the
+only reliable way to carry `.htaccess` across. Over an FTP client, turn on
+"show hidden files" first or it is silently left behind.
+
+`.htaccess` forces HTTPS, compresses the pages and sets cache headers. Without
+it the site still works; a visitor who typed the bare domain just stays on
+plaintext HTTP.

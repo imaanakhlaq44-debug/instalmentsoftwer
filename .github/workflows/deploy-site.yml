@@ -1,0 +1,96 @@
+name: Deploy site
+
+# Publishes the marketing site to shared hosting over FTP.
+#
+# The site is static, so unlike the dashboard and the API it can live on
+# Hostinger's web hosting — see site/PUBLISH.md. This workflow is what makes
+# that sustainable: the alternative is dragging a folder into File Manager and
+# hoping the dotfile came with it.
+#
+# Only the site is deployed here. Nothing in this file touches the server, the
+# database or a handset.
+
+on:
+  push:
+    branches: [main]
+    # A push that changes nothing under site/ has nothing to publish.
+    paths:
+      - 'site/**'
+      - '.github/workflows/deploy-site.yml'
+  # Lets a deploy be triggered by hand — after changing SITE_APP_URL, say,
+  # which is a variable rather than a commit.
+  workflow_dispatch:
+
+# One deploy at a time, and never cancel one in flight: an FTP transfer killed
+# halfway leaves the site half-uploaded, which is worse than being one commit
+# behind for a minute.
+concurrency:
+  group: deploy-site
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and upload
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      # Where the site's "Sign in" button goes. Set the repository variable
+      # SITE_APP_URL to the dashboard's address once it is hosted; until then
+      # the default leaves the button out of the page entirely, because a shop
+      # reading this site should not meet a dead link where the product is.
+      APP_URL: ${{ vars.SITE_APP_URL || 'none' }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # Fail here, with a sentence a person can act on, rather than letting the
+      # FTP step fail with a connection error that says nothing about why.
+      - name: Check the credentials exist
+        env:
+          FTP_SERVER: ${{ secrets.SITE_FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.SITE_FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.SITE_FTP_PASSWORD }}
+        run: |
+          missing=""
+          [ -n "$FTP_SERVER" ]   || missing="$missing SITE_FTP_SERVER"
+          [ -n "$FTP_USERNAME" ] || missing="$missing SITE_FTP_USERNAME"
+          [ -n "$FTP_PASSWORD" ] || missing="$missing SITE_FTP_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "Missing repository secrets:$missing"
+            echo "Add them under Settings → Secrets and variables → Actions."
+            echo "They come from hPanel → Files → FTP Accounts. See site/PUBLISH.md."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Install
+        run: npm install --prefix site --no-audit --no-fund
+
+      - name: Build
+        run: npm run --prefix site build
+
+      # Says in the log which of the two builds this was, so a deploy that
+      # published the wrong "Sign in" button is visible without downloading a
+      # page and reading its HTML.
+      - name: Report the sign-in target
+        run: echo "APP_URL=$APP_URL"
+
+      - name: Upload
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.SITE_FTP_SERVER }}
+          username: ${{ secrets.SITE_FTP_USERNAME }}
+          password: ${{ secrets.SITE_FTP_PASSWORD }}
+          # FTPS, not FTP. Plain FTP sends the password across the internet in
+          # clear text, and that password can write to the document root.
+          protocol: ftps
+          local-dir: ./site/dist/
+          server-dir: ${{ vars.SITE_FTP_DIR || '/public_html/' }}
+          # The action keeps a small state file on the server and uploads only
+          # what changed, so a deploy is a few kilobytes rather than the whole
+          # site. It never deletes anything it did not put there.
+          dangerous-clean-slate: false
