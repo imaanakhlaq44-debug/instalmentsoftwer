@@ -23,6 +23,24 @@ const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const SRC = path.join(ROOT, 'src');
 const OUT = path.join(ROOT, 'dist');
 
+/**
+ * Where the "Sign in" button goes.
+ *
+ * The site is published before the dashboard has a server — it is the thing a
+ * shop reads while deciding — so this cannot be baked in. In development it is
+ * the Vite dev server; for the published build, pass the real one:
+ *
+ *   APP_URL=https://app.almassdm.pk npm run build
+ *
+ * Pointing it at a host that does not answer yet is worse than not linking at
+ * all, so a build that leaves it unset keeps the localhost default and says so.
+ * Until the dashboard is hosted anywhere, publish with `APP_URL=none` and the
+ * button is left out of the page entirely — a shop reading this site should not
+ * meet a dead link where the product is supposed to be.
+ */
+const APP_URL = (process.env.APP_URL || '').trim() || 'http://localhost:5173';
+const HAS_APP = APP_URL !== 'none';
+
 /** Pulled out of each page's `<!-- meta ... -->` comment. */
 function readMeta(html) {
   const match = html.match(/<!--\s*meta\s*([\s\S]*?)-->/);
@@ -40,7 +58,10 @@ function readMeta(html) {
 }
 
 async function build() {
-  const layout = await readFile(path.join(SRC, 'layout.html'), 'utf8');
+  const rawLayout = await readFile(path.join(SRC, 'layout.html'), 'utf8');
+  const layout = HAS_APP
+    ? rawLayout.replace(/<!--\s*\/?signin\s*-->/g, '')
+    : rawLayout.replace(/<!--\s*signin\s*-->[\s\S]*?<!--\s*\/signin\s*-->/g, '');
   const pages = (await readdir(path.join(SRC, 'pages'))).filter((f) => f.endsWith('.html'));
 
   await mkdir(OUT, { recursive: true });
@@ -55,6 +76,7 @@ async function build() {
       .replaceAll('{{titleUr}}', meta.titleUr ?? meta.title ?? 'Almas SDM')
       .replaceAll('{{description}}', meta.description ?? '')
       .replaceAll('{{page}}', meta.page ?? '')
+      .replaceAll('{{appUrl}}', APP_URL)
       .replace('{{content}}', body);
 
     await writeFile(path.join(OUT, file), html, 'utf8');
@@ -84,6 +106,12 @@ async function build() {
 
 await build();
 process.stdout.write('Site built to site/dist\n');
+process.stdout.write(
+  HAS_APP ? `  Sign in → ${APP_URL}\n` : '  Sign in button omitted (APP_URL=none)\n'
+);
+if (!process.env.APP_URL) {
+  process.stdout.write('  (APP_URL unset — do not publish this build)\n');
+}
 
 if (process.argv.includes('--watch')) {
   const { default: chokidar } = await import('chokidar');

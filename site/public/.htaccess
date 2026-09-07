@@ -1,0 +1,37 @@
+# Almas SDM marketing site — Apache/LiteSpeed configuration for shared hosting.
+#
+# This file is copied into dist/ by the build and belongs in public_html
+# alongside the pages. Hostinger's web hosting runs LiteSpeed, which reads
+# .htaccess the same way Apache does.
+
+# --- HTTPS, always -----------------------------------------------------------
+# The certificate is issued by the host; this makes sure a visitor who typed
+# the bare domain does not stay on plaintext.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} !=on
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+# --- Caching -----------------------------------------------------------------
+# The pages are rebuilt and re-uploaded by hand, so they are not cached for
+# long; the artwork and the stylesheet never change without a new upload, but
+# they carry no content hash in their names either, so a week is the honest
+# compromise. Shorten it while you are iterating.
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/html "access plus 10 minutes"
+  ExpiresByType text/css "access plus 7 days"
+  ExpiresByType image/png "access plus 7 days"
+  ExpiresByType image/webp "access plus 7 days"
+</IfModule>
+
+# --- Compression -------------------------------------------------------------
+# The pages are mostly words, and the audience is on a phone on 3G in a shop.
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/plain application/javascript
+</IfModule>
+
+# --- Housekeeping ------------------------------------------------------------
+Options -Indexes
+AddDefaultCharset UTF-8
