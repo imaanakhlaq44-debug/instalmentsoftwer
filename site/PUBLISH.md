@@ -19,8 +19,8 @@ baked in at build time and the DNS records are easier to add together.
 
 | Name | Points at | When |
 |---|---|---|
-| `almassdm.pk` (or whatever you registered) | Hostinger shared hosting — this site | now |
-| `app.almassdm.pk` | the VPS the dashboard will run on | later |
+| `almassdm.pro` (or whatever you registered) | Hostinger shared hosting — this site | now |
+| `app.almassdm.pro` | the VPS the dashboard will run on | later |
 
 The two live in different places, and that is fine: the domain's DNS zone in
 hPanel holds an `A` record for the VPS's IP under the name `app`, while the
@@ -54,7 +54,15 @@ Under *Variables*, both optional:
 | Variable | Default | Set it when |
 |---|---|---|
 | `SITE_APP_URL` | `none` | the dashboard is hosted — see below |
-| `SITE_FTP_DIR` | `/public_html/` | the site lives somewhere else on the host |
+| `SITE_FTP_DIR` | `/public_html/` | the domain's files are not at that path |
+
+**Check that path before the first deploy.** `/public_html/` is where the files
+go only when the plan hosts one website. A plan carrying several puts each
+domain under its own directory — `/domains/almassdm.pro/public_html/` — and an
+upload to the wrong one publishes this site over a different domain's. hPanel's
+**FTP Accounts** page names the directory each account opens in; File Manager
+shows the same path in its breadcrumb. If it is not `/public_html/`, set
+`SITE_FTP_DIR` to what it actually is.
 
 The upload uses **FTPS**. Plain FTP would send that password across the
 internet in clear text, and it can write to your document root.
@@ -70,7 +78,7 @@ While the dashboard is not hosted anywhere, `SITE_APP_URL` stays unset. The
 button is then left out of the page entirely — a shop reading the site should
 not meet a dead link where the product is supposed to be.
 
-Once the dashboard is live, set the variable to `https://app.almassdm.pk` and
+Once the dashboard is live, set the variable to `https://app.almassdm.pro` and
 run the workflow by hand from the **Actions** tab (a variable is not a commit,
 so nothing triggers a deploy on its own). The button comes back pointing at the
 real address.
@@ -84,7 +92,7 @@ To see either build locally:
 cd site
 npm install
 APP_URL=none npm run build            # what is published today
-APP_URL=https://app.almassdm.pk npm run build
+APP_URL=https://app.almassdm.pro npm run build
 ```
 
 ---
@@ -115,9 +123,13 @@ the people this site is for will see it:
 ## Re-publishing
 
 Edit a page, push to `main`, and the workflow does the rest — it uploads only
-what changed, so a wording fix is a few kilobytes. If a change does not show
-up, it is the cache before it is the deploy: `.htaccess` holds a page for ten
-minutes, and the run's own log says exactly which files it sent.
+what changed, so a wording fix is a few kilobytes.
+
+If a change does not show up, it is the cache before it is the deploy. There
+are two of them: `.htaccess` holds a page in the visitor's browser for ten
+minutes, and if the CDN is switched on in hPanel it holds its own copy in front
+of the server — **Dashboard → Cache → Clear cache** empties that one. The run's
+own log lists every file it sent, so start there before suspecting either.
 
 ---
 
