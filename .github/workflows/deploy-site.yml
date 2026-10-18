@@ -79,18 +79,29 @@ jobs:
       - name: Report the sign-in target
         run: echo "APP_URL=$APP_URL"
 
-      - name: Upload
+      - name: Upload (FTPS)
+        id: upload-ftps
+        continue-on-error: true
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.SITE_FTP_SERVER }}
           username: ${{ secrets.SITE_FTP_USERNAME }}
           password: ${{ secrets.SITE_FTP_PASSWORD }}
-          # FTPS, not FTP. Plain FTP sends the password across the internet in
-          # clear text, and that password can write to the document root.
           protocol: ftps
+          port: 21
           local-dir: ./site/dist/
           server-dir: ${{ vars.SITE_FTP_DIR || '/public_html/' }}
-          # The action keeps a small state file on the server and uploads only
-          # what changed, so a deploy is a few kilobytes rather than the whole
-          # site. It never deletes anything it did not put there.
+          dangerous-clean-slate: false
+
+      - name: Fallback Upload (standard FTP)
+        if: steps.upload-ftps.outcome == 'failure'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.SITE_FTP_SERVER }}
+          username: ${{ secrets.SITE_FTP_USERNAME }}
+          password: ${{ secrets.SITE_FTP_PASSWORD }}
+          protocol: ftp
+          port: 21
+          local-dir: ./site/dist/
+          server-dir: ${{ vars.SITE_FTP_DIR || '/public_html/' }}
           dangerous-clean-slate: false
