@@ -9,15 +9,18 @@ page: home
 <!-- Hero Stage & Live Interactive Dealer Console                      -->
 <!-- ------------------------------------------------------------------ -->
 <section class="stage relative overflow-hidden pb-20 pt-12 sm:pt-20 sm:pb-28">
-  <div class="mx-auto max-w-6xl px-4 sm:px-6">
+  <!-- Ambient Luminous Mesh Lighting -->
+  <div class="pointer-events-none absolute -top-28 left-1/2 -translate-x-1/2 h-[450px] w-[750px] rounded-full bg-gradient-to-tr from-blue-600/20 via-indigo-500/15 to-emerald-500/10 blur-[130px]" aria-hidden="true"></div>
+
+  <div class="mx-auto max-w-6xl px-4 sm:px-6 relative z-10">
     <!-- Hero Header -->
     <div class="mx-auto max-w-3xl text-center">
-      <div class="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-3.5 py-1 text-xs font-semibold text-blue-400 backdrop-blur-md reveal reveal-1">
-        <span class="flex h-2 w-2 rounded-full bg-blue-400 animate-pulse"></span>
-        <span data-ur="پاکستانی موبائل دکانوں کے لیے #1 فنانسنگ سسٹم">★ Pakistan's #1 Mobile Financing & Device Lock Platform</span>
+      <div class="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-4 py-1.5 text-xs font-semibold text-blue-300 backdrop-blur-md shadow-[0_0_20px_rgba(59,130,246,0.2)] reveal reveal-1">
+        <span class="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span data-ur="پاکستانی موبائل دکانوں کے لیے #1 فنانسنگ سسٹم">★ Pakistan's #1 Mobile Financing &amp; Device Sentinel</span>
       </div>
 
-      <h1 class="reveal reveal-2 mt-6 font-display font-extrabold text-[2.4rem] leading-[1.1] tracking-[-0.03em] text-white sm:text-[3.5rem] lg:text-[4rem]" data-ur="قسطوں پر فون بیچیں، رقم ڈوبنے کے خطرے کے بغیر۔">
+      <h1 class="reveal reveal-2 mt-6 font-display font-black text-[2.5rem] leading-[1.08] tracking-[-0.035em] text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-100 to-slate-400 sm:text-[3.8rem] lg:text-[4.4rem]" data-ur="قسطوں پر فون بیچیں، رقم ڈوبنے کے خطرے کے بغیر۔">
         Sell phones on instalments without losing them.
       </h1>
 
@@ -26,28 +29,28 @@ page: home
       </p>
 
       <div class="reveal reveal-4 mt-8 flex flex-wrap items-center justify-center gap-3.5">
-        <a href="/pricing.html" class="btn-primary px-6 py-3 text-body font-bold rounded-xl shadow-lg shadow-blue-600/30" data-ur="قیمت اور پیکجز دیکھیں">See Pricing &amp; Locks</a>
-        <a href="#dashboard" class="btn border border-white/20 bg-white/5 text-white hover:bg-white/10 px-5 py-3 rounded-xl backdrop-blur-sm" data-ur="ڈیش بورڈ ڈیمو دیکھیں">Explore Live Demo</a>
-        <a href="/rentwise/" class="btn border border-white/10 text-slate-300 hover:text-white hover:bg-white/5 px-4 py-3 rounded-xl text-caption" data-ur="رینٹ وائز ٹولز">Free Tools</a>
+        <a href="/pricing.html" class="btn-primary px-7 py-3 text-body font-bold rounded-xl shadow-lg shadow-blue-600/30 hover:shadow-blue-600/50" data-ur="قیمت اور پیکجز دیکھیں">See Pricing &amp; Locks</a>
+        <a href="#dashboard" class="btn border border-white/20 bg-white/5 text-white hover:bg-white/10 px-6 py-3 rounded-xl backdrop-blur-md" data-ur="ڈیش بورڈ ڈیمو دیکھیں">Explore Live Demo</a>
+        <a href="/rentwise/" class="btn border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:text-white hover:bg-emerald-500/20 px-5 py-3 rounded-xl text-caption font-semibold" data-ur="رینٹ وائز ٹولز">Free Tools</a>
       </div>
 
       <!-- Trust Metrics Ticker -->
       <div class="reveal reveal-5 mt-10 grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-white/10 pt-8 text-left" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem;">
-        <div class="rounded-lg p-2.5 bg-white/[0.02]">
+        <div class="rounded-xl p-3.5 bg-white/[0.03] border border-white/10 backdrop-blur-md hover:border-blue-500/30 transition-all">
           <p class="text-xs uppercase tracking-wider text-slate-400 font-medium" data-ur="فلیٹ سائز">Enrolled Handsets</p>
           <p class="mt-1 text-2xl font-bold text-white tracking-tight">14,800+</p>
         </div>
-        <div class="rounded-lg p-2.5 bg-white/[0.02]">
+        <div class="rounded-xl p-3.5 bg-white/[0.03] border border-white/10 backdrop-blur-md hover:border-emerald-500/30 transition-all">
           <p class="text-xs uppercase tracking-wider text-slate-400 font-medium" data-ur="ریکوری شرح">Recovery Rate</p>
           <p class="mt-1 text-2xl font-bold text-emerald-400 tracking-tight">99.4%</p>
         </div>
-        <div class="rounded-lg p-2.5 bg-white/[0.02]">
+        <div class="rounded-xl p-3.5 bg-white/[0.03] border border-white/10 backdrop-blur-md hover:border-amber-500/30 transition-all">
           <p class="text-xs uppercase tracking-wider text-slate-400 font-medium" data-ur="فیس ماڈل">Transparent Pricing</p>
           <p class="mt-1 text-2xl font-bold text-white tracking-tight">Rs 600<span class="text-xs text-slate-400 font-normal"> / handset</span></p>
         </div>
-        <div class="rounded-lg p-2.5 bg-white/[0.02]">
+        <div class="rounded-xl p-3.5 bg-white/[0.03] border border-white/10 backdrop-blur-md hover:border-cyan-500/30 transition-all">
           <p class="text-xs uppercase tracking-wider text-slate-400 font-medium" data-ur="سیکیورٹی سطح">Device Enforce</p>
-          <p class="mt-1 text-2xl font-bold text-blue-400 tracking-tight">Knox DPC</p>
+          <p class="mt-1 text-2xl font-bold text-cyan-400 tracking-tight">Knox DPC</p>
         </div>
       </div>
     </div>
@@ -384,11 +387,11 @@ page: home
 <!-- ------------------------------------------------------------------ -->
 <!-- What it Replaces (Modern Feature Cards)                            -->
 <!-- ------------------------------------------------------------------ -->
-<section class="border-y border-paper-300 bg-paper-50">
+<section class="border-y border-white/[0.08] bg-[#070B14]">
   <div class="band-tight">
     <div class="text-center max-w-2xl mx-auto mb-12">
       <p class="eyebrow" data-ur="پرانے طریقوں سے چھٹکارا">Goodbye Paper Ledgers</p>
-      <h2 class="mt-2 font-display text-2xl sm:text-3xl font-extrabold text-ink-900 tracking-tight" data-ur="کاپی، رجسٹر اور پیسے ڈوبنے کے خطرے کا خاتمہ۔">
+      <h2 class="mt-2 font-display text-2xl sm:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-slate-300 tracking-tight" data-ur="کاپی، رجسٹر اور پیسے ڈوبنے کے خطرے کا خاتمہ۔">
         Built specifically for Pakistani mobile dealers.
       </h2>
     </div>
@@ -397,17 +400,24 @@ page: home
       <!-- Card 1 -->
       <div class="surface p-6 flex flex-col justify-between">
         <div>
-          <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 text-accent-700 mb-4">
+          <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 mb-4 shadow-sm shadow-blue-500/20">
             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
-          <p class="text-title font-bold text-ink-900" data-ur="کاپی اور رجسٹر کی جگہ">Instead of the register</p>
-          <p class="mt-2.5 text-body text-ink-500" data-ur="ہر گاہک کا شیڈول خود بنتا ہے، اور جمع شدہ رقم اپنے آپ درست قسط پر لگتی ہے۔ لیٹ فیس دوبارہ نہیں لگتی۔">
+          <p class="text-title font-bold text-white" data-ur="کاپی اور رجسٹر کی جگہ">Instead of the register</p>
+          <p class="mt-2.5 text-body text-slate-300" data-ur="ہر گاہک کا شیڈول خود بنتا ہے، اور جمع شدہ رقم اپنے آپ درست قسط پر لگتی ہے۔ لیٹ فیس دوبارہ نہیں لگتی۔">
             Every installment schedule is generated in seconds. Payments automatically credit the exact due balance. Human ledger errors drop to zero.
           </p>
+
+          <!-- Interactive Mini Widget: Ledger Calculation Preview -->
+          <div class="mt-5 rounded-xl border border-white/5 bg-black/40 p-3 text-xs space-y-1.5">
+            <div class="flex justify-between text-slate-400"><span>Sale Total:</span><span class="font-mono text-white">Rs 62,000</span></div>
+            <div class="flex justify-between text-emerald-400"><span>Payment Credited:</span><span class="font-mono font-bold">+ Rs 7,750</span></div>
+            <div class="flex justify-between text-slate-300 font-semibold border-t border-white/10 pt-1"><span>Remaining Due:</span><span class="font-mono text-blue-300">Rs 54,250</span></div>
+          </div>
         </div>
-        <div class="mt-6 pt-4 border-t border-paper-300/80 text-xs font-semibold text-accent-700">
+        <div class="mt-6 pt-4 border-t border-white/10 text-xs font-semibold text-blue-400">
           ✓ Automatic Ledger Sync
         </div>
       </div>
@@ -415,17 +425,27 @@ page: home
       <!-- Card 2 -->
       <div class="surface p-6 flex flex-col justify-between">
         <div>
-          <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 mb-4">
+          <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-4 shadow-sm shadow-emerald-500/20">
             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
             </svg>
           </div>
-          <p class="text-title font-bold text-ink-900" data-ur="یاد دہانی جو واقعی جاتی ہے">Reminders that actually arrive</p>
-          <p class="mt-2.5 text-body text-ink-500" data-ur="اپنی دکان کا ایک فون جوڑ دیں اور یاد دہانیاں اُسی سم سے چلی جاتی ہیں۔ جب تک سم قبول نہ کرے، پیغام بھیجا ہوا نہیں گنا جاتا۔">
+          <p class="text-title font-bold text-white" data-ur="یاد دہانی جو واقعی جاتی ہے">Reminders that actually arrive</p>
+          <p class="mt-2.5 text-body text-slate-300" data-ur="اپنی دکان کا ایک فون جوڑ دیں اور یاد دہانیاں اُسی سم سے چلی جاتی ہیں۔ جب تک سم قبول نہ کرے، پیغام بھیجا ہوا نہیں گنا جاتا۔">
             Pair any Android phone at your counter and WhatsApp / SMS reminders send directly from your own shop number with confirmed delivery receipts.
           </p>
+
+          <!-- Interactive Mini Widget: WhatsApp SIM Dispatch Preview -->
+          <div class="mt-5 rounded-xl border border-emerald-500/20 bg-emerald-950/20 p-3 text-xs space-y-1.5">
+            <div class="flex items-center justify-between text-emerald-300 font-bold">
+              <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span> Shop SIM Dispatch</span>
+              <span class="text-[10px] text-emerald-400 font-mono">0300-8451299</span>
+            </div>
+            <p class="text-[11px] text-slate-300 italic">"محترم زبیر صاحب، قسط Rs 7,750 کی آخری تاریخ کل ہے۔"</p>
+            <div class="flex justify-end text-[10px] text-emerald-400 font-mono">✓✓ Delivered 10:42 AM</div>
+          </div>
         </div>
-        <div class="mt-6 pt-4 border-t border-paper-300/80 text-xs font-semibold text-emerald-600">
+        <div class="mt-6 pt-4 border-t border-white/10 text-xs font-semibold text-emerald-400">
           ✓ Verified SIM Dispatch
         </div>
       </div>
@@ -433,18 +453,27 @@ page: home
       <!-- Card 3 -->
       <div class="surface p-6 flex flex-col justify-between">
         <div>
-          <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 mb-4">
+          <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20 mb-4 shadow-sm shadow-rose-500/20">
             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <rect x="3" y="11" width="18" height="11" rx="2" stroke-width="2" />
               <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke-width="2" />
             </svg>
           </div>
-          <p class="text-title font-bold text-ink-900" data-ur="آخری قدم، جب کچھ اور نہ بچے">The guaranteed remote lock</p>
-          <p class="mt-2.5 text-body text-ink-500" data-ur="قسط واقعی رک جائے تو فون محدود ہو جاتا ہے۔ ادائیگی آتے ہی خود کھل جاتا ہے۔">
+          <p class="text-title font-bold text-white" data-ur="آخری قدم، جب کچھ اور نہ بچے">The guaranteed remote lock</p>
+          <p class="mt-2.5 text-body text-slate-300" data-ur="قسط واقعی رک جائے تو فون محدود ہو جاتا ہے۔ ادائیگی آتے ہی خود کھل جاتا ہے۔">
             When a customer ignores calls and genuinely stops paying, the phone is locked down via hardware Device Owner mode. It auto-unlocks instantly upon payment.
           </p>
+
+          <!-- Interactive Mini Widget: Knox DPC Status -->
+          <div class="mt-5 rounded-xl border border-rose-500/20 bg-rose-950/20 p-3 text-xs space-y-1.5">
+            <div class="flex items-center justify-between text-rose-300 font-bold">
+              <span>Knox DPC Sentinel</span>
+              <span class="rounded bg-rose-500/30 px-1.5 py-0.5 text-[9px] text-rose-200">TAMPER PROOF</span>
+            </div>
+            <p class="text-[11px] text-slate-300">Hard factory reset blocked · Recovery mode disabled · Instant auto-unlock on JazzCash confirmation.</p>
+          </div>
         </div>
-        <div class="mt-6 pt-4 border-t border-paper-300/80 text-xs font-semibold text-rose-600">
+        <div class="mt-6 pt-4 border-t border-white/10 text-xs font-semibold text-rose-400">
           ✓ Hardware Level Lock
         </div>
       </div>
@@ -455,38 +484,47 @@ page: home
 <!-- ------------------------------------------------------------------ -->
 <!-- How It Works: Three Counter Steps                                   -->
 <!-- ------------------------------------------------------------------ -->
-<section class="band">
+<section class="band bg-[#050811]">
   <div class="max-w-2xl">
     <p class="eyebrow" data-ur="طریقہ کار">How it works</p>
-    <h2 class="mt-2 font-display text-3xl font-extrabold text-ink-900 tracking-tight" data-ur="کاؤنٹر پر صرف تین آسان قدم۔">
+    <h2 class="mt-2 font-display text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-slate-300 tracking-tight" data-ur="کاؤنٹر پر صرف تین آسان قدم۔">
       Three simple steps at your counter.
     </h2>
-    <p class="mt-3 text-body text-ink-500" data-ur="گاہک سے ڈیل مکمل کرنے اور فون محفوظ کرنے میں بمشکل دو منٹ لگتے ہیں۔">
+    <p class="mt-3 text-body text-slate-400" data-ur="گاہک سے ڈیل مکمل کرنے اور فون محفوظ کرنے میں بمشکل دو منٹ لگتے ہیں۔">
       Provisioning a phone and handing it to a customer takes under two minutes.
     </p>
   </div>
 
   <ol class="mt-10 grid gap-6 sm:grid-cols-3">
     <li class="surface p-6 relative">
-      <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-600 text-white font-bold text-sm shadow-sm mb-4">01</span>
-      <p class="text-title font-bold text-ink-900" data-ur="سودا درج کریں">Register the sale</p>
-      <p class="mt-2.5 text-body text-ink-500" data-ur="گاہک، فون اور قسط کا منصوبہ۔ معاہدہ خود بخود تیار ہو جاتا ہے، اردو اور انگریزی دونوں میں۔">
+      <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-sm shadow-md shadow-blue-500/30 mb-4">01</span>
+      <p class="text-title font-bold text-white" data-ur="سودا درج کریں">Register the sale</p>
+      <p class="mt-2.5 text-body text-slate-300" data-ur="گاہک، فون اور قسط کا منصوبہ۔ معاہدہ خود بخود تیار ہو جاتا ہے، اردو اور انگریزی دونوں میں۔">
         Select the handset model, advance payment, and monthly plan. The bilingual agreement drafts itself automatically.
       </p>
+      <div class="mt-4 pt-3 border-t border-white/10 text-[11px] font-semibold text-blue-400">
+        ✓ Bilingual Instant Contract
+      </div>
     </li>
     <li class="surface p-6 relative">
-      <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-600 text-white font-bold text-sm shadow-sm mb-4">02</span>
-      <p class="text-title font-bold text-ink-900" data-ur="گاہک اسکرین پر دستخط کرتا ہے">The customer signs on screen</p>
-      <p class="mt-2.5 text-body text-ink-500" data-ur="بغیر دستخط شدہ معاہدے کے لاک ہوتا ہی نہیں۔ یہ سہولت نہیں، شرط ہے۔">
+      <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-sm shadow-md shadow-blue-500/30 mb-4">02</span>
+      <p class="text-title font-bold text-white" data-ur="گاہک اسکرین پر دستخط کرتا ہے">The customer signs on screen</p>
+      <p class="mt-2.5 text-body text-slate-300" data-ur="بغیر دستخط شدہ معاہدے کے لاک ہوتا ہی نہیں۔ یہ سہولت نہیں، شرط ہے۔">
         The buyer reads the Urdu terms and signs with their finger on your tablet or phone. Without this signature, no lock can ever be activated.
       </p>
+      <div class="mt-4 pt-3 border-t border-white/10 text-[11px] font-semibold text-emerald-400">
+        ✓ Cryptographic Legal Signature
+      </div>
     </li>
     <li class="surface p-6 relative">
-      <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-600 text-white font-bold text-sm shadow-sm mb-4">03</span>
-      <p class="text-title font-bold text-ink-900" data-ur="فون کیو آر اسکین کرتا ہے">The phone scans a QR</p>
-      <p class="mt-2.5 text-body text-ink-500" data-ur="نیا فون سیٹ اپ کے دوران کیو آر اسکین کرتا ہے اور مینجمنٹ میں آ جاتا ہے۔ یہیں ایک لاک خرچ ہوتا ہے۔">
+      <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-sm shadow-md shadow-blue-500/30 mb-4">03</span>
+      <p class="text-title font-bold text-white" data-ur="فون کیو آر اسکین کرتا ہے">The phone scans a QR</p>
+      <p class="mt-2.5 text-body text-slate-300" data-ur="نیا فون سیٹ اپ کے دوران کیو آر اسکین کرتا ہے اور مینجمنٹ میں آ جاتا ہے۔ یہیں ایک لاک خرچ ہوتا ہے۔">
         Tap the setup screen 6 times to scan the QR. The phone enters Device Owner mode and is permanently protected against hard factory-resets.
       </p>
+      <div class="mt-4 pt-3 border-t border-white/10 text-[11px] font-semibold text-cyan-400">
+        ✓ Knox Device Owner Active
+      </div>
     </li>
   </ol>
 </section>
@@ -494,15 +532,15 @@ page: home
 <!-- ------------------------------------------------------------------ -->
 <!-- Consent & Legal Guarantee                                          -->
 <!-- ------------------------------------------------------------------ -->
-<section class="border-y border-paper-300 bg-paper-50">
+<section class="border-y border-white/[0.08] bg-[#070B14]">
   <div class="band">
     <div class="grid gap-12 lg:grid-cols-2 lg:items-center">
       <div>
         <p class="eyebrow" data-ur="قانونی تحفظ">Legal Consent</p>
-        <h2 class="mt-2 font-display text-3xl font-extrabold text-ink-900 tracking-tight" data-ur="بغیر دستخط کے کوئی فون لاک نہیں ہوتا۔">
+        <h2 class="mt-2 font-display text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-slate-300 tracking-tight" data-ur="بغیر دستخط کے کوئی فون لاک نہیں ہوتا۔">
           No handset is locked without explicit signed consent.
         </h2>
-        <div class="prose-block mt-5 space-y-4 text-ink-600">
+        <div class="prose-block mt-5 space-y-4 text-slate-300">
           <p data-ur="ہر قسط والے سودے پر ایک معاہدہ بنتا ہے جس میں فون، آئی ایم ای آئی، پوری رقم، ہر قسط کی تاریخ، مہلت کے دن، اور یہ صاف لکھا ہوتا ہے کہ ادائیگی رک جانے پر فون محدود کیا جا سکتا ہے۔">
             Every financed sale generates a legally binding agreement detailing the handset model, IMEI, total price, installment schedule, and explicit terms authorizing device restriction in case of genuine default.
           </p>
@@ -512,36 +550,36 @@ page: home
         </div>
       </div>
 
-      <div class="surface p-6 sm:p-7 shadow-sm border border-paper-300/90">
-        <div class="flex items-center justify-between border-b border-paper-300 pb-3">
-          <p class="text-xs font-bold uppercase tracking-wider text-accent-700">Digital Agreement · قانونی معاہدہ</p>
-          <span class="rounded bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-500/20">FROZEN &amp; VERIFIED</span>
+      <div class="surface p-6 sm:p-7 shadow-2xl border border-white/10">
+        <div class="flex items-center justify-between border-b border-white/10 pb-3">
+          <p class="text-xs font-bold uppercase tracking-wider text-blue-400">Digital Agreement · قانونی معاہدہ</p>
+          <span class="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-400 border border-emerald-500/30">FROZEN &amp; VERIFIED ✓</span>
         </div>
         
-        <p class="mt-4 text-title font-bold text-ink-900">Infinix Note 30 Pro · 256GB</p>
-        <p class="text-caption text-ink-400">IMEI: 3569 3803 5643 809 · PTA Approved</p>
+        <p class="mt-4 text-title font-bold text-white">Infinix Note 30 Pro · 256GB</p>
+        <p class="text-caption text-slate-400">IMEI: 3569 3803 5643 809 · PTA Approved</p>
 
-        <dl class="mt-5 space-y-2.5 border-t border-paper-300 pt-4 text-body">
+        <dl class="mt-5 space-y-2.5 border-t border-white/10 pt-4 text-body">
           <div class="flex justify-between gap-4">
-            <dt class="text-ink-500">Total Financed</dt>
-            <dd class="font-bold text-ink-900 tabular-nums">Rs 62,000</dd>
+            <dt class="text-slate-400">Total Financed</dt>
+            <dd class="font-bold text-white tabular-nums">Rs 62,000</dd>
           </div>
           <div class="flex justify-between gap-4">
-            <dt class="text-ink-500">Plan Terms</dt>
-            <dd class="font-bold text-ink-900 tabular-nums">8 monthly × Rs 7,750</dd>
+            <dt class="text-slate-400">Plan Terms</dt>
+            <dd class="font-bold text-white tabular-nums">8 monthly × Rs 7,750</dd>
           </div>
           <div class="flex justify-between gap-4">
-            <dt class="text-ink-500">Grace Period</dt>
-            <dd class="font-bold text-emerald-700">3 days before restriction</dd>
+            <dt class="text-slate-400">Grace Period</dt>
+            <dd class="font-bold text-emerald-400">3 days before restriction</dd>
           </div>
         </dl>
 
-        <div class="mt-5 border-t border-paper-300 pt-4">
-          <p class="text-caption font-semibold text-ink-500 mb-2">Customer Screen Signature:</p>
-          <svg viewBox="0 0 200 40" class="h-10 w-44 text-ink-900" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <div class="mt-5 border-t border-white/10 pt-4">
+          <p class="text-caption font-semibold text-slate-400 mb-2">Customer Screen Signature:</p>
+          <svg viewBox="0 0 200 40" class="h-10 w-44 text-cyan-400" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M4 30c14-4 18-22 26-22s2 24 12 24 16-26 26-26 4 22 14 22 14-16 22-16 8 12 18 12 20-6 24-10" stroke-linecap="round" />
           </svg>
-          <p class="mt-2 text-caption text-ink-400">Digitally signed &amp; timestamped · Verified Device Enrolment</p>
+          <p class="mt-2 text-caption text-slate-500">Digitally signed &amp; timestamped · Verified Device Enrolment</p>
         </div>
       </div>
     </div>
@@ -551,13 +589,13 @@ page: home
 <!-- ------------------------------------------------------------------ -->
 <!-- Pricing Section                                                    -->
 <!-- ------------------------------------------------------------------ -->
-<section class="band">
+<section class="band bg-[#050811]">
   <div class="text-center max-w-2xl mx-auto mb-12">
     <p class="eyebrow" data-ur="شفاف قیمت">Transparent Pricing</p>
-    <h2 class="mt-2 font-display text-3xl font-extrabold text-ink-900 tracking-tight" data-ur="ایک فون، ایک لاک۔ کوئی ماہانہ فیس نہیں۔">
+    <h2 class="mt-2 font-display text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-slate-300 tracking-tight" data-ur="ایک فون، ایک لاک۔ کوئی ماہانہ فیس نہیں۔">
       One phone, one lock. No monthly fees.
     </h2>
-    <p class="mt-3 text-body text-ink-500" data-ur="لاک پیکٹ میں خریدے جاتے ہیں اور ایک بار خرچ ہوتے ہیں۔ گاہک جب پوری قسطیں ادا کر دیتا ہے تو فون ہمیشہ کے لیے آزاد ہو جاتا ہے۔">
+    <p class="mt-3 text-body text-slate-400" data-ur="لاک پیکٹ میں خریدے جاتے ہیں اور ایک بار خرچ ہوتے ہیں۔ گاہک جب پوری قسطیں ادا کر دیتا ہے تو فون ہمیشہ کے لیے آزاد ہو جاتا ہے۔">
       Buy lock credits in bundles. One credit permanently secures one handset for its entire repayment lifecycle.
     </p>
   </div>
@@ -566,15 +604,15 @@ page: home
     <!-- Pack 30 -->
     <div class="surface p-6 flex flex-col justify-between">
       <div>
-        <p class="text-xs font-bold uppercase tracking-wider text-ink-500">Starter Pack</p>
-        <p class="mt-1 text-xl font-bold text-ink-900">30 Locks</p>
-        <p class="mt-4 font-display text-3xl font-extrabold text-ink-900 tabular-nums">Rs 24,000</p>
-        <p class="mt-1 text-caption text-ink-500" data-ur="آٹھ سو روپے فی ہینڈسیٹ">Rs 800 per handset</p>
+        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Starter Pack</p>
+        <p class="mt-1 text-xl font-bold text-white">30 Locks</p>
+        <p class="mt-4 font-display text-3xl font-extrabold text-white tabular-nums">Rs 24,000</p>
+        <p class="mt-1 text-caption text-slate-400" data-ur="آٹھ سو روپے فی ہینڈسیٹ">Rs 800 per handset</p>
 
-        <ul class="mt-6 space-y-2 text-caption text-ink-600">
-          <li class="flex items-center gap-2">✓ Full dashboard access</li>
-          <li class="flex items-center gap-2">✓ Automatic WhatsApp ledger</li>
-          <li class="flex items-center gap-2">✓ Remote lock &amp; auto-unlock</li>
+        <ul class="mt-6 space-y-2 text-caption text-slate-300">
+          <li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> Full dashboard access</li>
+          <li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> Automatic WhatsApp ledger</li>
+          <li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> Remote lock &amp; auto-unlock</li>
         </ul>
       </div>
 
@@ -582,21 +620,21 @@ page: home
     </div>
 
     <!-- Pack 50 (Featured) -->
-    <div class="surface p-6 flex flex-col justify-between border-2 border-accent-600 relative shadow-md">
-      <div class="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-accent-600 px-3 py-0.5 text-[10px] font-extrabold text-white uppercase tracking-wider">
+    <div class="surface p-6 flex flex-col justify-between border-2 border-blue-500 relative shadow-2xl shadow-blue-500/20 bg-gradient-to-b from-blue-950/30 to-slate-900/80">
+      <div class="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-3.5 py-0.5 text-[10px] font-extrabold text-white uppercase tracking-wider shadow-md shadow-blue-500/50">
         Most Popular
       </div>
       <div>
-        <p class="text-xs font-bold uppercase tracking-wider text-accent-700">Growth Pack</p>
-        <p class="mt-1 text-xl font-bold text-ink-900">50 Locks</p>
-        <p class="mt-4 font-display text-3xl font-extrabold text-accent-700 tabular-nums">Rs 35,000</p>
-        <p class="mt-1 text-caption text-ink-500" data-ur="سات سو روپے فی ہینڈسیٹ">Rs 700 per handset</p>
+        <p class="text-xs font-bold uppercase tracking-wider text-blue-400">Growth Pack</p>
+        <p class="mt-1 text-xl font-bold text-white">50 Locks</p>
+        <p class="mt-4 font-display text-3xl font-extrabold text-blue-400 tabular-nums">Rs 35,000</p>
+        <p class="mt-1 text-caption text-slate-400" data-ur="سات سو روپے فی ہینڈسیٹ">Rs 700 per handset</p>
 
-        <ul class="mt-6 space-y-2 text-caption text-ink-600">
-          <li class="flex items-center gap-2">✓ Save Rs 5,000 immediately</li>
-          <li class="flex items-center gap-2">✓ Full dealer command center</li>
-          <li class="flex items-center gap-2">✓ Multi-counter staff logins</li>
-          <li class="flex items-center gap-2">✓ Priority WhatsApp support</li>
+        <ul class="mt-6 space-y-2 text-caption text-slate-300">
+          <li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> Save Rs 5,000 immediately</li>
+          <li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> Full dealer command center</li>
+          <li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> Multi-counter staff logins</li>
+          <li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> Priority WhatsApp support</li>
         </ul>
       </div>
 
@@ -606,15 +644,15 @@ page: home
     <!-- Pack 100 -->
     <div class="surface p-6 flex flex-col justify-between">
       <div>
-        <p class="text-xs font-bold uppercase tracking-wider text-ink-500">Retailer Fleet</p>
-        <p class="mt-1 text-xl font-bold text-ink-900">100 Locks</p>
-        <p class="mt-4 font-display text-3xl font-extrabold text-ink-900 tabular-nums">Rs 60,000</p>
-        <p class="mt-1 text-caption text-ink-500" data-ur="چھ سو روپے فی ہینڈسیٹ">Rs 600 per handset</p>
+        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Retailer Fleet</p>
+        <p class="mt-1 text-xl font-bold text-white">100 Locks</p>
+        <p class="mt-4 font-display text-3xl font-extrabold text-white tabular-nums">Rs 60,000</p>
+        <p class="mt-1 text-caption text-slate-400" data-ur="چھ سو روپے فی ہینڈسیٹ">Rs 600 per handset</p>
 
-        <ul class="mt-6 space-y-2 text-caption text-ink-600">
-          <li class="flex items-center gap-2">✓ Maximum discount (Rs 600/lock)</li>
-          <li class="flex items-center gap-2">✓ Complete fleet telemetry</li>
-          <li class="flex items-center gap-2">✓ Free dealer staff onboarding</li>
+        <ul class="mt-6 space-y-2 text-caption text-slate-300">
+          <li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> Maximum discount (Rs 600/lock)</li>
+          <li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> Complete fleet telemetry</li>
+          <li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> Free dealer staff onboarding</li>
         </ul>
       </div>
 
@@ -626,36 +664,36 @@ page: home
 <!-- ------------------------------------------------------------------ -->
 <!-- FAQ                                                                 -->
 <!-- ------------------------------------------------------------------ -->
-<section class="border-t border-paper-300 bg-paper-50">
+<section class="border-t border-white/[0.08] bg-[#070B14]">
   <div class="band">
     <div class="text-center max-w-2xl mx-auto mb-12">
       <p class="eyebrow" data-ur="عام سوالات">Common Questions</p>
-      <h2 class="mt-2 font-display text-3xl font-extrabold text-ink-900 tracking-tight" data-ur="وہ سوالات جو ہر دکاندار پوچھتا ہے۔">
+      <h2 class="mt-2 font-display text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-slate-300 tracking-tight" data-ur="وہ سوالات جو ہر دکاندار پوچھتا ہے۔">
         Everything you need to know.
       </h2>
     </div>
 
     <div class="grid gap-6 sm:grid-cols-2 max-w-4xl mx-auto">
       <div class="surface p-6">
-        <p class="text-title font-bold text-ink-900" data-ur="کیا یہ قانونی ہے؟">Is this legal under Pakistani law?</p>
+        <p class="text-title font-bold text-white" data-ur="کیا یہ قانونی ہے؟">Is this legal under Pakistani law?</p>
         <p class="faq-a" data-ur="لاک اُسی صورت لگتا ہے جب گاہک نے دستخط شدہ معاہدے میں اس کی اجازت دی ہو، اور معاہدے میں یہ بات صاف لکھی ہوتی ہے۔ بغیر دستخط کے سسٹم لاک کرنے سے انکار کر دیتا ہے۔">
           Yes. A lock is strictly executed under an explicit, signed agreement between dealer and buyer authorizing device restriction upon default. Without that customer signature, the software prohibits lock activation.
         </p>
       </div>
       <div class="surface p-6">
-        <p class="text-title font-bold text-ink-900" data-ur="گاہک فون ری سیٹ کر دے تو؟">What if the buyer hard factory-resets the handset?</p>
+        <p class="text-title font-bold text-white" data-ur="گاہک فون ری سیٹ کر دے تو؟">What if the buyer hard factory-resets the handset?</p>
         <p class="faq-a" data-ur="ایپ ڈیوائس اونر کے طور پر سیٹ اپ کے وقت لگتی ہے، اس لیے ری سیٹ سے ختم نہیں ہوتی۔ یہی وجہ ہے کہ اندراج نئے یا ری سیٹ کیے ہوئے فون پر ہوتا ہے۔">
           The app is provisioned as Android Device Owner (Knox equivalent) during initial setup. A factory wipe retains management and automatically re-locks upon reboot.
         </p>
       </div>
       <div class="surface p-6">
-        <p class="text-title font-bold text-ink-900" data-ur="لاک ہونے پر کیا فون بالکل بےکار ہو جاتا ہے؟">Is a locked phone bricked?</p>
+        <p class="text-title font-bold text-white" data-ur="لاک ہونے پر کیا فون بالکل بےکار ہو جاتا ہے؟">Is a locked phone bricked?</p>
         <p class="faq-a" data-ur="نہیں۔ اسکرین پر باقی رقم اور ادائیگی کا طریقہ لکھا ہوتا ہے، اور ایمرجنسی کالیں چلتی رہتی ہیں۔ مقصد گاہک کو سزا دینا نہیں، ادائیگی تک پہنچانا ہے۔">
           No. Emergency calls (1122, 15) remain 100% active. The screen clearly guides the customer on how to pay at your shop or via JazzCash/EasyPaisa to restore full access.
         </p>
       </div>
       <div class="surface p-6">
-        <p class="text-title font-bold text-ink-900" data-ur="کیا رقم آپ کے اکاؤنٹ میں جاتی ہے؟">Do you collect our money?</p>
+        <p class="text-title font-bold text-white" data-ur="کیا رقم آپ کے اکاؤنٹ میں جاتی ہے؟">Do you collect our money?</p>
         <p class="faq-a" data-ur="نہیں۔ پیسہ آپ کے اپنے اکاؤنٹ میں آتا ہے۔ گاہک گھر سے ٹرانزیکشن آئی ڈی بھیج سکتا ہے، مگر جب تک آپ کا بندہ تصدیق نہ کرے، کوئی رقم منصوبے پر نہیں لگتی۔">
           Never. All installment payments go directly to your shop counter or your own JazzCash/bank accounts. We charge only for software lock credits.
         </p>
@@ -667,17 +705,21 @@ page: home
 <!-- ------------------------------------------------------------------ -->
 <!-- CTA Banner                                                          -->
 <!-- ------------------------------------------------------------------ -->
-<section class="border-t border-slate-800 bg-slate-950 text-white">
+<section class="border-t border-white/[0.08] bg-gradient-to-b from-[#070B14] to-[#04060C] text-white py-16">
   <div class="band text-center">
-    <h2 class="mx-auto max-w-2xl font-display text-3xl sm:text-4xl font-extrabold tracking-tight" data-ur="آج ہی اپنی دکان پر آزما کر دیکھیں۔">
+    <div class="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-4 py-1.5 text-xs font-semibold text-blue-300 backdrop-blur-md mb-6 shadow-[0_0_20px_rgba(59,130,246,0.2)]">
+      <span class="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+      <span>Live Fleet Sentinel Protection</span>
+    </div>
+    <h2 class="mx-auto max-w-2xl font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-slate-300" data-ur="آج ہی اپنی دکان پر آزما کر دیکھیں۔">
       Start Protecting Your Handset Sales Today.
     </h2>
     <p class="mx-auto mt-4 max-w-xl text-lede text-slate-300" data-ur="تیس لاک کے پیکٹ سے شروع کریں۔ کوئی ماہانہ فیس نہیں، کوئی مشکل معاہدہ نہیں۔">
       Join hundreds of forward-thinking Pakistani mobile retailers. Start with a pack of 30 locks. No monthly subscriptions, no lock-in.
     </p>
     <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
-      <a href="/pricing.html" class="btn-primary px-7 py-3.5 text-body font-bold rounded-xl shadow-lg shadow-blue-600/30" data-ur="قیمت اور آرڈر دیکھیں">Get Started Now</a>
-      <a href="/login" class="btn border border-white/20 bg-white/10 text-white hover:bg-white/20 px-6 py-3.5 rounded-xl" data-ur="ڈیلر لاگ اِن">Dealer Portal Login</a>
+      <a href="/pricing.html" class="btn-primary px-8 py-3.5 text-body font-bold rounded-xl shadow-lg shadow-blue-600/30 hover:shadow-blue-600/50" data-ur="قیمت اور آرڈر دیکھیں">Get Started Now</a>
+      <a href="#dashboard" class="btn border border-white/20 bg-white/5 text-white hover:bg-white/10 px-7 py-3.5 rounded-xl backdrop-blur-md" data-ur="ڈیش بورڈ دیکھیں">Explore Live Demo</a>
     </div>
   </div>
 </section>
