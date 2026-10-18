@@ -33,45 +33,45 @@
 
 @layer components {
   .surface {
-    @apply bg-paper-50 border border-paper-300 rounded-lg;
+    @apply bg-paper-50 border border-paper-300 rounded-xl shadow-sm transition-all hover:border-paper-400 hover:shadow-md;
   }
 
   .well {
-    @apply bg-paper-200/60 border border-paper-300/70 rounded-md;
+    @apply bg-paper-200/50 border border-paper-300/80 rounded-lg;
   }
 
   .eyebrow {
-    @apply text-micro font-semibold uppercase tracking-[0.08em] text-ink-400;
+    @apply text-micro font-bold uppercase tracking-[0.1em] text-accent-700;
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2 text-body
-           font-medium transition-colors;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-body
+           font-semibold transition-all duration-200;
   }
 
   .btn-primary {
-    @apply btn bg-accent-800 text-white hover:bg-accent-900;
+    @apply btn bg-accent-600 text-white shadow-sm hover:bg-accent-700 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0;
   }
 
   .btn-secondary {
-    @apply btn bg-paper-50 text-ink-700 border border-paper-300 hover:bg-paper-200;
+    @apply btn bg-paper-50 text-ink-700 border border-paper-300 shadow-sm hover:bg-paper-200 hover:border-paper-400 active:bg-paper-200;
   }
 
   .site-link {
-    @apply rounded-md px-2.5 py-1.5 text-body text-ink-500 transition-colors hover:bg-paper-200 hover:text-ink-900;
+    @apply rounded-lg px-3 py-1.5 text-body text-ink-500 transition-colors hover:bg-paper-200/80 hover:text-ink-900;
   }
 
   /* One rhythm for every band on the site, so the pages feel like one document. */
   .band {
-    @apply mx-auto max-w-5xl px-4 py-14 sm:px-6 sm:py-20;
+    @apply mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24;
   }
 
   .band-tight {
-    @apply mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12;
+    @apply mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16;
   }
 
   .prose-block p {
-    @apply mt-3 text-lede text-ink-700;
+    @apply mt-3 text-lede text-ink-700 leading-relaxed;
   }
 
   .prose-block p:first-child {
@@ -79,58 +79,79 @@
   }
 
   .figure {
-    @apply font-serif text-ink-900;
+    @apply font-bold text-ink-900 tracking-tight;
     font-variant-numeric: tabular-nums;
   }
 
   /* The answer half of the FAQ. */
   .faq-a {
-    @apply mt-2 text-body text-ink-500;
+    @apply mt-2 text-body text-ink-500 leading-relaxed;
+  }
+
+  /* Modern console panel styles */
+  .console-panel {
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .console-row {
+    transition: all 0.2s ease;
+  }
+  .console-row:hover {
+    background: rgba(255, 255, 255, 0.05);
   }
 }
 
 /* ---------------------------------------------------------------------------
    The stage
-   ---------------------------------------------------------------------------
-   The hero is dark and the rest of the site is paper. That is deliberate: the
-   drama belongs where the product introduces itself, and clarity belongs where
-   a shop owner is deciding whether to trust it with their money. A site that is
-   dark all the way down looks expensive and reads badly under a shop's tube
-   light — which is where this one is actually opened.
    --------------------------------------------------------------------------- */
 @layer components {
   .stage {
     background:
-      radial-gradient(120% 90% at 20% 0%, rgba(37, 106, 191, 0.28), transparent 60%),
-      radial-gradient(90% 70% at 85% 20%, rgba(18, 122, 84, 0.22), transparent 65%),
-      #0B0F16;
-    color: #F6F5F2;
+      radial-gradient(100% 70% at 50% -10%, rgba(37, 99, 235, 0.24), transparent 70%),
+      radial-gradient(70% 50% at 85% 15%, rgba(16, 185, 129, 0.16), transparent 60%),
+      radial-gradient(60% 60% at 15% 45%, rgba(99, 102, 241, 0.12), transparent 60%),
+      #070B12;
+    color: #F8FAFC;
+    position: relative;
   }
 
-  /* A hairline of light along the bottom edge, so the dark block ends on a
-     drawn line rather than a sudden stop. */
+  /* Fine tech grid background */
+  .stage::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: 
+      linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 36px 36px;
+    pointer-events: none;
+    mask-image: radial-gradient(ellipse 90% 70% at 50% 30%, #000 30%, transparent 80%);
+  }
+
   .stage-edge {
-    background-image: linear-gradient(90deg, transparent, rgba(246, 245, 242, 0.22), transparent);
+    background-image: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.3), rgba(16, 185, 129, 0.3), transparent);
     height: 1px;
   }
 
   .stage-eyebrow {
-    @apply text-micro font-semibold uppercase tracking-[0.14em];
-    color: rgba(246, 245, 242, 0.5);
+    @apply text-micro font-bold uppercase tracking-[0.14em];
+    color: #60A5FA;
   }
 
-  /* The handset. Built from a border and two radii rather than an image, so it
-     costs nothing to download and stays sharp on any screen. */
+  /* The handset */
   .handset {
-    background: linear-gradient(160deg, #1B2029, #0D1117);
+    background: linear-gradient(160deg, #1E293B, #0F172A);
     box-shadow:
-      0 0 0 1px rgba(246, 245, 242, 0.09),
-      0 40px 80px -20px rgba(0, 0, 0, 0.8),
-      0 0 120px -40px rgba(37, 106, 191, 0.5);
+      0 0 0 1px rgba(255, 255, 255, 0.12),
+      0 30px 60px -15px rgba(0, 0, 0, 0.9),
+      0 0 80px -20px rgba(37, 99, 235, 0.35);
   }
 
   .handset-screen {
-    background: linear-gradient(170deg, #101722, #0A0D13);
+    background: #090D16;
   }
 }
 

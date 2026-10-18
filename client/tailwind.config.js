@@ -19,19 +19,19 @@ export default {
   theme: {
     extend: {
       colors: {
-        /* Warm neutral ramp — the whole surface language. */
+        /* Modern crisp neutral ramp — sleek SaaS surface language */
         paper: {
-          50: '#FDFDFC',  // raised card
-          100: '#F6F5F2', // app canvas
-          200: '#EFEDE8', // sunken well / hover
-          300: '#E6E3DC', // hairline border
-          400: '#D5D1C7', // strong border
+          50: '#FFFFFF',  // raised card
+          100: '#F8FAFC', // app canvas
+          200: '#F1F5F9', // sunken well / hover
+          300: '#E2E8F0', // crisp hairline border
+          400: '#CBD5E1', // strong border
         },
         ink: {
-          900: '#171614', // headings
-          700: '#3D3B36', // body
-          500: '#6B6862', // secondary
-          400: '#8C8880', // muted / captions
+          900: '#0F172A', // crisp dark headings
+          700: '#334155', // clear readable body
+          500: '#64748B', // secondary
+          400: '#94A3B8', // muted / captions
         },
         /* The single accent. 600 is the interactive step, 800 the brand ground. */
         accent: {
@@ -39,28 +39,30 @@ export default {
           100: '#DCE8FA',
           200: '#B7D3F6',
           400: '#3987E5',
-          600: '#256ABF',
-          700: '#1C5CAB',
-          800: '#184F95',
-          900: '#12386B',
-          950: '#0C2444',
+          500: '#2563EB',
+          600: '#1D4ED8',
+          700: '#1E40AF',
+          800: '#1E3A8A',
+          900: '#172554',
+          950: '#0A1329',
         },
         /* Status. Reserved — never used as a "nice colour" for a card. */
-        positive: { 50: '#E9F5EF', 200: '#A8D9C3', 600: '#127A54', 700: '#0E5F42' },
-        caution:  { 50: '#FDF3E6', 200: '#F0CE9A', 600: '#A85B00', 700: '#8A4A00' },
-        critical: { 50: '#FCECEB', 200: '#F3B9B6', 600: '#C23934', 700: '#9E2B27' },
+        positive: { 50: '#ECFDF5', 200: '#A7F3D0', 600: '#059669', 700: '#047857' },
+        caution:  { 50: '#FFFBEB', 200: '#FDE68A', 600: '#D97706', 700: '#B45309' },
+        critical: { 50: '#FEF2F2', 200: '#FECACA', 600: '#DC2626', 700: '#B91C1C' },
         /* --- Legacy, pending the page-by-page migration ---------------------
            The shell and the dashboard are on the tokens above. The remaining
            pages still name these, and an unknown Tailwind class is silently
            dropped rather than flagged — so they stay, mapped onto the new
            neutrals, until each page is migrated. Do not use them in new code. */
-        navy: { 800: '#1F1D19', 900: '#171614', 950: '#0F0E0C' },
+        navy: { 800: '#1E293B', 900: '#0F172A', 950: '#020617' },
         /* Chart series. Validated: adjacent CVD ΔE 21.6, normal-vision ΔE 32.3. */
-        viz: { collection: '#2a78d6', overdue: '#e34948', grid: '#E6E3DC' },
+        viz: { collection: '#2563EB', overdue: '#DC2626', grid: '#E2E8F0' },
       },
       fontFamily: {
-        sans: ['Inter', 'Noto Naskh Arabic', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
-        serif: ['Newsreader', 'Noto Naskh Arabic', 'Georgia', 'serif'],
+        sans: ['Inter', 'Plus Jakarta Sans', 'Noto Naskh Arabic', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+        display: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+        serif: ['Plus Jakarta Sans', 'Noto Naskh Arabic', 'Inter', 'sans-serif'],
         mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       fontSize: {

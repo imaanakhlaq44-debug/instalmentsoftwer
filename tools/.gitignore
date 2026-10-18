@@ -1,0 +1,12 @@
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+source/out/
+source/tsconfig.tsbuildinfo
+/deploy/
+/deploy-previous/
+.DS_Store
+.env
+.env.*
+!.env.example

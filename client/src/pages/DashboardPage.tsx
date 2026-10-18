@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, QrCode, RefreshCw, ArrowRight, BadgeCheck } from 'lucide-react';
+import { Plus, QrCode, RefreshCw, ArrowRight, BadgeCheck, Wallet, ShieldAlert, TrendingUp } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { ApiService } from '../services/api.js';
 import { AddCustomerWizardModal } from '../components/modals/AddCustomerWizardModal.js';
@@ -175,53 +175,68 @@ export const DashboardPage: React.FC = () => {
       {/* ---------------------------------------------------------------- */}
       <Card flush>
         <div className="grid divide-y divide-paper-300 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          <div className="p-5">
-            <p className="eyebrow">Outstanding</p>
+          <div className="p-5.5 hover:bg-paper-100/50 transition-colors">
+            <div className="flex items-center justify-between">
+              <p className="eyebrow">Outstanding</p>
+              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-accent-50 text-accent-700">
+                <Wallet className="h-3.5 w-3.5" aria-hidden="true" />
+              </span>
+            </div>
             {loading && !stats ? (
               <Skeleton className="mt-2 h-9 w-40" />
             ) : (
-              <p className="figure mt-1.5">{money(stats?.outstandingAmount)}</p>
+              <p className="figure mt-2 text-2xl font-bold tracking-tight text-ink-900">{money(stats?.outstandingAmount)}</p>
             )}
             <p className="mt-1.5 text-caption text-ink-400">
               Financed balance still to be recovered
             </p>
           </div>
 
-          <div className="p-5">
-            <p className="eyebrow">At risk</p>
+          <div className="p-5.5 hover:bg-paper-100/50 transition-colors">
+            <div className="flex items-center justify-between">
+              <p className="eyebrow">At risk</p>
+              <span className={`flex h-6 w-6 items-center justify-center rounded-md ${stats?.overdueInstallmentsCount ? 'bg-critical-50 text-critical-700' : 'bg-positive-50 text-positive-700'}`}>
+                <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
+              </span>
+            </div>
             {loading && !stats ? (
               <Skeleton className="mt-2 h-9 w-32" />
             ) : (
-              <p className="figure mt-1.5">{money(stats?.overdueAmount)}</p>
+              <p className="figure mt-2 text-2xl font-bold tracking-tight text-ink-900">{money(stats?.overdueAmount)}</p>
             )}
             <p className="mt-1.5 text-caption">
               {stats?.overdueInstallmentsCount ? (
-                <span className="text-critical-700">
+                <span className="font-semibold text-critical-700">
                   {stats.overdueInstallmentsCount} instalments past due
                 </span>
               ) : (
-                <span className="text-positive-700">Nothing past due</span>
+                <span className="font-semibold text-positive-700">Nothing past due · Fleet healthy</span>
               )}
             </p>
           </div>
 
-          <div className="p-5">
-            <p className="eyebrow">Collected this month</p>
+          <div className="p-5.5 hover:bg-paper-100/50 transition-colors">
+            <div className="flex items-center justify-between">
+              <p className="eyebrow">Collected this month</p>
+              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-50 text-emerald-700">
+                <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />
+              </span>
+            </div>
             {loading && !stats ? (
               <Skeleton className="mt-2 h-9 w-32" />
             ) : (
-              <p className="figure mt-1.5">{money(collected)}</p>
+              <p className="figure mt-2 text-2xl font-bold tracking-tight text-ink-900">{money(collected)}</p>
             )}
             {targetPct !== null ? (
               <div className="mt-2.5">
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-paper-200">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-paper-200">
                   <div
-                    className="h-full rounded-full bg-accent-600 transition-[width] duration-500"
+                    className="h-full rounded-full bg-accent-600 transition-[width] duration-500 shadow-xs"
                     style={{ width: `${targetPct}%` }}
                   />
                 </div>
-                <p className="mt-1.5 text-caption text-ink-400 tabular">
-                  {targetPct}% of {moneyShort(target)} expected this month
+                <p className="mt-1.5 text-caption text-ink-500 tabular">
+                  <strong className="text-ink-900 font-semibold">{targetPct}%</strong> of {moneyShort(target)} expected this month
                 </p>
               </div>
             ) : (

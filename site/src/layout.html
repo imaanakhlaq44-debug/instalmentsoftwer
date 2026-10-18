@@ -15,44 +15,50 @@
       reader who never switches language, so the toggle fetches it on demand.
     -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/styles.css" />
   </head>
-  <body class="bg-paper-100 text-ink-700 font-sans text-body antialiased">
-    <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:m-3 focus:rounded focus:bg-paper-50 focus:px-3 focus:py-2">Skip to content</a>
+  <body class="bg-paper-100 text-ink-700 font-sans text-body antialiased selection:bg-accent-500/10 selection:text-accent-700">
+    <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:m-3 focus:rounded-md focus:bg-paper-50 focus:px-3 focus:py-2 focus:shadow-md">Skip to content</a>
 
-    <header class="sticky top-0 z-40 border-b border-paper-300 bg-paper-100/90 backdrop-blur-sm">
-      <div class="mx-auto flex h-14 max-w-5xl items-center gap-4 px-4 sm:px-6">
-        <a href="/" class="flex items-center gap-2 shrink-0">
-          <!-- WebP with a PNG beside it: the artwork is a third of the size in
-               WebP, and the fallback costs one line rather than a script. -->
+    <header class="sticky top-0 z-40 border-b border-paper-300/80 bg-paper-50/85 backdrop-blur-md transition-all">
+      <div class="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+        <a href="/" class="flex items-center gap-2.5 shrink-0 group">
           <picture>
             <source srcset="/logo-mark.webp" type="image/webp" />
-            <img src="/logo-mark.png" alt="" width="32" height="26" class="h-6 w-auto" />
+            <img src="/logo-mark.png" alt="" width="34" height="28" class="h-7 w-auto transition-transform group-hover:scale-105" />
           </picture>
-          <span class="text-lede font-semibold tracking-[-0.01em] text-ink-900">Almas SDM</span>
+          <div class="flex flex-col">
+            <span class="text-lede font-bold tracking-[-0.02em] text-ink-900 group-hover:text-accent-600 transition-colors">Almas SDM</span>
+            <span class="text-[10px] font-medium tracking-wider text-ink-400 uppercase -mt-1 hidden sm:block">Dealer Portal</span>
+          </div>
         </a>
 
-        <nav class="ms-auto hidden items-center gap-1 sm:flex" aria-label="Main">
-          <a href="/how-it-works.html" data-nav="how-it-works" class="site-link" data-ur="یہ کیسے چلتا ہے">How it works</a>
-          <a href="/pricing.html" data-nav="pricing" class="site-link" data-ur="قیمت">Pricing</a>
-          <a href="/dpc.html" data-nav="dpc" class="site-link" data-ur="ہینڈسیٹ ایپ">Handset app</a>
+        <nav class="hidden items-center gap-1 md:flex" aria-label="Main">
+          <a href="/#dashboard" class="site-link font-medium" data-ur="ڈیش بورڈ ڈیمو">Dashboard Demo</a>
+          <a href="/how-it-works.html" data-nav="how-it-works" class="site-link font-medium" data-ur="یہ کیسے چلتا ہے">How it works</a>
+          <a href="/pricing.html" data-nav="pricing" class="site-link font-medium" data-ur="قیمت">Pricing</a>
+          <a href="/dpc.html" data-nav="dpc" class="site-link font-medium" data-ur="ہینڈسیٹ ایپ">Handset app</a>
+          <a href="/rentwise/" class="site-link font-medium text-accent-700" data-ur="مفت ٹولز">Free Tools</a>
         </nav>
 
-        <div class="ms-auto flex items-center gap-2 sm:ms-0">
-          <!-- The toggle writes to localStorage, so a shop that reads Urdu only
-               chooses once. -->
+        <div class="flex items-center gap-2.5">
           <button
             type="button"
             id="lang-toggle"
-            class="rounded-md border border-paper-300 px-2.5 py-1 text-caption text-ink-700 transition-colors hover:bg-paper-200"
+            class="inline-flex items-center gap-1.5 rounded-lg border border-paper-300/90 bg-paper-50 px-3 py-1.5 text-caption font-semibold text-ink-700 shadow-sm transition-all hover:bg-paper-200 hover:border-paper-400"
             aria-label="Switch language"
           >
+            <svg class="h-3.5 w-3.5 text-ink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+            </svg>
             <span data-lang-label>اردو</span>
           </button>
-          <!-- signin --><a href="{{appUrl}}" class="btn-primary py-1.5 text-caption" data-ur="سائن اِن">Sign in</a><!-- /signin -->
+          <!-- signin --><a href="{{appUrl}}" class="btn-primary py-1.5 px-4 text-caption shadow-sm hover:shadow-md transition-all font-semibold rounded-lg" data-ur="ڈیلر لاگ اِن">
+            <span>Dealer Login</span>
+          </a><!-- /signin -->
         </div>
       </div>
     </header>
@@ -79,6 +85,12 @@
                 <li><a href="/how-it-works.html" class="site-link px-0" data-ur="یہ کیسے چلتا ہے">How it works</a></li>
                 <li><a href="/pricing.html" class="site-link px-0" data-ur="قیمت">Pricing</a></li>
                 <li><a href="/dpc.html" class="site-link px-0" data-ur="ہینڈسیٹ ایپ">Handset app</a></li>
+              </ul>
+            </div>
+            <div>
+              <p class="eyebrow" data-ur="مفت ٹولز">Free Tools</p>
+              <ul class="mt-2.5 space-y-1.5">
+                <li><a href="/rentwise/" class="site-link px-0" data-ur="کرایہ اور منتقل کیلکولیٹر">Rent &amp; Move Calculators</a></li>
               </ul>
             </div>
             <div>
