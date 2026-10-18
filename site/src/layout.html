@@ -19,6 +19,24 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/styles.css" />
+    <style>
+      /* Defensive layout fallbacks ensuring rock-solid rendering */
+      img { max-width: 100%; }
+      .header-logo-box { width: 34px; height: 28px; min-width: 34px; min-height: 28px; max-width: 34px; max-height: 28px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+      .header-logo-box img { width: 34px; height: 28px; max-width: 34px; max-height: 28px; object-fit: contain; display: block; }
+      @media (min-width: 768px) {
+        .nav-desktop-links { display: flex !important; }
+        .command-center-wrapper { display: flex !important; flex-direction: row !important; }
+        .command-console-col { width: 62% !important; flex: 1 1 62% !important; min-width: 0 !important; }
+        .command-phone-col { width: 38% !important; flex: 1 1 38% !important; min-width: 0 !important; }
+      }
+      @media (max-width: 767px) {
+        .nav-desktop-links { display: none !important; }
+        .command-center-wrapper { display: flex !important; flex-direction: column !important; }
+        .command-console-col { width: 100% !important; }
+        .command-phone-col { width: 100% !important; }
+      }
+    </style>
   </head>
   <body class="bg-paper-100 text-ink-700 font-sans text-body antialiased selection:bg-accent-500/10 selection:text-accent-700">
     <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:m-3 focus:rounded-md focus:bg-paper-50 focus:px-3 focus:py-2 focus:shadow-md">Skip to content</a>
@@ -26,9 +44,9 @@
     <header class="sticky top-0 z-40 border-b border-paper-300/80 bg-paper-50/85 backdrop-blur-md transition-all">
       <div class="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <a href="/" class="flex items-center gap-2.5 shrink-0 group">
-          <picture>
+          <picture class="header-logo-box shrink-0">
             <source srcset="/logo-mark.webp" type="image/webp" />
-            <img src="/logo-mark.png" alt="" width="34" height="28" class="h-7 w-auto transition-transform group-hover:scale-105" />
+            <img src="/logo-mark.png" alt="Almas SDM" width="34" height="28" class="h-7 w-auto transition-transform group-hover:scale-105" />
           </picture>
           <div class="flex flex-col">
             <span class="text-lede font-bold tracking-[-0.02em] text-ink-900 group-hover:text-accent-600 transition-colors">Almas SDM</span>
@@ -36,7 +54,7 @@
           </div>
         </a>
 
-        <nav class="hidden items-center gap-1 md:flex" aria-label="Main">
+        <nav class="nav-desktop-links hidden items-center gap-1 md:flex" aria-label="Main">
           <a href="/#dashboard" class="site-link font-medium" data-ur="ڈیش بورڈ ڈیمو">Dashboard Demo</a>
           <a href="/how-it-works.html" data-nav="how-it-works" class="site-link font-medium" data-ur="یہ کیسے چلتا ہے">How it works</a>
           <a href="/pricing.html" data-nav="pricing" class="site-link font-medium" data-ur="قیمت">Pricing</a>
@@ -69,9 +87,9 @@
       <div class="mx-auto max-w-5xl px-4 py-10 sm:px-6">
         <div class="flex flex-col gap-8 sm:flex-row sm:justify-between">
           <div class="max-w-xs">
-            <picture>
+            <picture class="block shrink-0 overflow-hidden" style="max-width: 180px; height: 50px;">
               <source srcset="/logo-lockup.webp" type="image/webp" />
-              <img src="/logo-lockup.png" alt="Almas SDM" width="720" height="629" loading="lazy" decoding="async" class="mb-3 h-16 w-auto" />
+              <img src="/logo-lockup.png" alt="Almas SDM" width="180" height="50" loading="lazy" decoding="async" style="max-width: 180px; height: 50px; object-fit: contain; display: block;" class="mb-3 h-12 w-auto" />
             </picture>
             <p class="mt-2 text-caption text-ink-500" data-ur="پاکستانی موبائل دکانوں کے لیے قسط اور ڈیوائس مینجمنٹ۔">
               Instalment and device management for Pakistani mobile shops.

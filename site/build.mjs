@@ -58,10 +58,12 @@ function readMeta(html) {
 }
 
 async function build() {
+  const BUILD_VERSION = Date.now().toString(36);
   const rawLayout = await readFile(path.join(SRC, 'layout.html'), 'utf8');
-  const layout = HAS_APP
+  const layoutWithApp = HAS_APP
     ? rawLayout.replace(/<!--\s*\/?signin\s*-->/g, '')
     : rawLayout.replace(/<!--\s*signin\s*-->[\s\S]*?<!--\s*\/signin\s*-->/g, '');
+  const layout = layoutWithApp.replaceAll('/styles.css', `/styles.css?v=${BUILD_VERSION}`);
   const pages = (await readdir(path.join(SRC, 'pages'))).filter((f) => f.endsWith('.html'));
 
   await mkdir(OUT, { recursive: true });
