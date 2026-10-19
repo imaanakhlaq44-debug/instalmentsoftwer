@@ -38,10 +38,10 @@
       }
     </style>
   </head>
-  <body class="bg-[#050811] text-slate-200 font-sans text-body antialiased selection:bg-blue-600/30 selection:text-blue-200">
-    <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:m-3 focus:rounded-md focus:bg-slate-900 focus:text-white focus:px-3 focus:py-2 focus:shadow-md">Skip to content</a>
+  <body class="bg-white text-slate-800 font-sans text-body antialiased selection:bg-emerald-100 selection:text-emerald-900">
+    <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:m-3 focus:rounded-md focus:bg-emerald-700 focus:text-white focus:px-3 focus:py-2 focus:shadow-md">Skip to content</a>
 
-    <header class="sticky top-0 z-40 border-b border-white/[0.08] bg-[#070B14]/85 backdrop-blur-xl transition-all">
+    <header class="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-md transition-all shadow-xs">
       <div class="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <a href="/" class="flex items-center gap-2.5 shrink-0 group">
           <picture class="header-logo-box shrink-0">
@@ -49,32 +49,40 @@
             <img src="/logo-mark.png" alt="Almas SDM" width="34" height="28" class="h-7 w-auto transition-transform group-hover:scale-105" />
           </picture>
           <div class="flex flex-col">
-            <span class="text-base font-bold tracking-[-0.02em] text-white group-hover:text-blue-400 transition-colors">Almas SDM</span>
-            <span class="text-[10px] font-semibold tracking-wider text-blue-400/90 uppercase -mt-0.5 hidden sm:block">Sentinel Portal</span>
+            <span class="text-base font-bold tracking-[-0.02em] text-slate-900 group-hover:text-emerald-700 transition-colors">Almas SDM</span>
+            <span class="text-[10px] font-semibold tracking-wider text-emerald-700 uppercase -mt-0.5 hidden sm:block" data-ur="موبائل دکان کھاتہ">Mobile Retailer Portal</span>
           </div>
         </a>
 
         <nav class="nav-desktop-links hidden items-center gap-1.5 md:flex" aria-label="Main">
-          <a href="/#dashboard" class="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-300 transition-colors hover:bg-white/[0.06] hover:text-white" data-ur="ڈیش بورڈ ڈیمو">Dashboard Demo</a>
-          <a href="/how-it-works.html" data-nav="how-it-works" class="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-300 transition-colors hover:bg-white/[0.06] hover:text-white" data-ur="یہ کیسے چلتا ہے">How it works</a>
-          <a href="/pricing.html" data-nav="pricing" class="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-300 transition-colors hover:bg-white/[0.06] hover:text-white" data-ur="قیمت">Pricing</a>
-          <a href="/dpc.html" data-nav="dpc" class="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-300 transition-colors hover:bg-white/[0.06] hover:text-white" data-ur="ہینڈسیٹ ایپ">Handset app</a>
-          <a href="/rentwise/" class="rounded-lg px-3 py-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 transition-all hover:bg-emerald-500/20 hover:text-emerald-300" data-ur="مفت ٹولز">Free Tools</a>
+          <a href="/#dashboard" class="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-emerald-50 hover:text-emerald-800" data-ur="کھاتہ ڈیمو">Khata Demo</a>
+          <a href="/how-it-works.html" data-nav="how-it-works" class="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-emerald-50 hover:text-emerald-800" data-ur="یہ کیسے چلتا ہے">How it works</a>
+          <a href="/pricing.html" data-nav="pricing" class="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-emerald-50 hover:text-emerald-800" data-ur="قیمت اور پیکجز">Pricing</a>
+          <a href="/dpc.html" data-nav="dpc" class="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-emerald-50 hover:text-emerald-800" data-ur="ہینڈسیٹ ایپ">Handset app</a>
+          <a href="/rentwise/" class="rounded-lg px-3 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 transition-all hover:bg-emerald-100" data-ur="مفت ٹولز">Free Tools</a>
         </nav>
 
-        <div class="flex items-center gap-2.5">
+        <div class="flex items-center gap-2">
           <button
             type="button"
             id="lang-toggle"
-            class="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-slate-200 shadow-sm transition-all hover:bg-white/10 hover:border-white/20"
+            class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-100"
             aria-label="Switch language"
           >
-            <svg class="h-3.5 w-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg class="h-3.5 w-3.5 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
             </svg>
             <span data-lang-label>اردو</span>
           </button>
-          <!-- signin --><a href="{{appUrl}}" class="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 px-4 py-1.5 text-xs font-bold text-white shadow-lg shadow-blue-500/25 border border-blue-400/30 transition-all hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-100" data-ur="ڈیلر لاگ اِن">
+          
+          <a href="https://wa.me/923000000000?text=Salam%2C%20Almas%20SDM%20Mobile%20Installment%20Software%20ki%20detail%20chahiye" target="_blank" rel="noopener noreferrer" class="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-[#25D366] hover:bg-[#20bd5a] px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-all hover:scale-[1.02]" data-ur="واٹس ایپ">
+            <svg class="h-3.5 w-3.5 fill-current" viewBox="0 0 24 24">
+              <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.861.174.086.275.072.376-.044.102-.115.434-.506.549-.68.116-.173.232-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.043.073.043.42-.101.825zM12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.98-1.306A9.957 9.957 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18.167c-1.637 0-3.153-.497-4.417-1.353l-.317-.215-2.957.776.789-2.883-.232-.369A8.127 8.127 0 013.833 12c0-4.503 3.664-8.167 8.167-8.167 4.502 0 8.167 3.664 8.167 8.167 0 4.503-3.665 8.167-8.167 8.167z"/>
+            </svg>
+            <span>WhatsApp</span>
+          </a>
+
+          <!-- signin --><a href="{{appUrl}}" class="inline-flex items-center justify-center rounded-lg bg-emerald-700 hover:bg-emerald-800 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition-all hover:scale-[1.02]" data-ur="ڈیلر لاگ اِن">
             <span>Dealer Login</span>
           </a><!-- /signin -->
         </div>
@@ -83,13 +91,27 @@
 
     <main id="main">{{content}}</main>
 
-    <footer class="mt-24 border-t border-white/[0.08] bg-[#03060C] text-slate-400">
+    <!-- Floating WhatsApp Action Button -->
+    <a
+      href="https://wa.me/923000000000?text=Salam%2C%20Almas%20SDM%20Mobile%20Installment%20Software%20ki%20detail%20chahiye"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-[#25D366] px-4 py-3 text-white shadow-xl hover:bg-[#20bd5a] hover:scale-105 active:scale-95 transition-all"
+      aria-label="WhatsApp Contact"
+    >
+      <svg class="h-6 w-6 fill-current" viewBox="0 0 24 24">
+        <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.861.174.086.275.072.376-.044.102-.115.434-.506.549-.68.116-.173.232-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.043.073.043.42-.101.825zM12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.98-1.306A9.957 9.957 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18.167c-1.637 0-3.153-.497-4.417-1.353l-.317-.215-2.957.776.789-2.883-.232-.369A8.127 8.127 0 013.833 12c0-4.503 3.664-8.167 8.167-8.167 4.502 0 8.167 3.664 8.167 8.167 0 4.503-3.665 8.167-8.167 8.167z"/>
+      </svg>
+      <span class="text-xs font-bold" data-ur="واٹس ایپ رابطہ">WhatsApp</span>
+    </a>
+
+    <footer class="mt-20 border-t border-slate-200 bg-slate-900 text-slate-300">
       <div class="mx-auto max-w-5xl px-4 py-12 sm:px-6">
         <div class="flex flex-col gap-8 sm:flex-row sm:justify-between">
           <div class="max-w-xs">
             <picture class="block shrink-0 overflow-hidden" style="max-width: 180px; height: 50px;">
               <source srcset="/logo-lockup.webp" type="image/webp" />
-              <img src="/logo-lockup.png" alt="Almas SDM" width="180" height="50" loading="lazy" decoding="async" style="max-width: 180px; height: 50px; object-fit: contain; display: block;" class="mb-3 h-12 w-auto" />
+              <img src="/logo-lockup.png" alt="Almas SDM" width="180" height="50" loading="lazy" decoding="async" style="max-width: 180px; height: 50px; object-fit: contain; display: block;" class="mb-3 h-12 w-auto brightness-200" />
             </picture>
             <p class="mt-2 text-xs text-slate-400" data-ur="پاکستانی موبائل دکانوں کے لیے قسط اور ڈیوائس مینجمنٹ۔">
               Hardware-enforced instalment &amp; device risk sentinel for Pakistani mobile shops.
@@ -98,10 +120,10 @@
 
           <div class="flex gap-10">
             <div>
-              <p class="text-xs font-bold uppercase tracking-wider text-blue-400" data-ur="پروڈکٹ">Product</p>
+              <p class="text-xs font-bold uppercase tracking-wider text-emerald-400" data-ur="پروڈکٹ">Product</p>
               <ul class="mt-3 space-y-2 text-xs">
                 <li><a href="/how-it-works.html" class="text-slate-400 hover:text-white transition-colors" data-ur="یہ کیسے چلتا ہے">How it works</a></li>
-                <li><a href="/pricing.html" class="text-slate-400 hover:text-white transition-colors" data-ur="قیمت">Pricing</a></li>
+                <li><a href="/pricing.html" class="text-slate-400 hover:text-white transition-colors" data-ur="قیمت اور پیکجز">Pricing</a></li>
                 <li><a href="/dpc.html" class="text-slate-400 hover:text-white transition-colors" data-ur="ہینڈسیٹ ایپ">Handset app</a></li>
               </ul>
             </div>
@@ -120,7 +142,7 @@
           </div>
         </div>
 
-        <p class="mt-10 border-t border-white/[0.08] pt-6 text-xs text-slate-500" data-ur="ایک فون تبھی لاک ہوتا ہے جب گاہک نے دستخط شدہ معاہدے میں اس کی اجازت دی ہو۔">
+        <p class="mt-10 border-t border-slate-800 pt-6 text-xs text-slate-500" data-ur="ایک فون تبھی لاک ہوتا ہے جب گاہک نے دستخط شدہ معاہدے میں اس کی اجازت دی ہو۔">
           A handset is strictly locked where the buyer has signed an explicit digital agreement. Powered by Knox DPC Device Owner enforcement.
         </p>
       </div>
