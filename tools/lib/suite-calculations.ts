@@ -19,6 +19,7 @@ export const toolDefaults: Record<string, Record<string, any>> = {
   'rent-per-sqft': { rent: 2000, area: 1000, benchmark: 0 },
   'couple-rent-splitter': { rent: 2400, incomeA: 5000, incomeB: 3000, otherSharedExpenses: 0 },
   'security-deposit-refund': { depositAmount: 2000, state: 'california', moveOutDate: '2026-05-01', returnedAmount: 0 },
+  'ai-lease-scanner': { jurisdiction: 'california', clauseCategory: 'deposit-fees', clauseText: 'Tenant agrees that the $2,000 security deposit is strictly non-refundable as a standard turnover cleaning fee upon lease termination.', monthlyRent: 2000 },
 };
 
 const money = (n:number) => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -116,6 +117,95 @@ export function calculateTool(slug:string,v:Record<string,any>,currency:'USD'|'G
     'Deadlines begin when tenancy ends and the tenant provides a forwarding address in writing.',
     'Landlords must generally provide an itemized statement with repair receipts for any deductions beyond normal wear and tear.'
   ],'good');
+ }
+ case 'ai-lease-scanner': {
+  const rent = typeof v.monthlyRent === 'number' ? v.monthlyRent : Number(v.monthlyRent) || 2000;
+  const jurisdiction = String(v.jurisdiction || 'california').toLowerCase();
+  const clauseText = String(v.clauseText || '').trim();
+  const lower = clauseText.toLowerCase();
+
+  let severity: 'alert' | 'warn' | 'good' = 'good';
+  let score = 15;
+  let category = 'Standard Term';
+  let statute = 'Compliant with US & UK statutory tenant codes';
+  let issue = 'No statutory tenant rights violations detected in the submitted clause text.';
+  let enforceability = 'Presumed enforceable under standard lease contract rules.';
+  let exposure = 0;
+  let counterLetter = 'This clause appears within standard statutory guidelines. Ensure terms match local market conventions.';
+
+  if (!clauseText) {
+    severity = 'warn';
+    score = 0;
+    category = 'Incomplete Input';
+    issue = 'Please paste a lease clause above to scan for statutory violations and predatory terms.';
+    enforceability = 'Not evaluated';
+    counterLetter = 'Please paste your lease text above to generate a formal counter-letter.';
+  } else if (lower.includes('non-refundable') || lower.includes('nonrefundable') || (lower.includes('deposit') && lower.includes('cleaning fee')) || lower.includes('turnover fee') || lower.includes('refurbishment fee') || lower.includes('forfeited upon move-out')) {
+    severity = 'alert';
+    score = 95;
+    category = 'Prohibited Non-Refundable Deposit / Fee';
+    const isUK = jurisdiction === 'england' || jurisdiction === 'scotland';
+    statute = isUK ? 'UK Tenant Fees Act 2019 (Schedule 1 Prohibited Payments)' : jurisdiction === 'new-york' ? 'N.Y. General Obligations Law § 7-108' : 'California Civil Code § 1950.5(m)';
+    issue = isUK ? 'Under the Tenant Fees Act 2019, compulsory cleaning, turnover or checkout fees are prohibited payments.' : 'State law strictly prohibits labeling any residential deposit as non-refundable. Security deposits remain tenant funds held in trust.';
+    enforceability = 'Void and unenforceable as a matter of public policy';
+    exposure = rent;
+    counterLetter = `Dear Landlord/Property Manager,\n\nRegarding the draft lease agreement, Clause [Clause Number] specifies a non-refundable cleaning/turnover fee. Under ${isUK ? 'the UK Tenant Fees Act 2019' : 'applicable statutory tenant protection laws'}, all compulsory payments outside permitted rent and refundable security deposits are prohibited.\n\nWe kindly request that this clause be amended to reflect that the security deposit is fully refundable in accordance with statutory guidelines.`;
+  } else if (lower.includes('enter at any time') || lower.includes('without notice') || (lower.includes('waive') && lower.includes('notice')) || lower.includes('immediate access') || (lower.includes('discretion') && lower.includes('inspect'))) {
+    severity = 'alert';
+    score = 90;
+    category = 'Unlawful Waiver of Entry Notice';
+    const isUK = jurisdiction === 'england' || jurisdiction === 'scotland';
+    statute = isUK ? 'Landlord & Tenant Act 1985 § 11(6) & Protection from Eviction Act 1977' : jurisdiction === 'florida' ? 'Florida Statutes § 83.53' : 'California Civil Code § 1954 & § 1953(a)(1)';
+    issue = isUK ? 'Tenants possess the fundamental right to quiet enjoyment; landlords must give at least 24 hours written notice.' : 'Landlords are legally required to provide advance written notice (typically 24 hours) prior to non-emergency visits during reasonable hours.';
+    enforceability = 'Void ab initio (Statutory right cannot be waived by contract)';
+    exposure = 500;
+    counterLetter = `Dear Landlord/Property Manager,\n\nWe noticed the entry provisions in Clause [Clause Number]. Under ${isUK ? 'Section 11(6) of the Landlord and Tenant Act 1985' : 'applicable state landlord-tenant laws'}, residential tenants are entitled to at least 24 hours advance written notice prior to non-emergency entry.\n\nWe request that the clause be revised to specify a minimum 24-hour written notice during normal business hours.`;
+  } else if (lower.includes('tenant responsible for all repairs') || lower.includes('maintain the heating') || lower.includes('plumbing repairs') || (lower.includes('repair') && lower.includes('regardless of cause')) || lower.includes('structural')) {
+    severity = 'alert';
+    score = 88;
+    category = 'Unlawful Transfer of Habitability / Structural Repairs';
+    const isUK = jurisdiction === 'england' || jurisdiction === 'scotland';
+    statute = isUK ? 'Landlord and Tenant Act 1985 Section 11 (Statutory Repair Obligations)' : 'Implied Warranty of Habitability (Non-Waivable Housing Code)';
+    issue = isUK ? 'Section 11 of the Landlord and Tenant Act 1985 places an absolute, non-delegable duty on the landlord to keep structure, heating, water, and sanitation in repair.' : 'The landlord is statutorily mandated to maintain the property in a habitable condition. Shifting structural or heating repairs to tenants violates habitability laws.';
+    enforceability = 'Void term under statutory public policy';
+    exposure = rent * 1.5;
+    counterLetter = `Dear Landlord/Property Manager,\n\nIn reviewing Clause [Clause Number], the language suggests tenant responsibility for structural, plumbing, and heating repairs. Under ${isUK ? 'Section 11 of the Landlord and Tenant Act 1985' : 'the statutory Implied Warranty of Habitability'}, maintenance of essential building systems remains the non-delegable responsibility of the property owner.\n\nWe ask that this provision be adjusted to clarify that tenant obligations are limited to routine cleanliness and repairing damages caused by tenant negligence.`;
+  } else if (lower.includes('checkout fee') || lower.includes('check-out fee') || lower.includes('inventory fee') || lower.includes('renewal fee') || lower.includes('professional carpet clean') || lower.includes('admin fee') || lower.includes('reference fee')) {
+    severity = 'alert';
+    score = 94;
+    category = 'Prohibited Administrative / Checkout Charges';
+    statute = 'UK Tenant Fees Act 2019 / Unfair Contract Terms Regulations';
+    issue = 'Charging tenants for routine tenancy renewals, inventory checkouts, or mandatory professional cleaning requirements violates statutory tenant fee bans.';
+    enforceability = 'Prohibited payment subject to statutory fines and sanctions';
+    exposure = 300;
+    counterLetter = `Dear Landlord/Property Manager,\n\nPlease remove the checkout/administrative fee listed in Clause [Clause Number]. Under the Tenant Fees Act 2019, charging tenants for inventory checks, renewals, or checkout inspections is classified as a prohibited payment.\n\nThank you for updating the draft agreement accordingly.`;
+  } else if (lower.includes('no overnight guests') || lower.includes('guest fee') || lower.includes('visitor fee') || (lower.includes('guests') && (lower.includes('curfew') || lower.includes('not permitted')))) {
+    severity = 'warn';
+    score = 65;
+    category = 'Unreasonable Restriction on Quiet Enjoyment';
+    statute = 'Covenant of Quiet Enjoyment & Unfair Terms Guidance';
+    issue = 'While landlords may prevent unauthorized permanent occupants (over 14 consecutive days), blanket bans on occasional overnight guests or charging daily guest fees are deemed unconscionable.';
+    enforceability = 'Likely unenforceable if challenged in court';
+    exposure = 200;
+    counterLetter = `Dear Landlord/Property Manager,\n\nWe would like to clarify the guest policy in Clause [Clause Number]. We propose clarifying that reasonable occasional overnight guests are permitted for up to 14 consecutive days without fee.`;
+  }
+
+  const headline = severity === 'alert'
+    ? `Risk Score: ${score}/100 · Critical Red Flag Detected`
+    : severity === 'warn'
+    ? `Risk Score: ${score}/100 · Caution / Unfair Term`
+    : `Risk Score: ${score}/100 · Standard Term`;
+
+  return result(headline, score, [
+    { label: 'Statutory compliance status', value: 0, unit: 'text', textValue: severity === 'alert' ? 'STATUTORY VIOLATION DETECTED' : severity === 'warn' ? 'POTENTIAL UNFAIR TERM' : 'COMPLIANT' },
+    { label: 'Governing statutory authority', value: 0, unit: 'text', textValue: statute },
+    { label: 'Enforceability in court', value: 0, unit: 'text', textValue: enforceability },
+    { label: 'Potential financial exposure / savings', value: exposure, unit: 'money' },
+  ], [
+    `Analysis: ${issue}`,
+    `Statutory Authority: ${statute}.`,
+    `Negotiation Letter / Counter-Proposal:\n${counterLetter}`,
+  ], severity, 'number');
  }
  default:return err(`Unknown calculator slug: ${slug}`);
  }

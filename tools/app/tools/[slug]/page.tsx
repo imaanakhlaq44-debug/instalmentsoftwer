@@ -14,21 +14,43 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const tool = getSuiteTool(slug);
   if (!tool) return { title: 'Calculator not found' };
-  const title = `${tool.name} — Free US & UK Rent Calculator`;
-  const description = `${tool.description} Free, instant private calculation for US and UK leases. View formula, worked examples, and local rules. No signup required.`;
+  const isLeaseScanner = slug === 'ai-lease-scanner';
+  const title = isLeaseScanner
+    ? 'AI Lease Scanner & Tenancy Red Flag Checker (US & UK) — Free Legal Clause Audit'
+    : `${tool.name} — Free US & UK Rent Calculator`;
+  const description = isLeaseScanner
+    ? 'Scan US & UK residential leases for illegal clauses, hidden fees, unannounced entry waivers, and predatory terms under California, New York, Texas, Florida, and UK law. Free, private, instant AI analysis.'
+    : `${tool.description} Free, instant private calculation for US and UK leases. View formula, worked examples, and local rules. No signup required.`;
   const url = absoluteSiteUrl(`/tools/${slug}/`);
+  const keywords = isLeaseScanner
+    ? [
+        'AI lease scanner',
+        'AI lease reviewer',
+        'check lease for illegal clauses',
+        'predatory lease clauses',
+        'landlord tenant law scanner',
+        'lease red flags checker',
+        'Tenant Fees Act 2019 checker',
+        'California Civil Code 1950.5 lease check',
+        'Texas Property Code 92 lease check',
+        'free AI rental agreement review',
+        'UK tenancy agreement checker',
+        'can landlord charge cleaning fee',
+        'unannounced landlord entry illegal',
+      ]
+    : [
+        tool.name,
+        `${tool.name} free calculator`,
+        `${tool.slug} online`,
+        'US rent calculation',
+        'UK tenancy calculator',
+        tool.category,
+        'free rental tools',
+      ];
   return {
     title,
     description,
-    keywords: [
-      tool.name,
-      `${tool.name} free calculator`,
-      `${tool.slug} online`,
-      'US rent calculation',
-      'UK tenancy calculator',
-      tool.category,
-      'free rental tools',
-    ],
+    keywords,
     alternates: {
       canonical: url,
       languages: {

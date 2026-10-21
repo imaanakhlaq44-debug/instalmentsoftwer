@@ -2,7 +2,7 @@ import type { ToolGuide } from '@/lib/content/toolGuides';
 import { SUITE_TOOLS } from '@/lib/tool-registry';
 
 /** Server-rendered guide: native details/summary keeps FAQs usable without JavaScript. */
-export default function ToolSEOContent({ title, introduction, formula, example, legalNotes, faqs, currentSlug }: ToolGuide & { currentSlug?: string }) {
+export default function ToolSEOContent({ title, introduction, formula, example, legalNotes, faqs, table, checklist, currentSlug }: ToolGuide & { currentSlug?: string }) {
   const relatedTools = SUITE_TOOLS.filter(tool => !currentSlug || tool.slug !== currentSlug).slice(0, 6);
 
   return (
@@ -28,6 +28,58 @@ export default function ToolSEOContent({ title, introduction, formula, example, 
           </div>
         </div>
       </header>
+
+      {/* Predatory Clause Red Flag Checklist (if available) */}
+      {checklist ? (
+        <section className="rounded-2xl border border-rose-500/30 bg-rose-950/10 p-5 sm:p-8" aria-labelledby="guide-checklist">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-500/20 text-xs font-bold text-rose-400">!</span>
+            <h2 id="guide-checklist" className="text-xl font-semibold text-rose-200">{checklist.title}</h2>
+          </div>
+          <p className="mt-2 text-sm leading-6 text-slate-300">{checklist.description}</p>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            {checklist.items.map((item, idx) => (
+              <div key={idx} className="rounded-xl border border-rose-500/20 bg-zinc-950/70 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-rose-300">{item.label}</h3>
+                  <span className="shrink-0 rounded bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-rose-300">{item.tag}</span>
+                </div>
+                <p className="mt-2 text-xs leading-5 text-slate-300">{item.detail}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {/* Statutory Comparison Table (for Perplexity & Google AI Overviews) */}
+      {table ? (
+        <section className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 sm:p-8" aria-labelledby="guide-table">
+          <h2 id="guide-table" className="text-xl font-semibold">{table.caption}</h2>
+          <p className="mt-2 text-sm text-slate-300">Statutory comparison across major United States and United Kingdom rental jurisdictions:</p>
+          <div className="mt-5 overflow-x-auto rounded-xl border border-zinc-800">
+            <table className="w-full text-left text-xs sm:text-sm">
+              <thead className="border-b border-zinc-800 bg-zinc-950/80 text-emerald-300">
+                <tr>
+                  {table.headers.map((header, idx) => (
+                    <th key={idx} className="px-3.5 py-3 font-semibold uppercase tracking-wider text-[11px] sm:text-xs">{header}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-800/60 bg-zinc-900/30 text-slate-200">
+                {table.rows.map((row, rowIdx) => (
+                  <tr key={rowIdx} className="transition hover:bg-zinc-800/40">
+                    {row.map((cell, cellIdx) => (
+                      <td key={cellIdx} className={`px-3.5 py-3 ${cellIdx === 0 ? 'font-semibold text-emerald-200' : 'text-slate-300'}`}>
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
 
       <section className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 sm:p-8" aria-labelledby="guide-how">
         <h2 id="guide-how" className="text-xl font-semibold">How it works &amp; the mathematical formula</h2>

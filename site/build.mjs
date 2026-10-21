@@ -104,6 +104,12 @@ async function build() {
   if (existsSync(path.join(ROOT, 'public'))) {
     await cp(path.join(ROOT, 'public'), OUT, { recursive: true });
   }
+
+  const toolsOut = path.join(ROOT, '..', 'tools', 'out');
+  if (existsSync(toolsOut)) {
+    await cp(toolsOut, path.join(OUT, 'rentwise'), { recursive: true });
+    process.stdout.write('  rentwise/ (from tools/out)\n');
+  }
 }
 
 await build();

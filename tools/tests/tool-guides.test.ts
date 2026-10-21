@@ -5,7 +5,7 @@ import { getToolGuide, toolGuides } from '../lib/content/toolGuides';
 import { buildToolSchema, serializeToolSchema } from '../lib/content/toolSchema';
 import { calculateTool } from '../lib/suite-calculations';
 
-const slugs = ['prorated-rent', 'rent-affordability', 'roommate-rent-splitter', 'rent-vs-buy', 'rent-increase', 'move-in-cash', 'utility-splitter', 'moving-cost-estimator', 'commute-vs-rent', 'sublease-rate', 'cap-rate-calculator', 'rent-per-sqft', 'couple-rent-splitter', 'security-deposit-refund'];
+const slugs = ['prorated-rent', 'rent-affordability', 'roommate-rent-splitter', 'rent-vs-buy', 'rent-increase', 'move-in-cash', 'utility-splitter', 'moving-cost-estimator', 'commute-vs-rent', 'sublease-rate', 'cap-rate-calculator', 'rent-per-sqft', 'couple-rent-splitter', 'security-deposit-refund', 'ai-lease-scanner'];
 
 test('all registered tools receive complete, sourced guides', () => {
   assert.deepEqual(Object.keys(toolGuides).sort(), [...slugs].sort());

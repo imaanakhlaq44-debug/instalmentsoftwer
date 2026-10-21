@@ -12,6 +12,11 @@ export const metadata: Metadata = {
   description: siteDescription,
   applicationName: 'RentWise Tools',
   keywords: [
+    'AI lease scanner',
+    'AI lease reviewer',
+    'check lease for illegal clauses',
+    'tenancy agreement AI checker',
+    'predatory lease clauses US UK',
     'rent calculator',
     'free rent calculator',
     'prorated rent calculator',

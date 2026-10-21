@@ -1,4 +1,23 @@
 User-agent: *
 Allow: /
 
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
 Sitemap: https://almassdm.pro/sitemap.xml
+Sitemap: https://almassdm.pro/rentwise/sitemap.xml

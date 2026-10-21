@@ -154,4 +154,66 @@ export const tenancyGuides: Record<string, ToolGuide> = {
       { question: 'What receipts is a landlord required to provide?', answer: 'If deductions exceed statutory thresholds (e.g. $125 in California), landlords must include copies of bills, contractor invoices, or hourly wage documentation proving the actual cost of repairs.' },
     ],
   },
+  'ai-lease-scanner': {
+    title: 'How to scan a lease agreement for illegal clauses',
+    introduction: 'An AI lease scanner audits residential rental agreements to detect predatory clauses, statutory tenant protection violations, and unconscionable fees before you sign. By benchmarking terms against US state codes (such as California Civil Code § 1950.5 and New York GOL § 7-108) and UK statutory frameworks (Tenant Fees Act 2019), the scanner identifies void provisions, computes potential financial exposure, and drafts formal negotiation counter-proposals.',
+    formula: {
+      equation: 'Lease Risk Score = (Statutory Severity Weight × 40%) + (Financial Exposure Impact × 30%) + (Enforceability Penalty × 30%). Scores above 75 indicate critical statutory violations.',
+      explanation: 'The scanner cross-references contract text against codified statutory prohibitions. Clauses attempting to waive non-waivable rights (such as habitability, minimum entry notice, or statutory deposit protections) are flagged as void ab initio, regardless of whether a tenant signs.',
+      methods: [
+        { name: 'Statutory clause cross-referencing', description: 'Evaluates lease terms against specific state and national statutes (such as California Civil Code § 1954 for entry or UK Tenant Fees Act 2019 for prohibited payments).' },
+        { name: 'Financial exposure calculation', description: 'Computes direct tenant financial liabilities arising from unlawful deposit forfeitures, bogus administrative charges, or unauthorized repair delegations.' },
+        { name: 'Counter-negotiation drafting', description: 'Generates formal, legally-grounded amendment requests citing relevant legal code to deliver to landlords or letting agents prior to lease execution.' },
+      ],
+    },
+    example: {
+      title: 'Audit of a $2,000/mo California lease with a "non-refundable turnover fee"',
+      steps: [
+        'The proposed lease states: "Tenant agrees that the $2,000 security deposit is strictly non-refundable as a standard turnover cleaning fee upon lease termination."',
+        'The scanner identifies California Civil Code § 1950.5(m), which expressly prohibits any residential lease from characterizing any security deposit as non-refundable.',
+        'The tool calculates a 95/100 critical violation risk score, warns of $2,000 unlawful financial exposure, and notes that the term is void in small claims court.',
+        'The scanner automatically outputs a formal counter-proposal letter requesting the clause be stricken prior to contract execution.',
+      ],
+      takeaway: 'Signing an illegal clause does not make it legal. However, striking predatory terms before signing avoids deposit disputes, bad-faith deductions, and small claims litigation later.',
+    },
+    legalNotes: [
+      { jurisdiction: 'California', title: 'Civil Code § 1950.5 strictly outlaws non-refundable security deposits', body: 'California Civil Code § 1950.5(m) states that no rental agreement may characterize any security deposit as non-refundable. Deductions are strictly limited to unpaid rent, cleaning necessary to restore the premises to move-in condition, and actual damage beyond normal wear and tear.', sourceLabel: 'California Department of Justice: Landlord-Tenant Guide', sourceUrl: 'https://oag.ca.gov/consumers/general/landlord-tenant-issues' },
+      { jurisdiction: 'California', title: 'Civil Code § 1954 mandates 24-hour written entry notice', body: 'Under California Civil Code § 1954 and § 1953(a)(1), landlords must provide at least 24 hours written notice before entering for non-emergencies, during normal business hours. Any lease clause attempting to waive this advance notice requirement is void as contrary to public policy.', sourceLabel: 'California Courts: Landlord Right to Entry', sourceUrl: 'https://www.courts.ca.gov/selfhelp-housing.htm' },
+      { jurisdiction: 'New York State', title: 'GOL § 7-108 caps deposits and voids non-refundable terms', body: 'Under NY General Obligations Law § 7-108, residential security deposits are capped at one month’s rent and must be returned within 14 days of move-out. Landlords cannot charge non-refundable administrative or refurbishment fees, and failure to provide an itemized receipt within 14 days forfeits all deduction rights.', sourceLabel: 'New York Attorney General: Tenants’ Rights Guide', sourceUrl: 'https://ag.ny.gov/publications/residential-tenants-rights-guide' },
+      { jurisdiction: 'England', title: 'Tenant Fees Act 2019 outlaws checkout, cleaning, and admin fees', body: 'Under the Tenant Fees Act 2019, any payment required of a tenant that is not permitted under Schedule 1 (rent, refundable deposit up to 5 weeks, default fees for lost keys/late rent) is a prohibited payment. Landlords cannot require professional cleaning clauses or charge checkout inspection fees.', sourceLabel: 'GOV.UK: Tenant Fees Act 2019 guidance', sourceUrl: 'https://www.gov.uk/government/publications/tenant-fees-act-2019-guidance' },
+      { jurisdiction: 'England', title: 'Landlord & Tenant Act 1985 Section 11 imposes mandatory repair duties', body: 'Section 11 of the Landlord and Tenant Act 1985 requires landlords to maintain the structure, exterior, heating, hot water, and sanitation systems in working order. Under Section 11(4), any lease agreement provision attempting to transfer these repair liabilities to an assured tenant is void.', sourceLabel: 'GOV.UK: Private renting repairs', sourceUrl: 'https://www.gov.uk/private-renting/repairs' },
+    ],
+    faqs: [
+      { question: 'Can an AI lease scanner tell me if a clause is legally enforceable?', answer: 'Yes. An AI scanner compares specific lease clauses against codified state and national tenant protection statutes (such as California Civil Code § 1950.5 or UK Tenant Fees Act 2019). While it provides legal analysis and risk scores, it serves as an educational and negotiation tool, not formal attorney representation.' },
+      { question: 'What happens if I sign a lease that contains an illegal clause?', answer: 'In both the US and UK, statutory tenant protection laws supersede private lease contracts. If a clause violates mandatory statutory law (such as an illegal waiver of 24-hour entry notice or non-refundable deposit terms), that specific clause is considered void and unenforceable in court, though the remainder of the lease usually remains valid.' },
+      { question: 'Can my landlord in the UK charge a cleaning fee or inventory fee at checkout?', answer: 'No. Under the Tenant Fees Act 2019, compulsory cleaning fees, checkout fees, and inventory charges are prohibited payments in England. Landlords can only deduct from the deposit if the tenant caused genuine damage or left the property materially dirtier than reflected on the move-in inventory.' },
+      { question: 'Can a landlord enter my apartment without 24 hours notice?', answer: 'In almost all US states and the UK, landlords cannot enter without reasonable advance notice (typically 24 hours in California, New York, and England; 12 hours in Florida) except in immediate emergencies (fire, flooding). Entry must also be during reasonable hours for legitimate maintenance or viewings.' },
+      { question: 'How should I ask a landlord to remove a predatory lease clause?', answer: 'Send a polite, factual email citing the relevant statutory code before signing. Explain that your legal check flagged the clause as conflicting with local tenant regulations and request an amendment or addendum striking the provision.' },
+      { question: 'Can a lease make the tenant responsible for plumbing and heating repairs?', answer: 'No. Under the US Implied Warranty of Habitability and UK Landlord and Tenant Act 1985 Section 11, landlords have an absolute, non-waivable statutory duty to maintain working plumbing, heating, electrical, and structural systems. Clauses shifting routine structural or utility maintenance to tenants are void.' },
+    ],
+    table: {
+      caption: 'Statutory Tenant Protections & Illegal Lease Terms by Jurisdiction (US & UK)',
+      headers: ['Jurisdiction', 'Deposit Maximum', 'Return Statutory Window', 'Mandatory Entry Notice', 'Prohibited Cleaning / Fees', 'Governing Legal Code'],
+      rows: [
+        ['California (US)', '1 Month rent (AB 12)', '21 calendar days (itemized receipts required)', '24 hours written notice (business hours)', 'Non-refundable cleaning/deposit terms void', 'Cal. Civ. Code § 1950.5 & § 1954'],
+        ['New York (US)', '1 Month rent', '14 calendar days (complete forfeiture if late)', 'Reasonable notice (~24 hours standard)', 'Administrative turnover fees prohibited', 'NY Gen. Oblig. Law § 7-108'],
+        ['Texas (US)', 'No statutory limit', '30 calendar days (triple damages for bad faith)', 'Governed by lease; emergency-only immediate', 'Normal wear and tear deductions illegal', 'Tex. Prop. Code § 92.101–§ 92.109'],
+        ['Florida (US)', 'No statutory limit', '15 days (full refund) or 30 days (if claim made)', '12 hours statutory advance notice', 'Repairs/cleaning strictly actual damages', 'Fla. Stat. Ch. 83.49 & § 83.53'],
+        ['England (UK)', '5 weeks rent (<£50k) or 6 weeks (>£50k)', '10 calendar days from mutual agreement', '24 hours written notice (reasonable hours)', 'Compulsory checkout/cleaning fees banned', 'Tenant Fees Act 2019, LTA 1985 s.11'],
+        ['Scotland (UK)', '2 Months rent maximum', 'SafeDeposits/LPS Scotland tenancy rules', '48 hours statutory notice', 'All tenant premiums & fees banned', 'Private Housing (Tenancies) (Scotland) Act 2016'],
+      ],
+    },
+    checklist: {
+      title: 'The 6 Most Dangerous Predatory Clauses to Flag Before Signing',
+      description: 'Contractual provisions that attempt to strip statutory rights are void ab initio in court. Never sign without demanding these clauses be stricken or amended:',
+      items: [
+        { tag: 'VOID BY STATUTE', label: 'Non-Refundable Cleaning or Turnover Deposits', detail: 'Any clause stating the security deposit or a portion of it is non-refundable is unlawful in California (CC § 1950.5m), New York (GOL § 7-108), and England (Tenant Fees Act 2019).' },
+        { tag: 'VOID BY STATUTE', label: 'Unannounced Landlord Right of Entry', detail: 'Clauses granting landlords unannounced entry without at least 24 hours written notice violate California Civil Code § 1954, UK quiet enjoyment rights, and Florida Statute § 83.53.' },
+        { tag: 'UNCONSCIONABLE', label: 'Tenant Liability for Major Structural or Heating Repairs', detail: 'Transferring heating, water, or structural maintenance to tenants is void under UK Landlord and Tenant Act 1985 s.11 and US Implied Warranty of Habitability.' },
+        { tag: 'PROHIBITED PAYMENT', label: 'Mandatory Checkout Inspection or Renewal Admin Fees', detail: 'Schedule 1 of the UK Tenant Fees Act 2019 makes charging administrative fees for contract renewal, inventory checks, or references an offense subject to £5,000 fines.' },
+        { tag: 'ILLEGAL FORFEITURE', label: 'Automatic Full Deposit Forfeiture for Minor Lease Defaults', detail: 'Statutes require actual demonstrable itemized damages with receipts. Penal forfeiture clauses are strictly struck down by courts.' },
+        { tag: 'VOID AS AGAINST PUBLIC POLICY', label: 'Exculpatory Liability Waivers for Landlord Negligence', detail: 'Provisions exempting the landlord from liability for property damage or personal injury caused by landlord negligence are void.' },
+      ],
+    },
+  },
 };

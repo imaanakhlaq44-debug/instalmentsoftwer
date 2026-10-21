@@ -21,6 +21,16 @@ export type ToolGuide = {
     sourceUrl: string;
   }[];
   faqs: GuideFAQ[];
+  table?: {
+    caption: string;
+    headers: string[];
+    rows: string[][];
+  };
+  checklist?: {
+    title: string;
+    description: string;
+    items: { label: string; detail: string; tag: string }[];
+  };
 };
 
 export const toolGuides: Record<string, ToolGuide> = {

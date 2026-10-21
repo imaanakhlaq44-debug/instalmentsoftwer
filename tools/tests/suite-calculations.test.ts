@@ -4,7 +4,19 @@ import { calculateTool, toolDefaults } from '../lib/suite-calculations';
 const run=(slug:string,v:any={})=>calculateTool(slug,{...toolDefaults[slug],...v},'USD');
 const valid=(r:any)=>{assert.equal(r.error,undefined);assert(Number.isFinite(r.value));for(const row of r.rows)assert(Number.isFinite(row.value));};
 describe('RentCalc pure calculation engine',()=>{
- it('exports defaults for each supported calculator',()=>assert.equal(Object.keys(toolDefaults).length,14));
+ it('exports defaults for each supported calculator',()=>assert.equal(Object.keys(toolDefaults).length,15));
+ it('scans residential lease clauses and identifies statutory violations and non-refundable deposit bans',()=>{
+   const ca=run('ai-lease-scanner',{jurisdiction:'california',clauseText:'Security deposit is non-refundable cleaning fee'});
+   assert.equal(ca.status,'alert');
+   assert.equal(ca.value,95);
+   assert(ca.notes.some(x=>x.includes('Civil Code § 1950.5')));
+   const entry=run('ai-lease-scanner',{jurisdiction:'california',clauseText:'Landlord may enter at any time without notice'});
+   assert.equal(entry.status,'alert');
+   assert.equal(entry.value,90);
+   const clean=run('ai-lease-scanner',{clauseText:'Rent is due on the first day of each month by electronic bank transfer.'});
+   assert.equal(clean.status,'good');
+   assert.equal(clean.value,15);
+ });
  it('splits couple rent proportionally, equally, and by leftover cash',()=>{const r=run('couple-rent-splitter',{rent:2400,incomeA:5000,incomeB:3000});valid(r);assert.equal(r.value,1500);assert.equal(r.rows.find(x=>x.label==='Partner 2 proportional rent')?.value,900);assert.equal(r.rows.find(x=>x.label.includes('Equal leftover cash: Partner 1'))?.value,2200);assert.equal(r.rows.find(x=>x.label.includes('Equal leftover cash: Partner 2'))?.value,200);assert.equal(r.rows.find(x=>x.label.includes('50/50'))?.value,1200);});
  it('calculates security deposit refund deadlines and statutory bad-faith penalties',()=>{const ca=run('security-deposit-refund',{depositAmount:2000,state:'california',moveOutDate:'2026-05-01'});valid(ca);assert.equal(ca.value,2000);assert.equal(ca.rows.find(x=>x.label.includes('penalty'))?.value,4000);assert.equal(ca.rows.find(x=>x.label.includes('Total potential'))?.value,6000);const tx=run('security-deposit-refund',{depositAmount:1000,state:'texas',moveOutDate:'2026-05-01'});valid(tx);assert.equal(tx.rows.find(x=>x.label.includes('penalty'))?.value,3100);});
 	 it('prorates inclusively over actual calendar months and exact day counts',()=>{const r=run('prorated-rent',{monthlyRent:3100,moveIn:'2024-02-28',moveOut:'2024-03-01',method:'exact'});valid(r);assert.equal(r.value,313.79);assert.equal(r.rows.find(x=>x.label.includes('Occupied'))?.value,3);});
