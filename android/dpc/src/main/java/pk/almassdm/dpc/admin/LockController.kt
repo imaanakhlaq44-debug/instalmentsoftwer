@@ -77,36 +77,31 @@ class LockController(context: Context) {
      *
      * Like everything else here it reports what happened, not what was asked:
      * [Outcome.Refused] when the platform does not support FRP or refuses it.
+     *
+     * Which call is due, if any, is decided by [FactoryResetProtection.next],
+     * which is unit-tested. The fingerprint it compares against records the
+     * route as well as the accounts, so a phone upgraded from Android 10 to 11
+     * moves onto the platform API at its next check-in.
      */
     fun applyFactoryResetProtection(accountIds: List<String>): Outcome {
         if (!isDeviceOwner) {
             return Outcome.Refused("Factory Reset Protection needs device-owner privileges.")
         }
-        val desired = accountIds.joinToString("|")
-        if (prefs.frpAppliedIds == desired) return Outcome.Applied
+        val step = FactoryResetProtection.next(Build.VERSION.SDK_INT, accountIds, prefs.frpAppliedIds)
 
         return try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                val policy = if (accountIds.isEmpty()) {
-                    null
-                } else {
-                    FactoryResetProtectionPolicy.Builder()
-                        .setFactoryResetProtectionAccounts(accountIds)
-                        .setFactoryResetProtectionEnabled(true)
-                        .build()
+            when (step) {
+                FactoryResetProtection.Step.None -> return Outcome.Applied
+                FactoryResetProtection.Step.Clear -> clearFactoryResetProtection()
+                is FactoryResetProtection.Step.Apply -> when (step.route) {
+                    FactoryResetProtection.Route.MODERN -> applyModernFrp(step.accountIds)
+                    FactoryResetProtection.Route.LEGACY -> applyLegacyFrp(step.accountIds)
                 }
-                dpm.setFactoryResetProtectionPolicy(admin, policy)
-            } else {
-                // Before Android 11 the only route is the restriction Google
-                // Play services reads, followed by a nudge to re-read it.
-                val restrictions = Bundle()
-                if (accountIds.isNotEmpty()) {
-                    restrictions.putStringArray(GMS_FRP_KEY, accountIds.toTypedArray())
-                }
-                dpm.setApplicationRestrictions(admin, GMS_PACKAGE, restrictions)
-                appContext.sendBroadcast(Intent(GMS_FRP_CHANGED).setPackage(GMS_PACKAGE))
             }
-            prefs.frpAppliedIds = desired
+            prefs.frpAppliedIds = when (step) {
+                is FactoryResetProtection.Step.Apply -> FactoryResetProtection.fingerprint(step.accountIds, step.route)
+                else -> ""
+            }
             Outcome.Applied
         } catch (e: UnsupportedOperationException) {
             Log.w(TAG, "This handset does not support Factory Reset Protection", e)
@@ -117,12 +112,63 @@ class LockController(context: Context) {
         }
     }
 
+    private fun applyModernFrp(accountIds: List<String>) {
+        check(Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) { "The FRP policy API needs Android 11." }
+        dpm.setFactoryResetProtectionPolicy(
+            admin,
+            FactoryResetProtectionPolicy.Builder()
+                .setFactoryResetProtectionAccounts(accountIds)
+                .setFactoryResetProtectionEnabled(true)
+                .build()
+        )
+    }
+
+    /**
+     * Before Android 11 the only route is the managed configuration Google Play
+     * services reads, followed by a nudge to re-read it. Merged into whatever
+     * restrictions Play services already carries rather than replacing them.
+     */
+    private fun applyLegacyFrp(accountIds: List<String>) {
+        val restrictions = Bundle(dpm.getApplicationRestrictions(admin, FactoryResetProtection.GMS_PACKAGE))
+        restrictions.putStringArray(FactoryResetProtection.LEGACY_RESTRICTION_KEY, accountIds.toTypedArray())
+        dpm.setApplicationRestrictions(admin, FactoryResetProtection.GMS_PACKAGE, restrictions)
+        notifyPlayServicesOfFrpChange()
+    }
+
+    /**
+     * Takes this app's FRP policy off by both routes. The legacy key is checked
+     * on every version, because a phone upgraded from Android 10 may still
+     * carry it. Throws if the platform refuses.
+     */
+    private fun clearFactoryResetProtection() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            dpm.setFactoryResetProtectionPolicy(admin, null)
+        }
+        val restrictions = dpm.getApplicationRestrictions(admin, FactoryResetProtection.GMS_PACKAGE)
+        if (restrictions.containsKey(FactoryResetProtection.LEGACY_RESTRICTION_KEY)) {
+            val remaining = Bundle(restrictions).apply { remove(FactoryResetProtection.LEGACY_RESTRICTION_KEY) }
+            dpm.setApplicationRestrictions(admin, FactoryResetProtection.GMS_PACKAGE, remaining)
+            notifyPlayServicesOfFrpChange()
+        }
+    }
+
+    private fun notifyPlayServicesOfFrpChange() {
+        appContext.sendBroadcast(
+            Intent(FactoryResetProtection.LEGACY_CHANGED_ACTION)
+                .setPackage(FactoryResetProtection.GMS_PACKAGE)
+                .addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
+        )
+    }
+
     /** Releases the handset entirely — used when the server says it is no longer managed. */
     fun releaseFromManagement() {
         if (!isDeviceOwner) return
         // First, on its own: a phone handed back must never still demand the
         // dealer's Google account after a reset, whatever else fails below.
-        applyFactoryResetProtection(emptyList())
+        // Cleared unconditionally rather than through the planner, so a stale
+        // or lost fingerprint can never leave the dealer's account in place.
+        runCatching { clearFactoryResetProtection() }
+            .onFailure { Log.w(TAG, "Could not clear Factory Reset Protection: ${it.message}") }
         runCatching {
             releaseLock()
             clearRestriction(UserManager.DISALLOW_FACTORY_RESET)
@@ -283,10 +329,5 @@ class LockController(context: Context) {
 
     companion object {
         private const val TAG = "LockController"
-
-        // Pre-Android 11 FRP, as documented for device policy controllers.
-        private const val GMS_PACKAGE = "com.google.android.gms"
-        private const val GMS_FRP_KEY = "factoryResetProtectionAdmin"
-        private const val GMS_FRP_CHANGED = "com.google.android.gms.auth.FRP_CONFIG_CHANGED"
     }
 }

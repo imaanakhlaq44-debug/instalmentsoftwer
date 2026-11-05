@@ -112,8 +112,9 @@ class Prefs(context: Context) {
     )
 
     /**
-     * The Factory Reset Protection accounts actually in force on the handset,
-     * "|"-joined, or null when none have been set. Lets a check-in skip the
+     * The Factory Reset Protection policy actually in force on the handset, as
+     * [pk.almassdm.dpc.admin.FactoryResetProtection.fingerprint] writes it
+     * (route plus accounts), or null/empty when none is. Lets a check-in skip the
      * platform call when nothing changed, and retry it when the last one failed.
      */
     var frpAppliedIds: String?

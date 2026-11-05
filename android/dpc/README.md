@@ -71,6 +71,65 @@ enforcement for a determined customer rather than escaping it.
 
 ---
 
+## Surviving a wipe from recovery
+
+`DISALLOW_FACTORY_RESET` closes the reset option in Settings, and it is the
+only thing it closes. A customer who holds power + volume, boots into the
+recovery menu and picks *Wipe data/factory reset* still erases the phone, and
+the wipe takes this app and its device-owner status with it. Ordinary reboots
+were never the problem: `BootReceiver` re-applies the lock after a restart.
+
+The answer is **Factory Reset Protection**. The dealer enters up to five
+numeric Google account IDs on the dashboard's Settings page. While an
+installment is still unpaid, the server sends them as `frpAccountIds` in every
+policy, and the handset installs them as the only accounts that can finish
+setup after a wipe. A wiped phone then stops at the setup wizard until somebody
+signs in with one of the shop's accounts. In practice that means it comes back
+to the counter.
+
+| | |
+|---|---|
+| Android 11+ (API 30) | `DevicePolicyManager.setFactoryResetProtectionPolicy` with the dealer's accounts and FRP enabled. |
+| Android 8–10 | Managed configuration on `com.google.android.gms`, key `factoryResetProtectionAdmin`, followed by the `com.google.android.gms.auth.FRP_CONFIG_CHANGED` broadcast. Merged into any restrictions Play services already has. |
+| `FactoryResetProtection` | Picks the route and decides whether anything changed. Pure and unit-tested. The heartbeat makes a platform call only when the accounts or the route change. A change of route happens when the OS is upgraded from 10 to 11. |
+| `Prefs.frpAppliedIds` | What the platform actually accepted. A refused call is retried at the next check-in. |
+
+It runs at enrolment and again on every check-in, so a dealer who adds an
+account after the sale still reaches phones already in the field. An empty list
+removes the policy. The server sends one once nothing is owed, so a customer
+who has paid off the phone never needs the dealer's account to use it.
+`releaseFromManagement()` clears it too, unconditionally.
+
+None of this touches the power menu, the recovery menu itself or emergency
+calls. It only controls who can set the phone up again.
+
+**The IDs are numbers, not emails.** FRP matches on the Google account ID (the
+obfuscated GAIA ID). An email address would leave a wiped phone asking for an
+account nobody can sign in with, which strands it for the dealer too. The
+server rejects anything that is not 6–30 digits, and the app drops such values
+rather than install them.
+
+### What FRP cannot do
+
+- **It needs Google Play services.** FRP is enforced by Play services during
+  setup. A handset without them (some Huawei models, de-Googled builds) has no
+  FRP. The same applies to a build with no persistent data block. The platform
+  refuses the call there, and the app logs it and tries again at the next
+  check-in.
+- **It needs a phone that has been set up.** The policy is installed after
+  enrolment, once this app is device owner and has reached the server. A phone
+  wiped before its first check-in has no policy to enforce.
+- **It does not bring this app back.** After a wipe the phone is locked to the
+  dealer's account, but it is no longer managed. There is no lock screen and no
+  check-in until the shop re-provisions it from the QR. Having the app install
+  itself again after a wipe needs **Android zero-touch enrolment** or **Samsung
+  Knox Guard**, where the device's IMEI is registered with the manufacturer or
+  carrier and setup enrols it again automatically. Neither is part of this app.
+- **Someone who knows the dealer's password defeats it.** That is the point:
+  the shop can always recover its own handset.
+
+---
+
 ## The one rule
 
 `LockController` reports **what it managed to do, not what it was asked to do**.
@@ -148,7 +207,8 @@ device owner survives until a factory reset — which the app then blocks.
    enrolment code to `AlmasDeviceAdminReceiver`.
 
 4. The app redeems the code, hardens the installation — no factory reset, no
-   safe boot, no added users, cannot be uninstalled — and starts checking in.
+   safe boot, no added users, cannot be uninstalled, and FRP set to the
+   dealer's Google accounts if any are configured — and starts checking in.
 
 ### The signature checksum
 
@@ -187,6 +247,7 @@ Two ways, and neither needs a handset:
 ```
 admin/   EmiDeviceAdminReceiver — provisioning hook
          LockController         — everything that actually restricts the phone
+         FactoryResetProtection — which FRP call is due, if any
 data/    Prefs                  — credential, cached policy, enforced lock state
          PolicyView             — the server's answer, parsed
 net/     DpcApi                 — the four endpoints
