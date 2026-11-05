@@ -36,9 +36,9 @@ export const metadata: Metadata = {
     'New York rent calculator',
     'London rent calculator',
   ],
-  authors: [{ name: 'Almas SDM — RentWise Tools', url: 'https://almassdm.pro/' }],
-  creator: 'Almas SDM',
-  publisher: 'Almas SDM',
+  authors: [{ name: 'RentWise Tools', url: `${SITE_URL}/` }],
+  creator: 'RentWise Tools',
+  publisher: 'RentWise Tools',
   alternates: {
     canonical: `${SITE_URL}/`,
     languages: {
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'RentWise Tools — Free Rental & Relocation Calculators',
     description: siteDescription,
-    siteName: 'RentWise Tools by Almas SDM',
+    siteName: 'RentWise Tools',
     type: 'website',
     locale: 'en_US',
     alternateLocale: ['en_GB'],
@@ -74,9 +74,9 @@ const structuredData = {
   '@graph': [
     {
       '@type': 'Organization',
-      '@id': 'https://almassdm.pro/#organization',
-      name: 'Almas SDM',
-      url: 'https://almassdm.pro/',
+      '@id': `${SITE_URL}/#organization`,
+      name: 'RentWise Tools',
+      url: `${SITE_URL}/`,
       logo: `${SITE_URL}/apartment-dusk.jpg`,
     },
     {
@@ -86,7 +86,7 @@ const structuredData = {
       name: 'RentWise Tools',
       description: siteDescription,
       inLanguage: ['en-US', 'en-GB'],
-      publisher: { '@id': 'https://almassdm.pro/#organization' },
+      publisher: { '@id': `${SITE_URL}/#organization` },
     },
     {
       '@type': 'WebApplication',
@@ -100,7 +100,7 @@ const structuredData = {
       isAccessibleForFree: true,
       availableLanguage: ['English'],
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-      provider: { '@id': 'https://almassdm.pro/#organization' },
+      provider: { '@id': `${SITE_URL}/#organization` },
     },
   ],
 };

@@ -31,6 +31,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title,
     description,
     alternates: { canonical: url },
+    // The city pages share almost all of their text, and near-duplicate pages
+    // drag down how search engines judge the whole suite. They stay reachable
+    // for visitors and keep passing links, but stay out of the index until each
+    // one carries genuinely local figures (typical rent, deposit caps, rules).
+    robots: { index: false, follow: true },
     openGraph: {
       title: `${title} | RentWise Tools`, description, url, locale, type: 'website', siteName: 'RentWise Tools',
       images: [{ url: socialImage, width: 736, height: 1104, alt: 'An evening city apartment, representing a new move' }],
