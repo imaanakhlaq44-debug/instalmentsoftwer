@@ -260,6 +260,8 @@ export interface DevicePolicy {
   lockWarningDays: number;
   /** Days a handset may go without reaching the server before it restricts itself. 0 = off. */
   offlineLockAfterDays?: number;
+  /** Google account ids (numeric) allowed to set a phone up after a recovery-mode reset. */
+  frpAccountIds?: string[];
   customerReminderEnabled: boolean;
   emergencyCallsAllowed: boolean;
   paymentMethodsOnLock: string[];

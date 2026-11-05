@@ -53,6 +53,7 @@ class DpcSync(context: Context) {
         prefs.lastCheckInAt = System.currentTimeMillis()
 
         lockController.protectInstallation()
+        syncFactoryResetProtection(result.policy)
         CheckInScheduler.schedule(appContext, result.checkInIntervalSeconds)
         OfflineWatchdogWorker.schedule(appContext)
 
@@ -90,6 +91,7 @@ class DpcSync(context: Context) {
         prefs.lastCheckInAt = System.currentTimeMillis()
         CheckInScheduler.schedule(appContext, result.checkInIntervalSeconds)
         OfflineWatchdogWorker.schedule(appContext)
+        syncFactoryResetProtection(result.policy)
 
         val command = result.command
         if (command != null) {
@@ -148,6 +150,18 @@ class DpcSync(context: Context) {
             policy.locked && !prefs.lockApplied -> applyAndAcknowledgeSilently(policy)
             policy.locked -> lockController.showLockScreen()
             !policy.locked && prefs.lockApplied -> lockController.releaseLock()
+        }
+    }
+
+    /**
+     * Keeps Factory Reset Protection in line with the accounts the server names.
+     * Runs on every check-in; it is a no-op when nothing changed, and a refusal
+     * is retried next time rather than blocking the lock protocol.
+     */
+    private fun syncFactoryResetProtection(policy: PolicyView) {
+        val outcome = lockController.applyFactoryResetProtection(policy.frpAccountIds)
+        if (outcome is LockController.Outcome.Refused) {
+            Log.w(TAG, "Factory Reset Protection not in force: ${outcome.reason}")
         }
     }
 

@@ -14,6 +14,11 @@ import {
   Key,
 } from 'lucide-react';
 
+/** Splits the FRP textarea into distinct account ids (whitespace or comma separated). */
+function parseFrpAccountIds(text: string): string[] {
+  return [...new Set(text.split(/[\s,]+/).filter(Boolean))];
+}
+
 export const SettingsPage: React.FC = () => {
   const { selectedDealerId, showToast, user } = useAuth();
 
@@ -40,6 +45,13 @@ export const SettingsPage: React.FC = () => {
     emergencyCallsAllowed: true,
   });
 
+  // Factory Reset Protection accounts, one Google account id per line.
+  const [frpAccountsText, setFrpAccountsText] = useState('');
+  const frpInvalid = frpAccountsText
+    .split(/[\s,]+/)
+    .filter(Boolean)
+    .filter((id) => !/^\d{6,30}$/.test(id));
+
   const loadSettings = async () => {
     try {
       setLoading(true);
@@ -63,6 +75,7 @@ export const SettingsPage: React.FC = () => {
           customerReminderEnabled: data.policy.customerReminderEnabled,
           emergencyCallsAllowed: data.policy.emergencyCallsAllowed,
         });
+        setFrpAccountsText((data.policy.frpAccountIds ?? []).join('\n'));
       }
     } catch (err: any) {
       showToast(err.message, 'error');
@@ -80,7 +93,7 @@ export const SettingsPage: React.FC = () => {
       setSaving(true);
       await ApiService.updatePolicy({
         dealerId: selectedDealerId,
-        policyData: policy,
+        policyData: { ...policy, frpAccountIds: parseFrpAccountIds(frpAccountsText) },
       });
       showToast('Financing & lock enforcement policies updated!', 'success');
     } catch (err: any) {
@@ -219,6 +232,35 @@ export const SettingsPage: React.FC = () => {
             {!policy.autoLockEnabled && policy.offlineLockAfterDays > 0 && (
               <p className="text-[11px] font-bold text-amber-700">
                 Automated locking is off, so no handset will act on this.
+              </p>
+            )}
+          </div>
+
+          {/* Factory Reset Protection — what survives a recovery-mode wipe */}
+          <div className="p-4 bg-slate-50 border rounded-2xl space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="font-bold text-slate-800 text-xs">Factory Reset Protection</span>
+              <span className="font-extrabold text-amber-600 text-sm">
+                {parseFrpAccountIds(frpAccountsText).length === 0 ? 'Off' : 'On'}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500">
+              Settings-menu resets are already blocked, but a reset from the phone's recovery menu (power +
+              volume buttons) wipes the app. With this on, a phone wiped that way cannot be set up again until
+              one of these Google accounts signs in — so bring it to the shop and re-enrol it. Applied only
+              while money is owed; it is removed automatically once the plan is paid off. Enter the numeric
+              Google account ID (not the email), one per line, up to 5.
+            </p>
+            <textarea
+              value={frpAccountsText}
+              onChange={(e) => setFrpAccountsText(e.target.value)}
+              rows={2}
+              placeholder="e.g. 118223344556677889900"
+              className="w-full px-3 py-2 text-xs font-mono bg-white border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+            {frpInvalid.length > 0 && (
+              <p className="text-[11px] font-bold text-red-600">
+                Not a Google account ID: {frpInvalid.join(', ')}. Use the long number, not an email address.
               </p>
             )}
           </div>

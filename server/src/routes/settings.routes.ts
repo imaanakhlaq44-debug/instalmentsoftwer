@@ -85,6 +85,22 @@ const policySchema = z
         message: 'The offline limit must be 0 (off) or at least 3 days.',
       })
       .optional(),
+    /**
+     * Google account ids for Factory Reset Protection. Android takes the
+     * numeric account id here, not an email — an email would be accepted by
+     * the phone and then match nobody, leaving a wiped handset that no one can
+     * set up. Rejecting it here is far kinder than finding out at the counter.
+     */
+    frpAccountIds: z
+      .array(
+        z
+          .string()
+          .trim()
+          .regex(/^\d{6,30}$/, 'A Google account id is the long number from your Google account, not an email address.')
+      )
+      .max(5, 'At most 5 Google accounts can be allowed.')
+      .transform((ids) => [...new Set(ids)])
+      .optional(),
     customerReminderEnabled: z.boolean().optional(),
     emergencyCallsAllowed: z.boolean().optional(),
     paymentMethodsOnLock: z.array(z.string().trim().max(30)).max(10).optional(),
@@ -139,7 +155,16 @@ settingsRouter.put('/policy', (req, res, next) => {
     updates.offlineLockAfterDays !== undefined &&
     updates.offlineLockAfterDays !== (existing.offlineLockAfterDays ?? 0);
 
-  const details = autoLockChanged
+  const frpChanged =
+    updates.frpAccountIds !== undefined &&
+    updates.frpAccountIds.join(',') !== (existing.frpAccountIds ?? []).join(',');
+
+  const details = frpChanged
+    ? updates.frpAccountIds!.length === 0
+      ? `${user.name} turned Factory Reset Protection OFF for handsets.`
+      : `${user.name} set Factory Reset Protection to ${updates.frpAccountIds!.length} Google account(s): ` +
+        `${updates.frpAccountIds!.join(', ')}.`
+    : autoLockChanged
     ? `${user.name} turned automatic device locking ${updates.autoLockEnabled ? 'ON' : 'OFF'}.`
     : offlineLockChanged
       ? updates.offlineLockAfterDays === 0
@@ -153,7 +178,7 @@ settingsRouter.put('/policy', (req, res, next) => {
     userId: user.userId,
     actorName: user.name,
     actorRole: user.role,
-    action: autoLockChanged || offlineLockChanged ? 'AUTO_LOCK_POLICY_CHANGED' : 'POLICY_UPDATED',
+    action: autoLockChanged || offlineLockChanged || frpChanged ? 'AUTO_LOCK_POLICY_CHANGED' : 'POLICY_UPDATED',
     targetType: 'POLICY',
     targetId: existing.id,
     details,

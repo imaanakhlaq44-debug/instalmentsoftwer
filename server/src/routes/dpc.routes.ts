@@ -49,6 +49,14 @@ interface DevicePolicyView {
    */
   offlineLockAfterDays: number;
   gracePeriodDays: number;
+  /**
+   * Google account ids allowed to set the phone up after a recovery-mode
+   * factory reset. Sent only while something is still owed: once the plan is
+   * paid off the list goes empty and the phone drops the protection, so a
+   * customer who owns their handset outright is never left needing the
+   * dealer's account to use it.
+   */
+  frpAccountIds: string[];
   contact: { dealerName: string; dealerPhone: string } | null;
 }
 
@@ -73,6 +81,7 @@ async function buildPolicyView(device: Device): Promise<DevicePolicyView> {
     nextDueDate: unpaid[0]?.dueDate ?? null,
     offlineLockAfterDays: await offlineLockDaysFor(device, policy),
     gracePeriodDays: policy.gracePeriodDays ?? DEFAULT_POLICY.gracePeriodDays,
+    frpAccountIds: unpaid.length > 0 ? policy.frpAccountIds ?? [] : [],
     contact: dealer ? { dealerName: dealer.name, dealerPhone: dealer.phone } : null,
   };
 }

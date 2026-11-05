@@ -359,6 +359,12 @@ export interface DevicePolicy {
    * phone that is off the network is exactly what the server cannot act on.
    */
   offlineLockAfterDays?: number;
+  /**
+   * Google account ids (numeric, not emails) that may re-activate a handset
+   * after a recovery-mode factory reset. Pushed to phones as Factory Reset
+   * Protection while money is still owed on them.
+   */
+  frpAccountIds?: string[];
   customerReminderEnabled: boolean;
   emergencyCallsAllowed: boolean;
   paymentMethodsOnLock: string[];

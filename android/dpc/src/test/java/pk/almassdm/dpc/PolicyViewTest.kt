@@ -17,6 +17,24 @@ import pk.almassdm.dpc.data.PolicyView
 class PolicyViewTest {
 
     @Test
+    fun `reads factory reset protection accounts, keeping only numeric ids`() {
+        val policy = PolicyView.fromJson(
+            JSONObject(
+                """
+                { "frpAccountIds": ["118223344556677889900", " 118223344556677889900 ", "dealer@gmail.com", "", "2233445566"] }
+                """
+            )
+        )
+
+        assertEquals(listOf("118223344556677889900", "2233445566"), policy.frpAccountIds)
+    }
+
+    @Test
+    fun `an older server without frp sends no accounts`() {
+        assertEquals(emptyList<String>(), PolicyView.fromJson(JSONObject("{}")).frpAccountIds)
+    }
+
+    @Test
     fun `reads a locked policy as the server sends it`() {
         val policy = PolicyView.fromJson(
             JSONObject(
