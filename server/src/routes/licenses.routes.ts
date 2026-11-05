@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { repo, indexBy, dealerScope } from '../db/repositories/index.js';
 import { Dealer, DeviceLicense } from '../types/index.js';
-import { LicenseService, PACK_OPTIONS } from '../services/LicenseService.js';
+import { LicenseService, PACK_OPTIONS, PRICE_TIERS, MAX_PACK_SIZE } from '../services/LicenseService.js';
 import { AuditService } from '../services/AuditService.js';
 import {
   requireDealerAdmin, requireSuperAdmin, getAuthUser, resolveDealerScope, clientIp, routeParam,
@@ -75,6 +75,8 @@ licensesRouter.get(
         consumed: licenses.filter((l) => l.packId === p.id && l.status === 'CONSUMED').length,
       })),
       catalogue: PACK_OPTIONS,
+      priceTiers: PRICE_TIERS,
+      maxPackSize: MAX_PACK_SIZE,
     });
   })
 );

@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { CheckCircle2, Eye, EyeOff, Loader2, MessageCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { ApiError, ApiService } from '../services/api.js';
+import { MAX_PACK_SIZE, PACK_PRESETS, money, priceForPack } from '../utils/packPricing.js';
 
 /**
  * A shop signs itself up.
@@ -14,15 +15,7 @@ import { ApiError, ApiService } from '../services/api.js';
  * shop at WhatsApp to pay, so nobody is surprised at the counter.
  */
 
-export const PACKS = [
-  { size: 30, perPhone: 800, total: 24_000, label: 'Starter' },
-  { size: 50, perPhone: 700, total: 35_000, label: 'Growth' },
-  { size: 100, perPhone: 600, total: 60_000, label: 'Best rate' },
-] as const;
-
 const WHATSAPP_NUMBER = '447521606952';
-
-const money = (n: number) => `Rs ${n.toLocaleString('en-PK')}`;
 
 interface Form {
   name: string;
@@ -60,6 +53,7 @@ export function validateSignup(f: Form): string | null {
   if (f.address.trim().length < 5) return 'Please enter the full shop address.';
   if (f.password.length < 8) return 'Password must be at least 8 characters.';
   if (f.password !== f.confirm) return 'The two passwords do not match.';
+  if (!priceForPack(f.packSize)) return `Choose between 1 and ${MAX_PACK_SIZE} locks.`;
   return null;
 }
 
@@ -86,7 +80,7 @@ export const RegisterPage: React.FC = () => {
   const set = (key: keyof Form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
 
-  const pack = PACKS.find((p) => p.size === form.packSize) ?? PACKS[0];
+  const pack = priceForPack(form.packSize);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,7 +119,7 @@ export const RegisterPage: React.FC = () => {
   if (done) {
     const text = encodeURIComponent(
       `Salam, maine Almas SDM par "${form.name.trim()}" register kiya hai (${form.email.trim()}). ` +
-        `${pack.size} locks ka pack chahiye: ${money(pack.total)}. Payment ki detail bhej dein.`
+        `${pack?.size} locks chahiye: ${money(pack?.totalPrice ?? 0)}. Payment ki detail bhej dein.`
     );
     return (
       <div className="flex min-h-screen items-center justify-center bg-paper-100 p-4">
@@ -139,7 +133,7 @@ export const RegisterPage: React.FC = () => {
           <div className="mt-5 rounded-md border-2 border-ink-900 bg-sun-100 p-4">
             <p className="eyebrow text-ink-700">Next step: pay for your locks</p>
             <p className="mt-1.5 text-body text-ink-900">
-              <b>{pack.size} locks</b> · {money(pack.perPhone)} per phone · <b>{money(pack.total)}</b> total
+              <b>{pack?.size} locks</b> · {money(pack?.unitPrice ?? 0)} per phone · <b>{money(pack?.totalPrice ?? 0)}</b> total
             </p>
             <p className="mt-2 text-caption text-ink-700">
               Your locks are added as soon as we confirm the payment. Until then you can explore the dashboard,
@@ -249,32 +243,50 @@ export const RegisterPage: React.FC = () => {
           </div>
 
           <fieldset className="mt-6">
-            <legend className="field-label">Pack of locks (one lock per phone)</legend>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {PACKS.map((p) => {
-                const selected = p.size === form.packSize;
+            <legend className="field-label">How many locks? (one lock per phone)</legend>
+            <div className="flex flex-wrap gap-2">
+              {PACK_PRESETS.map((n) => {
+                const selected = n === form.packSize;
                 return (
-                  <label
-                    key={p.size}
-                    className={`cursor-pointer rounded-md border-2 border-ink-900 p-3 transition ${
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, packSize: n }))}
+                    aria-pressed={selected}
+                    className={`rounded-md border-2 border-ink-900 px-3.5 py-1.5 text-body font-extrabold transition ${
                       selected ? 'bg-sun-400 shadow-[3px_3px_0_#0F1419]' : 'bg-white hover:bg-sun-100'
                     }`}
                   >
-                    <input
-                      type="radio"
-                      name="pack"
-                      value={p.size}
-                      checked={selected}
-                      onChange={() => setForm((f) => ({ ...f, packSize: p.size }))}
-                      className="sr-only"
-                    />
-                    <span className="block text-micro font-extrabold uppercase tracking-[0.1em] text-ink-700">{p.label}</span>
-                    <span className="mt-1 block text-title font-black text-ink-900">{p.size} locks</span>
-                    <span className="block text-caption text-ink-700">{money(p.perPhone)} / phone</span>
-                    <span className="block text-caption font-bold text-ink-900">{money(p.total)}</span>
-                  </label>
+                    {n}
+                  </button>
                 );
               })}
+              <label className="flex items-center gap-2">
+                <span className="sr-only">Number of locks</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={MAX_PACK_SIZE}
+                  inputMode="numeric"
+                  className="input w-24 py-1.5"
+                  value={Number.isFinite(form.packSize) ? form.packSize : ''}
+                  onChange={(e) => setForm((f) => ({ ...f, packSize: e.target.value === '' ? NaN : Number(e.target.value) }))}
+                  disabled={submitting}
+                  aria-label="Number of locks"
+                />
+              </label>
+            </div>
+            <div className="mt-3 rounded-md border-2 border-ink-900 bg-sun-100 px-3.5 py-2.5">
+              {pack ? (
+                <p className="text-body text-ink-900">
+                  <b>{pack.size} locks</b> · {money(pack.unitPrice)} per phone · <b>{money(pack.totalPrice)}</b> total
+                </p>
+              ) : (
+                <p className="text-body text-critical-700">Choose between 1 and {MAX_PACK_SIZE} locks.</p>
+              )}
+              <p className="mt-1 text-caption text-ink-700">
+                1–29: Rs 1,000 · 30–49: Rs 800 · 50–99: Rs 700 · 100+: Rs 600 per phone
+              </p>
             </div>
             <p className="mt-2 text-caption text-ink-500">
               You pay after signing up. Locks are added once the payment is confirmed.

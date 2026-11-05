@@ -164,12 +164,19 @@ describe('packs', () => {
     expect(await availableFor('dealer-4')).toBe(before + 100);
   });
 
-  it('sells only the sizes on the price list', async () => {
-    const res = await as(ACCOUNTS.superAdmin)
+  it('sells any size from 1 to 500, priced by its tier', async () => {
+    const ok = await as(ACCOUNTS.superAdmin)
       .post('/api/licenses/packs')
       .send({ dealerId: 'dealer-1', size: 42 });
+    expect(ok.status).toBe(201);
+    expect(ok.body.pack).toMatchObject({ size: 42, unitPrice: 800, totalPrice: 33_600 });
 
-    expect(res.status).toBe(400);
+    for (const size of [0, 501]) {
+      const res = await as(ACCOUNTS.superAdmin)
+        .post('/api/licenses/packs')
+        .send({ dealerId: 'dealer-1', size });
+      expect(res.status).toBe(400);
+    }
   });
 
   it('does not let a dealer mint their own locks', async () => {

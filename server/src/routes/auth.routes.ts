@@ -13,7 +13,7 @@ import { AppError } from '../utils/AppError.js';
 import { hashPassword, validatePasswordStrength } from '../utils/password.js';
 import { pakistaniPhoneSchema, normalizePhone } from '../utils/validators.js';
 import { AuditService } from '../services/AuditService.js';
-import { PACK_OPTIONS, findPackOption } from '../services/LicenseService.js';
+import { PACK_SIZE_RULE, priceForPack } from '../services/LicenseService.js';
 
 export const authRouter = Router();
 
@@ -51,8 +51,8 @@ const registerDealerSchema = z.object({
   packSize: z
     .number()
     .int()
-    .refine((n) => PACK_OPTIONS.some((p) => p.size === n), {
-      message: `Packs are sold in ${PACK_OPTIONS.map((p) => p.size).join(', ')} locks.`,
+    .refine((n) => priceForPack(n) !== undefined, {
+      message: PACK_SIZE_RULE,
     })
     .default(30),
 });
@@ -87,7 +87,7 @@ authRouter.post(
     // 100 free locks. The shop starts with none; a super admin issues the pack
     // once payment is confirmed, and until then a financed sale is refused at
     // the counter with "no locks left" rather than going ahead unpaid.
-    const requestedPack = findPackOption(body.packSize)!;
+    const requestedPack = priceForPack(body.packSize)!;
     const session = await runInTransaction(async (tx) => {
       await repo.dealers.create(
         {

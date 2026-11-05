@@ -267,6 +267,17 @@ describe('POST /api/auth/register-dealer', () => {
     expect(await repo.licensePacks.findMany({ where: { dealerId } })).toHaveLength(0);
   });
 
+  it('accepts a small pack of five, priced per lock', async () => {
+    const res = await anonymous().post('/api/auth/register-dealer').send({ ...signup, packSize: 5 });
+    expect(res.status).toBe(201);
+    expect(res.body.requestedPack).toMatchObject({ size: 5, unitPrice: 1000, totalPrice: 5000, issued: false });
+  });
+
+  it('refuses a pack of zero', async () => {
+    const res = await anonymous().post('/api/auth/register-dealer').send({ ...signup, packSize: 0 });
+    expect(res.status).toBe(422);
+  });
+
   it('shows the new shop its empty lock position', async () => {
     const res = await anonymous().post('/api/auth/register-dealer').send(signup);
     const token = res.body.token as string;
@@ -288,6 +299,17 @@ describe('POST /api/auth/register-dealer', () => {
 
     expect(issued.status).toBe(201);
     expect(await repo.deviceLicenses.countAvailable(dealerId)).toBe(100);
+  });
+
+  it('lets a super admin issue an odd-sized pack of seven', async () => {
+    const res = await anonymous().post('/api/auth/register-dealer').send(signup);
+    const dealerId = res.body.dealer.id as string;
+
+    const issued = await as(ACCOUNTS.superAdmin).post('/api/licenses/packs').send({ dealerId, size: 7 });
+
+    expect(issued.status).toBe(201);
+    expect(issued.body.pack).toMatchObject({ size: 7, unitPrice: 1000, totalPrice: 7000 });
+    expect(await repo.deviceLicenses.countAvailable(dealerId)).toBe(7);
   });
 });
 

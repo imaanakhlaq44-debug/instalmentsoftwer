@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { PACKS, validateSignup } from './RegisterPage.js';
+import { validateSignup } from './RegisterPage.js';
+import { PACK_PRESETS, priceForPack } from '../utils/packPricing.js';
 
 const ok = {
   name: 'Bismillah Mobiles',
@@ -31,11 +32,23 @@ describe('sign-up form checks', () => {
     expect(validateSignup({ ...ok, confirm: 'Different#2026' })).toMatch(/do not match/);
   });
 
-  it('offers the three packs the server sells, at the site prices', () => {
-    expect(PACKS.map((p) => [p.size, p.perPhone, p.total])).toEqual([
-      [30, 800, 24_000],
-      [50, 700, 35_000],
-      [100, 600, 60_000],
-    ]);
+  it('accepts a small order and refuses an impossible one', () => {
+    expect(validateSignup({ ...ok, packSize: 5 })).toBeNull();
+    expect(validateSignup({ ...ok, packSize: 0 })).toMatch(/between 1 and 500/);
+    expect(validateSignup({ ...ok, packSize: Number.NaN })).toMatch(/between 1 and 500/);
+  });
+});
+
+describe('lock pricing, as the server charges it', () => {
+  it('prices each tier', () => {
+    expect(priceForPack(5)).toEqual({ size: 5, unitPrice: 1000, totalPrice: 5000 });
+    expect(priceForPack(30)).toEqual({ size: 30, unitPrice: 800, totalPrice: 24_000 });
+    expect(priceForPack(50)).toEqual({ size: 50, unitPrice: 700, totalPrice: 35_000 });
+    expect(priceForPack(100)).toEqual({ size: 100, unitPrice: 600, totalPrice: 60_000 });
+    expect(priceForPack(501)).toBeUndefined();
+  });
+
+  it('offers 5 and 10 as one-click sizes alongside the old packs', () => {
+    expect([...PACK_PRESETS]).toEqual([5, 10, 30, 50, 100]);
   });
 });
