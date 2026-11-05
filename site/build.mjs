@@ -60,10 +60,11 @@ function readMeta(html) {
 async function build() {
   const BUILD_VERSION = Date.now().toString(36);
   const rawLayout = await readFile(path.join(SRC, 'layout.html'), 'utf8');
-  const layoutWithApp = HAS_APP
-    ? rawLayout.replace(/<!--\s*\/?signin\s*-->/g, '')
-    : rawLayout.replace(/<!--\s*signin\s*-->[\s\S]*?<!--\s*\/signin\s*-->/g, '');
-  const layout = layoutWithApp.replaceAll('/styles.css', `/styles.css?v=${BUILD_VERSION}`);
+  const withSignin = (html) =>
+    HAS_APP
+      ? html.replace(/<!--\s*\/?signin\s*-->/g, '')
+      : html.replace(/<!--\s*signin\s*-->[\s\S]*?<!--\s*\/signin\s*-->/g, '');
+  const layout = withSignin(rawLayout).replaceAll('/styles.css', `/styles.css?v=${BUILD_VERSION}`);
   const pages = (await readdir(path.join(SRC, 'pages'))).filter((f) => f.endsWith('.html'));
 
   await mkdir(OUT, { recursive: true });
@@ -72,6 +73,15 @@ async function build() {
     const raw = await readFile(path.join(SRC, 'pages', file), 'utf8');
     const meta = readMeta(raw);
     const body = raw.replace(/<!--\s*meta[\s\S]*?-->/, '').trim();
+
+    // A page with `layout: none` is a whole document of its own — the home
+    // page, whose design does not share the inner pages' header and footer.
+    // It still gets the Sign in rule and the app address.
+    if (meta.layout === 'none') {
+      await writeFile(path.join(OUT, file), withSignin(body).replaceAll('{{appUrl}}', APP_URL), 'utf8');
+      process.stdout.write(`  ${file} (own layout)\n`);
+      continue;
+    }
 
     const html = layout
       .replaceAll('{{title}}', meta.title ?? 'Almas SDM')
