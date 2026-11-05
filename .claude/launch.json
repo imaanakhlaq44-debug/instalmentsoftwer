@@ -4,14 +4,36 @@
     {
       "name": "almas-sdm-client",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "client", "run", "dev"],
+      "runtimeArgs": [
+        "--prefix",
+        "client",
+        "run",
+        "dev"
+      ],
       "port": 5173
     },
     {
       "name": "almas-sdm-site",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "site", "run", "preview"],
+      "runtimeArgs": [
+        "--prefix",
+        "site",
+        "run",
+        "preview"
+      ],
       "port": 4173
+    },
+    {
+      "name": "almas-sdm-concepts",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "--yes",
+        "serve",
+        "site/dist",
+        "-l",
+        "4181"
+      ],
+      "port": 4181
     }
   ]
 }

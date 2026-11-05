@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Concept 2 · Diamond Trust · Almas SDM</title>
+<link rel="icon" href="/favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --navy-900: #071A33; --navy-800: #0B2547; --navy-700: #123563; --navy-600: #1C4A85;
+    --teal-500: #1FA387; --teal-400: #36C2A2; --teal-100: #DDF5EE;
+    --slate-50: #F5F7FA; --slate-100: #EBEFF5; --slate-300: #C6CFDC; --slate-500: #5D6B80; --slate-800: #1B2638;
+    --red: #E25C4B;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.6 Inter, system-ui, sans-serif; color: var(--slate-800); background: #fff; }
+  .lang-ur body, .lang-ur h1, .lang-ur h2, .lang-ur h3 { font-family: 'Noto Naskh Arabic', serif; }
+  .lang-ur h1, .lang-ur h2 { line-height: 1.6 !important; }
+  h1, h2, h3 { font-family: Sora, Inter, sans-serif; letter-spacing: -0.02em; }
+  a { color: inherit; text-decoration: none; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 13px 22px; border-radius: 999px; font-weight: 600; font-size: 15px; transition: transform .15s, background .15s; }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-teal { background: var(--teal-400); color: var(--navy-900); }
+  .btn-teal:hover { background: #4fd3b3; }
+  .btn-ghost { border: 1px solid rgba(255,255,255,.28); color: #fff; }
+  .btn-ghost:hover { background: rgba(255,255,255,.08); }
+  .btn-navy { background: var(--navy-800); color: #fff; }
+  .btn-outline { border: 1px solid var(--slate-300); color: var(--navy-800); }
+
+  /* Hero */
+  .hero { background: radial-gradient(1200px 600px at 85% -10%, #1C4A85 0%, transparent 60%), radial-gradient(800px 500px at 0% 110%, #0F5B57 0%, transparent 60%), var(--navy-900); color: #fff; position: relative; overflow: hidden; }
+  .facets { position: absolute; inset: 0; opacity: .12; pointer-events: none; }
+  nav { display: flex; align-items: center; justify-content: space-between; height: 72px; position: relative; z-index: 2; }
+  .brand { display: flex; align-items: center; gap: 10px; font-family: Sora, sans-serif; font-weight: 700; font-size: 18px; }
+  .brand img { width: 36px; height: 28px; object-fit: contain; }
+  .links { display: flex; gap: 28px; font-size: 14px; color: #B8C7DD; }
+  .links a:hover { color: #fff; }
+  .nav-r { display: flex; gap: 10px; align-items: center; }
+  .lang { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18); color: #fff; border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 13px; cursor: pointer; }
+  .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; padding: 56px 0 96px; position: relative; z-index: 2; }
+  .pill { display: inline-flex; gap: 8px; align-items: center; background: rgba(54,194,162,.12); border: 1px solid rgba(54,194,162,.35); color: #8FE6CF; padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 500; }
+  .pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--teal-400); display: inline-block; }
+  h1 { font-size: clamp(36px, 5vw, 60px); line-height: 1.06; margin: 20px 0 18px; font-weight: 700; }
+  h1 span { background: linear-gradient(90deg, #8FE6CF, #4DA3FF); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero p.lead { font-size: 18px; color: #B8C7DD; max-width: 520px; margin: 0 0 32px; }
+  .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; }
+  .facts { display: flex; gap: 32px; margin-top: 40px; flex-wrap: wrap; }
+  .facts div { border-inline-start: 2px solid var(--teal-400); padding-inline-start: 12px; }
+  .facts b { display: block; font-family: Sora, sans-serif; font-size: 20px; }
+  .facts span { font-size: 13px; color: #8EA2BE; }
+
+  .dash { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); border-radius: 20px; padding: 18px; backdrop-filter: blur(8px); box-shadow: 0 40px 80px -30px rgba(0,0,0,.6); }
+  .dash-top { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #B8C7DD; margin-bottom: 14px; }
+  .dot3 { display: flex; gap: 6px; } .dot3 i { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,.2); display: block; }
+  .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .kpi { background: #fff; color: var(--slate-800); border-radius: 12px; padding: 12px; }
+  .kpi small { color: var(--slate-500); font-size: 11px; display: block; }
+  .kpi b { font-family: Sora, sans-serif; font-size: 18px; }
+  .kpi.alert b { color: var(--red); }
+  .bars { background: #fff; border-radius: 12px; padding: 14px; margin-top: 10px; display: flex; align-items: flex-end; gap: 8px; height: 110px; }
+  .bars i { flex: 1; background: linear-gradient(var(--teal-400), var(--navy-600)); border-radius: 4px 4px 0 0; display: block; }
+  .list { background: #fff; border-radius: 12px; margin-top: 10px; color: var(--slate-800); font-size: 13px; }
+  .li { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--slate-100); }
+  .li:last-child { border: 0; }
+  .badge { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 999px; }
+  .b-ok { background: var(--teal-100); color: #0D7A63; } .b-lock { background: #FDE6E2; color: #B33A2B; } .b-due { background: #FFF2D6; color: #8A5B00; }
+
+  section { padding: 96px 0; }
+  .center { text-align: center; max-width: 680px; margin: 0 auto 56px; }
+  .kicker { color: var(--teal-500); font-weight: 600; font-size: 14px; }
+  h2 { font-size: clamp(30px, 3.6vw, 42px); line-height: 1.12; margin: 8px 0 14px; color: var(--navy-800); }
+  .center p { color: var(--slate-500); margin: 0; font-size: 17px; }
+
+  .flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; position: relative; }
+  .flow::before { content: ''; position: absolute; top: 34px; left: 16%; right: 16%; height: 2px; background: repeating-linear-gradient(90deg, var(--slate-300) 0 8px, transparent 8px 14px); }
+  .fstep { text-align: center; padding: 0 12px; position: relative; }
+  .fico { width: 68px; height: 68px; border-radius: 20px; margin: 0 auto 18px; display: grid; place-items: center; background: var(--navy-800); color: var(--teal-400); box-shadow: 0 0 0 8px #fff; }
+  .fstep h3 { margin: 0 0 8px; font-size: 19px; color: var(--navy-800); }
+  .fstep p { margin: 0; color: var(--slate-500); font-size: 15px; }
+
+  .bento-bg { background: var(--slate-50); }
+  .bento { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; }
+  .card { background: #fff; border: 1px solid var(--slate-100); border-radius: 20px; padding: 28px; }
+  .card h3 { margin: 0 0 8px; color: var(--navy-800); font-size: 19px; }
+  .card p { margin: 0; color: var(--slate-500); font-size: 15px; }
+  .c-wide { grid-column: span 4; } .c-narrow { grid-column: span 2; } .c-third { grid-column: span 2; }
+  .c-dark { background: var(--navy-800); border: 0; color: #fff; }
+  .c-dark h3 { color: #fff; } .c-dark p { color: #B8C7DD; }
+  .card .ic { width: 42px; height: 42px; border-radius: 12px; background: var(--teal-100); color: #0D7A63; display: grid; place-items: center; margin-bottom: 18px; }
+  .c-dark .ic { background: rgba(54,194,162,.15); color: var(--teal-400); }
+  .sched { display: flex; gap: 6px; margin-top: 22px; }
+  .sched span { flex: 1; height: 34px; border-radius: 8px; background: var(--teal-100); font-size: 11px; display: grid; place-items: center; color: #0D7A63; font-weight: 600; }
+  .sched span.l { background: #FDE6E2; color: #B33A2B; } .sched span.f { background: var(--slate-100); color: var(--slate-500); }
+
+  .trust { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .shield { border: 1px solid var(--slate-100); border-radius: 20px; padding: 28px 22px; background: linear-gradient(180deg, #fff, var(--slate-50)); }
+  .shield svg { color: var(--teal-500); }
+  .shield h3 { font-size: 17px; margin: 14px 0 6px; color: var(--navy-800); }
+  .shield p { margin: 0; font-size: 14px; color: var(--slate-500); }
+  .consent { margin-top: 24px; text-align: center; font-size: 14px; color: var(--slate-500); }
+
+  .pricing { background: var(--navy-900); color: #fff; }
+  .pricing h2 { color: #fff; } .pricing .center p { color: #8EA2BE; }
+  .tiers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: stretch; }
+  .tier { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.12); border-radius: 24px; padding: 32px 28px; display: flex; flex-direction: column; }
+  .tier.hl { background: linear-gradient(160deg, #123563, #0E4C52); border-color: var(--teal-400); }
+  .tier .nm { color: #8FE6CF; font-weight: 600; font-size: 14px; }
+  .tier .cnt { font-family: Sora, sans-serif; font-size: 22px; margin: 6px 0 18px; }
+  .tier .pr { font-family: Sora, sans-serif; font-size: 40px; font-weight: 700; line-height: 1; }
+  .tier .pp { color: #8EA2BE; font-size: 14px; margin-top: 6px; }
+  .tier ul { list-style: none; padding: 0; margin: 22px 0 28px; font-size: 14px; color: #C8D4E6; flex: 1; }
+  .tier li { padding: 6px 0; display: flex; gap: 8px; } .tier li::before { content: '✓'; color: var(--teal-400); }
+  .tier .btn { width: 100%; }
+
+  .contact { padding: 80px 0; }
+  .contact-box { background: linear-gradient(120deg, var(--teal-100), #E6EEFA); border-radius: 28px; padding: 48px; display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; }
+  .contact-box h2 { margin: 0 0 6px; }
+  .contact-box p { margin: 0; color: var(--slate-500); }
+  .num { font-family: Sora, sans-serif; font-weight: 700; color: var(--navy-800); direction: ltr; unicode-bidi: embed; }
+  footer { border-top: 1px solid var(--slate-100); padding: 28px 0; font-size: 13px; color: var(--slate-500); }
+
+  @media (max-width: 900px) {
+    .links { display: none; }
+    .hero-grid { grid-template-columns: 1fr; padding: 32px 0 64px; }
+    .flow, .tiers { grid-template-columns: 1fr; gap: 36px; }
+    .flow::before { display: none; }
+    .trust { grid-template-columns: 1fr 1fr; }
+    .c-wide, .c-narrow, .c-third { grid-column: span 6; }
+    section { padding: 64px 0; }
+    .contact-box { padding: 32px 24px; }
+    .nav-r .btn { display: none; }
+  }
+  @media (max-width: 480px) { .trust { grid-template-columns: 1fr; } .kpi b { font-size: 15px; } .facts { gap: 20px; } }
+</style>
+</head>
+<body>
+<header class="hero">
+  <svg class="facets" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <g fill="none" stroke="#fff" stroke-width="1.2">
+      <path d="M700 80 L1000 80 L1150 240 L850 620 L550 240 Z" />
+      <path d="M550 240 L1150 240 M700 80 L780 240 L850 620 L920 240 L1000 80 M780 240 L850 80 L920 240" />
+      <path d="M-50 500 L150 500 L250 600 L50 860 L-150 600 Z M-150 600 L250 600" />
+    </g>
+  </svg>
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="#"><img src="/logo-mark.png" alt="" />Almas SDM</a>
+      <div class="links">
+        <a href="#how" data-ur="طریقہ کار">How it works</a>
+        <a href="#features" data-ur="خصوصیات">Platform</a>
+        <a href="#trust" data-ur="اعتماد">Trust</a>
+        <a href="#pricing" data-ur="قیمت">Pricing</a>
+      </div>
+      <div class="nav-r">
+        <button class="lang" data-lang-toggle><span data-lang-label>اردو</span></button>
+        <a class="btn btn-teal" style="padding:9px 18px;font-size:14px" href="https://wa.me/447521606952?text=Salam%2C%20Almas%20SDM%20ka%20demo%20chahiye" target="_blank" rel="noopener" data-ur="ڈیمو بک کریں">Book a demo</a>
+      </div>
+    </nav>
+    <div class="hero-grid">
+      <div>
+        <span class="pill"><i></i><span data-ur="پاکستانی موبائل ریٹیل کے لیے">Built for Pakistani mobile retail</span></span>
+        <h1 data-ur="قسطوں کا کاروبار، مکمل اعتماد کے ساتھ۔">Instalment sales, <span>secured by the handset itself.</span></h1>
+        <p class="lead" data-ur="ڈیلر ڈیش بورڈ اور فون پر چلنے والی ایپ مل کر قسط، ادائیگی اور لاک کو ایک نظام میں جوڑتے ہیں — تاکہ آپ زیادہ فون قسط پر بیچ سکیں، کم خطرے کے ساتھ۔">A dealer dashboard and an on-device app that tie every plan, payment and lock into one system — so you can finance more phones with less risk.</p>
+        <div class="hero-cta">
+          <a class="btn btn-teal" href="https://wa.me/447521606952?text=Salam%2C%20Almas%20SDM%20ka%20demo%20chahiye" target="_blank" rel="noopener" data-ur="واٹس ایپ پر ڈیمو">Get a WhatsApp demo</a>
+          <a class="btn btn-ghost" href="#how" data-ur="دیکھیں یہ کیسے چلتا ہے">See how it works</a>
+        </div>
+        <div class="facts">
+          <div><b data-ur="Rs 600 سے">From Rs 600</b><span data-ur="فی فون، ایک بار">per phone, once</span></div>
+          <div><b data-ur="0 ماہانہ فیس">Rs 0 / month</b><span data-ur="کوئی سبسکرپشن نہیں">no subscription</span></div>
+          <div><b data-ur="اردو + انگریزی">Urdu + English</b><span data-ur="معاہدہ اور رسید">contract &amp; receipts</span></div>
+        </div>
+      </div>
+      <div class="dash" aria-label="Dashboard preview">
+        <div class="dash-top"><div class="dot3"><i></i><i></i><i></i></div><span data-ur="ڈیلر ڈیش بورڈ · مثال">Dealer dashboard · example</span></div>
+        <div class="kpis">
+          <div class="kpi"><small data-ur="فعال فون">Active phones</small><b>42</b></div>
+          <div class="kpi"><small data-ur="اس ماہ وصول">Collected this month</small><b>Rs 6.4L</b></div>
+          <div class="kpi alert"><small data-ur="لاک شدہ">Locked now</small><b>1</b></div>
+        </div>
+        <div class="bars" aria-hidden="true"><i style="height:40%"></i><i style="height:55%"></i><i style="height:48%"></i><i style="height:66%"></i><i style="height:72%"></i><i style="height:64%"></i><i style="height:85%"></i><i style="height:92%"></i></div>
+        <div class="list">
+          <div class="li"><span>Usman · Infinix Note 30</span><span class="badge b-ok" data-ur="ادا شدہ">Paid</span></div>
+          <div class="li"><span>Bilal · Galaxy A16</span><span class="badge b-due" data-ur="کل واجب">Due tomorrow</span></div>
+          <div class="li"><span>Hamza · Tecno Spark 20</span><span class="badge b-lock" data-ur="لاک">Locked</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section id="how">
+    <div class="wrap">
+      <div class="center">
+        <div class="kicker" data-ur="طریقہ کار">How it works</div>
+        <h2 data-ur="فروخت سے وصولی تک، ایک ہی بہاؤ۔">From sale to recovery, one flow.</h2>
+        <p data-ur="آپ کے عملے کو کوئی تکنیکی کام نہیں کرنا — بس QR اسکین۔">Your staff need no technical skill — just a QR scan.</p>
+      </div>
+      <div class="flow">
+        <div class="fstep"><div class="fico"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v7M14 20h3"/></svg></div><h3 data-ur="1 · QR سے اندراج">1 · QR enrolment</h3><p data-ur="نیا فون سیٹ اپ پر QR اسکین کرتا ہے اور ڈیوائس اونر ایپ انسٹال ہو جاتی ہے۔ گاہک اسکرین پر معاہدہ دستخط کرتا ہے۔">The new phone scans a QR during setup and the device-owner app installs. The customer signs the agreement on screen.</p></div>
+        <div class="fstep"><div class="fico"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg></div><h3 data-ur="2 · قسط اور ادائیگی">2 · Plans &amp; payments</h3><p data-ur="قسط کا شیڈول خود بنتا ہے۔ ادائیگی درج کریں، رسید پرنٹ کریں، یاد دہانی آپ کی سم سے جاتی ہے۔">The plan is scheduled automatically. Record payments, print receipts, and reminders go out from your SIM.</p></div>
+        <div class="fstep"><div class="fico"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0"/></svg></div><h3 data-ur="3 · خودکار لاک / اَن لاک">3 · Auto lock / unlock</h3><p data-ur="تاریخ گزرنے پر فون لاک ہو کر واجب رقم دکھاتا ہے، اور ادائیگی پر خود کھل جاتا ہے۔">Past the due date the phone locks and shows the balance; once paid, it unlocks by itself.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" class="bento-bg">
+    <div class="wrap">
+      <div class="center">
+        <div class="kicker" data-ur="پلیٹ فارم">Platform</div>
+        <h2 data-ur="ڈیش بورڈ اور فون — ایک نظام۔">Dashboard and handset, one system.</h2>
+      </div>
+      <div class="bento">
+        <div class="card c-wide"><div class="ic">₨</div><h3 data-ur="خودکار قسط کھاتہ">Automatic instalment ledger</h3><p data-ur="ایڈوانس، ماہانہ اور جزوی ادائیگیاں صحیح بیلنس میں درج۔ ہر گاہک کی مکمل تاریخ ایک جگہ۔">Advance, monthly and part payments land on the right balance. Every customer's full history in one place.</p>
+          <div class="sched" aria-hidden="true"><span>Jul</span><span>Aug</span><span>Sep</span><span class="l">Oct</span><span class="f">Nov</span><span class="f">Dec</span></div></div>
+        <div class="card c-narrow c-dark"><div class="ic">⏻</div><h3 data-ur="آف لائن سیلف لاک">Offline self-lock</h3><p data-ur="ڈیٹا بند کرنے سے فون نہیں بچتا — شیڈول فون میں محفوظ ہے۔">Turning data off doesn't help — the schedule lives on the phone.</p></div>
+        <div class="card c-third"><div class="ic">⟲</div><h3 data-ur="ری سیٹ سے تحفظ">Reset protection</h3><p data-ur="سیٹنگز ری سیٹ بند؛ رقم باقی ہو تو ریکوری وائپ کے بعد بھی ڈیلر کا گوگل اکاؤنٹ درکار۔">Settings reset blocked; while money is owed, a recovery wipe still asks for the dealer's Google account.</p></div>
+        <div class="card c-third"><div class="ic">✉</div><h3 data-ur="سم سے یاد دہانی">SIM reminders</h3><p data-ur="SMS آپ کے اپنے کاؤنٹر نمبر سے، ترسیل کی تصدیق کے ساتھ۔">SMS from your own counter number, with delivery confirmation.</p></div>
+        <div class="card c-third"><div class="ic">👥</div><h3 data-ur="عملہ اور آڈٹ">Staff &amp; audit</h3><p data-ur="کردار کے مطابق رسائی، ہر عمل کا ریکارڈ، تھرمل رسیدیں۔">Role-based access, every action logged, thermal receipts.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="trust">
+    <div class="wrap">
+      <div class="center">
+        <div class="kicker" data-ur="اعتماد اور ذمہ داری">Trust &amp; responsibility</div>
+        <h2 data-ur="طاقتور لاک، واضح حدود۔">A strong lock, with clear limits.</h2>
+        <p data-ur="ہم نے جان بوجھ کر یہ کام نہیں رکھے — تاکہ گاہک اور ڈیلر دونوں محفوظ رہیں۔">Some things we deliberately left out, so both customer and dealer are protected.</p>
+      </div>
+      <div class="trust">
+        <div class="shield"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><h3 data-ur="واجب رقم نظر آتی ہے">Balance is visible</h3><p data-ur="لاک اسکرین گاہک کو رقم، دکان اور رابطہ نمبر دکھاتی ہے۔">The lock screen shows the customer the amount, shop and contact.</p></div>
+        <div class="shield"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg><h3 data-ur="ایمرجنسی کال">Emergency calls</h3><p data-ur="لاک کی حالت میں بھی 1122 اور 15 ملائے جا سکتے ہیں۔">1122 and 15 work even while the phone is locked.</p></div>
+        <div class="shield"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z"/><path d="M4 4l16 16"/></svg><h3 data-ur="لوکیشن ٹریکنگ نہیں">No location tracking</h3><p data-ur="فون کی جگہ نہ پڑھی جاتی ہے نہ محفوظ کی جاتی ہے۔">The phone's location is never read or stored.</p></div>
+        <div class="shield"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/><path d="M4 4l16 16"/></svg><h3 data-ur="ریموٹ وائپ نہیں">No remote wipe</h3><p data-ur="گاہک کا ڈیٹا کبھی دور سے مٹایا نہیں جا سکتا۔">Customer data can never be erased remotely.</p></div>
+      </div>
+      <p class="consent" data-ur="فون صرف تب لاک ہو سکتا ہے جب خریدار نے ڈیجیٹل معاہدے پر دستخط کیے ہوں۔">A phone can be locked only if the buyer has signed the digital agreement.</p>
+    </div>
+  </section>
+
+  <section id="pricing" class="pricing">
+    <div class="wrap">
+      <div class="center">
+        <div class="kicker" style="color:#8FE6CF" data-ur="قیمت">Pricing</div>
+        <h2 data-ur="لاک کے پیک۔ کوئی ماہانہ بل نہیں۔">Lock packs. No monthly bill.</h2>
+        <p data-ur="ایک لاک ایک فون کی پوری قسط مدت کے لیے۔ وہی فون دوبارہ جوڑنا مفت۔">One lock covers one phone for its full plan. Re-enrolling the same phone is free.</p>
+      </div>
+      <div class="tiers">
+        <div class="tier"><div class="nm" data-ur="اسٹارٹر">Starter</div><div class="cnt" data-ur="30 لاک">30 locks</div><div class="pr">Rs 24,000</div><div class="pp" data-ur="Rs 800 فی فون">Rs 800 per phone</div><ul><li data-ur="مکمل ڈیلر ڈیش بورڈ">Full dealer dashboard</li><li data-ur="سم سے یاد دہانی">SIM reminders</li><li data-ur="خودکار لاک اور اَن لاک">Automatic lock &amp; unlock</li></ul><a class="btn btn-ghost" href="https://wa.me/447521606952?text=Starter%20pack%2030%20locks" target="_blank" rel="noopener" data-ur="منتخب کریں">Choose Starter</a></div>
+        <div class="tier hl"><div class="nm" data-ur="گروتھ · سب سے مقبول">Growth · most popular</div><div class="cnt" data-ur="50 لاک">50 locks</div><div class="pr">Rs 35,000</div><div class="pp" data-ur="Rs 700 فی فون · Rs 5,000 بچت">Rs 700 per phone · save Rs 5,000</div><ul><li data-ur="اسٹارٹر کی ہر چیز">Everything in Starter</li><li data-ur="کئی کاؤنٹر، عملہ اکاؤنٹس">Multi-counter staff accounts</li><li data-ur="ترجیحی واٹس ایپ سپورٹ">Priority WhatsApp support</li></ul><a class="btn btn-teal" href="https://wa.me/447521606952?text=Growth%20pack%2050%20locks" target="_blank" rel="noopener" data-ur="منتخب کریں">Choose Growth</a></div>
+        <div class="tier"><div class="nm" data-ur="ڈیلر فلیٹ">Dealer fleet</div><div class="cnt" data-ur="100 لاک">100 locks</div><div class="pr">Rs 60,000</div><div class="pp" data-ur="Rs 600 فی فون · Rs 20,000 بچت">Rs 600 per phone · save Rs 20,000</div><ul><li data-ur="گروتھ کی ہر چیز">Everything in Growth</li><li data-ur="تمام برانچیں ایک ڈیش بورڈ پر">All branches on one dashboard</li><li data-ur="عملے کی تربیت شامل">Staff onboarding included</li></ul><a class="btn btn-ghost" href="https://wa.me/447521606952?text=Dealer%20pack%20100%20locks" target="_blank" rel="noopener" data-ur="منتخب کریں">Choose Fleet</a></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="contact">
+    <div class="wrap">
+      <div class="contact-box">
+        <div><h2 data-ur="15 منٹ میں ڈیمو دیکھیں۔">See it working in 15 minutes.</h2><p data-ur="واٹس ایپ کریں یا کال کریں:">WhatsApp or call us:</p><p class="num">+44 7521 606952</p></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <a class="btn btn-navy" href="https://wa.me/447521606952?text=Salam%2C%20Almas%20SDM%20ka%20demo%20chahiye" target="_blank" rel="noopener" data-ur="واٹس ایپ کریں">WhatsApp us</a>
+          <a class="btn btn-outline" href="tel:+447521606952" data-ur="کال کریں">Call</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+<footer><div class="wrap" data-ur="© Almas SDM · پاکستانی موبائل دکانوں کے لیے قسط اور ڈیوائس مینجمنٹ">© Almas SDM · Instalment and device management for Pakistani mobile shops</div></footer>
+<script src="lang.js"></script>
+</body>
+</html>

@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Concept 3 · Counter Bold · Almas SDM</title>
+<link rel="icon" href="/favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&display=swap" rel="stylesheet" />
+<style>
+  :root { --ink: #101418; --sun: #FFC83D; --mint: #19B38A; --mint-d: #0B7A5E; --navy: #13336A; --cream: #FFF8E6; --red: #E8473A; --line: 3px solid var(--ink); }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--cream); color: var(--ink); font: 500 17px/1.55 Archivo, system-ui, sans-serif; padding-bottom: 76px; }
+  .lang-ur body, .lang-ur .big, .lang-ur h2, .lang-ur h3 { font-family: 'Noto Naskh Arabic', serif; font-weight: 700; }
+  .lang-ur .big, .lang-ur h2 { line-height: 1.55 !important; }
+  a { color: inherit; text-decoration: none; }
+  .wrap { max-width: 1140px; margin: 0 auto; padding: 0 18px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 22px; font-weight: 900; font-size: 16px; border: var(--line); border-radius: 12px; box-shadow: 4px 4px 0 var(--ink); transition: transform .1s, box-shadow .1s; background: #fff; }
+  .btn:active { transform: translate(3px,3px); box-shadow: 1px 1px 0 var(--ink); }
+  .btn-wa { background: #25D366; }
+  .btn-sun { background: var(--sun); }
+  .btn-ink { background: var(--ink); color: #fff; box-shadow: 4px 4px 0 var(--sun); }
+
+  .top { background: var(--ink); color: #fff; font-size: 14px; text-align: center; padding: 8px 12px; font-weight: 700; }
+  .top b { color: var(--sun); }
+  nav { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; gap: 10px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 20px; }
+  .brand img { width: 38px; height: 30px; object-fit: contain; }
+  .lang { border: var(--line); border-radius: 10px; padding: 8px 14px; font: inherit; font-weight: 900; background: #fff; cursor: pointer; box-shadow: 3px 3px 0 var(--ink); }
+
+  .hero { display: grid; grid-template-columns: 1.25fr .75fr; gap: 40px; align-items: center; padding: 28px 0 64px; }
+  .big { font-size: clamp(44px, 7.6vw, 96px); line-height: .95; font-weight: 900; letter-spacing: -0.035em; margin: 0 0 22px; text-transform: uppercase; }
+  .big mark { background: var(--sun); padding: 0 .12em; border-radius: 6px; color: var(--ink); }
+  .big .strike { color: var(--red); }
+  .hero p { font-size: 19px; max-width: 560px; margin: 0 0 28px; }
+  .cta-row { display: flex; gap: 14px; flex-wrap: wrap; }
+
+  .phone { width: 100%; max-width: 290px; margin: 0 auto; border: var(--line); border-radius: 36px; background: var(--ink); padding: 12px; box-shadow: 10px 10px 0 var(--mint); }
+  .screen { border-radius: 26px; min-height: 470px; padding: 26px 20px; display: flex; flex-direction: column; justify-content: space-between; transition: background .3s; background: var(--mint); color: var(--ink); }
+  .screen.locked { background: var(--red); color: #fff; }
+  .screen .state { font-size: 30px; font-weight: 900; line-height: 1; text-transform: uppercase; }
+  .screen .amt { font-size: 40px; font-weight: 900; }
+  .screen .box { background: rgba(255,255,255,.92); color: var(--ink); border-radius: 14px; padding: 12px 14px; font-size: 14px; font-weight: 700; }
+  .toggle { display: flex; gap: 8px; justify-content: center; margin-top: 22px; }
+  .toggle button { font: inherit; font-weight: 900; font-size: 14px; border: var(--line); border-radius: 10px; padding: 8px 14px; background: #fff; cursor: pointer; }
+  .toggle button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+
+  .band { background: var(--sun); border-top: var(--line); border-bottom: var(--line); overflow: hidden; white-space: nowrap; font-weight: 900; font-size: 20px; padding: 12px 0; text-transform: uppercase; }
+  .band span { display: inline-block; padding: 0 18px; }
+
+  section { padding: 72px 0; }
+  h2 { font-size: clamp(34px, 5vw, 60px); line-height: 1; letter-spacing: -0.03em; text-transform: uppercase; margin: 0 0 36px; font-weight: 900; }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .step { background: #fff; border: var(--line); border-radius: 18px; padding: 24px; box-shadow: 6px 6px 0 var(--ink); }
+  .step .n { width: 54px; height: 54px; border-radius: 50%; border: var(--line); background: var(--sun); display: grid; place-items: center; font-weight: 900; font-size: 24px; margin-bottom: 16px; }
+  .step:nth-child(2) .n { background: var(--mint); } .step:nth-child(3) .n { background: var(--red); color: #fff; }
+  h3 { margin: 0 0 8px; font-size: 22px; font-weight: 900; line-height: 1.15; }
+  .step p, .f p { margin: 0; font-size: 16px; }
+
+  .dark { background: var(--navy); color: #fff; }
+  .feats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .f { border: 3px solid #fff; border-radius: 18px; padding: 22px; }
+  .f .emo { font-size: 30px; display: block; margin-bottom: 10px; }
+  .f p { color: #D2DCEF; }
+
+  .trust { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .t { display: flex; gap: 16px; align-items: flex-start; background: #fff; border: var(--line); border-radius: 18px; padding: 22px; }
+  .t .yes { flex: none; width: 46px; height: 46px; border-radius: 12px; background: var(--mint); border: var(--line); display: grid; place-items: center; font-weight: 900; font-size: 22px; }
+  .t .no { background: var(--red); color: #fff; }
+  .t p { margin: 4px 0 0; font-size: 16px; }
+
+  .packs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-items: end; }
+  .pk { border: var(--line); border-radius: 20px; background: #fff; padding: 26px 22px; box-shadow: 6px 6px 0 var(--ink); }
+  .pk.hot { background: var(--sun); transform: translateY(-14px); }
+  .pk .per { font-size: 56px; font-weight: 900; line-height: 1; letter-spacing: -0.03em; }
+  .pk .per small { font-size: 18px; letter-spacing: 0; }
+  .pk .meta { font-weight: 700; margin: 10px 0 18px; }
+  .pk .btn { width: 100%; }
+  .flag { display: inline-block; background: var(--ink); color: var(--sun); font-weight: 900; font-size: 13px; padding: 4px 10px; border-radius: 6px; margin-bottom: 12px; }
+
+  .final { background: var(--mint); border-top: var(--line); text-align: center; }
+  .final .num { display: inline-block; font-size: clamp(30px, 6vw, 64px); font-weight: 900; direction: ltr; margin: 0 0 26px; letter-spacing: -0.02em; }
+  footer { padding: 24px 0; font-size: 14px; font-weight: 700; }
+
+  .sticky { position: fixed; left: 0; right: 0; bottom: 0; background: var(--ink); padding: 10px 14px; display: flex; gap: 10px; z-index: 20; }
+  .sticky a { flex: 1; text-align: center; padding: 12px; border-radius: 10px; font-weight: 900; font-size: 15px; }
+  .sticky .w { background: #25D366; color: var(--ink); } .sticky .c { background: #fff; color: var(--ink); }
+
+  @media (min-width: 861px) { .sticky { display: none; } body { padding-bottom: 0; } }
+  @media (max-width: 860px) {
+    .hero { grid-template-columns: 1fr; padding-top: 12px; }
+    .steps, .feats, .trust, .packs { grid-template-columns: 1fr; }
+    .pk.hot { transform: none; }
+    section { padding: 56px 0; }
+    .nav-wa { display: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="top"><span data-ur="ماہانہ فیس صفر · فی فون صرف Rs 600 سے">Zero monthly fee · from just <b>Rs 600</b> per phone</span></div>
+<div class="wrap">
+  <nav>
+    <a class="brand" href="#"><img src="/logo-mark.png" alt="" />ALMAS SDM</a>
+    <div style="display:flex;gap:10px">
+      <button class="lang" data-lang-toggle><span data-lang-label>اردو</span></button>
+      <a class="btn btn-wa nav-wa" style="padding:8px 14px;font-size:14px" href="https://wa.me/447521606952?text=Salam%2C%20Almas%20SDM%20ki%20detail%20chahiye" target="_blank" rel="noopener">WhatsApp</a>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div>
+      <h1 class="big" data-ur="قسط لیٹ؟ فون لاک۔ ادائیگی؟ فون آن۔">Late instalment? <mark>Phone locks.</mark> Paid? Phone opens.</h1>
+      <p data-ur="پاکستانی موبائل دکانوں کے لیے سب سے آسان قسط سسٹم۔ گاہک کے پیچھے بھاگنا بند — فون خود یاد دلاتا ہے۔">The simplest instalment system for Pakistani mobile shops. Stop chasing customers — the phone does the reminding.</p>
+      <div class="cta-row">
+        <a class="btn btn-wa" href="https://wa.me/447521606952?text=Salam%2C%20Almas%20SDM%20ka%20demo%20chahiye" target="_blank" rel="noopener" data-ur="واٹس ایپ پر فری ڈیمو">Free demo on WhatsApp</a>
+        <a class="btn btn-sun" href="#price" data-ur="ریٹ دیکھیں">See rates</a>
+      </div>
+    </div>
+    <div>
+      <div class="phone"><div class="screen" id="scr">
+        <div><div class="state" id="st" data-ur="فون فعال">Phone active</div><div style="margin-top:8px;font-weight:700" id="sub" data-ur="تمام قسطیں ادا شدہ">All instalments paid</div></div>
+        <div class="amt" id="am">Rs 0</div>
+        <div class="box" id="bx" data-ur="اگلی قسط: 20 نومبر · Rs 7,750">Next instalment: 20 Nov · Rs 7,750</div>
+      </div></div>
+      <div class="toggle" role="group" aria-label="Demo">
+        <button type="button" id="b-paid" aria-pressed="true" data-ur="ادا شدہ">Paid</button>
+        <button type="button" id="b-late" aria-pressed="false" data-ur="لیٹ">Late</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="band" aria-hidden="true"><span>Samsung</span>★<span>Infinix</span>★<span>Tecno</span>★<span>Xiaomi</span>★<span>Vivo</span>★<span>Oppo</span>★<span>Realme</span>★<span>itel</span>★<span>Samsung</span>★<span>Infinix</span>★<span>Tecno</span></div>
+
+<main>
+  <section id="how">
+    <div class="wrap">
+      <h2 data-ur="بس 3 قدم">Just 3 steps</h2>
+      <div class="steps">
+        <div class="step"><div class="n">1</div><h3 data-ur="QR اسکین کریں">Scan the QR</h3><p data-ur="نیا فون کھولیں، QR اسکین کریں، گاہک انگلی سے دستخط کرے۔ دو منٹ کا کام۔">Open the new phone, scan the QR, customer signs with a finger. Two minutes.</p></div>
+        <div class="step"><div class="n">2</div><h3 data-ur="قسط لیں، رسید دیں">Take payment, print receipt</h3><p data-ur="کھاتہ خود بنتا ہے۔ قسط سے پہلے گاہک کو آپ کی سم سے SMS جاتا ہے۔">The khata builds itself. Before each due date, an SMS goes from your SIM.</p></div>
+        <div class="step"><div class="n">3</div><h3 data-ur="لاک اور اَن لاک خود">Lock &amp; unlock — automatic</h3><p data-ur="قسط لیٹ = فون لاک۔ ادائیگی درج = فون آن۔ آپ کو بٹن بھی نہیں دبانا۔">Late = locked. Payment recorded = open. You don't even press a button.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="dark">
+    <div class="wrap">
+      <h2 data-ur="دکان کو جو چاہیے، سب">Everything the shop needs</h2>
+      <div class="feats">
+        <div class="f"><span class="emo">📒</span><h3 data-ur="ڈیجیٹل کھاتہ">Digital khata</h3><p data-ur="ہر گاہک، ہر قسط، ہر بیلنس — ایک اسکرین پر۔">Every customer, every instalment, every balance — one screen.</p></div>
+        <div class="f"><span class="emo">📩</span><h3 data-ur="اپنی سم سے SMS">SMS from your SIM</h3><p data-ur="یاد دہانی آپ کے اپنے نمبر سے جاتی ہے۔">Reminders go from your own number.</p></div>
+        <div class="f"><span class="emo">📴</span><h3 data-ur="نیٹ بند؟ پھر بھی لاک">Data off? Still locks</h3><p data-ur="فون شیڈول خود یاد رکھتا ہے۔">The phone remembers its own schedule.</p></div>
+        <div class="f"><span class="emo">🔒</span><h3 data-ur="ری سیٹ کا راستہ بند">Reset is blocked</h3><p data-ur="سیٹنگز سے ری سیٹ نہیں، اور وائپ کے بعد بھی آپ کا گوگل اکاؤنٹ چاہیے۔">No reset from Settings — and after a wipe, your Google account is still needed.</p></div>
+        <div class="f"><span class="emo">✍️</span><h3 data-ur="اردو / انگریزی معاہدہ">Urdu / English contract</h3><p data-ur="اسکرین پر دستخط۔ دستخط نہیں تو لاک نہیں۔">Signed on screen. No signature, no lock.</p></div>
+        <div class="f"><span class="emo">🧾</span><h3 data-ur="رسید اور عملہ">Receipts &amp; staff</h3><p data-ur="تھرمل رسید، ہر سیلز مین کا الگ لاگ اِن۔">Thermal receipts, a login for every salesman.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2 data-ur="گاہک کے ساتھ انصاف">Fair to your customer</h2>
+      <div class="trust">
+        <div class="t"><span class="yes">✓</span><div><h3 data-ur="رقم صاف نظر آتی ہے">Owed amount is shown</h3><p data-ur="لاک اسکرین پر کتنا باقی ہے اور کس دکان کا۔">The lock screen shows how much and which shop.</p></div></div>
+        <div class="t"><span class="yes">✓</span><div><h3 data-ur="ایمرجنسی کال چلتی ہے">Emergency calls work</h3><p data-ur="1122 اور 15 ہمیشہ ملتے ہیں۔">1122 and 15 always connect.</p></div></div>
+        <div class="t"><span class="yes no">✕</span><div><h3 data-ur="لوکیشن ٹریکنگ نہیں">No location tracking</h3><p data-ur="گاہک کہاں ہے، ہم نہیں دیکھتے۔">We never see where the customer is.</p></div></div>
+        <div class="t"><span class="yes no">✕</span><div><h3 data-ur="ڈیٹا ڈیلیٹ نہیں">No remote wipe</h3><p data-ur="گاہک کی تصاویر اور ڈیٹا محفوظ رہتا ہے۔">The customer's photos and data stay safe.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="price" style="padding-top:20px">
+    <div class="wrap">
+      <h2 data-ur="ریٹ — سیدھا اور صاف">Rates — straight and simple</h2>
+      <div class="packs">
+        <div class="pk"><div class="per">Rs 800<small data-ur=" /فون"> /phone</small></div><div class="meta" data-ur="30 لاک · کل Rs 24,000">30 locks · Rs 24,000 total</div><a class="btn" href="https://wa.me/447521606952?text=30%20locks%20chahiye" target="_blank" rel="noopener" data-ur="30 لاک لیں">Get 30 locks</a></div>
+        <div class="pk hot"><span class="flag" data-ur="سب سے زیادہ بکنے والا">Best seller</span><div class="per">Rs 700<small data-ur=" /فون"> /phone</small></div><div class="meta" data-ur="50 لاک · کل Rs 35,000">50 locks · Rs 35,000 total</div><a class="btn btn-ink" href="https://wa.me/447521606952?text=50%20locks%20chahiye" target="_blank" rel="noopener" data-ur="50 لاک لیں">Get 50 locks</a></div>
+        <div class="pk"><div class="per">Rs 600<small data-ur=" /فون"> /phone</small></div><div class="meta" data-ur="100 لاک · کل Rs 60,000">100 locks · Rs 60,000 total</div><a class="btn" href="https://wa.me/447521606952?text=100%20locks%20chahiye" target="_blank" rel="noopener" data-ur="100 لاک لیں">Get 100 locks</a></div>
+      </div>
+      <p style="margin-top:28px;font-weight:700" data-ur="ماہانہ فیس نہیں۔ لاک صرف فون جوڑنے پر خرچ ہوتا ہے۔">No monthly fee. A lock is used only when a phone is enrolled.</p>
+    </div>
+  </section>
+
+  <section class="final">
+    <div class="wrap">
+      <h2 data-ur="ابھی واٹس ایپ کریں">WhatsApp us now</h2>
+      <a class="num" href="tel:+447521606952">+44 7521 606952</a><br />
+      <a class="btn btn-ink" href="https://wa.me/447521606952?text=Salam%2C%20Almas%20SDM%20ki%20detail%20chahiye" target="_blank" rel="noopener" data-ur="واٹس ایپ کھولیں">Open WhatsApp</a>
+    </div>
+  </section>
+</main>
+<footer><div class="wrap" data-ur="Almas SDM · فون صرف دستخط شدہ معاہدے پر لاک ہوتا ہے۔">Almas SDM · Phones lock only under a signed agreement.</div></footer>
+
+<div class="sticky">
+  <a class="w" href="https://wa.me/447521606952?text=Salam%2C%20Almas%20SDM%20ki%20detail%20chahiye" target="_blank" rel="noopener" data-ur="واٹس ایپ">WhatsApp</a>
+  <a class="c" href="tel:+447521606952" data-ur="کال کریں">Call</a>
+</div>
+
+<script src="lang.js"></script>
+<script>
+  (function () {
+    var ur = function () { return document.documentElement.lang === 'ur'; };
+    var S = {
+      paid: { cls: '', st: ['Phone active', 'فون فعال'], sub: ['All instalments paid', 'تمام قسطیں ادا شدہ'], am: 'Rs 0', bx: ['Next instalment: 20 Nov · Rs 7,750', 'اگلی قسط: 20 نومبر · Rs 7,750'] },
+      late: { cls: 'locked', st: ['Phone locked', 'فون لاک'], sub: ['Instalment overdue', 'قسط کی تاریخ گزر گئی'], am: 'Rs 15,500', bx: ['Pay at Al-Madina Mobile · unlocks itself · Emergency 1122 / 15', 'المدینہ موبائل پر ادائیگی کریں · فون خود کھلے گا · ایمرجنسی 1122 / 15'] }
+    };
+    function set(k) {
+      var s = S[k], scr = document.getElementById('scr');
+      scr.className = 'screen ' + s.cls;
+      [['st', s.st], ['sub', s.sub], ['bx', s.bx]].forEach(function (p) {
+        var el = document.getElementById(p[0]);
+        el.setAttribute('data-en', p[1][0]); el.setAttribute('data-ur', p[1][1]);
+        el.textContent = ur() ? p[1][1] : p[1][0];
+      });
+      document.getElementById('am').textContent = s.am;
+      document.getElementById('b-paid').setAttribute('aria-pressed', k === 'paid');
+      document.getElementById('b-late').setAttribute('aria-pressed', k === 'late');
+    }
+    document.getElementById('b-paid').onclick = function () { set('paid'); };
+    document.getElementById('b-late').onclick = function () { set('late'); };
+  })();
+</script>
+</body>
+</html>
