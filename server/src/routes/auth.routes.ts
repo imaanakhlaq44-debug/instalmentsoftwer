@@ -13,7 +13,7 @@ import { AppError } from '../utils/AppError.js';
 import { hashPassword, validatePasswordStrength } from '../utils/password.js';
 import { pakistaniPhoneSchema, normalizePhone } from '../utils/validators.js';
 import { AuditService } from '../services/AuditService.js';
-import { LicenseService, PACK_OPTIONS } from '../services/LicenseService.js';
+import { PACK_OPTIONS, findPackOption } from '../services/LicenseService.js';
 
 export const authRouter = Router();
 
@@ -44,7 +44,10 @@ const registerDealerSchema = z.object({
   city: z.string().trim().min(2).max(60),
   address: z.string().trim().min(5, 'Please enter a complete shop address.').max(300),
   password: z.string().min(8, 'Password must be at least 8 characters.').max(128),
-  /** The pack of device locks the shop is signing up with. */
+  /**
+   * The pack the shop wants to buy. Recorded, not issued: locks are minted only
+   * once the platform confirms the money arrived (POST /api/licenses/packs).
+   */
   packSize: z
     .number()
     .int()
@@ -76,10 +79,16 @@ authRouter.post(
     const cityCode = body.city.substring(0, 3).toUpperCase();
     const nowIso = new Date().toISOString();
 
-    // A dealer without its locks, policy or owner login is not a usable
-    // account. Every row lands together or none of them do.
+    // A dealer without its policy or owner login is not a usable account.
+    // Every row lands together or none of them do.
+    //
+    // No locks are issued here. This endpoint is public and there is no payment
+    // gateway, so minting the requested pack at sign-up would hand anyone up to
+    // 100 free locks. The shop starts with none; a super admin issues the pack
+    // once payment is confirmed, and until then a financed sale is refused at
+    // the counter with "no locks left" rather than going ahead unpaid.
+    const requestedPack = findPackOption(body.packSize)!;
     const session = await runInTransaction(async (tx) => {
-      // The dealer row comes first: the pack of locks references it.
       await repo.dealers.create(
         {
           id: dealerId,
@@ -109,15 +118,6 @@ authRouter.post(
         createdAt: nowIso,
       }, tx);
 
-      // The pack the shop signed up for. Minted here rather than after the
-      // commit so a dealer can never exist with no locks and no record of why.
-      const { pack } = await LicenseService.issuePack({
-        dealerId,
-        size: body.packSize,
-        actor: { id: user.id, name: user.name },
-        tx,
-      });
-
       await repo.devicePolicies.create({
         id: `pol-${dealerId}`,
         dealerId,
@@ -141,8 +141,8 @@ authRouter.post(
         targetType: 'DEALER',
         targetId: dealerId,
         details:
-          `New dealer "${body.name}" registered in ${body.city} with a pack of ` +
-          `${pack.size} device locks (Rs ${pack.totalPrice}).`,
+          `New dealer "${body.name}" registered in ${body.city}. Requested a pack of ` +
+          `${requestedPack.size} device locks (Rs ${requestedPack.totalPrice}), not issued until payment is confirmed.`,
         ipAddress: clientIp(req),
       }, tx);
 
@@ -150,6 +150,7 @@ authRouter.post(
         user: toPublicUser(user),
         dealer: await repo.dealers.findById(dealerId, tx),
         token: AuthService.issueToken(user),
+        requestedPack: { ...requestedPack, issued: false },
       };
     });
 

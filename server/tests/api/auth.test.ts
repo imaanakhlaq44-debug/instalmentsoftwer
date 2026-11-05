@@ -243,6 +243,54 @@ describe('POST /api/auth/change-password', () => {
   });
 });
 
+describe('POST /api/auth/register-dealer', () => {
+  const signup = {
+    name: 'Bismillah Mobiles',
+    ownerName: 'Kashif Ali',
+    email: 'kashif@bismillahmobiles.pk',
+    phone: '03001234567',
+    city: 'Faisalabad',
+    address: 'Shop 12, Rail Bazaar, Faisalabad',
+    password: 'Bismillah#2026',
+    packSize: 100,
+  };
+
+  it('creates the shop with no locks until payment is confirmed', async () => {
+    const res = await anonymous().post('/api/auth/register-dealer').send(signup);
+
+    expect(res.status).toBe(201);
+    expect(res.body.token).toBeTruthy();
+    expect(res.body.requestedPack).toMatchObject({ size: 100, totalPrice: 60_000, issued: false });
+
+    const dealerId = res.body.dealer.id as string;
+    expect(await repo.deviceLicenses.countAvailable(dealerId)).toBe(0);
+    expect(await repo.licensePacks.findMany({ where: { dealerId } })).toHaveLength(0);
+  });
+
+  it('shows the new shop its empty lock position', async () => {
+    const res = await anonymous().post('/api/auth/register-dealer').send(signup);
+    const token = res.body.token as string;
+
+    const licenses = await anonymous().get('/api/licenses').set('Authorization', `Bearer ${token}`);
+    expect(licenses.status).toBe(200);
+    expect(licenses.body.dealers).toEqual([
+      expect.objectContaining({ dealerId: res.body.dealer.id, available: 0, outOfLocks: true }),
+    ]);
+  });
+
+  it('gets locks once a super admin issues the paid pack', async () => {
+    const res = await anonymous().post('/api/auth/register-dealer').send(signup);
+    const dealerId = res.body.dealer.id as string;
+
+    const issued = await as(ACCOUNTS.superAdmin)
+      .post('/api/licenses/packs')
+      .send({ dealerId, size: 100, reference: 'JazzCash TXN 123' });
+
+    expect(issued.status).toBe(201);
+    expect(await repo.deviceLicenses.countAvailable(dealerId)).toBe(100);
+  });
+});
+
 describe('GET /api/health', () => {
   it('is reachable without a token', async () => {
     const res = await anonymous().get('/api/health');

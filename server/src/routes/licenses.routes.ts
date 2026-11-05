@@ -33,7 +33,9 @@ licensesRouter.get(
       repo.deviceLicenses.findMany({ where: dealerScope(scope) }),
     ]);
 
-    const dealerIds = [...new Set([...packs, ...licenses].map((r) => r.dealerId))];
+    // A shop that has signed up but not yet paid owns no packs or locks, and
+    // must still see its own (empty) position rather than nothing at all.
+    const dealerIds = [...new Set([...(scope ? [scope] : []), ...[...packs, ...licenses].map((r) => r.dealerId)])];
     const dealersById = indexBy<Dealer>(await repo.dealers.findByIds(dealerIds), (d) => d.id);
 
     const countFor = (dealerId: string, status: DeviceLicense['status']) =>
