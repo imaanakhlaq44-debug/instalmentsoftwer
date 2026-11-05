@@ -143,6 +143,9 @@ export class LicenseService {
 
       await repo.deviceLicenses.createMany(licenses, tx);
 
+      // The shop has now been sold locks; it is no longer waiting to pay.
+      await repo.dealers.update(params.dealerId, { requestedPackSize: null }, tx);
+
       return { pack, licenses: licenses.length };
     };
 

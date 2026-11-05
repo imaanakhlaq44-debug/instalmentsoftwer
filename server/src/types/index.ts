@@ -61,6 +61,8 @@ export interface Dealer {
   address: string;
   active: boolean;
   createdAt: string;
+  /** Locks asked for at sign-up and not yet paid for; null once a pack is issued. */
+  requestedPackSize?: number | null;
 }
 
 export interface User {

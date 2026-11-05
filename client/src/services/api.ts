@@ -326,6 +326,11 @@ export class ApiService {
   // Licenses / Notifications / Audit
   // -------------------------------------------------------------------------
 
+  /** The super admin's platform dashboard: shops, sales and the fleet. */
+  static getPlatformOverview() {
+    return this.request<any>('/platform/overview');
+  }
+
   static getLicenses(dealerId?: string) {
     return this.request<{
       dealers: any[];
