@@ -32,6 +32,16 @@ export function routeParam(req: Request, name: string): string {
   return value ?? '';
 }
 
+/**
+ * The only endpoints an account with a temporary password may reach: restore
+ * the session, set a real password, or sign out. Matched as "METHOD /full/path".
+ */
+const PASSWORD_CHANGE_ALLOWED = new Set([
+  'GET /api/auth/me',
+  'POST /api/auth/change-password',
+  'POST /api/auth/logout',
+]);
+
 function extractToken(req: Request): string | null {
   const header = req.headers.authorization;
   if (header && header.startsWith('Bearer ')) {
@@ -64,6 +74,25 @@ export const requireAuth = asyncHandler(async (req: Request, _res: Response, nex
   }
   if (!user.active) {
     return next(AppError.forbidden('This account has been deactivated.'));
+  }
+
+  // Suspending a dealer must cut off its staff and customers immediately, not
+  // only at their next login — otherwise a token issued before the suspension
+  // keeps locking devices and recording payments until it expires.
+  if (user.dealerId) {
+    const dealer = await repo.dealers.findById(user.dealerId);
+    if (!dealer || !dealer.active) {
+      return next(AppError.forbidden('Your dealer account is suspended. Please contact Almas SDM support.'));
+    }
+  }
+
+  // A temporary password (set by an admin) must be replaced before the account
+  // can do anything else. The dashboard redirects too, but that is only UI —
+  // this is the actual gate for anyone calling the API directly.
+  if (user.mustChangePassword && !PASSWORD_CHANGE_ALLOWED.has(`${req.method} ${req.baseUrl}${req.path}`)) {
+    return next(
+      new AppError('You must change your temporary password before continuing.', 403, { code: 'PASSWORD_CHANGE_REQUIRED' })
+    );
   }
 
   req.user = {

@@ -115,6 +115,8 @@ const updateUserSchema = z.object({
   phone: pakistaniPhoneSchema.optional(),
   role: z.enum(['DEALER_ADMIN', 'DEALER_STAFF', 'CUSTOMER']).optional(),
   active: z.boolean().optional(),
+  /** Required when changing a staff login into a CUSTOMER login. */
+  customerId: z.string().trim().optional(),
 });
 
 usersRouter.patch(
@@ -145,6 +147,29 @@ usersRouter.patch(
   if (body.phone !== undefined) updates.phone = normalizePhone(body.phone);
   if (body.role !== undefined) updates.role = body.role;
   if (body.active !== undefined) updates.active = body.active;
+
+  // Keep the customer binding consistent with the role, exactly as on create:
+  // a CUSTOMER login must point at a customer of this dealer, and a staff login
+  // must not carry a leftover customer id.
+  const nextRole = body.role ?? target.role;
+  if (nextRole === 'CUSTOMER') {
+    const customerId = body.customerId ?? target.customerId;
+    if (!customerId) {
+      throw AppError.badRequest('A customerId is required when changing a login to the CUSTOMER role.');
+    }
+    if (customerId !== target.customerId) {
+      const customer = await repo.customers.findById(customerId);
+      if (!customer) throw AppError.notFound('Customer');
+      assertDealerAccess(req, customer.dealerId, 'customer');
+      if (customer.dealerId !== target.dealerId) throw AppError.notFound('Customer');
+      updates.customerId = customer.id;
+    }
+  } else {
+    if (body.customerId) {
+      throw AppError.badRequest('A customerId can only be set on a CUSTOMER login.');
+    }
+    if (target.customerId) updates.customerId = undefined;
+  }
 
   if (Object.keys(updates).length === 0) {
     throw AppError.badRequest('No changes were supplied.');
