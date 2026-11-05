@@ -41,6 +41,109 @@ const OUT = path.join(ROOT, 'dist');
 const APP_URL = (process.env.APP_URL || '').trim() || 'http://localhost:5173';
 const HAS_APP = APP_URL !== 'none';
 
+/**
+ * The public address, for canonical links, social previews and structured
+ * data. Search engines need absolute URLs in all three.
+ */
+const SITE_URL = (process.env.SITE_URL || 'https://almassdm.pro').replace(/\/+$/, '');
+
+const escapeAttr = (s) =>
+  String(s).replace(/&(?!amp;|lt;|gt;|quot;|#\d+;)/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
+const stripTags = (s) =>
+  s.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+
+/**
+ * Canonical, Open Graph and Twitter tags for one page. A shop owner shares a
+ * link on WhatsApp far more often than anyone searches for it, and WhatsApp
+ * builds its preview from exactly these tags.
+ */
+function seoTags({ file, title, description }) {
+  const url = file === 'index.html' ? `${SITE_URL}/` : `${SITE_URL}/${file}`;
+  const image = `${SITE_URL}/logo-lockup.png`;
+  return [
+    `<link rel="canonical" href="${url}" />`,
+    `<meta property="og:type" content="website" />`,
+    `<meta property="og:site_name" content="Almas SDM" />`,
+    `<meta property="og:locale" content="en_PK" />`,
+    `<meta property="og:url" content="${url}" />`,
+    `<meta property="og:title" content="${escapeAttr(title)}" />`,
+    `<meta property="og:description" content="${escapeAttr(description)}" />`,
+    `<meta property="og:image" content="${image}" />`,
+    `<meta property="og:image:width" content="720" />`,
+    `<meta property="og:image:height" content="629" />`,
+    `<meta name="twitter:card" content="summary" />`,
+  ].join('\n    ');
+}
+
+/**
+ * FAQPage structured data, read from the page's own `<details>` blocks so the
+ * markup can never claim an answer the visitor cannot see — Google ignores
+ * (and can penalise) FAQ data that does not match the page.
+ */
+function faqJsonLd(html) {
+  const items = [...html.matchAll(/<details[^>]*>\s*<summary[^>]*>([\s\S]*?)<\/summary>\s*<p[^>]*>([\s\S]*?)<\/p>\s*<\/details>/g)].map(
+    ([, q, a]) => ({
+      '@type': 'Question',
+      name: stripTags(q),
+      acceptedAnswer: { '@type': 'Answer', text: stripTags(a) },
+    })
+  );
+  if (!items.length) return '';
+  return jsonLd({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: items });
+}
+
+const jsonLd = (data) =>
+  `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`;
+
+/** Who we are and what we sell, for the home page. */
+function homeJsonLd() {
+  return jsonLd({
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': `${SITE_URL}/#org`,
+        name: 'Almas SDM',
+        url: `${SITE_URL}/`,
+        logo: `${SITE_URL}/logo-mark.png`,
+        areaServed: 'PK',
+        contactPoint: {
+          '@type': 'ContactPoint',
+          contactType: 'sales',
+          telephone: '+447521606952',
+          availableLanguage: ['en', 'ur'],
+        },
+      },
+      {
+        '@type': 'WebSite',
+        '@id': `${SITE_URL}/#site`,
+        url: `${SITE_URL}/`,
+        name: 'Almas SDM',
+        inLanguage: ['en', 'ur'],
+        publisher: { '@id': `${SITE_URL}/#org` },
+      },
+      {
+        '@type': 'SoftwareApplication',
+        name: 'Almas SDM',
+        applicationCategory: 'BusinessApplication',
+        operatingSystem: 'Android, Web',
+        description:
+          'Mobile installment (qist) software for Pakistani phone shops: digital khata, SMS reminders from your own SIM, a signed Urdu/English agreement, and automatic phone lock and unlock.',
+        publisher: { '@id': `${SITE_URL}/#org` },
+        offers: {
+          '@type': 'AggregateOffer',
+          priceCurrency: 'PKR',
+          lowPrice: 600,
+          highPrice: 800,
+          offerCount: 3,
+          url: `${SITE_URL}/pricing.html`,
+        },
+      },
+    ],
+  });
+}
+
 /** Pulled out of each page's `<!-- meta ... -->` comment. */
 function readMeta(html) {
   const match = html.match(/<!--\s*meta\s*([\s\S]*?)-->/);
@@ -78,7 +181,15 @@ async function build() {
     // page, whose design does not share the inner pages' header and footer.
     // It still gets the Sign in rule and the app address.
     if (meta.layout === 'none') {
-      await writeFile(path.join(OUT, file), withSignin(body).replaceAll('{{appUrl}}', APP_URL), 'utf8');
+      const ownTitle = stripTags(body.match(/<title>([\s\S]*?)<\/title>/)?.[1] ?? meta.title ?? 'Almas SDM');
+      const ownDesc = body.match(/<meta name="description" content="([^"]*)"/)?.[1] ?? meta.description ?? '';
+      const seo = [
+        seoTags({ file, title: ownTitle, description: ownDesc }),
+        file === 'index.html' ? homeJsonLd() : '',
+        faqJsonLd(body),
+      ].filter(Boolean).join('\n    ');
+      const out = withSignin(body).replaceAll('{{appUrl}}', APP_URL).replace('{{seo}}', seo);
+      await writeFile(path.join(OUT, file), out, 'utf8');
       process.stdout.write(`  ${file} (own layout)\n`);
       continue;
     }
@@ -89,6 +200,13 @@ async function build() {
       .replaceAll('{{description}}', meta.description ?? '')
       .replaceAll('{{page}}', meta.page ?? '')
       .replaceAll('{{appUrl}}', APP_URL)
+      .replace(
+        '{{seo}}',
+        [
+          seoTags({ file, title: `${meta.title ?? 'Almas SDM'} · Almas SDM`, description: meta.description ?? '' }),
+          faqJsonLd(body),
+        ].filter(Boolean).join('\n    ')
+      )
       .replace('{{content}}', body);
 
     await writeFile(path.join(OUT, file), html, 'utf8');
