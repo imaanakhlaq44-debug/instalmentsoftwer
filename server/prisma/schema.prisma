@@ -22,6 +22,10 @@ generator client {
   provider     = "prisma-client"
   output       = "../src/generated/prisma"
   moduleFormat = "cjs"
+  // Spelled out because Prisma otherwise guesses from the tsconfig it can see.
+  // The Docker build generates before tsconfig.json is copied in, guessed ".ts",
+  // and the compiled server then required ./internal/class.ts and crashed.
+  importFileExtension = "js"
 }
 
 // Prisma 7 takes the connection URL from prisma.config.ts (driver adapter),
