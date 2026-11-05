@@ -24,7 +24,7 @@
       "port": 4173
     },
     {
-      "name": "almas-sdm-concepts",
+      "name": "almas-sdm-dist",
       "runtimeExecutable": "npx",
       "runtimeArgs": [
         "--yes",
