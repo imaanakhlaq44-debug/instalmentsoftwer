@@ -134,11 +134,27 @@ then `docker compose ... restart web`.
 
 ---
 
-## 5. Create the first account
+## 5. Create the first accounts
 
 The database starts **empty**. `AUTO_SEED` is forced to `false` in production —
 the config refuses to boot otherwise — because demo customers in a live shop's
 records would be worse than no records.
+
+### The platform's super admin
+
+Only a super admin can issue packs of locks, and no endpoint can create one, so
+the first is made from a shell on the server. The password is typed at a hidden
+prompt, twice, and never appears in history or logs:
+
+```bash
+docker compose -f deploy/docker-compose.yml --env-file deploy/.env \
+  exec server node dist/scripts/createSuperAdmin.js --email you@example.com --name "Your Name"
+```
+
+Sign in at `https://your-domain.pk` with that email. This is the account that
+issues a shop its locks once payment has arrived (Licenses page).
+
+### A dealership
 
 **There is no sign-up screen in the dashboard.** The API has the endpoint and
 the client has a method for it, but nothing in the interface calls it, so the
@@ -159,13 +175,13 @@ curl -s https://your-domain.pk/api/auth/register-dealer \
   }'
 ```
 
-That creates the dealership, its enforcement policy, its first pack of locks and
-the owner's `DEALER_ADMIN` login in one transaction. Sign in at
-`https://your-domain.pk` with that email and password; everything else — staff
-accounts, customers, devices — is done from the dashboard.
-
-`packSize` must be 30, 50 or 100. Locks are spent one per handset at enrolment
-and never returned, so start with what the shop has actually bought.
+That creates the dealership, its enforcement policy and the owner's
+`DEALER_ADMIN` login in one transaction. It does **not** issue locks: `packSize`
+(30, 50 or 100) is recorded as the pack the shop wants, and the super admin
+issues it from the Licenses page once the money has arrived. Until then a
+financed sale is refused at the counter. Sign in at `https://your-domain.pk`
+with that email and password; everything else — staff accounts, customers,
+devices — is done from the dashboard.
 
 > The missing sign-up screen is worth building before a second dealership is
 > ever onboarded. Doing it by curl is fine for the shop that owns the server; it
