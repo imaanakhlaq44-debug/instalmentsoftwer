@@ -35,7 +35,7 @@ export const Sidebar: React.FC = () => {
   })).filter((g) => g.items.length > 0);
 
   return (
-    <aside className="hidden w-60 shrink-0 select-none flex-col border-r border-paper-300 bg-paper-50 lg:flex">
+    <aside className="hidden w-60 shrink-0 select-none flex-col border-r-2 border-ink-900 bg-paper-50 lg:flex">
       <div className="flex h-16 items-center gap-2.5 px-5">
         {/* The mark carries no background plate: it is drawn with white lines
             between its facets, and a coloured tile behind it fights them. */}
@@ -47,14 +47,14 @@ export const Sidebar: React.FC = () => {
           className="h-7 w-auto"
           aria-hidden="true"
         />
-        <span className="text-lede font-semibold tracking-[-0.01em] text-ink-900">Almas SDM</span>
+        <span className="text-lede font-black uppercase tracking-[-0.01em] text-ink-900">Almas SDM</span>
       </div>
 
       {/* Whose books are on screen. For a super admin this is the only thing
           distinguishing one dealership's data from another's. */}
-      <div className="mx-3 mb-2 rounded-md bg-paper-200/70 px-3 py-2.5">
+      <div className="mx-3 mb-2 rounded-md border-2 border-ink-900 bg-sun-100 px-3 py-2.5 shadow-[3px_3px_0_#0F1419]">
         <p className="eyebrow">{role === 'SUPER_ADMIN' ? 'Viewing' : 'Dealership'}</p>
-        <p className="mt-0.5 truncate text-caption font-medium text-ink-900">
+        <p className="mt-0.5 truncate text-caption font-bold text-ink-900">
           {dealer?.name || (role === 'SUPER_ADMIN' ? 'All dealers' : '—')}
         </p>
       </div>
@@ -72,20 +72,17 @@ export const Sidebar: React.FC = () => {
                       to={item.to}
                       end={item.to === '/'}
                       className={({ isActive }) =>
-                        `relative flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-body transition-colors ${
+                        `relative flex items-center gap-2.5 rounded-md border-2 px-2.5 py-1.5 text-body transition-colors ${
                           isActive
-                            ? 'bg-paper-200 font-medium text-ink-900'
-                            : 'text-ink-500 hover:bg-paper-200/60 hover:text-ink-900'
+                            ? 'border-ink-900 bg-sun-400 font-extrabold text-ink-900 shadow-[3px_3px_0_#0F1419]'
+                            : 'border-transparent font-semibold text-ink-700 hover:bg-sun-100 hover:text-ink-900'
                         }`
                       }
                     >
                       {({ isActive }) => (
                         <>
-                          {isActive && (
-                            <span className="absolute inset-y-1 left-0 w-0.5 rounded-full bg-accent-600" />
-                          )}
-                          <Icon
-                            className={`h-4 w-4 shrink-0 ${isActive ? 'text-accent-700' : 'text-ink-400'}`}
+                                                    <Icon
+                            className={`h-4 w-4 shrink-0 ${isActive ? 'text-ink-900' : 'text-ink-500'}`}
                             aria-hidden="true"
                           />
                           <span className="truncate">{item.label}</span>
@@ -101,7 +98,7 @@ export const Sidebar: React.FC = () => {
       </nav>
 
       {user && (
-        <div className="border-t border-paper-300 px-5 py-3.5">
+        <div className="border-t-2 border-ink-900 px-5 py-3.5">
           <p className="truncate text-caption font-medium text-ink-900">{user.name}</p>
           <p className="truncate text-micro normal-case tracking-normal text-ink-400">
             {ROLE_LABELS[user.role] ?? user.role}

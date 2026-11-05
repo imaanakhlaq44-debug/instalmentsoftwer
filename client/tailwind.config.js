@@ -1,5 +1,7 @@
 /**
- * Almas SDM design tokens.
+ * Almas SDM design tokens — the marketing site's look (cream paper, ink
+ * borders, hard offset shadows, sun and mint), so the dashboard and the home
+ * page read as one product.
  *
  * The rules this file encodes, so they survive the next feature:
  *
@@ -21,48 +23,51 @@ export default {
       colors: {
         /* Modern crisp neutral ramp — sleek SaaS surface language */
         paper: {
-          50: '#FFFFFF',  // raised card
-          100: '#F8FAFC', // app canvas
-          200: '#F1F5F9', // sunken well / hover
-          300: '#E2E8F0', // crisp hairline border
-          400: '#CBD5E1', // strong border
+          50: '#FFFDF6',  // raised card — the home page's paper
+          100: '#FFF8E8', // app canvas — the home page's cream
+          200: '#F7EDD3', // sunken well / hover
+          300: '#E6D9BA', // warm hairline (tables, dividers)
+          400: '#CDBD98', // strong line
         },
         ink: {
-          900: '#0F172A', // crisp dark headings
-          700: '#334155', // clear readable body
-          500: '#64748B', // secondary
-          400: '#94A3B8', // muted / captions
+          900: '#0F1419', // the home page's ink: headings, borders, shadows
+          700: '#3A4350', // body
+          500: '#5B6472', // secondary
+          400: '#8A919C', // muted / captions
         },
         /* The single accent. 600 is the interactive step, 800 the brand ground. */
         accent: {
-          50: '#EEF4FD',
-          100: '#DCE8FA',
-          200: '#B7D3F6',
-          400: '#3987E5',
-          500: '#2563EB',
-          600: '#1D4ED8',
-          700: '#1E40AF',
-          800: '#1E3A8A',
-          900: '#172554',
-          950: '#0A1329',
+          50: '#EAF0FA',
+          100: '#D6E2F5',
+          200: '#AFC5EA',
+          400: '#3D6CB8',
+          500: '#2A56A0',
+          600: '#1B4382',
+          700: '#163A72',
+          800: '#12305F', // the home page's navy
+          900: '#0C2246',
+          950: '#071530',
         },
+        /* The home page's two loud colours, for highlights and active states. */
+        sun: { 100: '#FFF1C7', 200: '#FFE08A', 400: '#FFC83D' },
+        mint: { 100: '#DDF6EC', 300: '#7BE0C2', 500: '#1DB98F' },
         /* Status. Reserved — never used as a "nice colour" for a card. */
-        positive: { 50: '#ECFDF5', 200: '#A7F3D0', 600: '#059669', 700: '#047857' },
-        caution:  { 50: '#FFFBEB', 200: '#FDE68A', 600: '#D97706', 700: '#B45309' },
-        critical: { 50: '#FEF2F2', 200: '#FECACA', 600: '#DC2626', 700: '#B91C1C' },
+        positive: { 50: '#DDF6EC', 200: '#7BE0C2', 600: '#14946F', 700: '#0B7A5E' },
+        caution:  { 50: '#FFF1C7', 200: '#FFE08A', 600: '#C98A00', 700: '#8A5B00' },
+        critical: { 50: '#FDE3DF', 200: '#F6A99F', 600: '#E8473A', 700: '#B3301F' },
         /* --- Legacy, pending the page-by-page migration ---------------------
            The shell and the dashboard are on the tokens above. The remaining
            pages still name these, and an unknown Tailwind class is silently
            dropped rather than flagged — so they stay, mapped onto the new
            neutrals, until each page is migrated. Do not use them in new code. */
-        navy: { 800: '#1E293B', 900: '#0F172A', 950: '#020617' },
+        navy: { 800: '#1B4382', 900: '#12305F', 950: '#0F1419' },
         /* Chart series. Validated: adjacent CVD ΔE 21.6, normal-vision ΔE 32.3. */
-        viz: { collection: '#2563EB', overdue: '#DC2626', grid: '#E2E8F0' },
+        viz: { collection: '#1B4382', overdue: '#E8473A', grid: '#E6D9BA' },
       },
       fontFamily: {
-        sans: ['Inter', 'Plus Jakarta Sans', 'Noto Naskh Arabic', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
-        display: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
-        serif: ['Plus Jakarta Sans', 'Noto Naskh Arabic', 'Inter', 'sans-serif'],
+        sans: ['Archivo', 'Noto Naskh Arabic', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+        display: ['Archivo', 'system-ui', 'sans-serif'],
+        serif: ['Archivo', 'Noto Naskh Arabic', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       fontSize: {
@@ -75,16 +80,16 @@ export default {
         display: ['1.75rem', { lineHeight: '2.125rem', letterSpacing: '-0.02em' }],
         figure: ['2.25rem', { lineHeight: '2.5rem', letterSpacing: '-0.03em' }],
       },
-      borderRadius: { DEFAULT: '6px', md: '8px', lg: '12px', xl: '16px' },
+      borderRadius: { DEFAULT: '8px', md: '12px', lg: '18px', xl: '22px' },
       boxShadow: {
         /* legacy aliases — see the note on the `navy` ramp above */
-        card: '0 1px 2px rgba(23, 22, 20, 0.04)',
-        'card-hover': '0 2px 8px rgba(23, 22, 20, 0.06)',
+        card: '4px 4px 0 #0F1419',
+        'card-hover': '5px 5px 0 #0F1419',
         /* Depth comes from spacing and hairlines. Shadows only say "this floats". */
-        hairline: '0 1px 2px rgba(23, 22, 20, 0.04)',
-        raised: '0 2px 8px rgba(23, 22, 20, 0.06)',
-        overlay: '0 12px 32px -8px rgba(23, 22, 20, 0.16)',
-        focus: '0 0 0 3px rgba(37, 106, 191, 0.18)',
+        hairline: '3px 3px 0 #0F1419',
+        raised: '5px 5px 0 #0F1419',
+        overlay: '6px 6px 0 #0F1419',
+        focus: '0 0 0 3px rgba(255, 200, 61, 0.55)',
       },
       transitionDuration: { DEFAULT: '150ms' },
     },
