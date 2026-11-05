@@ -222,6 +222,8 @@ model Dealer {
   address      String   @db.VarChar(300)
   active       Boolean  @default(true)
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  /// Locks asked for at sign-up, not yet paid for. Cleared when a pack is issued.
+  requestedPackSize Int? @map("requested_pack_size")
 
   users            User[]
   customers        Customer[]

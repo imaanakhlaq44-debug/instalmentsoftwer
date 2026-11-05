@@ -101,6 +101,7 @@ authRouter.post(
           address: body.address,
           active: true,
           createdAt: nowIso,
+          requestedPackSize: requestedPack.size,
         },
         tx
       );

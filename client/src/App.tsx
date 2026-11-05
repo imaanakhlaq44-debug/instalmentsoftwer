@@ -9,6 +9,26 @@ import { LoginPage } from './pages/LoginPage.js';
 import { RegisterPage } from './pages/RegisterPage.js';
 import { ChangePasswordPage } from './pages/ChangePasswordPage.js';
 import { DashboardPage } from './pages/DashboardPage.js';
+import { PlatformDashboardPage } from './pages/PlatformDashboardPage.js';
+import { useAuth } from './context/AuthContext.js';
+
+/**
+ * Home. A super admin looking at every shop gets the platform view; once they
+ * pick a shop, or for anyone else, it is that shop's own dashboard.
+ */
+const HomePage: React.FC = () => {
+  const { role, selectedDealerId, setSelectedDealerId } = useAuth();
+  if (role !== 'SUPER_ADMIN') return <DashboardPage />;
+  if (!selectedDealerId) return <PlatformDashboardPage />;
+  return (
+    <div className="space-y-4">
+      <button type="button" className="btn-secondary py-1.5 text-caption" onClick={() => setSelectedDealerId(undefined)}>
+        ← Back to platform
+      </button>
+      <DashboardPage />
+    </div>
+  );
+};
 import { DevicesPage } from './pages/DevicesPage.js';
 import { DeviceDetailPage } from './pages/DeviceDetailPage.js';
 import { SimulatorPage } from './pages/SimulatorPage.js';
@@ -59,7 +79,7 @@ export function App() {
                 </RequireAuth>
               }
             >
-              <Route path="/" element={<DashboardPage />} />
+              <Route path="/" element={<HomePage />} />
 
               <Route path="/devices" element={<RequireRole roles={[...ALL]}><DevicesPage /></RequireRole>} />
               <Route path="/devices/:id" element={<RequireRole roles={[...ALL]}><DeviceDetailPage /></RequireRole>} />
