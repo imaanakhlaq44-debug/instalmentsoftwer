@@ -9,6 +9,9 @@
 
   body {
     @apply bg-paper-100 text-ink-700 font-sans text-body;
+    /* The home page's dotted cream. */
+    background-image: radial-gradient(rgba(15, 20, 25, 0.07) 1px, transparent 1.2px);
+    background-size: 22px 22px;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
@@ -23,7 +26,18 @@
 
   /* One focus ring for the whole app, on the accent, never removed. */
   :focus-visible {
-    @apply outline-none ring-2 ring-accent-600/40 ring-offset-2 ring-offset-paper-100 rounded;
+    @apply outline-none ring-2 ring-ink-900 ring-offset-2 ring-offset-sun-400 rounded;
+  }
+
+  h1 {
+    font-weight: 900;
+    letter-spacing: -0.03em;
+  }
+
+  h2,
+  h3 {
+    font-weight: 800;
+    letter-spacing: -0.01em;
   }
 
   ::selection {
@@ -59,16 +73,16 @@
      spacing around it is wrong.
      ------------------------------------------------------------------------- */
   .surface {
-    @apply bg-paper-50 border border-paper-300 rounded-lg;
+    @apply bg-paper-50 border-2 border-ink-900 rounded-lg shadow-card;
   }
 
   .surface-interactive {
-    @apply surface transition-shadow hover:shadow-raised hover:border-paper-400;
+    @apply surface transition-transform hover:-translate-x-px hover:-translate-y-px hover:shadow-raised;
   }
 
   /* Recessed area inside a card — meters, wells, empty states. */
   .well {
-    @apply bg-paper-200/60 border border-paper-300/70 rounded-md;
+    @apply bg-paper-200/70 border-2 border-dashed border-paper-400 rounded-md;
   }
 
   /* -------------------------------------------------------------------------
@@ -77,7 +91,7 @@
      weight. Nothing in this app shouts in bold except a number.
      ------------------------------------------------------------------------- */
   .eyebrow {
-    @apply text-micro font-semibold uppercase tracking-[0.08em] text-ink-400;
+    @apply text-micro font-extrabold uppercase tracking-[0.12em] text-ink-500;
   }
 
   .field-label {
@@ -90,8 +104,8 @@
      carrier of meaning.
      ------------------------------------------------------------------------- */
   .status-pill {
-    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-micro font-semibold
-           border normal-case tracking-normal;
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-micro font-bold
+           border-2 normal-case tracking-normal;
   }
 
   .status-active,
@@ -117,31 +131,36 @@
      ------------------------------------------------------------------------- */
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2 text-body
-           font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none;
+           font-extrabold transition disabled:opacity-50 disabled:pointer-events-none;
   }
 
+  /* The home page's chunky button: ink outline, offset shadow, pressed on click. */
   .btn-primary {
-    @apply btn bg-accent-800 text-white hover:bg-accent-900;
+    @apply btn bg-ink-900 text-white border-2 border-ink-900 shadow-[3px_3px_0_#FFC83D]
+           hover:-translate-x-px hover:-translate-y-px hover:shadow-[4px_4px_0_#FFC83D]
+           active:translate-x-0.5 active:translate-y-0.5 active:shadow-none;
   }
 
   .btn-secondary {
-    @apply btn bg-paper-50 text-ink-700 border border-paper-300 hover:bg-paper-200;
+    @apply btn bg-white text-ink-900 border-2 border-ink-900 shadow-[3px_3px_0_#0F1419]
+           hover:-translate-x-px hover:-translate-y-px hover:shadow-[4px_4px_0_#0F1419]
+           active:translate-x-0.5 active:translate-y-0.5 active:shadow-none;
   }
 
   .btn-ghost {
-    @apply btn text-ink-500 hover:text-ink-900 hover:bg-paper-200;
+    @apply btn text-ink-700 hover:text-ink-900 hover:bg-sun-100;
   }
 
   .input {
-    @apply w-full rounded-md border border-paper-300 bg-paper-50 px-3 py-2 text-body text-ink-900
+    @apply w-full rounded-md border-2 border-ink-900 bg-white px-3 py-2 text-body font-medium text-ink-900
            placeholder:text-ink-400 transition-colors
-           focus:border-accent-600 focus:outline-none focus:ring-0 focus:shadow-focus;
+           focus:outline-none focus:ring-0 focus:shadow-focus;
   }
 
   /* A number that is the point of its card. Serif, because it is being said to
      someone rather than tabulated at them. */
   .figure {
-    @apply font-serif text-figure text-ink-900 tabular;
+    @apply font-display font-black text-figure text-ink-900 tabular tracking-[-0.04em];
   }
 }
 

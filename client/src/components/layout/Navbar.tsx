@@ -86,7 +86,7 @@ export const Navbar: React.FC = () => {
     'flex w-full items-center gap-2.5 px-3 py-2 text-body text-ink-700 transition-colors hover:bg-paper-200';
 
   return (
-    <header className="sticky top-0 z-30 border-b border-paper-300 bg-paper-100/90 px-4 py-2.5 backdrop-blur-sm lg:px-8">
+    <header className="sticky top-0 z-30 border-b-2 border-ink-900 bg-paper-100/90 px-4 py-2.5 backdrop-blur-sm lg:px-8">
       <div className="flex items-center gap-3">
         <div className="hidden max-w-sm flex-1 sm:block">
           <div className="relative">
@@ -127,7 +127,7 @@ export const Navbar: React.FC = () => {
               </button>
 
               {showDealerMenu && (
-                <div className="absolute right-0 z-50 mt-1.5 max-h-80 w-72 overflow-y-auto rounded-lg border border-paper-300 bg-paper-50 py-1 shadow-overlay">
+                <div className="absolute right-0 z-50 mt-1.5 max-h-80 w-72 overflow-y-auto rounded-lg border-2 border-ink-900 bg-paper-50 py-1 shadow-overlay">
                   <p className="eyebrow px-3 py-1.5">View dealership</p>
                   <button
                     type="button"
@@ -208,7 +208,7 @@ export const Navbar: React.FC = () => {
             </button>
 
             {showProfile && (
-              <div className="absolute right-0 z-50 mt-1.5 w-64 rounded-lg border border-paper-300 bg-paper-50 py-1 shadow-overlay">
+              <div className="absolute right-0 z-50 mt-1.5 w-64 rounded-lg border-2 border-ink-900 bg-paper-50 py-1 shadow-overlay">
                 <div className="border-b border-paper-300 px-3 pb-2.5 pt-2">
                   <p className="truncate text-body font-medium text-ink-900">{user?.name}</p>
                   <p className="truncate text-caption text-ink-400">{user?.email}</p>
