@@ -634,6 +634,12 @@ model DevicePolicy {
    * server cannot act on.
    */
   offlineLockAfterDays     Int               @default(0) @map("offline_lock_after_days")
+  /**
+   * Google account ids (the numeric id, not the email) allowed to activate a
+   * handset after a recovery-mode factory reset. Empty means no Factory Reset
+   * Protection is pushed to phones.
+   */
+  frpAccountIds            String[]          @default([]) @map("frp_account_ids")
   customerReminderEnabled  Boolean           @default(true) @map("customer_reminder_enabled")
   emergencyCallsAllowed    Boolean           @default(true) @map("emergency_calls_allowed")
   paymentMethodsOnLock     String[]          @map("payment_methods_on_lock")

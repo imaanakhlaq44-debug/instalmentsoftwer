@@ -1,12 +1,14 @@
 package pk.almassdm.dpc.admin
 
 import android.app.admin.DevicePolicyManager
+import android.app.admin.FactoryResetProtectionPolicy
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Bundle
 import android.os.UserManager
 import android.telecom.TelecomManager
 import android.util.Log
@@ -59,9 +61,114 @@ class LockController(context: Context) {
         }.onFailure { Log.w(TAG, "Could not harden the installation: ${it.message}") }
     }
 
+    /**
+     * Factory Reset Protection: who may set the phone up after a wipe.
+     *
+     * `DISALLOW_FACTORY_RESET` only closes the Settings route. A reset from the
+     * recovery menu (hardware buttons) runs below Android, where no app can
+     * stop it, and erases this app along with everything else. FRP is the
+     * answer to that path: it is kept by the platform across the wipe, so the
+     * phone then refuses to finish setup until one of these Google accounts
+     * signs in — the dealer's, who re-enrols it.
+     *
+     * An empty list removes the protection. The server sends one once nothing
+     * is owed, so a customer who has paid off the handset is never left needing
+     * the dealer's account to use their own phone.
+     *
+     * Like everything else here it reports what happened, not what was asked:
+     * [Outcome.Refused] when the platform does not support FRP or refuses it.
+     *
+     * Which call is due, if any, is decided by [FactoryResetProtection.next],
+     * which is unit-tested. The fingerprint it compares against records the
+     * route as well as the accounts, so a phone upgraded from Android 10 to 11
+     * moves onto the platform API at its next check-in.
+     */
+    fun applyFactoryResetProtection(accountIds: List<String>): Outcome {
+        if (!isDeviceOwner) {
+            return Outcome.Refused("Factory Reset Protection needs device-owner privileges.")
+        }
+        val step = FactoryResetProtection.next(Build.VERSION.SDK_INT, accountIds, prefs.frpAppliedIds)
+
+        return try {
+            when (step) {
+                FactoryResetProtection.Step.None -> return Outcome.Applied
+                FactoryResetProtection.Step.Clear -> clearFactoryResetProtection()
+                is FactoryResetProtection.Step.Apply -> when (step.route) {
+                    FactoryResetProtection.Route.MODERN -> applyModernFrp(step.accountIds)
+                    FactoryResetProtection.Route.LEGACY -> applyLegacyFrp(step.accountIds)
+                }
+            }
+            prefs.frpAppliedIds = when (step) {
+                is FactoryResetProtection.Step.Apply -> FactoryResetProtection.fingerprint(step.accountIds, step.route)
+                else -> ""
+            }
+            Outcome.Applied
+        } catch (e: UnsupportedOperationException) {
+            Log.w(TAG, "This handset does not support Factory Reset Protection", e)
+            Outcome.Refused("This handset does not support Factory Reset Protection.")
+        } catch (e: Exception) {
+            Log.w(TAG, "Factory Reset Protection refused", e)
+            Outcome.Refused("Factory Reset Protection could not be set: ${e.message ?: e.javaClass.simpleName}")
+        }
+    }
+
+    private fun applyModernFrp(accountIds: List<String>) {
+        check(Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) { "The FRP policy API needs Android 11." }
+        dpm.setFactoryResetProtectionPolicy(
+            admin,
+            FactoryResetProtectionPolicy.Builder()
+                .setFactoryResetProtectionAccounts(accountIds)
+                .setFactoryResetProtectionEnabled(true)
+                .build()
+        )
+    }
+
+    /**
+     * Before Android 11 the only route is the managed configuration Google Play
+     * services reads, followed by a nudge to re-read it. Merged into whatever
+     * restrictions Play services already carries rather than replacing them.
+     */
+    private fun applyLegacyFrp(accountIds: List<String>) {
+        val restrictions = Bundle(dpm.getApplicationRestrictions(admin, FactoryResetProtection.GMS_PACKAGE))
+        restrictions.putStringArray(FactoryResetProtection.LEGACY_RESTRICTION_KEY, accountIds.toTypedArray())
+        dpm.setApplicationRestrictions(admin, FactoryResetProtection.GMS_PACKAGE, restrictions)
+        notifyPlayServicesOfFrpChange()
+    }
+
+    /**
+     * Takes this app's FRP policy off by both routes. The legacy key is checked
+     * on every version, because a phone upgraded from Android 10 may still
+     * carry it. Throws if the platform refuses.
+     */
+    private fun clearFactoryResetProtection() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            dpm.setFactoryResetProtectionPolicy(admin, null)
+        }
+        val restrictions = dpm.getApplicationRestrictions(admin, FactoryResetProtection.GMS_PACKAGE)
+        if (restrictions.containsKey(FactoryResetProtection.LEGACY_RESTRICTION_KEY)) {
+            val remaining = Bundle(restrictions).apply { remove(FactoryResetProtection.LEGACY_RESTRICTION_KEY) }
+            dpm.setApplicationRestrictions(admin, FactoryResetProtection.GMS_PACKAGE, remaining)
+            notifyPlayServicesOfFrpChange()
+        }
+    }
+
+    private fun notifyPlayServicesOfFrpChange() {
+        appContext.sendBroadcast(
+            Intent(FactoryResetProtection.LEGACY_CHANGED_ACTION)
+                .setPackage(FactoryResetProtection.GMS_PACKAGE)
+                .addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
+        )
+    }
+
     /** Releases the handset entirely — used when the server says it is no longer managed. */
     fun releaseFromManagement() {
         if (!isDeviceOwner) return
+        // First, on its own: a phone handed back must never still demand the
+        // dealer's Google account after a reset, whatever else fails below.
+        // Cleared unconditionally rather than through the planner, so a stale
+        // or lost fingerprint can never leave the dealer's account in place.
+        runCatching { clearFactoryResetProtection() }
+            .onFailure { Log.w(TAG, "Could not clear Factory Reset Protection: ${it.message}") }
         runCatching {
             releaseLock()
             clearRestriction(UserManager.DISALLOW_FACTORY_RESET)

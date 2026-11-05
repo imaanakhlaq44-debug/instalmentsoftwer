@@ -28,6 +28,12 @@ data class PolicyView(
     val offlineLockAfterDays: Int,
     /** The same grace the server allows after a due date, applied offline too. */
     val gracePeriodDays: Int,
+    /**
+     * Google account ids that may set the phone up again after a recovery-mode
+     * factory reset. Empty means no Factory Reset Protection — the server sends
+     * an empty list once nothing is owed, and the phone then drops it.
+     */
+    val frpAccountIds: List<String> = emptyList(),
     val dealerName: String?,
     val dealerPhone: String?,
 ) {
@@ -50,6 +56,18 @@ data class PolicyView(
                 // offline rule must not have one inferred for it.
                 offlineLockAfterDays = json.optInt("offlineLockAfterDays", 0).coerceAtLeast(0),
                 gracePeriodDays = json.optInt("gracePeriodDays", 0).coerceAtLeast(0),
+                // Absent means none. Only all-digit ids are kept: anything else
+                // (an email pasted by mistake) would be accepted by Android and
+                // then match no account, leaving a wiped phone nobody can set up.
+                frpAccountIds = json.optJSONArray("frpAccountIds").let { ids ->
+                    buildList {
+                        for (i in 0 until (ids?.length() ?: 0)) {
+                            ids?.optString(i)?.trim()
+                                ?.takeIf { it.isNotEmpty() && it.all(Char::isDigit) }
+                                ?.let { add(it) }
+                        }
+                    }.distinct()
+                },
                 dealerName = contact?.optStringOrNull("dealerName"),
                 dealerPhone = contact?.optStringOrNull("dealerPhone"),
             )

@@ -91,6 +91,7 @@ class Prefs(context: Context) {
             .putString(KEY_P_PHONE, policy.dealerPhone)
             .putInt(KEY_P_OFFLINE_DAYS, policy.offlineLockAfterDays)
             .putInt(KEY_P_GRACE_DAYS, policy.gracePeriodDays)
+            .putString(KEY_P_FRP_IDS, policy.frpAccountIds.joinToString("|"))
             .apply()
     }
 
@@ -104,9 +105,21 @@ class Prefs(context: Context) {
         nextDueDate = prefs.getString(KEY_P_DUE, null),
         offlineLockAfterDays = prefs.getInt(KEY_P_OFFLINE_DAYS, 0),
         gracePeriodDays = prefs.getInt(KEY_P_GRACE_DAYS, 0),
+        frpAccountIds = prefs.getString(KEY_P_FRP_IDS, "")
+            .orEmpty().split("|").filter { it.isNotBlank() },
         dealerName = prefs.getString(KEY_P_DEALER, null),
         dealerPhone = prefs.getString(KEY_P_PHONE, null),
     )
+
+    /**
+     * The Factory Reset Protection policy actually in force on the handset, as
+     * [pk.almassdm.dpc.admin.FactoryResetProtection.fingerprint] writes it
+     * (route plus accounts), or null/empty when none is. Lets a check-in skip the
+     * platform call when nothing changed, and retry it when the last one failed.
+     */
+    var frpAppliedIds: String?
+        get() = prefs.getString(KEY_FRP_APPLIED, null)
+        set(value) = prefs.edit().putString(KEY_FRP_APPLIED, value).apply()
 
     /** Used when a handset is released from management. */
     fun clear() = prefs.edit().clear().apply()
@@ -138,5 +151,7 @@ class Prefs(context: Context) {
         private const val KEY_P_PHONE = "policy_phone"
         private const val KEY_P_OFFLINE_DAYS = "policy_offline_lock_days"
         private const val KEY_P_GRACE_DAYS = "policy_grace_days"
+        private const val KEY_P_FRP_IDS = "policy_frp_account_ids"
+        private const val KEY_FRP_APPLIED = "frp_applied_ids"
     }
 }
