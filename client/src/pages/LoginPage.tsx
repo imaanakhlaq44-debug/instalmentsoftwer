@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { ApiError } from '../services/api.js';
@@ -142,6 +142,10 @@ export const LoginPage: React.FC = () => {
             Forgotten your password? Your shop administrator can reset it.
           </p>
         </form>
+
+        <Link to="/register" className="btn-secondary mt-5 w-full py-2.5">
+          New shop? Register here
+        </Link>
 
         <p className="mt-6 text-center text-caption text-ink-400">
           Access is logged. Unauthorised use is prohibited.
