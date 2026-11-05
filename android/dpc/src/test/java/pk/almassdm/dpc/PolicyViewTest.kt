@@ -17,6 +17,22 @@ import pk.almassdm.dpc.data.PolicyView
 class PolicyViewTest {
 
     @Test
+    fun `reads the staged restriction level and app list`() {
+        val policy = PolicyView.fromJson(
+            JSONObject("""{ "restrictionLevel": 2, "restrictedApps": ["com.whatsapp", " com.whatsapp ", ""] }""")
+        )
+        assertEquals(2, policy.restrictionLevel)
+        assertEquals(listOf("com.whatsapp"), policy.restrictedApps)
+    }
+
+    @Test
+    fun `an older server asks for no stage, and nonsense is clamped`() {
+        assertEquals(0, PolicyView.fromJson(JSONObject("{}")).restrictionLevel)
+        assertEquals(2, PolicyView.fromJson(JSONObject("""{ "restrictionLevel": 7 }""")).restrictionLevel)
+        assertEquals(0, PolicyView.fromJson(JSONObject("""{ "restrictionLevel": -1 }""")).restrictionLevel)
+    }
+
+    @Test
     fun `reads factory reset protection accounts, keeping only numeric ids`() {
         val policy = PolicyView.fromJson(
             JSONObject(

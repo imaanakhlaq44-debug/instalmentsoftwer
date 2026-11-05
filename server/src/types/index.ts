@@ -353,6 +353,8 @@ export interface DevicePolicy {
   dealerId: string;
   gracePeriodDays: number;
   autoLockEnabled: boolean;
+  /** Calls/SMS, then apps, then a full lock, as installments are missed. */
+  stagedRestrictionsEnabled?: boolean;
   autoUnlockEnabled: boolean;
   lockWarningDays: number;
   /**

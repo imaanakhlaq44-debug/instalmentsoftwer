@@ -470,6 +470,11 @@ export class ContractService {
         enabled: effective.autoLockEnabled === true && (effective.offlineLockAfterDays ?? 0) > 0,
         afterDays: effective.offlineLockAfterDays ?? 0,
       },
+      // Frozen like the offline rule: clause 4 of terms v1.2 describes the
+      // stages only if they were on when this customer signed.
+      stagedRestrictions: {
+        enabled: effective.autoLockEnabled === true && effective.stagedRestrictionsEnabled === true,
+      },
       lateFee: {
         enabled: effective.lateFeeEnabled !== false,
         type: effective.lateFeeType ?? 'FIXED',

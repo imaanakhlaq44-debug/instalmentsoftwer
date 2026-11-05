@@ -123,7 +123,13 @@ authRouter.post(
         id: `pol-${dealerId}`,
         dealerId,
         gracePeriodDays: 3,
-        autoLockEnabled: false,
+        // New shops start with enforcement on: staged restrictions, and the
+        // offline rule at its minimum of 3 days. Every one of these is printed
+        // in the contract the customer signs, and the shop can turn any of
+        // them off in Settings.
+        autoLockEnabled: true,
+        stagedRestrictionsEnabled: true,
+        offlineLockAfterDays: 3,
         autoUnlockEnabled: true,
         lockWarningDays: 2,
         customerReminderEnabled: true,

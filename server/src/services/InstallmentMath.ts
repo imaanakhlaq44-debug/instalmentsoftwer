@@ -103,7 +103,7 @@ export const DEFAULT_POLICY: Pick<
   DevicePolicy,
   | 'gracePeriodDays' | 'autoLockEnabled' | 'autoUnlockEnabled' | 'lockWarningDays'
   | 'customerReminderEnabled' | 'lateFeeEnabled' | 'lateFeeType' | 'lateFeeAmount'
-  | 'lateFeeFrequency' | 'lateFeeMaxPerInstallment' | 'offlineLockAfterDays'
+  | 'lateFeeFrequency' | 'lateFeeMaxPerInstallment' | 'offlineLockAfterDays' | 'stagedRestrictionsEnabled'
 > = {
   gracePeriodDays: 3,
   autoLockEnabled: false,
@@ -112,6 +112,7 @@ export const DEFAULT_POLICY: Pick<
   // Off unless a dealer turns it on. A handset that restricts itself is the
   // strongest thing this system does, and it is not a default.
   offlineLockAfterDays: 0,
+  stagedRestrictionsEnabled: false,
   customerReminderEnabled: true,
   lateFeeEnabled: false,
   lateFeeType: 'FIXED',

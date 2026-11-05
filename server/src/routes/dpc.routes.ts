@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { repo } from '../db/repositories/index.js';
 import { EnrollmentService } from '../services/EnrollmentService.js';
 import { offlineLockDaysFor } from '../services/OfflineLockPolicy.js';
+import { RESTRICTED_APPS, restrictionLevelFor } from '../services/StagedRestrictions.js';
 import { deviceManagementService } from '../services/DeviceManagementService.js';
 import { AuditService } from '../services/AuditService.js';
 import { amountOutstanding, DEFAULT_POLICY } from '../services/InstallmentMath.js';
@@ -57,6 +58,14 @@ interface DevicePolicyView {
    * dealer's account to use it.
    */
   frpAccountIds: string[];
+  /**
+   * Staged restrictions short of a full lock: 0 none, 1 outgoing calls and SMS
+   * off, 2 also the apps in `restrictedApps` suspended. Always 0 while locked
+   * (the lock covers everything) and whenever the signed contract does not
+   * describe the stages.
+   */
+  restrictionLevel: 0 | 1 | 2;
+  restrictedApps: string[];
   contact: { dealerName: string; dealerPhone: string } | null;
 }
 
@@ -72,8 +81,11 @@ async function buildPolicyView(device: Device): Promise<DevicePolicyView> {
   const unpaid = installments.filter((i) => i.status !== 'PAID');
   const overdue = installments.filter((i) => i.status === 'OVERDUE');
 
+  const locked = device.status === 'LOCKED';
+  const restrictionLevel = locked ? 0 : await restrictionLevelFor(device, policy, installments);
+
   return {
-    locked: device.status === 'LOCKED',
+    locked,
     lockMessage: device.status === 'LOCKED' ? device.lockMessage ?? device.lockReason ?? null : null,
     emergencyCallsAllowed: policy.emergencyCallsAllowed !== false,
     paymentMethods: policy.paymentMethodsOnLock ?? ['CASH'],
@@ -82,6 +94,8 @@ async function buildPolicyView(device: Device): Promise<DevicePolicyView> {
     offlineLockAfterDays: await offlineLockDaysFor(device, policy),
     gracePeriodDays: policy.gracePeriodDays ?? DEFAULT_POLICY.gracePeriodDays,
     frpAccountIds: unpaid.length > 0 ? policy.frpAccountIds ?? [] : [],
+    restrictionLevel,
+    restrictedApps: restrictionLevel >= 2 ? [...RESTRICTED_APPS] : [],
     contact: dealer ? { dealerName: dealer.name, dealerPhone: dealer.phone } : null,
   };
 }
