@@ -1,118 +1,149 @@
 <!-- meta
 title: How it works, in simple words
-titleUr: الماس SDM کیسے کام کرتا ہے، آسان الفاظ میں
 description: A plain-language guide for mobile shops: scan a QR, the customer signs, the khata builds itself, and the phone locks when an instalment is late and opens when it is paid. No monthly fee, from Rs 600 per phone.
 page: guide
+layout: home
 -->
+<style>
+  /* Guide-only pieces. Everything else comes from the home page's design. */
+  .g-hero { padding: 56px 0 24px; }
+  .g-hero h1 { font-size: clamp(38px, 5.6vw, 76px); max-width: 980px; }
+  .g-hero .hero-sub { max-width: 640px; }
+  .probs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  .prob { background: var(--paper); border: var(--b); border-radius: var(--r); padding: 22px; box-shadow: var(--sh); font-weight: 700; display: flex; flex-direction: column; gap: 14px; }
+  .prob .x { width: 42px; height: 42px; border-radius: 12px; border: var(--b); display: grid; place-items: center; background: var(--red); color: #fff; }
+  .prob .x .ico { width: 22px; height: 22px; }
+  .answer { margin-top: 30px; display: inline-flex; align-items: center; gap: 12px; background: var(--mint); border: var(--b); border-radius: 16px; padding: 14px 20px; font-weight: 800; font-size: 18px; box-shadow: 4px 4px 0 var(--ink); }
+  .answer .ico { flex: none; }
+  .step p + p { margin-top: 10px; }
+  .g-extra { margin-top: 14px; }
+  @media (max-width: 900px) {
+    .probs { grid-template-columns: 1fr 1fr; }
+    .g-hero { padding: 28px 0 8px; }
+  }
+  @media (max-width: 520px) { .probs { grid-template-columns: 1fr; } }
+</style>
 
-<section class="band pb-8">
-  <p class="eyebrow reveal" data-ur="آسان الفاظ میں">In simple words</p>
-  <h1 class="mt-2 max-w-3xl font-serif text-hero text-ink-900" data-ur="قسطوں پر موبائل بیچتے ہیں؟ اب قسط کی ٹینشن ختم۔">
-    Selling phones on instalments? No more chasing payments.
-  </h1>
-  <p class="mt-4 max-w-2xl text-lede text-ink-700" data-ur="الماس SDM موبائل دکان کا ڈیجیٹل کھاتہ بھی ہے اور فون لاک بھی۔ یہ صفحہ بغیر کسی تکنیکی زبان کے بتاتا ہے کہ یہ کیسے کام کرتا ہے۔">
-    Almas SDM is a digital khata and a phone lock for mobile shops. This page explains how it works, without the technical words.
-  </p>
-</section>
+  <section class="g-hero">
+    <div class="wrap">
+      <span class="kicker"><i></i><span data-ur="آسان الفاظ میں">In simple words</span></span>
+      <h1><span data-ur="قسطوں پر موبائل بیچتے ہیں؟">Selling phones on instalments?</span> <span class="hl" data-ur="اب قسط کی ٹینشن ختم۔">No more chasing payments.</span></h1>
+      <p class="hero-sub" data-ur="الماس SDM موبائل دکان کا ڈیجیٹل کھاتہ بھی ہے اور فون لاک بھی۔ یہ صفحہ بغیر کسی تکنیکی زبان کے بتاتا ہے کہ یہ کیسے کام کرتا ہے۔">Almas SDM is a digital khata and a phone lock for mobile shops. This page explains how it works, without the technical words.</p>
+      <div class="cta-row">
+        <a class="btn btn-wa" href="https://wa.me/447521606952?text=Salam%2C%20Almas%20SDM%20ka%20demo%20chahiye" target="_blank" rel="noopener"><svg class="ico"><use href="#i-wa"/></svg><span data-ur="واٹس ایپ پر فری ڈیمو">Free demo on WhatsApp</span></a>
+        <a class="btn btn-sun" href="#rates" data-ur="ریٹ دیکھیں">See rates</a>
+      </div>
+    </div>
+  </section>
 
-<section class="band-tight pt-0">
-  <h2 class="font-serif text-section text-ink-900" data-ur="کیا آپ کے ساتھ بھی ایسا ہوتا ہے؟">Does this sound familiar?</h2>
-  <ul class="mt-6 grid gap-4 sm:grid-cols-2">
-    <li class="well p-5 text-body text-ink-700" data-ur="❌ گاہک قسط دینا بند کر دیتا ہے۔">❌ The customer simply stops paying.</li>
-    <li class="well p-5 text-body text-ink-700" data-ur="❌ فون بند کر کے غائب ہو جاتا ہے۔">❌ They switch the phone off and disappear.</li>
-    <li class="well p-5 text-body text-ink-700" data-ur="❌ ہر مہینے گاہک کے پیچھے فون کرتے رہنا پڑتا ہے۔">❌ Every month you are calling customers to ask for money.</li>
-    <li class="well p-5 text-body text-ink-700" data-ur="❌ کاپی اور رجسٹر میں حساب گڑبڑ ہو جاتا ہے۔">❌ The notebook and register never quite add up.</li>
-  </ul>
-  <p class="mt-6 max-w-2xl text-lede text-ink-700" data-ur="الماس SDM ان سب کا حل ہے۔ یہ تین قدموں میں چلتا ہے۔">Almas SDM solves all of this. It works in three steps.</p>
-</section>
+  <section id="problem">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><span class="kicker"><i></i><span data-ur="مسئلہ">The problem</span></span><h2 data-ur="کیا آپ کے ساتھ بھی ایسا ہوتا ہے؟">Does this sound familiar?</h2></div>
+      </div>
+      <div class="probs">
+        <div class="prob"><span class="x"><svg class="ico"><use href="#i-x"/></svg></span><span data-ur="گاہک قسط دینا بند کر دیتا ہے۔">The customer simply stops paying.</span></div>
+        <div class="prob"><span class="x"><svg class="ico"><use href="#i-x"/></svg></span><span data-ur="فون بند کر کے غائب ہو جاتا ہے۔">They switch the phone off and disappear.</span></div>
+        <div class="prob"><span class="x"><svg class="ico"><use href="#i-x"/></svg></span><span data-ur="ہر مہینے گاہک کے پیچھے فون کرتے رہنا پڑتا ہے۔">Every month you are calling customers to ask for money.</span></div>
+        <div class="prob"><span class="x"><svg class="ico"><use href="#i-x"/></svg></span><span data-ur="کاپی اور رجسٹر میں حساب گڑبڑ ہو جاتا ہے۔">The notebook and register never quite add up.</span></div>
+      </div>
+      <div class="answer"><svg class="ico"><use href="#i-check"/></svg><span data-ur="الماس SDM ان سب کا حل ہے — صرف تین قدموں میں۔">Almas SDM solves all of this, in just three steps.</span></div>
+    </div>
+  </section>
 
-<section class="band-tight pt-0">
-  <ol class="space-y-4">
-    <li class="surface p-6">
-      <div class="flex items-baseline gap-4">
-        <span class="font-serif text-title text-ink-400">01</span>
-        <div>
-          <h2 class="text-title font-semibold text-ink-900" data-ur="QR اسکین کریں">Scan the QR</h2>
-          <p class="mt-2 text-body text-ink-500" data-ur="نیا موبائل کھولیں اور QR کوڈ اسکین کریں۔ گاہک اپنی انگلی سے اسکرین پر معاہدے پر دستخط کرتا ہے۔ معاہدہ اردو اور انگریزی دونوں میں ہوتا ہے، تاکہ گاہک کو ہر بات صاف سمجھ آئے۔">
-            Open the new phone and scan the QR code. The customer signs the agreement on the screen with a finger. The agreement is in both Urdu and English, so the customer understands every word.
-          </p>
+  <section id="how" style="padding-top:24px">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><span class="kicker"><i></i><span data-ur="طریقہ">How it works</span></span><h2 data-ur="بس 3 قدم">Just 3 steps</h2></div>
+        <p data-ur="عملے کو کوئی تکنیکی کام نہیں کرنا۔ ایک QR اسکین، باقی سسٹم خود سنبھالتا ہے۔">Your staff need no technical skill. One QR scan, and the system takes it from there.</p>
+      </div>
+      <div class="steps">
+        <div class="step"><div class="step-top"><span class="n">01</span><span class="ic"><svg class="ico"><use href="#i-qr"/></svg></span></div><h3 data-ur="QR اسکین کریں">Scan the QR</h3><p data-ur="نیا موبائل کھولیں اور QR کوڈ اسکین کریں۔ گاہک اپنی انگلی سے اسکرین پر معاہدے پر دستخط کرتا ہے۔ معاہدہ اردو اور انگریزی دونوں میں ہوتا ہے، تاکہ گاہک کو ہر بات صاف سمجھ آئے۔">Open the new phone and scan the QR code. The customer signs the agreement on the screen with a finger. It is in both Urdu and English, so the customer understands every word.</p></div>
+        <div class="step"><div class="step-top"><span class="n">02</span><span class="ic"><svg class="ico"><use href="#i-cash"/></svg></span></div><h3 data-ur="قسط لیں، رسید دیں">Take payment, give a receipt</h3><p data-ur="ہر گاہک کا کھاتہ خود بن جاتا ہے: ایڈوانس، ماہانہ قسط اور بقایا، سب ایک اسکرین پر۔">Every customer's khata builds itself: advance, monthly instalment and balance, all on one screen.</p><p data-ur="قسط کی تاریخ سے پہلے گاہک کو آپ کی اپنی سم سے یاد دہانی کا SMS چلا جاتا ہے۔">Before each due date, a reminder SMS goes to the customer from your own SIM.</p></div>
+        <div class="step"><div class="step-top"><span class="n">03</span><span class="ic"><svg class="ico"><use href="#i-lock"/></svg></span></div><h3 data-ur="لاک اور اَن لاک، سب خود بخود">Lock &amp; unlock, all automatic</h3><p data-ur="⏰ قسط لیٹ ہوئی تو فون خود لاک ہو جاتا ہے۔">⏰ If an instalment is late, the phone locks itself.</p><p data-ur="✅ آپ نے ادائیگی درج کی تو فون خود کھل جاتا ہے۔ گاہک کو دکان آنے کی ضرورت نہیں۔">✅ When you record the payment, the phone opens itself. The customer doesn't need to come back to the shop.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="dark">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><span class="kicker"><i></i><span data-ur="مضبوط لاک">A firm lock</span></span><h2 data-ur="گاہک بچ نہیں سکتا">The customer can't slip away</h2></div>
+        <p data-ur="لاک فون کے اندر بیٹھا ہوتا ہے، اس لیے عام چالیں کام نہیں کرتیں۔">The lock lives inside the phone, so the usual tricks don't work.</p>
+      </div>
+      <div class="feats">
+        <div class="f"><div class="ic"><svg class="ico"><use href="#i-wifioff"/></svg></div><h3 data-ur="نیٹ بند؟ پھر بھی لاک">Data off? Still locks</h3><p data-ur="انٹرنیٹ بند کر دے، پھر بھی فون لاک ہوتا ہے۔">Turning off the internet does not stop the lock.</p></div>
+        <div class="f"><div class="ic"><svg class="ico"><use href="#i-reset"/></svg></div><h3 data-ur="ری سیٹ بند">Reset is blocked</h3><p data-ur="سیٹنگز سے فیکٹری ری سیٹ نہیں ہوتا۔">Factory reset from Settings is blocked.</p></div>
+        <div class="f"><div class="ic"><svg class="ico"><use href="#i-shield"/></svg></div><h3 data-ur="وائپ کے بعد بھی">Even after a wipe</h3><p data-ur="فون وائپ کر دے، تب بھی فون آپ کا گوگل اکاؤنٹ مانگتا ہے۔">Even after a wipe, the phone asks for your Google account.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="fair">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><span class="kicker"><i></i><span data-ur="انصاف">Fairness</span></span><h2 data-ur="گاہک کے ساتھ انصاف">Fair to your customer</h2></div>
+        <p data-ur="گاہک کا بھروسا آپ کی دکان کی ساکھ ہے۔">Your customer's trust is your shop's name.</p>
+      </div>
+      <div class="fair">
+        <div class="col">
+          <div class="col-h"><span class="badge">✓</span><h3 style="margin:0" data-ur="گاہک کو ہمیشہ ملتا ہے">The customer always gets</h3></div>
+          <ul>
+            <li><svg class="ico"><use href="#i-check"/></svg><div><b data-ur="واجب رقم صاف نظر آتی ہے">The amount owed, clearly shown</b><span data-ur="لاک اسکرین پر رقم، دکان کا نام اور نمبر۔">Amount, shop name and number on the lock screen.</span></div></li>
+            <li><svg class="ico"><use href="#i-check"/></svg><div><b data-ur="ایمرجنسی کال">Emergency calls</b><span data-ur="1122 اور 15 لاک میں بھی ملتے ہیں۔">1122 and 15 connect even when locked.</span></div></li>
+          </ul>
+        </div>
+        <div class="col no">
+          <div class="col-h"><span class="badge">✕</span><h3 style="margin:0" data-ur="ہم کبھی نہیں کرتے">We never do</h3></div>
+          <ul>
+            <li><svg class="ico"><use href="#i-x"/></svg><div><b data-ur="لوکیشن ٹریکنگ">Location tracking</b><span data-ur="ہم گاہک کی لوکیشن ٹریک نہیں کرتے۔">We never track where the customer is.</span></div></li>
+            <li><svg class="ico"><use href="#i-x"/></svg><div><b data-ur="ڈیٹا مٹانا">Erasing data</b><span data-ur="گاہک کی تصویریں یا ڈیٹا کبھی ڈیلیٹ نہیں ہوتا۔">The customer's photos and data are never erased.</span></div></li>
+            <li><svg class="ico"><use href="#i-x"/></svg><div><b data-ur="بغیر معاہدے کے لاک">Locking without consent</b><span data-ur="معاہدے پر دستخط نہیں ہوئے تو لاک بھی نہیں لگتا۔">No signed agreement, no lock.</span></div></li>
+          </ul>
         </div>
       </div>
-    </li>
-    <li class="surface p-6">
-      <div class="flex items-baseline gap-4">
-        <span class="font-serif text-title text-ink-400">02</span>
-        <div>
-          <h2 class="text-title font-semibold text-ink-900" data-ur="قسط لیں، رسید دیں">Take payment, give a receipt</h2>
-          <p class="mt-2 text-body text-ink-500" data-ur="ہر گاہک کا کھاتہ خود بن جاتا ہے: ایڈوانس، ماہانہ قسط اور بقایا، سب ایک اسکرین پر۔ قسط کی تاریخ سے پہلے گاہک کو آپ کی اپنی سم سے یاد دہانی کا SMS چلا جاتا ہے۔">
-            Every customer's khata builds itself: advance, monthly instalment and balance, all on one screen. Before each due date, a reminder SMS goes to the customer from your own SIM.
-          </p>
+    </div>
+  </section>
+
+  <section id="rates" style="padding-top:24px">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><span class="kicker"><i></i><span data-ur="قیمت">Price</span></span><h2 data-ur="کوئی ماہانہ فیس نہیں">No monthly fee</h2></div>
+        <p data-ur="ایک فون کا لاک صرف ایک دفعہ لگتا ہے، دوبارہ پیسہ نہیں۔">A phone's lock is paid for once. You never pay twice for the same phone.</p>
+      </div>
+      <div class="packs">
+        <div class="pk">
+          <div class="name" data-ur="30 فون کا پیک">30-phone pack</div>
+          <div class="per">Rs 800<small data-ur=" / فون"> /phone</small></div>
+          <div class="tot" data-ur="کل Rs 24,000">Rs 24,000 total</div>
+        </div>
+        <div class="pk">
+          <div class="name" data-ur="50 فون کا پیک">50-phone pack</div>
+          <div class="per">Rs 700<small data-ur=" / فون"> /phone</small></div>
+          <div class="tot" data-ur="کل Rs 35,000">Rs 35,000 total</div>
+        </div>
+        <div class="pk hot">
+          <span class="flag" data-ur="سب سے سستا">Lowest rate</span>
+          <div class="name" data-ur="100 فون کا پیک">100-phone pack</div>
+          <div class="per">Rs 600<small data-ur=" / فون"> /phone</small></div>
+          <div class="tot" data-ur="کل Rs 60,000">Rs 60,000 total</div>
         </div>
       </div>
-    </li>
-    <li class="surface border-accent-200 p-6">
-      <div class="flex items-baseline gap-4">
-        <span class="font-serif text-title text-accent-700">03</span>
-        <div>
-          <h2 class="text-title font-semibold text-ink-900" data-ur="لاک اور اَن لاک، سب خود بخود">Lock and unlock, all automatic</h2>
-          <p class="mt-2 text-body text-ink-500" data-ur="⏰ قسط لیٹ ہوئی تو فون خود لاک ہو جاتا ہے۔">⏰ If an instalment is late, the phone locks itself.</p>
-          <p class="mt-1 text-body text-ink-500" data-ur="✅ آپ نے ادائیگی درج کی تو فون خود کھل جاتا ہے۔ گاہک کو دکان آنے کی ضرورت نہیں۔">✅ When you record the payment, the phone opens itself. The customer does not need to come back to the shop.</p>
+      <p class="note"><svg class="ico"><use href="#i-receipt"/></svg><span data-ur="ساتھ میں: 80mm تھرمل رسید، ہر سیلز مین کا الگ لاگ اِن، اور پورا ریکارڈ۔">Also included: 80mm thermal receipts, a separate login for every salesman, and a complete record.</span></p>
+    </div>
+  </section>
+
+  <section style="padding-top:24px">
+    <div class="wrap">
+      <div class="final-card">
+        <div><h2 data-ur="15 منٹ کا مفت ڈیمو">Free 15-minute demo</h2><p data-ur="واٹس ایپ کریں — ہم آپ کو 15 منٹ میں پورا سسٹم چلا کر دکھائیں گے۔">Message us on WhatsApp — we'll show you the whole system running in 15 minutes.</p></div>
+        <div class="final-actions">
+          <a class="num" href="tel:+447521606952">+44 7521 606952</a>
+          <div class="row">
+            <a class="btn btn-ink" href="https://wa.me/447521606952?text=Salam%2C%20Almas%20SDM%20ka%20demo%20chahiye" target="_blank" rel="noopener"><svg class="ico"><use href="#i-wa"/></svg><span data-ur="واٹس ایپ کھولیں">Open WhatsApp</span></a>
+            <a class="btn" href="/how-it-works.html" data-ur="تفصیلی طریقہ کار">Detailed walkthrough</a>
+          </div>
         </div>
       </div>
-    </li>
-  </ol>
-</section>
-
-<section class="border-t border-paper-300 bg-paper-50">
-  <div class="band-tight grid gap-8 lg:grid-cols-2">
-    <div>
-      <h2 class="font-serif text-section text-ink-900" data-ur="🔒 گاہک بچ نہیں سکتا">🔒 The customer can't slip away</h2>
-      <ul class="mt-5 space-y-3">
-        <li class="well p-4 text-body text-ink-700" data-ur="انٹرنیٹ بند کر دے، پھر بھی فون لاک ہوتا ہے۔">Turning off the internet does not stop the lock.</li>
-        <li class="well p-4 text-body text-ink-700" data-ur="سیٹنگز سے فیکٹری ری سیٹ نہیں ہوتا۔">Factory reset from Settings is blocked.</li>
-        <li class="well p-4 text-body text-ink-700" data-ur="فون وائپ کر دے، تب بھی فون آپ کا گوگل اکاؤنٹ مانگتا ہے۔">Even after a wipe, the phone asks for your Google account.</li>
-      </ul>
     </div>
-    <div>
-      <h2 class="font-serif text-section text-ink-900" data-ur="🤝 گاہک کے ساتھ انصاف">🤝 Fair to your customer</h2>
-      <ul class="mt-5 space-y-3">
-        <li class="well p-4 text-body text-ink-700" data-ur="لاک اسکرین پر صاف لکھا ہوتا ہے کہ کتنی رقم باقی ہے، اور دکان کا نام اور نمبر۔">The lock screen clearly shows the amount owed, the shop's name and its number.</li>
-        <li class="well p-4 text-body text-ink-700" data-ur="لاک ہونے پر بھی 1122 اور 15 پر ایمرجنسی کال ہو جاتی ہے۔">Emergency calls to 1122 and 15 work even when locked.</li>
-        <li class="well p-4 text-body text-ink-700" data-ur="ہم گاہک کی لوکیشن ٹریک نہیں کرتے۔">We never track the customer's location.</li>
-        <li class="well p-4 text-body text-ink-700" data-ur="گاہک کی تصویریں یا ڈیٹا کبھی ڈیلیٹ نہیں ہوتا۔">The customer's photos and data are never erased.</li>
-        <li class="well p-4 text-body text-ink-700" data-ur="معاہدے پر دستخط نہیں ہوئے تو لاک بھی نہیں لگتا۔">No signed agreement, no lock.</li>
-      </ul>
-    </div>
-  </div>
-</section>
-
-<section class="band-tight">
-  <h2 class="font-serif text-section text-ink-900" data-ur="💰 قیمت: کوئی ماہانہ فیس نہیں">💰 Price: no monthly fee</h2>
-  <div class="mt-6 grid gap-4 sm:grid-cols-3">
-    <div class="surface p-6">
-      <p class="text-body font-semibold text-ink-700" data-ur="30 فون کا پیک">30-phone pack</p>
-      <p class="mt-2 font-serif text-title text-ink-900" data-ur="Rs 800 فی فون">Rs 800 per phone</p>
-    </div>
-    <div class="surface p-6">
-      <p class="text-body font-semibold text-ink-700" data-ur="50 فون کا پیک">50-phone pack</p>
-      <p class="mt-2 font-serif text-title text-ink-900" data-ur="Rs 700 فی فون">Rs 700 per phone</p>
-    </div>
-    <div class="surface border-accent-200 p-6">
-      <p class="text-body font-semibold text-ink-700" data-ur="100 فون کا پیک">100-phone pack</p>
-      <p class="mt-2 font-serif text-title text-accent-700" data-ur="صرف Rs 600 فی فون">Only Rs 600 per phone</p>
-    </div>
-  </div>
-  <p class="mt-5 max-w-2xl text-body text-ink-700" data-ur="ایک فون کا لاک صرف ایک دفعہ لگتا ہے، دوبارہ پیسہ نہیں۔">A phone's lock is paid for once. You never pay twice for the same phone.</p>
-  <p class="mt-2 max-w-2xl text-body text-ink-700" data-ur="✨ ساتھ میں: 80mm تھرمل رسید، ہر سیلز مین کا الگ لاگ اِن، اور پورا ریکارڈ۔">✨ Also included: 80mm thermal receipts, a separate login for every salesman, and a complete record.</p>
-</section>
-
-<section class="border-t border-paper-300 bg-paper-50">
-  <div class="band-tight text-center">
-    <h2 class="font-serif text-section text-ink-900" data-ur="15 منٹ کا مفت ڈیمو">A free 15-minute demo</h2>
-    <p class="mx-auto mt-3 max-w-xl text-lede text-ink-700" data-ur="واٹس ایپ کریں — ہم آپ کو 15 منٹ میں پورا سسٹم چلا کر دکھائیں گے۔">Message us on WhatsApp and we'll show you the whole system running in 15 minutes.</p>
-    <div class="mt-6 flex flex-wrap justify-center gap-3">
-      <a class="btn-whatsapp" href="https://wa.me/447521606952?text=Salam%2C%20Almas%20SDM%20ka%20demo%20chahiye" target="_blank" rel="noopener" data-ur="واٹس ایپ پر مفت ڈیمو">Free demo on WhatsApp</a>
-      <a class="btn-secondary" href="/how-it-works.html" data-ur="تفصیلی طریقہ کار دیکھیں">See the detailed walkthrough</a>
-    </div>
-  </div>
-</section>
+  </section>
