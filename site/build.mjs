@@ -177,6 +177,35 @@ async function build() {
     const meta = readMeta(raw);
     const body = raw.replace(/<!--\s*meta[\s\S]*?-->/, '').trim();
 
+    // A page with `layout: home` wears the home page's own design: its head,
+    // styles, header, footer and language toggle are lifted from index.html at
+    // build time, so the two can never drift apart. Only what sits between
+    // <main> and </main> is the page's own. Anything the home page marks
+    // `<!-- home-only -->` (the hero phone's script) is left behind.
+    if (meta.layout === 'home') {
+      const home = await readFile(path.join(SRC, 'pages', 'index.html'), 'utf8');
+      const homeDoc = home.replace(/<!--\s*meta[\s\S]*?-->/, '').trim();
+      const open = homeDoc.indexOf('<main>');
+      const close = homeDoc.indexOf('</main>');
+      if (open < 0 || close < 0) throw new Error('index.html has no <main> to borrow the layout from');
+      const title = `${meta.title ?? 'Almas SDM'} · Almas SDM`;
+      const description = meta.description ?? '';
+      const seo = [seoTags({ file, title, description }), faqJsonLd(body)].filter(Boolean).join('\n    ');
+      const shell = (part) =>
+        part
+          .replace(/<!--\s*home-only\s*-->[\s\S]*?<!--\s*\/home-only\s*-->/g, '')
+          .replace(/<title>[\s\S]*?<\/title>/, `<title>${escapeAttr(title)}</title>`)
+          .replace(/<meta name="description" content="[^"]*" \/>/, `<meta name="description" content="${escapeAttr(description)}" />`)
+          .replace(/<meta name="keywords"[^>]*>\n?/, '')
+          .replace('{{seo}}', seo)
+          // In-page anchors on the home page point back at it from here.
+          .replace(/(<a\b[^>]*\shref=")#/g, '$1/#');
+      const html = shell(homeDoc.slice(0, open)) + `<main>\n${body}\n</main>` + shell(homeDoc.slice(close + '</main>'.length));
+      await writeFile(path.join(OUT, file), withSignin(html).replaceAll('{{appUrl}}', APP_URL), 'utf8');
+      process.stdout.write(`  ${file} (home layout)\n`);
+      continue;
+    }
+
     // A page with `layout: none` is a whole document of its own — the home
     // page, whose design does not share the inner pages' header and footer.
     // It still gets the Sign in rule and the app address.
