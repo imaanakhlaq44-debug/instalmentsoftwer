@@ -30,6 +30,10 @@ COPY server/tsconfig.json ./
 # repository does not contain and .dockerignore keeps out.
 COPY server/src ./src
 RUN npm run build
+# Load the compiled Prisma client once, so an image that would crash on start
+# fails here, in CI, instead. (It once did: the generated imports pointed at .ts
+# files that do not exist in dist.)
+RUN node -e "require('./dist/generated/prisma/client.js')"
 
 # --- runtime -----------------------------------------------------------------
 FROM node:22-alpine AS runtime
