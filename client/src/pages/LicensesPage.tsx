@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext.js';
 import { ApiService } from '../services/api.js';
 import { Card, CardHeader, Rows, EmptyState, Skeleton } from '../components/ui/Card.js';
 import { money, shortDate } from '../utils/format.js';
+import { MAX_PACK_SIZE, priceForPack } from '../utils/packPricing.js';
 
 /**
  * Device locks.
@@ -56,6 +57,8 @@ export const LicensesPage: React.FC = () => {
   const [packs, setPacks] = useState<PackRow[]>([]);
   const [catalogue, setCatalogue] = useState<PackOption[]>([]);
   const [issuing, setIssuing] = useState<number | null>(null);
+  const [customSize, setCustomSize] = useState('');
+  const customPrice = priceForPack(Number(customSize));
 
   const load = async () => {
     try {
@@ -170,7 +173,7 @@ export const LicensesPage: React.FC = () => {
           title="Packs"
           hint={isSuperAdmin ? 'Issue after payment has cleared' : 'Contact the platform to buy'}
         />
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {catalogue.map((option) => (
             <div key={option.size} className="well p-4">
               <p className="text-title font-semibold text-ink-900 tabular">{option.size} locks</p>
@@ -191,6 +194,37 @@ export const LicensesPage: React.FC = () => {
             </div>
           ))}
         </div>
+        {isSuperAdmin && (
+          <div className="mt-4 flex flex-wrap items-end gap-3 border-t-2 border-dashed border-paper-400 pt-4">
+            <label className="block">
+              <span className="field-label">Any other number</span>
+              <input
+                type="number"
+                min={1}
+                max={MAX_PACK_SIZE}
+                inputMode="numeric"
+                className="input w-28"
+                value={customSize}
+                onChange={(e) => setCustomSize(e.target.value)}
+                placeholder="e.g. 5"
+                aria-label="Custom number of locks"
+              />
+            </label>
+            <p className="pb-2 text-body text-ink-700 tabular">
+              {customPrice
+                ? `${money(customPrice.unitPrice)} per handset · ${money(customPrice.totalPrice)} total`
+                : `1 to ${MAX_PACK_SIZE} locks`}
+            </p>
+            <button
+              type="button"
+              onClick={() => customPrice && issue(customPrice.size)}
+              disabled={!customPrice || issuing !== null}
+              className="btn-primary py-2 text-caption"
+            >
+              {customPrice && issuing === customPrice.size ? 'Issuing…' : `Issue ${customPrice ? customPrice.size : ''} locks`}
+            </button>
+          </div>
+        )}
       </Card>
 
       {/* A super admin's view of the platform: who is about to run out. */}

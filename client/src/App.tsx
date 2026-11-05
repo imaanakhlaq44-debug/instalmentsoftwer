@@ -6,6 +6,7 @@ import { RequireAuth, RequireRole } from './components/auth/RouteGuards.js';
 import { ErrorBoundary } from './components/ErrorBoundary.js';
 
 import { LoginPage } from './pages/LoginPage.js';
+import { RegisterPage } from './pages/RegisterPage.js';
 import { ChangePasswordPage } from './pages/ChangePasswordPage.js';
 import { DashboardPage } from './pages/DashboardPage.js';
 import { DevicesPage } from './pages/DevicesPage.js';
@@ -38,6 +39,7 @@ export function App() {
           <Routes>
             {/* Public */}
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
 
             {/* Signed in, but outside the dashboard shell */}
             <Route

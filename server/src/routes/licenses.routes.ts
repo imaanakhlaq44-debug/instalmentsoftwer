@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { repo, indexBy, dealerScope } from '../db/repositories/index.js';
 import { Dealer, DeviceLicense } from '../types/index.js';
-import { LicenseService, PACK_OPTIONS } from '../services/LicenseService.js';
+import { LicenseService, PACK_OPTIONS, PRICE_TIERS, MAX_PACK_SIZE } from '../services/LicenseService.js';
 import { AuditService } from '../services/AuditService.js';
 import {
   requireDealerAdmin, requireSuperAdmin, getAuthUser, resolveDealerScope, clientIp, routeParam,
@@ -34,8 +34,13 @@ licensesRouter.get(
     ]);
 
     // A shop that has signed up but not yet paid owns no packs or locks, and
-    // must still see its own (empty) position rather than nothing at all.
-    const dealerIds = [...new Set([...(scope ? [scope] : []), ...[...packs, ...licenses].map((r) => r.dealerId)])];
+    // must still appear: to itself as an empty position, and to a super admin
+    // looking at every dealership — whose dealer picker is built from this
+    // list, and who could otherwise never select a new shop to issue its pack.
+    const everyDealer = scope ? [] : (await repo.dealers.findMany({})).map((d) => d.id);
+    const dealerIds = [
+      ...new Set([...(scope ? [scope] : []), ...everyDealer, ...[...packs, ...licenses].map((r) => r.dealerId)]),
+    ];
     const dealersById = indexBy<Dealer>(await repo.dealers.findByIds(dealerIds), (d) => d.id);
 
     const countFor = (dealerId: string, status: DeviceLicense['status']) =>
@@ -75,6 +80,8 @@ licensesRouter.get(
         consumed: licenses.filter((l) => l.packId === p.id && l.status === 'CONSUMED').length,
       })),
       catalogue: PACK_OPTIONS,
+      priceTiers: PRICE_TIERS,
+      maxPackSize: MAX_PACK_SIZE,
     });
   })
 );

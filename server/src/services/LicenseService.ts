@@ -31,19 +31,37 @@ export interface PackOption {
 }
 
 /**
- * What the platform sells today.
+ * What the platform sells today: any number of locks, priced per lock by how
+ * many are bought at once. A small shop can start with five; 30, 50 and 100
+ * keep the prices they always had.
  *
- * A pack records the price it was actually sold at, so changing this list never
- * rewrites what a dealer already paid.
+ * A pack records the price it was actually sold at, so changing these tiers
+ * never rewrites what a dealer already paid.
  */
-export const PACK_OPTIONS: PackOption[] = [
-  { size: 30, unitPrice: 800, totalPrice: 24_000 },
-  { size: 50, unitPrice: 700, totalPrice: 35_000 },
-  { size: 100, unitPrice: 600, totalPrice: 60_000 },
+export const PRICE_TIERS: { minSize: number; unitPrice: number }[] = [
+  { minSize: 100, unitPrice: 600 },
+  { minSize: 50, unitPrice: 700 },
+  { minSize: 30, unitPrice: 800 },
+  { minSize: 1, unitPrice: 1000 },
 ];
 
-export const findPackOption = (size: number): PackOption | undefined =>
-  PACK_OPTIONS.find((p) => p.size === size);
+/** The largest single pack. A bigger order is two packs, each on the record. */
+export const MAX_PACK_SIZE = 500;
+
+/** The price of a pack of `size` locks, or undefined if that is not a sellable size. */
+export function priceForPack(size: number): PackOption | undefined {
+  if (!Number.isInteger(size) || size < 1 || size > MAX_PACK_SIZE) return undefined;
+  const tier = PRICE_TIERS.find((t) => size >= t.minSize)!;
+  return { size, unitPrice: tier.unitPrice, totalPrice: size * tier.unitPrice };
+}
+
+export const PACK_SIZE_RULE = `A pack is 1 to ${MAX_PACK_SIZE} locks.`;
+
+/** Ready-made sizes the dashboard offers as one-click buttons. */
+export const PACK_OPTIONS: PackOption[] = [10, 30, 50, 100].map((n) => priceForPack(n)!);
+
+/** Kept for callers that still name it. */
+export const findPackOption = priceForPack;
 
 /**
  * `ALMAS-L-7F3A-9C2E-B41D`.
@@ -85,7 +103,7 @@ export class LicenseService {
     const option = findPackOption(params.size);
     if (!option) {
       throw AppError.badRequest(
-        `Packs are sold in ${PACK_OPTIONS.map((p) => p.size).join(', ')} locks.`
+        PACK_SIZE_RULE
       );
     }
 
