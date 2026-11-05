@@ -98,15 +98,8 @@ layout: none
   .screen .box { background: rgba(255,255,255,.95); color: var(--ink); border-radius: 14px; padding: 10px 14px; font-size: 15px; font-weight: 800; line-height: 1.35; }
   .screen .box small { display: block; font-size: 12px; font-weight: 700; color: var(--ink-2); margin-bottom: 2px; }
   .lang-ur .screen .box { line-height: 1.7; }
-  /* On phones the floating stickers would cover the screen, so they move
-     out of the handset into a tidy row under the Paid/Late switch. */
-  .chips { display: none; }
   .screen .sos { display: none; background: var(--ink); color: #fff; border-radius: 12px; padding: 10px; text-align: center; font-size: 14px; font-weight: 800; }
   .screen.locked .sos { display: block; }
-  .sticker { position: absolute; z-index: 2; background: #fff; border: var(--b); border-radius: 14px; padding: 9px 13px; font-size: 13px; font-weight: 800; box-shadow: 3px 3px 0 var(--ink); display: flex; align-items: center; gap: 8px; white-space: nowrap; }
-  .sticker .ico { width: 18px; height: 18px; color: var(--mint); }
-  .st-1 { top: 236px; inset-inline-start: -62px; transform: rotate(-5deg); }
-  .st-2 { top: 74px; inset-inline-end: -72px; transform: rotate(4deg); }
   .toggle { position: relative; z-index: 2; display: inline-flex; gap: 4px; margin-top: 26px; background: #fff; border: var(--b); border-radius: 14px; padding: 4px; box-shadow: 3px 3px 0 var(--ink); }
   .toggle button { font: inherit; font-weight: 800; font-size: 14px; border: 0; border-radius: 10px; padding: 8px 16px; background: transparent; cursor: pointer; color: var(--ink); }
   .toggle button[aria-pressed="true"] { background: var(--ink); color: #fff; }
@@ -234,9 +227,6 @@ layout: none
     .step:not(:last-child)::after { top: auto; bottom: -27px; inset-inline-end: auto; left: 50%; transform: translateX(-50%) rotate(90deg); }
     .f.wide { grid-column: auto; grid-template-columns: 1fr; }
     .mini-ledger { min-width: 0; }
-    .phone .sticker { display: none; }
-    .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 18px; }
-    .chips .sticker { position: static; transform: none; }
     .packs { gap: 30px; }
     section { padding: 64px 0; }
     .final-card { padding: 34px 24px; box-shadow: 6px 6px 0 var(--ink); }
@@ -315,8 +305,6 @@ layout: none
       <div class="stage">
         <div class="phone">
           <div class="notch"></div>
-          <div class="sticker st-1"><svg class="ico"><use href="#i-sms"/></svg><span data-ur="یاد دہانی بھیج دی">Reminder sent</span></div>
-          <div class="sticker st-2"><svg class="ico"><use href="#i-check"/></svg><span data-ur="Rs 7,750 وصول">Rs 7,750 received</span></div>
           <div class="sbar"><span>9:41</span><span>4G ▮▮▮</span></div>
           <div class="screen" id="scr">
             <div class="lockico"><svg class="ico" id="lk"><use href="#i-unlock"/></svg></div>
@@ -330,10 +318,6 @@ layout: none
       <div class="toggle" role="group" aria-label="Demo">
         <button type="button" id="b-paid" aria-pressed="true" data-ur="ادا شدہ">Paid</button>
         <button type="button" id="b-late" aria-pressed="false" data-ur="قسط لیٹ">Late</button>
-      </div>
-      <div class="chips" aria-hidden="true">
-        <span class="sticker"><svg class="ico"><use href="#i-sms"/></svg><span data-ur="یاد دہانی بھیج دی">Reminder sent</span></span>
-        <span class="sticker"><svg class="ico"><use href="#i-check"/></svg><span data-ur="Rs 7,750 وصول">Rs 7,750 received</span></span>
       </div>
     </div>
   </div>
