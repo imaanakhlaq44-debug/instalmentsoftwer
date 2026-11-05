@@ -301,6 +301,17 @@ describe('POST /api/auth/register-dealer', () => {
     expect(await repo.deviceLicenses.countAvailable(dealerId)).toBe(100);
   });
 
+  it('shows a new shop with no locks in the super admin dealer list', async () => {
+    const res = await anonymous().post('/api/auth/register-dealer').send(signup);
+    const dealerId = res.body.dealer.id as string;
+
+    const all = await as(ACCOUNTS.superAdmin).get('/api/licenses');
+    expect(all.status).toBe(200);
+    expect(all.body.dealers).toEqual(
+      expect.arrayContaining([expect.objectContaining({ dealerId, available: 0, outOfLocks: true })])
+    );
+  });
+
   it('lets a super admin issue an odd-sized pack of seven', async () => {
     const res = await anonymous().post('/api/auth/register-dealer').send(signup);
     const dealerId = res.body.dealer.id as string;

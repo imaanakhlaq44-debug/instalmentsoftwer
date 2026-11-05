@@ -91,6 +91,19 @@ const authLimiter = rateLimit({
 });
 
 /**
+ * Sign-up is public and, unlike sign-in, a success is the thing to limit: the
+ * login limiter skips successful requests, so without this one address could
+ * create shops without end.
+ */
+const signupLimiter = rateLimit({
+  windowMs: config.signupRateLimit.windowMs,
+  max: config.signupRateLimit.max,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many shops registered from this network. Please try again later.', code: 'SIGNUP_RATE_LIMITED' },
+});
+
+/**
  * The DPC fleet gets its own budget.
  *
  * A shop's handsets share one mobile network and often one NAT, so they arrive
@@ -151,6 +164,7 @@ app.get('/api/health', (_req, res) => {
 
 // Auth router handles its own per-route protection: /login and /register-dealer
 // are public, everything else inside it requires a session.
+app.use('/api/auth/register-dealer', signupLimiter);
 app.use('/api/auth', authLimiter, authRouter);
 
 /**

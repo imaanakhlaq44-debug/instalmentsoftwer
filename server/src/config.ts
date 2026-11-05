@@ -117,6 +117,12 @@ export const config = {
     max: num(process.env.RATE_LIMIT_MAX, 500),
   },
 
+  /** Shop sign-ups per address. Every request counts, successful or not. */
+  signupRateLimit: {
+    windowMs: num(process.env.SIGNUP_RATE_LIMIT_WINDOW_MINUTES, 60) * 60_000,
+    max: num(process.env.SIGNUP_RATE_LIMIT_MAX, 5),
+  },
+
   loginRateLimit: {
     windowMs: num(process.env.LOGIN_RATE_LIMIT_WINDOW_MINUTES, 15) * 60_000,
     max: num(process.env.LOGIN_RATE_LIMIT_MAX, 10),
