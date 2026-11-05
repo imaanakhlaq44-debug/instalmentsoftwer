@@ -38,7 +38,10 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      # Default packages include the removed legacy `tools` package; see ci.yml.
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
       - uses: gradle/actions/setup-gradle@v4
 
       # A release APK that fails its own unit tests is not a release.
