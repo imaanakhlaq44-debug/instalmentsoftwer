@@ -92,6 +92,8 @@ class Prefs(context: Context) {
             .putInt(KEY_P_OFFLINE_DAYS, policy.offlineLockAfterDays)
             .putInt(KEY_P_GRACE_DAYS, policy.gracePeriodDays)
             .putString(KEY_P_FRP_IDS, policy.frpAccountIds.joinToString("|"))
+            .putInt(KEY_P_STAGE, policy.restrictionLevel)
+            .putString(KEY_P_STAGE_APPS, policy.restrictedApps.joinToString("|"))
             .apply()
     }
 
@@ -107,6 +109,9 @@ class Prefs(context: Context) {
         gracePeriodDays = prefs.getInt(KEY_P_GRACE_DAYS, 0),
         frpAccountIds = prefs.getString(KEY_P_FRP_IDS, "")
             .orEmpty().split("|").filter { it.isNotBlank() },
+        restrictionLevel = prefs.getInt(KEY_P_STAGE, 0),
+        restrictedApps = prefs.getString(KEY_P_STAGE_APPS, "")
+            .orEmpty().split("|").filter { it.isNotBlank() },
         dealerName = prefs.getString(KEY_P_DEALER, null),
         dealerPhone = prefs.getString(KEY_P_PHONE, null),
     )
@@ -120,6 +125,16 @@ class Prefs(context: Context) {
     var frpAppliedIds: String?
         get() = prefs.getString(KEY_FRP_APPLIED, null)
         set(value) = prefs.edit().putString(KEY_FRP_APPLIED, value).apply()
+
+    /** Whether this app has turned off outgoing calls and SMS (staged level 1+). */
+    var stageRestrictionsOn: Boolean
+        get() = prefs.getBoolean(KEY_STAGE_ON, false)
+        set(value) = prefs.edit().putBoolean(KEY_STAGE_ON, value).apply()
+
+    /** Apps this app suspended at staged level 2, so exactly those are released. */
+    var stageSuspendedApps: Set<String>
+        get() = prefs.getStringSet(KEY_STAGE_SUSPENDED, emptySet()).orEmpty().toSet()
+        set(value) = prefs.edit().putStringSet(KEY_STAGE_SUSPENDED, value).apply()
 
     /** Used when a handset is released from management. */
     fun clear() = prefs.edit().clear().apply()
@@ -153,5 +168,9 @@ class Prefs(context: Context) {
         private const val KEY_P_GRACE_DAYS = "policy_grace_days"
         private const val KEY_P_FRP_IDS = "policy_frp_account_ids"
         private const val KEY_FRP_APPLIED = "frp_applied_ids"
+        private const val KEY_P_STAGE = "policy_restriction_level"
+        private const val KEY_P_STAGE_APPS = "policy_restricted_apps"
+        private const val KEY_STAGE_ON = "stage_restrictions_on"
+        private const val KEY_STAGE_SUSPENDED = "stage_suspended_apps"
     }
 }

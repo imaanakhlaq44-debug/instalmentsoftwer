@@ -54,6 +54,7 @@ class DpcSync(context: Context) {
 
         lockController.protectInstallation()
         syncFactoryResetProtection(result.policy)
+        syncStagedRestrictions(result.policy)
         CheckInScheduler.schedule(appContext, result.checkInIntervalSeconds)
         OfflineWatchdogWorker.schedule(appContext)
 
@@ -92,6 +93,7 @@ class DpcSync(context: Context) {
         CheckInScheduler.schedule(appContext, result.checkInIntervalSeconds)
         OfflineWatchdogWorker.schedule(appContext)
         syncFactoryResetProtection(result.policy)
+        syncStagedRestrictions(result.policy)
 
         val command = result.command
         if (command != null) {
@@ -162,6 +164,18 @@ class DpcSync(context: Context) {
         val outcome = lockController.applyFactoryResetProtection(policy.frpAccountIds)
         if (outcome is LockController.Outcome.Refused) {
             Log.w(TAG, "Factory Reset Protection not in force: ${outcome.reason}")
+        }
+    }
+
+    /**
+     * Keeps calls/SMS and app suspension at the level the server names. Like
+     * FRP, a refusal is logged and retried next check-in; it never blocks the
+     * lock protocol.
+     */
+    private fun syncStagedRestrictions(policy: PolicyView) {
+        val outcome = lockController.applyStagedRestrictions(policy.restrictionLevel, policy.restrictedApps)
+        if (outcome is LockController.Outcome.Refused) {
+            Log.w(TAG, "Staged restrictions not in force: ${outcome.reason}")
         }
     }
 

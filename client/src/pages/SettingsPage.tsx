@@ -38,6 +38,7 @@ export const SettingsPage: React.FC = () => {
   const [policy, setPolicy] = useState({
     gracePeriodDays: 3,
     autoLockEnabled: false,
+    stagedRestrictionsEnabled: false,
     autoUnlockEnabled: true,
     lockWarningDays: 2,
     offlineLockAfterDays: 0,
@@ -69,6 +70,7 @@ export const SettingsPage: React.FC = () => {
         setPolicy({
           gracePeriodDays: data.policy.gracePeriodDays,
           autoLockEnabled: data.policy.autoLockEnabled,
+          stagedRestrictionsEnabled: data.policy.stagedRestrictionsEnabled ?? false,
           autoUnlockEnabled: data.policy.autoUnlockEnabled,
           lockWarningDays: data.policy.lockWarningDays,
           offlineLockAfterDays: data.policy.offlineLockAfterDays ?? 0,
@@ -196,6 +198,30 @@ export const SettingsPage: React.FC = () => {
               checked={policy.autoLockEnabled}
               onChange={(e) => setPolicy({ ...policy, autoLockEnabled: e.target.checked })}
               className="w-5 h-5 text-blue-600 rounded-lg focus:ring-blue-500 cursor-pointer"
+            />
+          </div>
+
+          {/* Staged restrictions — calls/SMS, then apps, then the full lock */}
+          <div className="p-4 bg-slate-50 border rounded-2xl flex items-center justify-between gap-4">
+            <div>
+              <span className="font-bold text-slate-800 text-xs block">Staged Restrictions (calls → apps → lock)</span>
+              <span className="text-[11px] text-slate-500">
+                1 installment late: outgoing calls and SMS blocked. 2 late: WhatsApp, Facebook, TikTok, YouTube and
+                similar apps paused too. 3 late (or the last installment): full lock. Incoming and emergency calls
+                always work. Off: the first late installment locks the phone. Applies to agreements signed while it is on.
+              </span>
+              {!policy.autoLockEnabled && policy.stagedRestrictionsEnabled && (
+                <span className="mt-1 block text-[11px] font-bold text-amber-700">
+                  Automated locking is off, so no handset will act on this.
+                </span>
+              )}
+            </div>
+            <input
+              type="checkbox"
+              aria-label="Staged restrictions"
+              checked={policy.stagedRestrictionsEnabled}
+              onChange={(e) => setPolicy({ ...policy, stagedRestrictionsEnabled: e.target.checked })}
+              className="w-5 h-5 shrink-0 text-blue-600 rounded-lg focus:ring-blue-500 cursor-pointer"
             />
           </div>
 

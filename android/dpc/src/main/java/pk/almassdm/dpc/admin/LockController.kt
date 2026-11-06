@@ -160,9 +160,58 @@ class LockController(context: Context) {
         )
     }
 
+    // -----------------------------------------------------------------------
+    // STAGED RESTRICTIONS
+    // -----------------------------------------------------------------------
+
+    /**
+     * Brings calls/SMS and app suspension in line with [level] (0, 1 or 2).
+     * Runs on every check-in and does nothing when nothing changed. What was
+     * actually applied is remembered, so a later release undoes exactly that.
+     */
+    fun applyStagedRestrictions(level: Int, apps: List<String>): Outcome {
+        if (!isDeviceOwner) return Outcome.Refused("device-owner privileges are not held")
+
+        val installed = apps.filter { isInstalled(it) }.toSet()
+        val plan = StagedRestrictions.plan(
+            level = level,
+            requestedApps = apps,
+            installed = installed,
+            suspendedNow = prefs.stageSuspendedApps,
+            restrictionsOn = prefs.stageRestrictionsOn,
+        )
+        if (plan.isEmpty) return Outcome.Applied
+
+        plan.addRestrictions.forEach(::addRestriction)
+        plan.clearRestrictions.forEach(::clearRestriction)
+        if (plan.addRestrictions.isNotEmpty()) prefs.stageRestrictionsOn = true
+        if (plan.clearRestrictions.isNotEmpty()) prefs.stageRestrictionsOn = false
+
+        var suspended = prefs.stageSuspendedApps
+        if (plan.suspend.isNotEmpty()) {
+            val failed = runCatching {
+                dpm.setPackagesSuspended(admin, plan.suspend.toTypedArray(), true).toSet()
+            }.getOrElse { plan.suspend.toSet() }
+            suspended = suspended + (plan.suspend.toSet() - failed)
+        }
+        if (plan.unsuspend.isNotEmpty()) {
+            runCatching { dpm.setPackagesSuspended(admin, plan.unsuspend.toTypedArray(), false) }
+                .onFailure { Log.w(TAG, "Could not unsuspend apps: ${it.message}") }
+            suspended = suspended - plan.unsuspend.toSet()
+        }
+        prefs.stageSuspendedApps = suspended
+        return Outcome.Applied
+    }
+
+    private fun isInstalled(packageName: String): Boolean =
+        runCatching { appContext.packageManager.getPackageInfo(packageName, 0); true }.getOrDefault(false)
+
     /** Releases the handset entirely — used when the server says it is no longer managed. */
     fun releaseFromManagement() {
         if (!isDeviceOwner) return
+        // A phone handed back must not keep calls blocked or apps paused.
+        runCatching { applyStagedRestrictions(0, emptyList()) }
+            .onFailure { Log.w(TAG, "Could not clear staged restrictions: ${it.message}") }
         // First, on its own: a phone handed back must never still demand the
         // dealer's Google account after a reset, whatever else fails below.
         // Cleared unconditionally rather than through the planner, so a stale

@@ -69,6 +69,7 @@ const policySchema = z
     dealerId: z.string().trim().max(64).optional(),
     gracePeriodDays: z.number().int().min(0).max(30).optional(),
     autoLockEnabled: z.boolean().optional(),
+    stagedRestrictionsEnabled: z.boolean().optional(),
     autoUnlockEnabled: z.boolean().optional(),
     lockWarningDays: z.number().int().min(0).max(15).optional(),
     /**
@@ -155,6 +156,10 @@ settingsRouter.put('/policy', (req, res, next) => {
     updates.offlineLockAfterDays !== undefined &&
     updates.offlineLockAfterDays !== (existing.offlineLockAfterDays ?? 0);
 
+  const stagedChanged =
+    updates.stagedRestrictionsEnabled !== undefined &&
+    updates.stagedRestrictionsEnabled !== (existing.stagedRestrictionsEnabled ?? false);
+
   const frpChanged =
     updates.frpAccountIds !== undefined &&
     updates.frpAccountIds.join(',') !== (existing.frpAccountIds ?? []).join(',');
@@ -164,6 +169,8 @@ settingsRouter.put('/policy', (req, res, next) => {
       ? `${user.name} turned Factory Reset Protection OFF for handsets.`
       : `${user.name} set Factory Reset Protection to ${updates.frpAccountIds!.length} Google account(s): ` +
         `${updates.frpAccountIds!.join(', ')}.`
+    : stagedChanged
+    ? `${user.name} turned staged restrictions (calls/SMS, then apps, then lock) ${updates.stagedRestrictionsEnabled ? 'ON' : 'OFF'}.`
     : autoLockChanged
     ? `${user.name} turned automatic device locking ${updates.autoLockEnabled ? 'ON' : 'OFF'}.`
     : offlineLockChanged
@@ -178,7 +185,7 @@ settingsRouter.put('/policy', (req, res, next) => {
     userId: user.userId,
     actorName: user.name,
     actorRole: user.role,
-    action: autoLockChanged || offlineLockChanged || frpChanged ? 'AUTO_LOCK_POLICY_CHANGED' : 'POLICY_UPDATED',
+    action: autoLockChanged || offlineLockChanged || frpChanged || stagedChanged ? 'AUTO_LOCK_POLICY_CHANGED' : 'POLICY_UPDATED',
     targetType: 'POLICY',
     targetId: existing.id,
     details,

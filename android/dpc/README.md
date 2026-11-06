@@ -71,6 +71,34 @@ enforcement for a determined customer rather than escaping it.
 
 ---
 
+## Staged restrictions
+
+A full lock at the first missed installment is heavy for a customer who is a
+few days short. With staged restrictions on (the dealer's Settings), the server
+sends a `restrictionLevel` on every check-in and the phone applies it:
+
+| Level | When | What stops working |
+|---|---|---|
+| 0 | Nothing overdue | Nothing |
+| 1 | One installment past grace | Outgoing calls and SMS (`DISALLOW_OUTGOING_CALLS`, `DISALLOW_SMS`) |
+| 2 | Two past grace | Level 1, plus the apps in `restrictedApps` suspended (`setPackagesSuspended`) |
+| Lock | Three past grace, or the final installment | The existing full lock |
+
+Incoming calls and emergency calls work at every level. A suspended app keeps
+its data; it just cannot be opened. `StagedRestrictions` works out the changes
+without touching Android and is unit-tested. The phone remembers what it
+applied (`Prefs.stageRestrictionsOn`, `Prefs.stageSuspendedApps`), so it undoes
+exactly that, including in `releaseFromManagement()`.
+
+**Why not "one SIM, then both SIMs".** Android gives a device-owner app no way
+to switch off a single SIM slot. Only the carrier or the OEM firmware can. Calls
+and SMS are the closest equivalent the platform allows.
+
+The server sends level 0 unless the customer's signed contract (terms v1.2)
+describes the stages and they were on when it was signed.
+
+---
+
 ## Surviving a wipe from recovery
 
 `DISALLOW_FACTORY_RESET` closes the reset option in Settings, and it is the

@@ -646,6 +646,12 @@ model DevicePolicy {
    * Protection is pushed to phones.
    */
   frpAccountIds            String[]          @default([]) @map("frp_account_ids")
+  /**
+   * One missed installment blocks outgoing calls and SMS, two also suspend
+   * social and video apps, three lock the phone. Off: the first missed
+   * installment past grace locks it, as before.
+   */
+  stagedRestrictionsEnabled Boolean          @default(false) @map("staged_restrictions_enabled")
   customerReminderEnabled  Boolean           @default(true) @map("customer_reminder_enabled")
   emergencyCallsAllowed    Boolean           @default(true) @map("emergency_calls_allowed")
   paymentMethodsOnLock     String[]          @map("payment_methods_on_lock")

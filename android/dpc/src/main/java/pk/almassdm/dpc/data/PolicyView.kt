@@ -34,6 +34,9 @@ data class PolicyView(
      * an empty list once nothing is owed, and the phone then drops it.
      */
     val frpAccountIds: List<String> = emptyList(),
+    /** 0 none, 1 no outgoing calls or SMS, 2 also [restrictedApps] suspended. */
+    val restrictionLevel: Int = 0,
+    val restrictedApps: List<String> = emptyList(),
     val dealerName: String?,
     val dealerPhone: String?,
 ) {
@@ -65,6 +68,15 @@ data class PolicyView(
                             ids?.optString(i)?.trim()
                                 ?.takeIf { it.isNotEmpty() && it.all(Char::isDigit) }
                                 ?.let { add(it) }
+                        }
+                    }.distinct()
+                },
+                // Absent means none: an older server never asks for a stage.
+                restrictionLevel = json.optInt("restrictionLevel", 0).coerceIn(0, 2),
+                restrictedApps = json.optJSONArray("restrictedApps").let { list ->
+                    buildList {
+                        for (i in 0 until (list?.length() ?: 0)) {
+                            list?.optString(i)?.trim()?.takeIf { it.isNotEmpty() }?.let { add(it) }
                         }
                     }.distinct()
                 },

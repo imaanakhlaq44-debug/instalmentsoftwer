@@ -7,6 +7,7 @@ import {
 import { deviceManagementService } from './DeviceManagementService.js';
 import { AuditService } from './AuditService.js';
 import { calculateLateFee, daysBetween, DEFAULT_POLICY, toDateOnly } from './InstallmentMath.js';
+import { stagedFullLockDue } from './StagedRestrictions.js';
 
 export interface OverdueEvaluationResult {
   evaluatedCount: number;
@@ -142,14 +143,23 @@ export class OverdueEngine {
           });
           if (queued) result.notificationsQueued++;
 
-          if (policy.autoLockEnabled && device.status !== 'LOCKED' && device.status !== 'LOCK_PENDING') {
+          // Under staged restrictions the first two missed installments are
+          // handled on the phone (calls/SMS, then apps); the full lock waits
+          // for the third, or for the final installment.
+          const lockNow =
+            !policy.stagedRestrictionsEnabled ||
+            stagedFullLockDue(await repo.installments.findByPlan(plan.id));
+
+          if (policy.autoLockEnabled && lockNow && device.status !== 'LOCKED' && device.status !== 'LOCK_PENDING') {
             try {
               await deviceManagementService.lockDevice({
                 deviceId: device.id,
                 userId: 'system-overdue-engine',
                 userName: 'Auto-Lock Policy Engine',
                 userRole: 'SUPER_ADMIN',
-                reason: `Automated enforcement: installment #${inst.installmentNumber} is past the ${policy.gracePeriodDays}-day grace period.`,
+                reason: policy.stagedRestrictionsEnabled
+                  ? `Automated enforcement: a third installment (or the final one) is past the ${policy.gracePeriodDays}-day grace period.`
+                  : `Automated enforcement: installment #${inst.installmentNumber} is past the ${policy.gracePeriodDays}-day grace period.`,
                 lockMessage: `DEVICE RESTRICTED: Installment payment overdue. Amount due: Rs. ${inst.amountDue.toLocaleString()}.`,
               });
               result.devicesLockedCount++;

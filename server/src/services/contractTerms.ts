@@ -23,7 +23,7 @@
  * `termsDiscloseOfflineLock` refuses that version and contracts signed under it
  * keep rendering — and keep meaning — exactly what they said.
  */
-export const CURRENT_TERMS_VERSION = '1.1';
+export const CURRENT_TERMS_VERSION = '1.2';
 
 /**
  * Whether the version somebody signed under actually tells them about the
@@ -33,6 +33,17 @@ export const CURRENT_TERMS_VERSION = '1.1';
 export function termsDiscloseOfflineLock(termsVersion: string): boolean {
   const [major = 0, minor = 0] = termsVersion.split('.').map((part) => Number(part) || 0);
   return major > 1 || (major === 1 && minor >= 1);
+}
+
+/**
+ * v1.2 adds staged restrictions to clause 4: calls and SMS first, then social
+ * and video apps, and a full lock only at the third missed installment (or the
+ * last). Contracts signed under v1.1 or earlier never described the stages, so
+ * a handset under one of them is never told to apply them.
+ */
+export function termsDiscloseStagedRestrictions(termsVersion: string): boolean {
+  const [major = 0, minor = 0] = termsVersion.split('.').map((part) => Number(part) || 0);
+  return major > 1 || (major === 1 && minor >= 2);
 }
 
 /** The facts the document is rendered from, frozen at signing. */
@@ -62,6 +73,8 @@ export interface ContractSnapshot {
    * rather than defaulting it to something the customer never saw.
    */
   offlineLock?: { enabled: boolean; afterDays: number };
+  /** Staged restrictions as they stood at signing. Absent before terms v1.2. */
+  stagedRestrictions?: { enabled: boolean };
   schedule: { installmentNumber: number; amountDue: number; dueDate: string }[];
   preparedAt: string;
 }
@@ -91,8 +104,10 @@ export function renderClauses(
   snapshot: ContractSnapshot,
   termsVersion: string = CURRENT_TERMS_VERSION
 ): ContractClause[] {
-  const clauses = clausesV1_0(snapshot);
-  return termsDiscloseOfflineLock(termsVersion) ? withOfflineRule(clauses, snapshot) : clauses;
+  let clauses = clausesV1_0(snapshot);
+  if (termsDiscloseOfflineLock(termsVersion)) clauses = withOfflineRule(clauses, snapshot);
+  if (termsDiscloseStagedRestrictions(termsVersion)) clauses = withStagedRestrictions(clauses, snapshot);
+  return clauses;
 }
 
 /**
@@ -127,6 +142,41 @@ function withOfflineRule(clauses: ContractClause[], snapshot: ContractSnapshot):
             `مسلسل ${days} دن تک یہ رابطہ نہ ہو سکے، تو موبائل خود کو محدود کر دے گا جب تک رابطہ بحال نہ ہو۔ اس لیے موبائل ڈیٹا بند ` +
             `کرنے، سم نکالنے یا فون کو آف لائن رکھنے سے پابندی سے بچا نہیں جا سکتا۔ رابطہ بحال ہوتے ہی اور قسط ادا ہو جانے پر ` +
             `پابندی ختم ہو جائے گی۔`,
+        }
+  );
+}
+
+/**
+ * Clause 4, extended for terms v1.2: what happens at each missed installment.
+ * Written so a customer can tell from the contract alone what will stop working
+ * and when, and that calls in and emergency calls always keep working.
+ */
+function withStagedRestrictions(clauses: ContractClause[], snapshot: ContractSnapshot): ContractClause[] {
+  if (!snapshot.stagedRestrictions?.enabled) return clauses;
+
+  return clauses.map((clause) =>
+    !clause.heading.startsWith('4.')
+      ? clause
+      : {
+          ...clause,
+          body:
+            `${clause.body}
+
+` +
+            `Restrictions are applied in stages. With one installment unpaid after its grace period, the handset ` +
+            `cannot make outgoing calls or send SMS. With two, social media, messaging and video apps (such as ` +
+            `WhatsApp, Facebook, TikTok and YouTube) are also paused. With three, or if the final installment is ` +
+            `unpaid after its grace period, the handset is restricted as described above. At every stage incoming ` +
+            `calls and emergency calls keep working, and each stage is lifted as soon as the overdue payment is ` +
+            `recorded.`,
+          bodyUr:
+            `${clause.bodyUr}
+
+` +
+            `پابندیاں مرحلہ وار لگیں گی۔ ایک قسط مہلت کے بعد بھی بقایا ہو تو موبائل سے باہر کال اور SMS نہیں ہو سکیں گے۔ ` +
+            `دو اقساط بقایا ہوں تو سوشل میڈیا، میسجنگ اور ویڈیو ایپس (جیسے واٹس ایپ، فیس بک، ٹک ٹاک، یوٹیوب) بھی بند ہو جائیں گی۔ ` +
+            `تین اقساط بقایا ہوں، یا آخری قسط مہلت کے بعد ادا نہ ہو، تو موبائل اوپر بیان کردہ طریقے سے بند ہو جائے گا۔ ` +
+            `ہر مرحلے میں آنے والی کالیں اور ایمرجنسی کال چلتی رہیں گی، اور بقایا ادائیگی درج ہوتے ہی پابندی ختم ہو جائے گی۔`,
         }
   );
 }
