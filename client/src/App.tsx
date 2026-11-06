@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext.js';
+import { LanguageProvider } from './i18n/LanguageContext.js';
 import { AppLayout } from './components/layout/AppLayout.js';
 import { RequireAuth, RequireRole } from './components/auth/RouteGuards.js';
 import { ErrorBoundary } from './components/ErrorBoundary.js';
@@ -56,6 +57,7 @@ export function App() {
     <ErrorBoundary>
       <BrowserRouter>
         <AuthProvider>
+        <LanguageProvider>
           <Routes>
             {/* Public */}
             <Route path="/login" element={<LoginPage />} />
@@ -105,6 +107,7 @@ export function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>
+        </LanguageProvider>
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>

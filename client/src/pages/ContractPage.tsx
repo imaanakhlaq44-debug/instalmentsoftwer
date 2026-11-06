@@ -77,7 +77,7 @@ export const ContractPage: React.FC = () => {
   const canSign = contract.status === 'DRAFT' && user?.role !== 'CUSTOMER';
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6" data-i18n-skip>
       {/*
         The A4 page rules live here rather than in index.css, which sizes the
         page for 80mm thermal receipt rolls. Two documents, two page sizes, and
