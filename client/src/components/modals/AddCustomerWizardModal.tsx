@@ -15,6 +15,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { PHONE_BRANDS } from '../../utils/brands.js';
 
 interface Props {
   onClose: () => void;
@@ -256,12 +257,9 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                     onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
                     className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
                   >
-                    <option value="Samsung">Samsung</option>
-                    <option value="Infinix">Infinix</option>
-                    <option value="Tecno">Tecno</option>
-                    <option value="Xiaomi">Xiaomi / Redmi</option>
-                    <option value="Vivo">Vivo</option>
-                    <option value="Oppo">Oppo</option>
+                    {PHONE_BRANDS.map((b) => (
+                      <option key={b.value} value={b.value}>{b.label}</option>
+                    ))}
                   </select>
                 </div>
 
