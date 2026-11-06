@@ -21,7 +21,6 @@ import {
   AlertTriangle,
   ArrowLeft,
   RefreshCw,
-  Radio,
   Clock,
   ShieldCheck,
   Send,
@@ -33,7 +32,7 @@ import {
 export const DeviceDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { showToast, isStaff, isDealerAdmin, isSuperAdmin } = useAuth();
+  const { showToast, isStaff, isDealerAdmin } = useAuth();
 
   const [device, setDevice] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -235,15 +234,6 @@ export const DeviceDetailPage: React.FC = () => {
         <div className="flex items-center gap-2.5 flex-wrap">
           {isStaff && (
             <>
-              {isSuperAdmin && (
-                <button
-                  onClick={() => navigate(`/simulator?deviceId=${device.id}`)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-xl text-xs font-bold transition-all"
-                >
-                  <Radio className="w-4 h-4" /> Test in Simulator
-                </button>
-              )}
-
               <button
                 onClick={() => setShowMessageModal(true)}
                 className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all"

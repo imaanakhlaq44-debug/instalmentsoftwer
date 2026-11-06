@@ -13,7 +13,6 @@ export const ROMAN_URDU: Record<string, string> = {
   // ---------------------------------------------------------------- shell
   Dashboard: 'Dashboard',
   Devices: 'Phones',
-  'Device Simulator': 'Device Simulator',
   Customers: 'Customers',
   Installments: 'Qistein',
   Payments: 'Payments',
@@ -165,7 +164,6 @@ export const ROMAN_URDU: Record<string, string> = {
   'Phones sold on installments': 'Qiston par biche hue phones',
   'See which phones are online, paid up or late, and lock or unlock them.':
     'Dekhein kaun se phone online hain, kis ki qist ada hai ya late hai, aur unhein lock ya unlock karein.',
-  'Phone Simulator': 'Phone Simulator',
   'Add Financed Device': 'Naya qiston wala phone',
   'Loading portfolio devices...': 'Phones load ho rahe hain...',
   'No Financed Devices Found': 'Koi qiston wala phone nahin mila',
@@ -197,7 +195,6 @@ export const ROMAN_URDU: Record<string, string> = {
 
   // ------------------------------------------------------------- device page
   'Loading device 360 profile...': 'Phone ki tafseel load ho rahi hai...',
-  'Test in Simulator': 'Simulator mein test',
   'Send Message': 'Message bhejein',
   'Edit Device': 'Phone ki tafseel badlein',
   'Re-enroll': 'Dobara jorein',

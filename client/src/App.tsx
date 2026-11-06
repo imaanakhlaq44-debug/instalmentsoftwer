@@ -33,7 +33,6 @@ const HomePage: React.FC = () => {
 };
 import { DevicesPage } from './pages/DevicesPage.js';
 import { DeviceDetailPage } from './pages/DeviceDetailPage.js';
-import { SimulatorPage } from './pages/SimulatorPage.js';
 import { CustomersPage } from './pages/CustomersPage.js';
 import { CustomerDetailPage } from './pages/CustomerDetailPage.js';
 import { InstallmentsPage } from './pages/InstallmentsPage.js';
@@ -97,7 +96,6 @@ export function App() {
 
               <Route path="/orders" element={<RequireRole roles={["SUPER_ADMIN"]}><PlatformOrdersPage /></RequireRole>} />
               <Route path="/shops" element={<RequireRole roles={["SUPER_ADMIN"]}><PlatformShopsPage /></RequireRole>} />
-              <Route path="/simulator" element={<RequireRole roles={["SUPER_ADMIN"]}><SimulatorPage /></RequireRole>} />
               <Route path="/enrollment" element={<RequireRole roles={[...STAFF]}><EnrollmentPage /></RequireRole>} />
 
               {/* A customer may read the agreement they signed; only staff may take a signature. */}

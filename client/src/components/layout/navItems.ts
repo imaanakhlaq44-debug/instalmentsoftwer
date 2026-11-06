@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Smartphone, Users, CalendarDays, CreditCard, QrCode,
-  KeyRound, Bell, FileSpreadsheet, Settings, Activity, Radio, ClipboardList, Store,
+  KeyRound, Bell, FileSpreadsheet, Settings, Activity, ClipboardList, Store,
 } from 'lucide-react';
 import { UserRole } from '../../types/index.js';
 
@@ -61,7 +61,6 @@ export const PLATFORM_NAV_ITEMS: NavItem[] = [
   { to: '/shops', label: 'Shops', icon: Store, roles: ['SUPER_ADMIN'], group: 'Platform' },
   { to: '/licenses', label: 'Locks sold', icon: KeyRound, roles: ['SUPER_ADMIN'], group: 'Platform' },
   { to: '/audit-logs', label: 'Activity log', icon: Activity, roles: ['SUPER_ADMIN'], group: 'Tools' },
-  { to: '/simulator', label: 'Device Simulator', icon: Radio, roles: ['SUPER_ADMIN'], group: 'Tools' },
 ];
 
 /**
