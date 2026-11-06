@@ -410,6 +410,17 @@ model Device {
    */
   noLock           Boolean   @default(false) @map("no_lock")
 
+  // --- Location for recovery ---------------------------------------------------
+  // Asked for only by a shop owner, only for a restricted or overdue phone whose
+  // agreement allows it. The phone answers once and the request closes.
+  /** When the shop asked; the phone is told to report while this is recent. */
+  locationRequestedAt DateTime? @map("location_requested_at") @db.Timestamptz(3)
+  locationRequestedBy String?   @map("location_requested_by") @db.VarChar(120)
+  /** When the phone took the fix it reported (locationLat / locationLng). */
+  locationAt          DateTime? @map("location_at") @db.Timestamptz(3)
+  /** Radius in metres the fix is good to. */
+  locationAccuracy    Float?    @map("location_accuracy")
+
   // --- The offline rule ------------------------------------------------------
   // The handset restricted itself because it had not reached the server for the
   // dealer's configured number of days. Nobody commanded it, so it is kept apart
@@ -658,6 +669,12 @@ model DevicePolicy {
    * installment past grace locks it, as before.
    */
   stagedRestrictionsEnabled Boolean          @default(false) @map("staged_restrictions_enabled")
+  /**
+   * The shop may ask a locked or overdue handset for its location, to recover
+   * it. Only customers whose signed agreement (terms v1.3+) says so are ever
+   * asked, and only while the phone is restricted or overdue.
+   */
+  locationOnRecoveryEnabled Boolean          @default(false) @map("location_on_recovery_enabled")
   customerReminderEnabled  Boolean           @default(true) @map("customer_reminder_enabled")
   emergencyCallsAllowed    Boolean           @default(true) @map("emergency_calls_allowed")
   paymentMethodsOnLock     String[]          @map("payment_methods_on_lock")

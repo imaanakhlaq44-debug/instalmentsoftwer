@@ -51,6 +51,13 @@ export class DeviceReleaseService {
         lockMessage: undefined,
         offlineLockActive: false,
         offlineLockSince: undefined,
+        // A phone that belongs to its owner keeps no trace of where it was.
+        locationLat: undefined,
+        locationLng: undefined,
+        locationAccuracy: undefined,
+        locationAt: undefined,
+        locationRequestedAt: undefined,
+        locationRequestedBy: undefined,
         updatedAt: new Date().toISOString(),
       },
       tx

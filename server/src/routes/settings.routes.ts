@@ -70,6 +70,7 @@ const policySchema = z
     gracePeriodDays: z.number().int().min(0).max(30).optional(),
     autoLockEnabled: z.boolean().optional(),
     stagedRestrictionsEnabled: z.boolean().optional(),
+    locationOnRecoveryEnabled: z.boolean().optional(),
     autoUnlockEnabled: z.boolean().optional(),
     lockWarningDays: z.number().int().min(0).max(15).optional(),
     /**
@@ -160,11 +161,18 @@ settingsRouter.put('/policy', (req, res, next) => {
     updates.stagedRestrictionsEnabled !== undefined &&
     updates.stagedRestrictionsEnabled !== (existing.stagedRestrictionsEnabled ?? false);
 
+  const locationChanged =
+    updates.locationOnRecoveryEnabled !== undefined &&
+    updates.locationOnRecoveryEnabled !== (existing.locationOnRecoveryEnabled ?? false);
+
   const frpChanged =
     updates.frpAccountIds !== undefined &&
     updates.frpAccountIds.join(',') !== (existing.frpAccountIds ?? []).join(',');
 
-  const details = frpChanged
+  const details = locationChanged
+    ? `${user.name} turned location for recovery ${updates.locationOnRecoveryEnabled ? 'ON' : 'OFF'}. ` +
+      'It applies only to agreements signed while it is on.'
+    : frpChanged
     ? updates.frpAccountIds!.length === 0
       ? `${user.name} turned Factory Reset Protection OFF for handsets.`
       : `${user.name} set Factory Reset Protection to ${updates.frpAccountIds!.length} Google account(s): ` +
@@ -185,7 +193,7 @@ settingsRouter.put('/policy', (req, res, next) => {
     userId: user.userId,
     actorName: user.name,
     actorRole: user.role,
-    action: autoLockChanged || offlineLockChanged || frpChanged || stagedChanged ? 'AUTO_LOCK_POLICY_CHANGED' : 'POLICY_UPDATED',
+    action: autoLockChanged || offlineLockChanged || frpChanged || stagedChanged || locationChanged ? 'AUTO_LOCK_POLICY_CHANGED' : 'POLICY_UPDATED',
     targetType: 'POLICY',
     targetId: existing.id,
     details,

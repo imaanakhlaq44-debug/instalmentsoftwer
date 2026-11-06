@@ -37,6 +37,12 @@ data class PolicyView(
     /** 0 none, 1 no outgoing calls or SMS, 2 also [restrictedApps] suspended. */
     val restrictionLevel: Int = 0,
     val restrictedApps: List<String> = emptyList(),
+    /**
+     * The shop asked for this phone's location to recover it, and the server
+     * has checked it may (signed consent, phone locked or overdue). One fix is
+     * taken and reported; the request then closes on the server.
+     */
+    val reportLocation: Boolean = false,
     val dealerName: String?,
     val dealerPhone: String?,
 ) {
@@ -71,6 +77,8 @@ data class PolicyView(
                         }
                     }.distinct()
                 },
+                // Absent means no: an older server never asks for a location.
+                reportLocation = json.optBoolean("reportLocation", false),
                 // Absent means none: an older server never asks for a stage.
                 restrictionLevel = json.optInt("restrictionLevel", 0).coerceIn(0, 2),
                 restrictedApps = json.optJSONArray("restrictedApps").let { list ->

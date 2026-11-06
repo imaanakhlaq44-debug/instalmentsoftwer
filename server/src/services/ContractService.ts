@@ -475,6 +475,11 @@ export class ContractService {
       stagedRestrictions: {
         enabled: effective.autoLockEnabled === true && effective.stagedRestrictionsEnabled === true,
       },
+      // Frozen too: clause 4 of terms v1.3 mentions location only if the shop
+      // had it on when this customer signed, and only then may it be asked for.
+      locationOnRecovery: {
+        enabled: (effective as { locationOnRecoveryEnabled?: boolean }).locationOnRecoveryEnabled === true,
+      },
       lateFee: {
         enabled: effective.lateFeeEnabled !== false,
         type: effective.lateFeeType ?? 'FIXED',

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ApiService } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.js';
 import { EditDeviceModal } from '../components/modals/EditDeviceModal.js';
+import { FindPhoneCard } from '../components/devices/FindPhoneCard.js';
 import { relativeTime } from '../utils/format.js';
 import {
   Smartphone,
@@ -494,6 +495,9 @@ export const DeviceDetailPage: React.FC = () => {
             restricted with nothing signed is the state a shop most needs to
             notice, and the lock will refuse until it is fixed.
           */}
+          {/* Owners only, and never for a phone that has no lock or has been released. */}
+          {isDealerAdmin && !device.noLock && !isReleased && !isPending && <FindPhoneCard deviceId={device.id} />}
+
           {contract && (
             <div className="bg-white p-5 rounded-3xl border-2 border-ink-900 shadow-card space-y-3">
               <h2 className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">

@@ -39,6 +39,7 @@ export const SettingsPage: React.FC = () => {
     gracePeriodDays: 3,
     autoLockEnabled: false,
     stagedRestrictionsEnabled: false,
+    locationOnRecoveryEnabled: false,
     autoUnlockEnabled: true,
     lockWarningDays: 2,
     offlineLockAfterDays: 0,
@@ -71,6 +72,7 @@ export const SettingsPage: React.FC = () => {
           gracePeriodDays: data.policy.gracePeriodDays,
           autoLockEnabled: data.policy.autoLockEnabled,
           stagedRestrictionsEnabled: data.policy.stagedRestrictionsEnabled ?? false,
+          locationOnRecoveryEnabled: data.policy.locationOnRecoveryEnabled ?? false,
           autoUnlockEnabled: data.policy.autoUnlockEnabled,
           lockWarningDays: data.policy.lockWarningDays,
           offlineLockAfterDays: data.policy.offlineLockAfterDays ?? 0,
@@ -218,6 +220,26 @@ export const SettingsPage: React.FC = () => {
               aria-label="Staged restrictions"
               checked={policy.stagedRestrictionsEnabled}
               onChange={(e) => setPolicy({ ...policy, stagedRestrictionsEnabled: e.target.checked })}
+              className="w-5 h-5 shrink-0 text-blue-600 rounded-lg focus:ring-blue-500 cursor-pointer"
+            />
+          </div>
+
+          {/* Location for recovery — consent-gated, owner-only, logged */}
+          <div className="p-4 bg-slate-50 border rounded-2xl flex items-center justify-between gap-4">
+            <div>
+              <span className="font-bold text-slate-800 text-xs block">Location for Phone Recovery</span>
+              <span className="text-xs text-slate-500">
+                Lets the shop owner ask a locked or overdue phone for its location, to recover it. Never for a customer
+                who is up to date. The customer's agreement says so, the phone shows them a notice each time, and every
+                request and view is recorded. Applies only to agreements signed while it is on, and needs phone app 1.3
+                or newer.
+              </span>
+            </div>
+            <input
+              type="checkbox"
+              aria-label="Location for phone recovery"
+              checked={policy.locationOnRecoveryEnabled}
+              onChange={(e) => setPolicy({ ...policy, locationOnRecoveryEnabled: e.target.checked })}
               className="w-5 h-5 shrink-0 text-blue-600 rounded-lg focus:ring-blue-500 cursor-pointer"
             />
           </div>

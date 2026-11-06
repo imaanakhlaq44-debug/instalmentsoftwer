@@ -158,6 +158,30 @@ rather than install them.
 
 ---
 
+## Location for recovery (1.3.0)
+
+The app reads location only when the server sets `reportLocation` in the
+policy. The server sets it only when all of these hold:
+
+- the shop turned on **Location for Phone Recovery**;
+- the customer signed terms v1.3 or newer while it was on (clause 4 says so);
+- the phone is locked, self-locked or has an overdue installment;
+- a shop owner asked within the last 24 hours, giving a reason.
+
+`LocationReporter` then:
+
+1. grants itself the location permission (device owner);
+2. takes one fix, waiting at most 30 s, or uses a last-known fix under 30 min old;
+3. sets the permission back to denied;
+4. reports the fix and shows the customer a notification, in English or Urdu.
+
+The server stores the fix only while that request is still open and still
+allowed, then closes the request. Coordinates are left out of every ordinary
+device response. An owner opens them on purpose, and the server logs it
+(`LOCATION_VIEWED`). Releasing the phone deletes them.
+
+---
+
 ## Letting the phone go
 
 When the last installment is paid, the server marks the device INACTIVE by

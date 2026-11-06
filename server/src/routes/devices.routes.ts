@@ -6,6 +6,7 @@ import { Customer, InstallmentPlan, Installment } from '../types/index.js';
 import { deviceManagementService } from '../services/DeviceManagementService.js';
 import { AuditService } from '../services/AuditService.js';
 import { DeviceReleaseService } from '../services/DeviceReleaseService.js';
+import { LocationService } from '../services/LocationService.js';
 import {
   requireDealerAdmin,
   requireDealerStaff,
@@ -474,6 +475,50 @@ devicesRouter.post(
     });
 
     res.json(sanitizeDevice(released, user.role));
+  })
+);
+
+/**
+ * Location for recovery. Owner-only both ways: asking for it, and looking at
+ * it. Every rule about when it is allowed lives in LocationService.
+ */
+const locationRequestSchema = z.object({
+  reason: z.string().trim().min(5, 'Please give a reason of at least 5 characters.').max(500),
+});
+
+devicesRouter.post(
+  '/:id/location-request',
+  requireDealerAdmin,
+  validateBody(locationRequestSchema),
+  asyncHandler(async (req, res) => {
+    const user = getAuthUser(req);
+    const device = await repo.devices.findById(routeParam(req, 'id'));
+    if (!device) throw AppError.notFound('Device');
+    assertDealerAccess(req, device.dealerId, 'device');
+
+    const actor = { userId: user.userId, userName: user.name, userRole: user.role, ipAddress: clientIp(req) };
+    const updated = await LocationService.request(device, actor, (req.body as z.infer<typeof locationRequestSchema>).reason);
+    res.json(await LocationService.view(updated, actor));
+  })
+);
+
+devicesRouter.get(
+  '/:id/location',
+  requireDealerAdmin,
+  asyncHandler(async (req, res) => {
+    const user = getAuthUser(req);
+    const device = await repo.devices.findById(routeParam(req, 'id'));
+    if (!device) throw AppError.notFound('Device');
+    assertDealerAccess(req, device.dealerId, 'device');
+
+    res.json(
+      await LocationService.view(device, {
+        userId: user.userId,
+        userName: user.name,
+        userRole: user.role,
+        ipAddress: clientIp(req),
+      })
+    );
   })
 );
 
