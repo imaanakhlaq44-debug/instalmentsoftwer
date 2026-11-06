@@ -61,6 +61,33 @@ export default {
            dropped rather than flagged — so they stay, mapped onto the new
            neutrals, until each page is migrated. Do not use them in new code. */
         navy: { 800: '#1B4382', 900: '#12305F', 950: '#0F1419' },
+        /* Tailwind's own ramps, re-pointed at this palette. The older pages
+           were written against cool grey, bright blue and candy greens and
+           reds, which is why they looked washed out and out of place next to
+           the home page. Re-pointing them here fixes every page at once:
+           greys become warm ink (and a step darker, so small text stays
+           readable), blue becomes the accent, and the status colours become
+           the three status hues. */
+        slate: {
+          50: '#FBF6E9', 100: '#F7EDD3', 200: '#E6D9BA', 300: '#CDBD98', 400: '#6F7682',
+          500: '#4A5260', 600: '#3A4350', 700: '#2A313B', 800: '#1C2229', 900: '#0F1419', 950: '#0A0E12',
+        },
+        blue: {
+          50: '#EAF0FA', 100: '#D6E2F5', 200: '#AFC5EA', 300: '#7C9DD6', 400: '#3D6CB8',
+          500: '#2A56A0', 600: '#1B4382', 700: '#163A72', 800: '#12305F', 900: '#0C2246', 950: '#071530',
+        },
+        emerald: {
+          50: '#DDF6EC', 100: '#C4EFDD', 200: '#7BE0C2', 300: '#4FD0A9', 400: '#1DB98F',
+          500: '#14946F', 600: '#0B7A5E', 700: '#086650', 800: '#065242', 900: '#043D31', 950: '#022A22',
+        },
+        rose: {
+          50: '#FDE3DF', 100: '#FBD0C9', 200: '#F6A99F', 300: '#F08174', 400: '#EC6355',
+          500: '#E8473A', 600: '#C93A2D', 700: '#B3301F', 800: '#8F2618', 900: '#6B1C12', 950: '#4A130C',
+        },
+        amber: {
+          50: '#FFF8E1', 100: '#FFF1C7', 200: '#FFE08A', 300: '#FFD15E', 400: '#FFC83D',
+          500: '#E0A400', 600: '#C98A00', 700: '#8A5B00', 800: '#6E4800', 900: '#553700', 950: '#3A2600',
+        },
         /* Chart series. Validated: adjacent CVD ΔE 21.6, normal-vision ΔE 32.3. */
         viz: { collection: '#1B4382', overdue: '#E8473A', grid: '#E6D9BA' },
       },
@@ -72,6 +99,9 @@ export default {
       },
       fontSize: {
         /* A real scale, so a heading is a heading everywhere. */
+        /* text-xs was 12px, and most of the older pages' body copy used it;
+           13px reads at arm's length on a counter screen. */
+        xs: ['0.8125rem', { lineHeight: '1.25rem' }],
         micro: ['0.6875rem', { lineHeight: '1rem', letterSpacing: '0.04em' }],
         caption: ['0.75rem', { lineHeight: '1.125rem' }],
         body: ['0.875rem', { lineHeight: '1.375rem' }],
@@ -80,7 +110,9 @@ export default {
         display: ['1.75rem', { lineHeight: '2.125rem', letterSpacing: '-0.02em' }],
         figure: ['2.25rem', { lineHeight: '2.5rem', letterSpacing: '-0.03em' }],
       },
-      borderRadius: { DEFAULT: '8px', md: '12px', lg: '18px', xl: '22px' },
+      /* 2xl and 3xl folded into the three radii: the older pages' bubbly
+         24px corners were part of why their cards did not match. */
+      borderRadius: { DEFAULT: '8px', md: '12px', lg: '18px', xl: '12px', '2xl': '18px', '3xl': '18px' },
       boxShadow: {
         /* legacy aliases — see the note on the `navy` ramp above */
         card: '4px 4px 0 #0F1419',
@@ -90,6 +122,10 @@ export default {
         raised: '5px 5px 0 #0F1419',
         overlay: '6px 6px 0 #0F1419',
         focus: '0 0 0 3px rgba(255, 200, 61, 0.55)',
+        /* Tailwind's soft blurs, re-pointed at the site's hard offset. */
+        sm: '2px 2px 0 #0F1419',
+        md: '3px 3px 0 #0F1419',
+        lg: '4px 4px 0 #0F1419',
       },
       transitionDuration: { DEFAULT: '150ms' },
     },

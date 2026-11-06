@@ -55,12 +55,9 @@ export const TransactionsPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-            Financial Transactions Ledger
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Complete audit trail of all customer down-payments, monthly installment recoveries, and fee transactions.
-          </p>
+          <p className="eyebrow">Money</p>
+          <h1 className="mt-1 text-display text-ink-900">All transactions</h1>
+          <p className="mt-1 max-w-2xl text-body text-ink-500">Every advance and installment received, in one list you can search and export.</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -74,14 +71,14 @@ export const TransactionsPage: React.FC = () => {
             <TrendingUp className="w-4 h-4" />
           </div>
           <div>
-            <span className="text-[10px] text-slate-400 font-bold uppercase">Total Ledger Volume</span>
+            <span className="text-micro text-slate-600 font-bold uppercase">Total Ledger Volume</span>
             <p className="text-sm font-extrabold text-slate-900">Rs. {totalCollected.toLocaleString()}</p>
           </div>
         </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-card overflow-hidden">
+      <div className="bg-white rounded-3xl border-2 border-ink-900 shadow-card overflow-hidden">
         {loading ? (
           <div className="py-16 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
             <RefreshCw className="w-4 h-4 animate-spin text-blue-600" /> Loading transaction ledger...
@@ -95,7 +92,7 @@ export const TransactionsPage: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-bold text-slate-600 uppercase tracking-wider">
                   <th className="py-3 px-4">Transaction ID</th>
                   <th className="py-3 px-4">Customer</th>
                   <th className="py-3 px-4">Type</th>
@@ -113,7 +110,7 @@ export const TransactionsPage: React.FC = () => {
                     </td>
                     <td className="py-3.5 px-4">
                       <span className="font-semibold text-slate-800 block">{t.customerName}</span>
-                      <span className="text-[10px] text-slate-400">{t.customerPhone}</span>
+                      <span className="text-micro text-slate-400">{t.customerPhone}</span>
                     </td>
                     <td className="py-3.5 px-4">
                       <span className="font-semibold text-slate-700">{t.type.replace('_', ' ')}</span>
@@ -121,15 +118,15 @@ export const TransactionsPage: React.FC = () => {
                     <td className="py-3.5 px-4 font-extrabold text-slate-900">
                       Rs. {Number(t.amount).toLocaleString()}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-500 text-[11px]">
+                    <td className="py-3.5 px-4 text-slate-500 text-xs">
                       {new Date(t.date).toLocaleDateString()} {new Date(t.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className="status-pill status-active text-[10px]">
+                      <span className="status-pill status-active text-micro">
                         {t.status}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-slate-500 text-[11px]">
+                    <td className="py-3.5 px-4 text-slate-500 text-xs">
                       {t.notes || 'Ledger entry'}
                     </td>
                   </tr>

@@ -207,10 +207,10 @@ export const ContractPage: React.FC = () => {
         <header className="text-center border-b border-slate-200 pb-4">
           <h1 className="text-lg font-extrabold text-slate-900">Installment Financing Agreement</h1>
           <p className="text-sm text-slate-700" dir="rtl">اقساط پر خریداری کا معاہدہ</p>
-          <p className="text-[11px] text-slate-500 mt-2">
+          <p className="text-xs text-slate-500 mt-2">
             {snapshot.dealer.name} · {snapshot.dealer.city} · {snapshot.dealer.phone}
           </p>
-          <p className="text-[10px] text-slate-400 mt-1">
+          <p className="text-micro text-slate-400 mt-1">
             Agreement {contract.id} · terms v{contract.termsVersion}
           </p>
         </header>
@@ -244,7 +244,7 @@ export const ContractPage: React.FC = () => {
             ['Installments', `${snapshot.plan.totalInstallments} × ${money(snapshot.plan.monthlyInstallment)}`],
           ].map(([label, value]) => (
             <div key={label}>
-              <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">{label}</p>
+              <p className="text-micro uppercase font-bold text-slate-500 tracking-wider">{label}</p>
               <p className="font-bold text-slate-900 mt-0.5">{value}</p>
             </div>
           ))}
@@ -273,7 +273,7 @@ export const ContractPage: React.FC = () => {
           <h3 className="text-xs font-bold text-slate-900 mb-2">
             Repayment schedule <span dir="rtl">/ اقساط کا شیڈول</span>
           </h3>
-          <table className="w-full text-[11px] border-collapse">
+          <table className="w-full text-xs border-collapse">
             <thead>
               <tr className="border-b border-slate-300 text-left">
                 <th className="py-1 font-bold">#</th>
@@ -307,23 +307,23 @@ export const ContractPage: React.FC = () => {
                   <img src={contract.signatureImage} alt="Customer signature" className="max-h-20" />
                 )}
               </div>
-              <p className="text-[10px] text-slate-600 mt-1">
+              <p className="text-micro text-slate-600 mt-1">
                 Customer / گاہک {contract.signerName ? `— ${contract.signerName}` : ''}
               </p>
               {contract.signedAt && (
-                <p className="text-[10px] text-slate-500">{new Date(contract.signedAt).toLocaleString()}</p>
+                <p className="text-micro text-slate-500">{new Date(contract.signedAt).toLocaleString()}</p>
               )}
             </div>
             <div>
               <div className="h-20 border-b border-slate-400" />
-              <p className="text-[10px] text-slate-600 mt-1">
+              <p className="text-micro text-slate-600 mt-1">
                 For {snapshot.dealer.name} / دکان کی جانب سے
               </p>
             </div>
           </div>
 
           {contract.documentHash && (
-            <p className="text-[9px] text-slate-400 pt-2 break-all">
+            <p className="text-micro text-slate-400 pt-2 break-all">
               Document hash (SHA-256): {contract.documentHash}
             </p>
           )}
@@ -345,14 +345,14 @@ export const ContractPage: React.FC = () => {
             </div>
 
             <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-              <p className="text-[11px] text-slate-800 leading-relaxed">{declaration.en}</p>
-              <p className="text-[11px] text-slate-800 leading-relaxed" dir="rtl">
+              <p className="text-xs text-slate-800 leading-relaxed">{declaration.en}</p>
+              <p className="text-xs text-slate-800 leading-relaxed" dir="rtl">
                 {declaration.ur}
               </p>
             </div>
 
             <div>
-              <label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block mb-1">
+              <label className="text-micro uppercase font-bold text-slate-500 tracking-wider block mb-1">
                 Name of the person signing
               </label>
               <input

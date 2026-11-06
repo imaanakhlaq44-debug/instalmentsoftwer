@@ -93,7 +93,7 @@ export const SubmitPaymentCard: React.FC<{ onSubmitted: () => void }> = ({ onSub
   if (plans.length === 0) return null;
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200/80 shadow-card p-5 sm:p-6 space-y-4">
+    <div className="bg-white rounded-3xl border-2 border-ink-900 shadow-card p-5 sm:p-6 space-y-4">
       <div>
         <h2 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
           <Send className="w-4 h-4 text-emerald-600" aria-hidden="true" /> Already paid? Tell the shop
@@ -123,7 +123,7 @@ export const SubmitPaymentCard: React.FC<{ onSubmitted: () => void }> = ({ onSub
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {plans.length > 1 && (
           <div className="sm:col-span-2">
-            <label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block mb-1">
+            <label className="text-micro uppercase font-bold text-slate-500 tracking-wider block mb-1">
               Which phone
             </label>
             <select
@@ -141,7 +141,7 @@ export const SubmitPaymentCard: React.FC<{ onSubmitted: () => void }> = ({ onSub
         )}
 
         <div>
-          <label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block mb-1">
+          <label className="text-micro uppercase font-bold text-slate-500 tracking-wider block mb-1">
             Amount sent
           </label>
           <input
@@ -154,7 +154,7 @@ export const SubmitPaymentCard: React.FC<{ onSubmitted: () => void }> = ({ onSub
         </div>
 
         <div>
-          <label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block mb-1">
+          <label className="text-micro uppercase font-bold text-slate-500 tracking-wider block mb-1">
             Sent by
           </label>
           <select
@@ -171,7 +171,7 @@ export const SubmitPaymentCard: React.FC<{ onSubmitted: () => void }> = ({ onSub
         </div>
 
         <div className="sm:col-span-2">
-          <label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block mb-1">
+          <label className="text-micro uppercase font-bold text-slate-500 tracking-wider block mb-1">
             Transaction ID (TID)
           </label>
           <input
@@ -183,7 +183,7 @@ export const SubmitPaymentCard: React.FC<{ onSubmitted: () => void }> = ({ onSub
         </div>
 
         <div className="sm:col-span-2">
-          <label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block mb-1">
+          <label className="text-micro uppercase font-bold text-slate-500 tracking-wider block mb-1">
             Note for the shop (optional)
           </label>
           <input
@@ -207,7 +207,7 @@ export const SubmitPaymentCard: React.FC<{ onSubmitted: () => void }> = ({ onSub
         </label>
 
         {proof && (
-          <span className="flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
+          <span className="flex items-center gap-1 text-xs text-emerald-700 font-bold">
             <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" /> Ready to send
           </span>
         )}

@@ -79,12 +79,9 @@ export const NotificationsPage: React.FC = () => {
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       <div>
-        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-          Notification Center & Customer Alerts
-        </h1>
-        <p className="text-xs sm:text-sm text-slate-500 mt-1">
-          Automated SMS due date reminders, overdue warnings, push lock alerts, and payment receipts.
-        </p>
+        <p className="eyebrow">Messages</p>
+        <h1 className="mt-1 text-display text-ink-900">Reminders and alerts</h1>
+        <p className="mt-1 max-w-2xl text-body text-ink-500">SMS reminders before a due date, late warnings and payment receipts sent to customers.</p>
       </div>
 
       {/* Whether a message reached a customer's phone is a fact, not a hope.
@@ -113,7 +110,7 @@ export const NotificationsPage: React.FC = () => {
       )}
 
       {/* Paired phones */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-card p-5 sm:p-6 space-y-4">
+      <div className="bg-white rounded-3xl border-2 border-ink-900 shadow-card p-5 sm:p-6 space-y-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h2 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
@@ -139,21 +136,21 @@ export const NotificationsPage: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-slate-900 truncate">{relay.name}</span>
                     <span
-                      className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
+                      className={`text-micro uppercase font-bold px-2 py-0.5 rounded-full ${
                         relay.online ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'
                       }`}
                     >
                       {relay.online ? 'Connected' : 'Not checked in'}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
+                  <p className="text-xs text-slate-500 mt-0.5">
                     Sent {relay.sentCount} · failed {relay.failedCount} ·{' '}
                     {relay.lastSeenAt ? `last seen ${new Date(relay.lastSeenAt).toLocaleString()}` : 'never seen'}
                   </p>
                 </div>
                 <button
                   onClick={() => unpairPhone(relay.id, relay.name)}
-                  className="text-[11px] font-bold text-rose-600 hover:text-rose-500 shrink-0"
+                  className="text-xs font-bold text-rose-600 hover:text-rose-500 shrink-0"
                 >
                   Unpair
                 </button>
@@ -164,17 +161,17 @@ export const NotificationsPage: React.FC = () => {
 
         {pairingCode && (
           <div className="p-4 rounded-2xl bg-slate-950 text-white space-y-2">
-            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+            <p className="text-micro uppercase font-bold text-slate-600 tracking-wider">
               Pairing code — shown once
             </p>
             <p className="font-mono text-xs font-bold text-emerald-400 break-all">{pairingCode}</p>
-            <p className="text-[11px] text-slate-300">
+            <p className="text-xs text-slate-300">
               Enter this in the Almas SDM Relay app on the phone. It cannot be retrieved again; if it is lost,
               unpair the phone and pair it afresh.
             </p>
             <button
               onClick={() => setPairingCode(null)}
-              className="text-[11px] font-bold text-slate-300 hover:text-white underline"
+              className="text-xs font-bold text-slate-300 hover:text-white underline"
             >
               I have entered it
             </button>
@@ -183,7 +180,7 @@ export const NotificationsPage: React.FC = () => {
 
         <div className="flex items-end gap-2 flex-wrap">
           <div className="flex-1 min-w-[200px]">
-            <label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block mb-1">
+            <label className="text-micro uppercase font-bold text-slate-500 tracking-wider block mb-1">
               Pair a phone
             </label>
             <input
@@ -206,7 +203,7 @@ export const NotificationsPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left 2 Cols: Notification Stream */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-card overflow-hidden">
+          <div className="bg-white rounded-3xl border-2 border-ink-900 shadow-card overflow-hidden">
             <div className="p-4 border-b border-slate-100 font-bold text-slate-900 text-xs flex items-center justify-between">
               <span>Dispatched Customer Notifications ({notifications.length})</span>
               <button onClick={loadData} className="text-slate-400 hover:text-slate-600">
@@ -227,10 +224,10 @@ export const NotificationsPage: React.FC = () => {
                         <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
                         {n.title}
                       </span>
-                      <span className="text-[10px] text-slate-400">{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span className="text-micro text-slate-400">{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                     <p className="text-slate-600 text-xs leading-relaxed">{n.message}</p>
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
+                    <div className="flex items-center justify-between text-micro text-slate-400 pt-1">
                       <span>Customer: {n.customerName} ({n.channel})</span>
                       <span className="text-emerald-600 font-semibold">{n.status} ✓</span>
                     </div>
@@ -250,15 +247,15 @@ export const NotificationsPage: React.FC = () => {
 
         {/* Right Col: Standard SMS Templates Preview */}
         <div className="space-y-4">
-          <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-card space-y-3">
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+          <div className="bg-white p-5 rounded-3xl border-2 border-ink-900 shadow-card space-y-3">
+            <h2 className="text-xs font-bold text-slate-600 uppercase tracking-wider">
               Standard Message Templates
             </h2>
             <div className="space-y-3">
               {templates.map((t) => (
                 <div key={t.id} className="p-3 bg-slate-50 border rounded-2xl text-xs space-y-1">
                   <span className="font-bold text-slate-800 block">{t.name}</span>
-                  <p className="text-[11px] text-slate-600 font-mono leading-relaxed bg-white p-2 rounded-lg border">
+                  <p className="text-xs text-slate-600 font-mono leading-relaxed bg-white p-2 rounded-lg border">
                     {t.bodyTemplate}
                   </p>
                 </div>

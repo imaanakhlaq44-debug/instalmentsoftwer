@@ -178,12 +178,9 @@ export const DevicesPage: React.FC = () => {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-            Device Management Hub
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Monitor device health, MDM compliance, installment schedules, and trigger enforcement actions.
-          </p>
+          <p className="eyebrow">Phones</p>
+          <h1 className="mt-1 text-display text-ink-900">Phones sold on installments</h1>
+          <p className="mt-1 max-w-2xl text-body text-ink-500">See which phones are online, paid up or late, and lock or unlock them.</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -195,15 +192,15 @@ export const DevicesPage: React.FC = () => {
           {isStaff && (
           <button
             onClick={() => navigate('/simulator')}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-xl text-xs font-bold transition-all"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-xl text-xs font-bold transition-all"
           >
-            <Radio className="w-4 h-4 text-indigo-600" /> Phone Simulator
+            <Radio className="w-4 h-4 text-blue-600" /> Phone Simulator
           </button>
           )}
           {isStaff && (
           <button
             onClick={() => setShowAddWizard(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-blue-600/30 transition-all"
+            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md transition-all"
           >
             <PlusCircle className="w-4 h-4" /> Add Financed Device
           </button>
@@ -212,7 +209,7 @@ export const DevicesPage: React.FC = () => {
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-card space-y-4">
+      <div className="bg-white p-4 rounded-3xl border-2 border-ink-900 shadow-card space-y-4">
         {/* Status Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
           {statusTabs.map((tab) => (
@@ -259,7 +256,7 @@ export const DevicesPage: React.FC = () => {
       </div>
 
       {/* Devices Table */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-card overflow-hidden">
+      <div className="bg-white rounded-3xl border-2 border-ink-900 shadow-card overflow-hidden">
         {loading ? (
           <div className="py-16 text-center text-xs text-slate-500 flex items-center justify-center gap-2 font-medium">
             <span className="w-4 h-4 rounded-full border-2 border-blue-600 border-t-transparent animate-spin"></span>
@@ -285,7 +282,7 @@ export const DevicesPage: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-bold text-slate-600 uppercase tracking-wider">
                   <th className="py-3 px-4">Device & Model</th>
                   <th className="py-3 px-4">Customer</th>
                   <th className="py-3 px-4">Masked IMEI</th>
@@ -314,7 +311,7 @@ export const DevicesPage: React.FC = () => {
                             <span className="font-bold text-slate-900 block leading-tight">
                               {d.brand} {d.model}
                             </span>
-                            <span className="text-[10px] text-slate-400 font-medium">{d.ramStorage}</span>
+                            <span className="text-micro text-slate-400 font-medium">{d.ramStorage}</span>
                           </div>
                         </div>
                       </td>
@@ -322,12 +319,12 @@ export const DevicesPage: React.FC = () => {
                       {/* Customer */}
                       <td className="py-3.5 px-4">
                         <span className="font-semibold text-slate-800 block">{d.customerName}</span>
-                        <span className="text-[10px] text-slate-400">{d.customerPhone}</span>
+                        <span className="text-micro text-slate-400">{d.customerPhone}</span>
                       </td>
 
                       {/* Masked IMEI */}
                       <td className="py-3.5 px-4">
-                        <span className="font-mono text-slate-600 font-semibold bg-slate-100 px-2 py-0.5 rounded text-[11px]">
+                        <span className="font-mono text-slate-600 font-semibold bg-slate-100 px-2 py-0.5 rounded text-xs">
                           {d.maskedImei}
                         </span>
                       </td>
@@ -337,14 +334,14 @@ export const DevicesPage: React.FC = () => {
                         <span className="font-extrabold text-slate-900">
                           Rs. {Number(d.monthlyAmount || 0).toLocaleString()}
                         </span>
-                        <span className="text-[10px] text-slate-400 block">/ month</span>
+                        <span className="text-micro text-slate-400 block">/ month</span>
                       </td>
 
                       {/* Next Due */}
                       <td className="py-3.5 px-4">
                         <span className="font-medium text-slate-700">{d.nextDueDate}</span>
                         {d.installmentStatus === 'OVERDUE' && (
-                          <span className="text-[10px] text-rose-600 font-bold block">Overdue</span>
+                          <span className="text-micro text-rose-600 font-bold block">Overdue</span>
                         )}
                       </td>
 
@@ -368,7 +365,7 @@ export const DevicesPage: React.FC = () => {
 
                       {/* Last Seen & Connectivity */}
                       <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-1.5 text-slate-500 text-[11px]">
+                        <div className="flex items-center gap-1.5 text-slate-500 text-xs">
                           {d.isOnline ? (
                             <Wifi className="w-3.5 h-3.5 text-emerald-500" />
                           ) : (
@@ -434,7 +431,7 @@ export const DevicesPage: React.FC = () => {
                           {isStaff && (
                           <button
                             onClick={() => navigate(`/simulator?deviceId=${d.id}`)}
-                            className="p-1.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             title="Launch in Virtual Simulator"
                           >
                             <Radio className="w-4 h-4" />
@@ -461,7 +458,7 @@ export const DevicesPage: React.FC = () => {
       {/* MODAL: Lock Confirmation Dialog */}
       {lockModalDevice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white p-6 rounded-3xl max-w-md w-full space-y-4 shadow-2xl border border-rose-100">
+          <div className="bg-white p-6 rounded-3xl max-w-md w-full space-y-4 shadow-overlay border-2 border-ink-900">
             <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
               <ShieldAlert className="w-6 h-6" />
             </div>
@@ -483,7 +480,7 @@ export const DevicesPage: React.FC = () => {
               />
             </div>
 
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-[11px] text-rose-800">
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800">
               ⚠️ Emergency call access will remain preserved. All consumer applications will be restricted until an unlock command is authorized.
             </div>
 
@@ -497,7 +494,7 @@ export const DevicesPage: React.FC = () => {
               <button
                 onClick={handleConfirmLock}
                 disabled={lockProcessing}
-                className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-lg shadow-rose-600/30"
+                className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-lg"
               >
                 {lockProcessing ? 'Dispatching...' : 'Confirm Lock Device'}
               </button>
@@ -509,7 +506,7 @@ export const DevicesPage: React.FC = () => {
       {/* MODAL: Unlock Confirmation Dialog */}
       {unlockModalDevice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white p-6 rounded-3xl max-w-md w-full space-y-4 shadow-2xl border border-emerald-100">
+          <div className="bg-white p-6 rounded-3xl max-w-md w-full space-y-4 shadow-overlay border-2 border-ink-900">
             <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
               <Unlock className="w-6 h-6" />
             </div>
@@ -541,7 +538,7 @@ export const DevicesPage: React.FC = () => {
               <button
                 onClick={handleConfirmUnlock}
                 disabled={unlockProcessing}
-                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-600/30"
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-lg"
               >
                 {unlockProcessing ? 'Authorizing...' : 'Confirm Unlock'}
               </button>
@@ -553,7 +550,7 @@ export const DevicesPage: React.FC = () => {
       {/* MODAL: Quick Payment Dialog */}
       {quickPayDevice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white p-6 rounded-3xl max-w-md w-full space-y-4 shadow-2xl">
+          <div className="bg-white p-6 rounded-3xl max-w-md w-full space-y-4 shadow-overlay border-2 border-ink-900">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="text-base font-bold text-slate-900">Record Installment Payment</h3>
               <button onClick={() => setQuickPayDevice(null)} className="text-slate-400 hover:text-slate-600">
@@ -604,7 +601,7 @@ export const DevicesPage: React.FC = () => {
               <button
                 onClick={handleQuickPaymentSubmit}
                 disabled={payProcessing}
-                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/30"
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md"
               >
                 {payProcessing ? 'Recording...' : 'Record & Verify Payment'}
               </button>

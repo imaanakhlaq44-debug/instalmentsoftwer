@@ -53,7 +53,7 @@ export const ChangePasswordPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <form onSubmit={handleSubmit} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl">
+        <form onSubmit={handleSubmit} className="bg-slate-900 border-2 border-ink-900 rounded-2xl p-6 sm:p-8 shadow-overlay">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-11 h-11 rounded-xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center">
               <KeyRound className="w-5 h-5 text-blue-400" aria-hidden="true" />

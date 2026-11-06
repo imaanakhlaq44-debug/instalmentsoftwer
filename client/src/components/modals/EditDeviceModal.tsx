@@ -118,7 +118,7 @@ export const EditDeviceModal: React.FC<Props> = ({ device, onClose, onSaved }) =
     >
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-3xl w-full max-w-lg my-8 shadow-2xl border border-slate-200"
+        className="bg-white rounded-3xl w-full max-w-lg my-8 shadow-overlay border-2 border-ink-900"
         noValidate
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
@@ -128,7 +128,7 @@ export const EditDeviceModal: React.FC<Props> = ({ device, onClose, onSaved }) =
             </div>
             <div>
               <h2 className="text-sm font-bold text-slate-900">Edit device</h2>
-              <p className="text-[11px] text-slate-500 font-mono">{device.maskedImei}</p>
+              <p className="text-xs text-slate-500 font-mono">{device.maskedImei}</p>
             </div>
           </div>
           <button
@@ -165,7 +165,7 @@ export const EditDeviceModal: React.FC<Props> = ({ device, onClose, onSaved }) =
                     fieldErrors[key] ? 'border-rose-400 bg-rose-50/50' : 'border-slate-200'
                   }`}
                 />
-                {fieldErrors[key] && <p className="mt-1 text-[11px] text-rose-600">{fieldErrors[key]}</p>}
+                {fieldErrors[key] && <p className="mt-1 text-xs text-rose-600">{fieldErrors[key]}</p>}
               </div>
             ))}
           </div>
@@ -184,7 +184,7 @@ export const EditDeviceModal: React.FC<Props> = ({ device, onClose, onSaved }) =
               <div className="space-y-3 p-4 rounded-2xl bg-amber-50 border border-amber-200">
                 <div className="flex items-start gap-2.5">
                   <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" aria-hidden="true" />
-                  <p className="text-[11px] text-amber-900">
+                  <p className="text-xs text-amber-900">
                     The IMEI identifies this handset. Every lock and unlock command depends on it, so
                     this change is recorded separately in the audit trail with your reason.
                   </p>
@@ -206,10 +206,10 @@ export const EditDeviceModal: React.FC<Props> = ({ device, onClose, onSaved }) =
                     }`}
                   />
                   {fieldErrors.imei ? (
-                    <p className="mt-1 text-[11px] text-rose-600">{fieldErrors.imei}</p>
+                    <p className="mt-1 text-xs text-rose-600">{fieldErrors.imei}</p>
                   ) : (
                     newImei.length > 0 && !imeiValid && (
-                      <p className="mt-1 text-[11px] text-rose-600">IMEI must be exactly 15 digits.</p>
+                      <p className="mt-1 text-xs text-rose-600">IMEI must be exactly 15 digits.</p>
                     )
                   )}
                 </div>
@@ -228,7 +228,7 @@ export const EditDeviceModal: React.FC<Props> = ({ device, onClose, onSaved }) =
                       fieldErrors.reason ? 'border-rose-400 bg-rose-50/50' : 'border-amber-300'
                     }`}
                   />
-                  {fieldErrors.reason && <p className="mt-1 text-[11px] text-rose-600">{fieldErrors.reason}</p>}
+                  {fieldErrors.reason && <p className="mt-1 text-xs text-rose-600">{fieldErrors.reason}</p>}
                 </div>
 
                 <button
@@ -238,7 +238,7 @@ export const EditDeviceModal: React.FC<Props> = ({ device, onClose, onSaved }) =
                     setNewImei('');
                     setImeiReason('');
                   }}
-                  className="text-[11px] text-slate-600 hover:text-slate-900 underline underline-offset-2"
+                  className="text-xs text-slate-600 hover:text-slate-900 underline underline-offset-2"
                 >
                   Cancel IMEI correction
                 </button>

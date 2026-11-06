@@ -148,12 +148,9 @@ export const PaymentsPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-            Installment Payments & Cash Desk
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Accept Cash, JazzCash, Easypaisa, or Bank Transfers with automatic balance reconciliation and instant unlock triggers.
-          </p>
+          <p className="eyebrow">Payments</p>
+          <h1 className="mt-1 text-display text-ink-900">Take a payment</h1>
+          <p className="mt-1 max-w-2xl text-body text-ink-500">Record cash, JazzCash, Easypaisa or bank payments. A paid-up phone unlocks by itself.</p>
         </div>
 
         <div className="flex items-center gap-3 self-start sm:self-auto">
@@ -168,7 +165,7 @@ export const PaymentsPage: React.FC = () => {
               setFormRef(`${formMethod.substring(0, 3)}-${Date.now().toString().slice(-6)}`);
               setShowRecordModal(true);
             }}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-emerald-600/30 transition-all"
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md transition-all"
           >
             <PlusCircle className="w-4 h-4" /> Record Installment Payment
           </button>
@@ -181,7 +178,7 @@ export const PaymentsPage: React.FC = () => {
       {isStaff && <PendingSubmissions onVerified={loadData} />}
 
       {/* Payments List Table */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-card overflow-hidden">
+      <div className="bg-white rounded-3xl border-2 border-ink-900 shadow-card overflow-hidden">
         {loading ? (
           <div className="py-16 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
             <RefreshCw className="w-4 h-4 animate-spin text-blue-600" /> Loading payment records...
@@ -195,7 +192,7 @@ export const PaymentsPage: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-bold text-slate-600 uppercase tracking-wider">
                   <th className="py-3 px-4">Receipt Ref #</th>
                   <th className="py-3 px-4">Customer Name</th>
                   <th className="py-3 px-4">Amount Paid</th>
@@ -214,29 +211,29 @@ export const PaymentsPage: React.FC = () => {
                     </td>
                     <td className="py-3.5 px-4">
                       <span className="font-semibold text-slate-800 block">{p.customerName}</span>
-                      <span className="text-[10px] text-slate-400">{p.customerPhone}</span>
+                      <span className="text-micro text-slate-400">{p.customerPhone}</span>
                     </td>
                     <td className="py-3.5 px-4 font-extrabold text-emerald-700 text-sm">
                       Rs. {Number(p.amount).toLocaleString()}
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-semibold text-[11px]">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-semibold text-xs">
                         {p.paymentMethod}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-slate-500 text-[11px]">
+                    <td className="py-3.5 px-4 text-slate-500 text-xs">
                       {new Date(p.createdAt).toLocaleDateString()} {new Date(p.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </td>
                     <td className="py-3.5 px-4">
                       <span
-                        className={`status-pill text-[10px] ${
+                        className={`status-pill text-micro ${
                           p.status === 'VERIFIED' ? 'status-active' : 'status-pending'
                         }`}
                       >
                         {p.status === 'VERIFIED' ? 'Verified ✓' : 'Pending Verification'}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-slate-500 text-[11px] max-w-xs truncate">
+                    <td className="py-3.5 px-4 text-slate-500 text-xs max-w-xs truncate">
                       {p.notes || 'Monthly installment'}
                     </td>
                     <td className="py-3.5 px-4 text-right">
@@ -251,13 +248,13 @@ export const PaymentsPage: React.FC = () => {
                             Verify Payment
                           </button>
                         ) : (
-                          <span className="text-[11px] text-amber-600 font-medium">Awaiting owner</span>
+                          <span className="text-xs text-amber-600 font-medium">Awaiting owner</span>
                         )
                       ) : (
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => setReceiptPaymentId(p.id)}
-                            className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-[11px] transition-colors"
+                            className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition-colors"
                             title="View and print the customer receipt"
                           >
                             Receipt
@@ -269,14 +266,14 @@ export const PaymentsPage: React.FC = () => {
                                 setReverseTarget(p);
                                 setReverseReason('');
                               }}
-                              className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-lg text-[11px] transition-colors"
+                              className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-lg text-xs transition-colors"
                               title="Reverse this payment (bounced cheque, wrong entry)"
                             >
                               Reverse
                             </button>
                           )}
                           {p.reversedAt && (
-                            <span className="text-[11px] text-rose-600 font-semibold">Reversed</span>
+                            <span className="text-xs text-rose-600 font-semibold">Reversed</span>
                           )}
                         </div>
                       )}
@@ -303,7 +300,7 @@ export const PaymentsPage: React.FC = () => {
       {/* MODAL: Reverse Payment */}
       {reverseTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
-          <div className="bg-white p-6 rounded-3xl max-w-md w-full space-y-4 shadow-2xl border border-rose-100">
+          <div className="bg-white p-6 rounded-3xl max-w-md w-full space-y-4 shadow-overlay border-2 border-ink-900">
             <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
               <X className="w-6 h-6" />
             </div>
@@ -353,7 +350,7 @@ export const PaymentsPage: React.FC = () => {
       {/* MODAL: Record Payment */}
       {showRecordModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white p-6 rounded-3xl max-w-md w-full space-y-4 shadow-2xl">
+          <div className="bg-white p-6 rounded-3xl max-w-md w-full space-y-4 shadow-overlay border-2 border-ink-900">
             <div className="flex items-center justify-between border-b pb-3">
               <div>
                 <span className="text-xs uppercase font-bold text-emerald-600">Cash & Digital Desk</span>
@@ -430,7 +427,7 @@ export const PaymentsPage: React.FC = () => {
                 />
               </div>
 
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-[11px] text-emerald-800">
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800">
                 ✨ <strong>Auto-Unlock Engine:</strong> If this payment clears all overdue balances, any restricted locked device will automatically be signaled to restore full access!
               </div>
 
@@ -445,7 +442,7 @@ export const PaymentsPage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/30"
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md"
                 >
                   {submitting ? 'Crediting...' : 'Record & Verify'}
                 </button>

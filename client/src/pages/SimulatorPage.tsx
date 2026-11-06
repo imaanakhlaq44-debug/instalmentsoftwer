@@ -153,9 +153,9 @@ export const SimulatorPage: React.FC = () => {
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       {/* Top Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 text-white p-5 sm:p-6 rounded-3xl border border-slate-800 shadow-xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 text-white p-5 sm:p-6 rounded-3xl border-2 border-ink-900 shadow-raised">
         <div>
-          <div className="flex items-center gap-2 text-indigo-400 text-xs font-bold uppercase tracking-wider mb-1">
+          <div className="flex items-center gap-2 text-blue-400 text-xs font-bold uppercase tracking-wider mb-1">
             <Smartphone className="w-4 h-4 text-emerald-400" /> Virtual Hardware Simulator
           </div>
           <h1 className="text-xl sm:text-2xl font-extrabold">Interactive Android Phone Simulator</h1>
@@ -185,7 +185,7 @@ export const SimulatorPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* LEFT: Virtual Android Smartphone Container */}
         <div className="lg:col-span-5 flex justify-center">
-          <div className="relative w-[340px] sm:w-[360px] h-[680px] bg-slate-950 rounded-[48px] p-3 shadow-2xl ring-1 ring-slate-800 phone-screen-frame flex flex-col overflow-hidden select-none transition-all">
+          <div className="relative w-[340px] sm:w-[360px] h-[680px] bg-slate-950 rounded-[48px] p-3 shadow-overlay ring-1 ring-slate-800 phone-screen-frame flex flex-col overflow-hidden select-none transition-all border-2 border-ink-900">
             {/* Phone Speaker & Front Camera Hole */}
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
               <div className="w-12 h-1 bg-slate-800 rounded-full"></div>
@@ -195,10 +195,10 @@ export const SimulatorPage: React.FC = () => {
             {/* Screen Inner Frame */}
             <div className="w-full h-full bg-slate-900 rounded-[38px] overflow-hidden flex flex-col relative text-white">
               {/* Android System Status Bar */}
-              <div className="h-7 px-6 flex items-center justify-between text-[11px] font-semibold text-slate-300 pt-1.5 z-20">
+              <div className="h-7 px-6 flex items-center justify-between text-xs font-semibold text-slate-300 pt-1.5 z-20">
                 <span>10:45 AM</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px]">{currentDevice?.simCarrier || 'Jazz 4G'}</span>
+                  <span className="text-micro">{currentDevice?.simCarrier || 'Jazz 4G'}</span>
                   {currentDevice?.isOnline ? (
                     <Wifi className="w-3.5 h-3.5 text-emerald-400" />
                   ) : (
@@ -252,7 +252,7 @@ export const SimulatorPage: React.FC = () => {
                       </div>
                     </div>
 
-                    <p className="text-[11px] text-slate-400 px-2 leading-relaxed">
+                    <p className="text-xs text-slate-400 px-2 leading-relaxed">
                       This device has been temporarily restricted per your financing contract. Clear the balance to instantly restore full phone access.
                     </p>
                   </div>
@@ -261,7 +261,7 @@ export const SimulatorPage: React.FC = () => {
                   <div className="space-y-2.5 pb-2">
                     <button
                       onClick={() => setShowPayModal(true)}
-                      className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-extrabold shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2"
+                      className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-extrabold shadow-lg transition-all flex items-center justify-center gap-2"
                     >
                       <CreditCard className="w-4 h-4" /> PAY NOW (RESTORE ACCESS)
                     </button>
@@ -294,7 +294,7 @@ export const SimulatorPage: React.FC = () => {
                         <div className="w-2 h-2 rounded-full bg-emerald-400 ring-4 ring-emerald-400/20"></div>
                         <span className="font-semibold text-slate-200">Almas SDM Active</span>
                       </div>
-                      <span className="text-[10px] text-slate-400">Policy Compliant</span>
+                      <span className="text-micro text-slate-400">Policy Compliant</span>
                     </div>
 
                     {/* Overdue Alert Banner if overdue */}
@@ -303,7 +303,7 @@ export const SimulatorPage: React.FC = () => {
                         <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
                         <div>
                           <p className="font-bold">Installment Due Soon</p>
-                          <p className="text-[10px] text-amber-300">Rs. {Number(currentDevice?.overdueAmount).toLocaleString()} overdue</p>
+                          <p className="text-micro text-amber-300">Rs. {Number(currentDevice?.overdueAmount).toLocaleString()} overdue</p>
                         </div>
                       </div>
                     )}
@@ -317,7 +317,7 @@ export const SimulatorPage: React.FC = () => {
 
                   {/* App Grid */}
                   <div className="space-y-4">
-                    <div className="grid grid-cols-4 gap-3 text-center text-[10px] font-medium text-slate-300">
+                    <div className="grid grid-cols-4 gap-3 text-center text-micro font-medium text-slate-300">
                       <div className="space-y-1">
                         <div className="w-12 h-12 rounded-2xl bg-emerald-600 flex items-center justify-center text-white mx-auto shadow-md">
                           <Phone className="w-5 h-5" />
@@ -331,7 +331,7 @@ export const SimulatorPage: React.FC = () => {
                         <span>Messages</span>
                       </div>
                       <div className="space-y-1">
-                        <div className="w-12 h-12 rounded-2xl bg-red-600 flex items-center justify-center text-white mx-auto shadow-md">
+                        <div className="w-12 h-12 rounded-2xl bg-rose-600 flex items-center justify-center text-white mx-auto shadow-md">
                           <CreditCard className="w-5 h-5" />
                         </div>
                         <span>JazzCash</span>
@@ -343,7 +343,7 @@ export const SimulatorPage: React.FC = () => {
                         <span>Easypaisa</span>
                       </div>
                       <div className="space-y-1">
-                        <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white mx-auto shadow-md">
+                        <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white mx-auto shadow-md">
                           <Globe className="w-5 h-5" />
                         </div>
                         <span>Chrome</span>
@@ -380,7 +380,7 @@ export const SimulatorPage: React.FC = () => {
                   </div>
 
                   <div className="pb-4">
-                    <span className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider">
+                    <span className="text-micro text-slate-500 uppercase font-semibold tracking-wider">
                       Almas SDM DPC Client v2.4
                     </span>
                   </div>
@@ -398,10 +398,10 @@ export const SimulatorPage: React.FC = () => {
         {/* RIGHT: Remote Simulator Control Deck */}
         <div className="lg:col-span-7 space-y-6">
           {/* Device Info & Live Status Card */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-card space-y-4">
+          <div className="bg-white p-6 rounded-3xl border-2 border-ink-900 shadow-card space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
               <div>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Target Virtual Phone</span>
+                <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Target Virtual Phone</span>
                 <h2 className="text-lg font-extrabold text-slate-900">
                   {currentDevice?.brand} {currentDevice?.model}
                 </h2>
@@ -440,7 +440,7 @@ export const SimulatorPage: React.FC = () => {
                 <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">
                   <div>
                     <span className="text-xs font-bold text-slate-800 block">Cellular / WiFi Network</span>
-                    <span className="text-[11px] text-slate-500">
+                    <span className="text-xs text-slate-500">
                       {currentDevice?.isOnline ? 'Online (Connected)' : 'Offline (Disconnected)'}
                     </span>
                   </div>
@@ -571,7 +571,7 @@ export const SimulatorPage: React.FC = () => {
       {/* MODAL: Call Dealer Modal */}
       {showCallModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white p-6 rounded-3xl max-w-sm w-full text-center space-y-4 shadow-2xl">
+          <div className="bg-white p-6 rounded-3xl max-w-sm w-full text-center space-y-4 shadow-overlay border-2 border-ink-900">
             <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mx-auto">
               <PhoneCall className="w-6 h-6" />
             </div>
@@ -595,7 +595,7 @@ export const SimulatorPage: React.FC = () => {
       {/* MODAL: Simulated Instant Payment Modal */}
       {showPayModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl">
+          <div className="bg-white p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-overlay border-2 border-ink-900">
             <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
               <CreditCard className="w-6 h-6" />
             </div>
@@ -616,7 +616,7 @@ export const SimulatorPage: React.FC = () => {
             <button
               onClick={handleSimulatedPayment}
               disabled={actionLoading}
-              className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-extrabold shadow-lg shadow-emerald-600/30"
+              className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-extrabold shadow-lg"
             >
               {actionLoading ? 'Processing & Unlocking...' : 'Confirm & Pay Rs. ' + Number(currentDevice?.overdueAmount).toLocaleString()}
             </button>
@@ -633,7 +633,7 @@ export const SimulatorPage: React.FC = () => {
       {/* MODAL: Emergency Call Modal */}
       {showEmergencyModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white p-6 rounded-3xl max-w-sm w-full text-center space-y-4 shadow-2xl">
+          <div className="bg-white p-6 rounded-3xl max-w-sm w-full text-center space-y-4 shadow-overlay border-2 border-ink-900">
             <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
               <ShieldAlert className="w-6 h-6" />
             </div>
