@@ -178,7 +178,7 @@ export const Navbar: React.FC = () => {
           >
             <Bell className="h-4 w-4" aria-hidden="true" />
             {unreadCount > 0 && (
-              <span className="absolute right-1 top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-critical-600 px-1 text-[10px] font-medium tabular text-white ring-2 ring-paper-100">
+              <span className="absolute right-1 top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-critical-600 px-1 text-micro font-medium tabular text-white ring-2 ring-paper-100">
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}

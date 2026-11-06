@@ -95,12 +95,9 @@ export const CustomersPage: React.FC = () => {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-            Customer Directory
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Financed customer profiles, identity verification, active smartphone allocations, and balances.
-          </p>
+          <p className="eyebrow">Customers</p>
+          <h1 className="mt-1 text-display text-ink-900">Customers</h1>
+          <p className="mt-1 max-w-2xl text-body text-ink-500">Everyone who bought a phone on installments: their details, phone and what they still owe.</p>
         </div>
 
         <div className="flex items-center gap-3 self-start sm:self-auto">
@@ -111,7 +108,7 @@ export const CustomersPage: React.FC = () => {
           />
           <button
             onClick={() => setShowAddWizard(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-blue-600/30 transition-all"
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md transition-all"
           >
             <PlusCircle className="w-4 h-4" /> Add Customer & Device
           </button>
@@ -119,7 +116,7 @@ export const CustomersPage: React.FC = () => {
       </div>
 
       {/* Search Bar */}
-      <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-card">
+      <div className="bg-white p-4 rounded-3xl border-2 border-ink-900 shadow-card">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -139,7 +136,7 @@ export const CustomersPage: React.FC = () => {
       </div>
 
       {/* Customers Table */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-card overflow-hidden">
+      <div className="bg-white rounded-3xl border-2 border-ink-900 shadow-card overflow-hidden">
         {loading ? (
           <div className="py-16 text-center text-xs text-slate-500 flex items-center justify-center gap-2 font-medium">
             <RefreshCw className="w-4 h-4 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
@@ -155,7 +152,7 @@ export const CustomersPage: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-bold text-slate-600 uppercase tracking-wider">
                   <th className="py-3 px-4">Customer Name</th>
                   <th className="py-3 px-4">Phone (03XX)</th>
                   <th className="py-3 px-4">Masked CNIC</th>
@@ -173,7 +170,7 @@ export const CustomersPage: React.FC = () => {
                     <td className="py-3.5 px-4 text-slate-700">{c.phone}</td>
                     <td className="py-3.5 px-4 font-mono text-slate-600 bg-slate-50/50">{c.cnic}</td>
                     <td className="py-3.5 px-4">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold text-[11px]">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold text-xs">
                         <Smartphone className="w-3 h-3" /> {c.totalDevices} Phone(s)
                       </span>
                     </td>
@@ -193,7 +190,7 @@ export const CustomersPage: React.FC = () => {
                         {c.paymentStatus}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-slate-500 text-[11px]">
+                    <td className="py-3.5 px-4 text-slate-500 text-xs">
                       {c.lastPaymentAmount ? `Rs. ${c.lastPaymentAmount.toLocaleString()}` : 'None yet'}
                     </td>
                     <td className="py-3.5 px-4 text-right">
@@ -238,7 +235,7 @@ export const CustomersPage: React.FC = () => {
       {/* MODAL: Customer 360 Profile */}
       {viewCustomer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in overflow-y-auto">
-          <div className="bg-white p-6 rounded-3xl max-w-2xl w-full space-y-5 shadow-2xl my-8">
+          <div className="bg-white p-6 rounded-3xl max-w-2xl w-full space-y-5 shadow-overlay my-8 border-2 border-ink-900">
             <div className="flex items-center justify-between border-b pb-3">
               <div>
                 <span className="text-xs uppercase font-bold text-blue-600">Customer 360 Profile</span>
@@ -290,10 +287,10 @@ export const CustomersPage: React.FC = () => {
                       <span className="font-bold text-slate-900 block text-xs">
                         {d.brand} {d.model}
                       </span>
-                      <span className="text-[10px] text-slate-400 font-mono">IMEI: ***************{d.imei.slice(-4)}</span>
+                      <span className="text-micro text-slate-400 font-mono">IMEI: ***************{d.imei.slice(-4)}</span>
                     </div>
                     <span
-                      className={`status-pill text-[10px] ${
+                      className={`status-pill text-micro ${
                         d.status === 'LOCKED' ? 'status-locked' : d.status === 'OVERDUE' ? 'status-overdue' : 'status-active'
                       }`}
                     >
@@ -314,9 +311,9 @@ export const CustomersPage: React.FC = () => {
                   <div key={p.id} className="py-2 flex items-center justify-between">
                     <div>
                       <span className="font-bold text-slate-800">Rs. {p.amount.toLocaleString()}</span>
-                      <span className="text-[10px] text-slate-400 ml-2">via {p.paymentMethod} (Ref: {p.referenceNumber})</span>
+                      <span className="text-micro text-slate-400 ml-2">via {p.paymentMethod} (Ref: {p.referenceNumber})</span>
                     </div>
-                    <span className="text-[10px] text-emerald-600 font-semibold">Verified ✓</span>
+                    <span className="text-micro text-emerald-600 font-semibold">Verified ✓</span>
                   </div>
                 ))}
               </div>

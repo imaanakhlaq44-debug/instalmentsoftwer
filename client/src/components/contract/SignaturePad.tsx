@@ -105,14 +105,14 @@ export const SignaturePad: React.FC<{
         aria-label="Signature area"
       />
       <div className="flex items-center justify-between">
-        <span className="text-[11px] text-slate-500">
+        <span className="text-xs text-slate-500">
           {hasInk ? 'Signature captured.' : 'Ask the customer to sign above.'}
         </span>
         <button
           type="button"
           onClick={clear}
           disabled={disabled || !hasInk}
-          className="text-[11px] font-bold text-slate-600 hover:text-slate-900 disabled:opacity-40"
+          className="text-xs font-bold text-slate-600 hover:text-slate-900 disabled:opacity-40"
         >
           Clear
         </button>

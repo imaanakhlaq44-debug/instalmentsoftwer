@@ -58,12 +58,9 @@ export const AuditLogsPage: React.FC = () => {
     <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
-        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-          Immutable System Audit Trail
-        </h1>
-        <p className="text-xs sm:text-sm text-slate-500 mt-1">
-          Cryptographically recorded timeline of all dealer actions, lock commands, payment verifications, and policy modifications.
-        </p>
+        <p className="eyebrow">Records</p>
+        <h1 className="mt-1 text-display text-ink-900">Activity log</h1>
+        <p className="mt-1 max-w-2xl text-body text-ink-500">Every lock, payment and settings change, with who did it and when. Entries cannot be edited.</p>
         </div>
         <ExportButton
           fetchPage={(p) => ApiService.getAuditLogs(auditQuery(p))}
@@ -73,7 +70,7 @@ export const AuditLogsPage: React.FC = () => {
       </div>
 
       {/* Filter Tabs & Search */}
-      <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-card flex flex-col sm:flex-row items-center gap-3 justify-between">
+      <div className="bg-white p-4 rounded-3xl border-2 border-ink-900 shadow-card flex flex-col sm:flex-row items-center gap-3 justify-between">
         <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
           {['ALL', 'DEVICE', 'PAYMENT', 'CUSTOMER', 'POLICY', 'SYSTEM'].map((tab) => (
             <button
@@ -109,7 +106,7 @@ export const AuditLogsPage: React.FC = () => {
       </div>
 
       {/* Logs Table */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-card overflow-hidden">
+      <div className="bg-white rounded-3xl border-2 border-ink-900 shadow-card overflow-hidden">
         {loading ? (
           <div className="py-16 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
             <RefreshCw className="w-4 h-4 animate-spin text-blue-600" /> Loading audit logs...
@@ -120,7 +117,7 @@ export const AuditLogsPage: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-bold text-slate-600 uppercase tracking-wider">
                   <th className="py-3 px-4">Timestamp</th>
                   <th className="py-3 px-4">Operator / Actor</th>
                   <th className="py-3 px-4">Role</th>
@@ -133,12 +130,12 @@ export const AuditLogsPage: React.FC = () => {
               <tbody className="divide-y divide-slate-100 text-xs">
                 {logs.map((l) => (
                   <tr key={l.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3.5 px-4 text-slate-500 font-mono text-[11px] whitespace-nowrap">
+                    <td className="py-3.5 px-4 text-slate-500 font-mono text-xs whitespace-nowrap">
                       {new Date(l.createdAt).toLocaleDateString()} {new Date(l.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </td>
                     <td className="py-3.5 px-4 font-bold text-slate-900">{l.actorName}</td>
                     <td className="py-3.5 px-4">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+                      <span className="text-micro font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
                         {l.actorRole}
                       </span>
                     </td>
@@ -146,12 +143,12 @@ export const AuditLogsPage: React.FC = () => {
                       {l.action.replace(/_/g, ' ')}
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className="font-mono text-[11px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-bold">
+                      <span className="font-mono text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-bold">
                         {l.targetType}
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-slate-600 max-w-md">{l.details}</td>
-                    <td className="py-3.5 px-4 text-slate-400 font-mono text-[11px]">{l.ipAddress}</td>
+                    <td className="py-3.5 px-4 text-slate-400 font-mono text-xs">{l.ipAddress}</td>
                   </tr>
                 ))}
               </tbody>

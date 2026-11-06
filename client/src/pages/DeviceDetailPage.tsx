@@ -219,7 +219,7 @@ export const DeviceDetailPage: React.FC = () => {
             <>
               <button
                 onClick={() => navigate(`/simulator?deviceId=${device.id}`)}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-xl text-xs font-bold transition-all"
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-xl text-xs font-bold transition-all"
               >
                 <Radio className="w-4 h-4" /> Test in Simulator
               </button>
@@ -264,14 +264,14 @@ export const DeviceDetailPage: React.FC = () => {
               {device.noLock ? null : !isLocked ? (
                 <button
                   onClick={() => setShowLockModal(true)}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md shadow-rose-600/30 transition-all"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md transition-all"
                 >
                   <Lock className="w-4 h-4" /> LOCK DEVICE
                 </button>
               ) : (
                 <button
                   onClick={() => setShowUnlockModal(true)}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/30 transition-all"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition-all"
                 >
                   <Unlock className="w-4 h-4" /> UNLOCK DEVICE
                 </button>
@@ -302,7 +302,7 @@ export const DeviceDetailPage: React.FC = () => {
           <p className="text-xs font-extrabold text-amber-900">
             This handset restricted itself under the offline rule
           </p>
-          <p className="text-[11px] text-amber-800 mt-1">
+          <p className="text-xs text-amber-800 mt-1">
             It could not reach the server for longer than the configured limit while an installment was
             overdue, so it applied the restriction on its own
             {device.offlineLockSince ? ` on ${new Date(device.offlineLockSince).toLocaleString()}` : ''}. It
@@ -315,7 +315,7 @@ export const DeviceDetailPage: React.FC = () => {
       {/* 5 Health Status Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {/* Connectivity */}
-        <div className="p-4 bg-white rounded-2xl border border-slate-200/80 shadow-card">
+        <div className="p-4 bg-white rounded-2xl border-2 border-ink-900 shadow-card">
           <div className="flex items-center justify-between text-slate-400 text-xs">
             <span>Network</span>
             {device.isOnline ? (
@@ -327,21 +327,21 @@ export const DeviceDetailPage: React.FC = () => {
           <p className="text-sm font-extrabold text-slate-900 mt-2">
             {device.isOnline ? 'Online (Connected)' : 'Offline'}
           </p>
-          <span className="text-[10px] text-slate-400 font-mono">{device.simCarrier || 'Jazz 4G'}</span>
+          <span className="text-micro text-slate-400 font-mono">{device.simCarrier || 'Jazz 4G'}</span>
         </div>
 
         {/* Battery */}
-        <div className="p-4 bg-white rounded-2xl border border-slate-200/80 shadow-card">
+        <div className="p-4 bg-white rounded-2xl border-2 border-ink-900 shadow-card">
           <div className="flex items-center justify-between text-slate-400 text-xs">
             <span>Battery Level</span>
             <Battery className="w-4 h-4 text-blue-500" />
           </div>
           <p className="text-sm font-extrabold text-slate-900 mt-2">{device.batteryLevel}%</p>
-          <span className="text-[10px] text-slate-400">Health Normal</span>
+          <span className="text-micro text-slate-400">Health Normal</span>
         </div>
 
         {/* Last Seen */}
-        <div className="p-4 bg-white rounded-2xl border border-slate-200/80 shadow-card">
+        <div className="p-4 bg-white rounded-2xl border-2 border-ink-900 shadow-card">
           <div className="flex items-center justify-between text-slate-400 text-xs">
             <span>Last Sync</span>
             <Clock className="w-4 h-4 text-slate-400" />
@@ -355,29 +355,29 @@ export const DeviceDetailPage: React.FC = () => {
           <p className="text-sm font-extrabold text-slate-900 mt-2">
             {relativeTime(device.lastCheckInAt)}
           </p>
-          <span className="text-[10px] text-slate-400">
+          <span className="text-micro text-slate-400">
             {device.lastCheckInAt ? 'Last DPC check-in' : 'The handset has never reported'}
           </span>
         </div>
 
         {/* OS & Version */}
-        <div className="p-4 bg-white rounded-2xl border border-slate-200/80 shadow-card">
+        <div className="p-4 bg-white rounded-2xl border-2 border-ink-900 shadow-card">
           <div className="flex items-center justify-between text-slate-400 text-xs">
             <span>OS & Platform</span>
             <Smartphone className="w-4 h-4 text-slate-400" />
           </div>
           <p className="text-sm font-extrabold text-slate-900 mt-2">{device.osVersion}</p>
-          <span className="text-[10px] text-slate-400">DPC Client 2.4</span>
+          <span className="text-micro text-slate-400">DPC Client 2.4</span>
         </div>
 
         {/* Security Patch */}
-        <div className="p-4 bg-white rounded-2xl border border-slate-200/80 shadow-card">
+        <div className="p-4 bg-white rounded-2xl border-2 border-ink-900 shadow-card">
           <div className="flex items-center justify-between text-slate-400 text-xs">
             <span>Security Status</span>
             <ShieldCheck className="w-4 h-4 text-emerald-500" />
           </div>
           <p className="text-sm font-extrabold text-emerald-700 mt-2">Enforced</p>
-          <span className="text-[10px] text-slate-400 font-mono">Patch: {device.securityPatch}</span>
+          <span className="text-micro text-slate-400 font-mono">Patch: {device.securityPatch}</span>
         </div>
       </div>
 
@@ -386,8 +386,8 @@ export const DeviceDetailPage: React.FC = () => {
         {/* Left Column: Customer & Plan Details */}
         <div className="lg:col-span-1 space-y-6">
           {/* Customer Card */}
-          <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-card space-y-3">
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+          <div className="bg-white p-5 rounded-3xl border-2 border-ink-900 shadow-card space-y-3">
+            <h2 className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
               <User className="w-4 h-4 text-blue-600" /> Customer Information
             </h2>
             <div className="space-y-2 text-xs">
@@ -416,8 +416,8 @@ export const DeviceDetailPage: React.FC = () => {
 
           {/* Financing Plan Summary */}
           {device.plan && (
-            <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-card space-y-3">
-              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+            <div className="bg-white p-5 rounded-3xl border-2 border-ink-900 shadow-card space-y-3">
+              <h2 className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
                 <CreditCard className="w-4 h-4 text-emerald-600" /> Installment Plan Details
               </h2>
               <div className="space-y-2 text-xs">
@@ -459,8 +459,8 @@ export const DeviceDetailPage: React.FC = () => {
             notice, and the lock will refuse until it is fixed.
           */}
           {contract && (
-            <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-card space-y-3">
-              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+            <div className="bg-white p-5 rounded-3xl border-2 border-ink-900 shadow-card space-y-3">
+              <h2 className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
                 <FileText className="w-4 h-4 text-blue-600" /> Financing Agreement
               </h2>
 
@@ -502,12 +502,12 @@ export const DeviceDetailPage: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           {/* Installments Schedule */}
           {device.installments && device.installments.length > 0 && (
-            <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-card space-y-4">
+            <div className="bg-white p-5 rounded-3xl border-2 border-ink-900 shadow-card space-y-4">
               <h2 className="text-sm font-bold text-slate-900">Installment Repayment Schedule</h2>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="border-b border-slate-100 text-slate-400 uppercase text-[10px]">
+                    <tr className="border-b border-slate-100 text-slate-600 uppercase text-micro">
                       <th className="py-2">#</th>
                       <th className="py-2">Due Date</th>
                       <th className="py-2">Amount</th>
@@ -524,7 +524,7 @@ export const DeviceDetailPage: React.FC = () => {
                         <td className="py-2 text-slate-500">{inst.graceDate}</td>
                         <td className="py-2">
                           <span
-                            className={`status-pill text-[10px] ${
+                            className={`status-pill text-micro ${
                               inst.status === 'PAID'
                                 ? 'status-active'
                                 : inst.status === 'OVERDUE'
@@ -544,7 +544,7 @@ export const DeviceDetailPage: React.FC = () => {
           )}
 
           {/* Immutable Device Action Log Timeline */}
-          <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-card space-y-4">
+          <div className="bg-white p-5 rounded-3xl border-2 border-ink-900 shadow-card space-y-4">
             <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <History className="w-4 h-4 text-blue-600" /> Device Action Audit Timeline
             </h2>
@@ -565,12 +565,12 @@ export const DeviceDetailPage: React.FC = () => {
                     <div className="flex-1 bg-slate-50 p-3 rounded-2xl border border-slate-200/60 text-xs">
                       <div className="flex items-center justify-between font-bold text-slate-800">
                         <span>{log.action} Action</span>
-                        <span className="text-[10px] font-normal text-slate-400">
+                        <span className="text-micro font-normal text-slate-400">
                           {new Date(log.createdAt).toLocaleString()}
                         </span>
                       </div>
                       <p className="text-slate-600 text-xs mt-1">{log.reason || 'Standard operation executed.'}</p>
-                      <div className="flex items-center justify-between text-[10px] text-slate-400 mt-2 pt-1 border-t border-slate-200/40">
+                      <div className="flex items-center justify-between text-micro text-slate-400 mt-2 pt-1 border-t border-slate-200/40">
                         <span>Actor: {log.userName}</span>
                         <span>IP: {log.ipAddress}</span>
                         <span className="text-emerald-600 font-semibold">Device Ack: ✓</span>
@@ -589,7 +589,7 @@ export const DeviceDetailPage: React.FC = () => {
       {/* MODAL: Lock Confirmation Dialog */}
       {showLockModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white p-6 rounded-3xl max-w-md w-full space-y-4 shadow-2xl border border-rose-100">
+          <div className="bg-white p-6 rounded-3xl max-w-md w-full space-y-4 shadow-overlay border-2 border-ink-900">
             <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
               <ShieldAlert className="w-6 h-6" />
             </div>
@@ -621,7 +621,7 @@ export const DeviceDetailPage: React.FC = () => {
               <button
                 onClick={handleLock}
                 disabled={actionProcessing}
-                className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md shadow-rose-600/30"
+                className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md"
               >
                 {actionProcessing ? 'Executing...' : 'Confirm Lock'}
               </button>
@@ -633,7 +633,7 @@ export const DeviceDetailPage: React.FC = () => {
       {/* MODAL: Unlock Confirmation Dialog */}
       {showUnlockModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white p-6 rounded-3xl max-w-md w-full space-y-4 shadow-2xl border border-emerald-100">
+          <div className="bg-white p-6 rounded-3xl max-w-md w-full space-y-4 shadow-overlay border-2 border-ink-900">
             <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
               <Unlock className="w-6 h-6" />
             </div>
@@ -665,7 +665,7 @@ export const DeviceDetailPage: React.FC = () => {
               <button
                 onClick={handleUnlock}
                 disabled={actionProcessing}
-                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/30"
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md"
               >
                 {actionProcessing ? 'Authorizing...' : 'Confirm Unlock'}
               </button>
@@ -676,27 +676,27 @@ export const DeviceDetailPage: React.FC = () => {
 
       {showReEnrollModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white p-6 rounded-3xl max-w-md w-full space-y-4 shadow-2xl border border-blue-100">
+          <div className="bg-white p-6 rounded-3xl max-w-md w-full space-y-4 shadow-overlay border-2 border-ink-900">
             <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mx-auto">
               <RefreshCw className="w-6 h-6" />
             </div>
 
             <div className="text-center">
-              <h3 className="text-base font-extrabold text-slate-900">Re-enroll this phone</h3>
-              <p className="text-xs text-slate-500 mt-1">
+              <h3 className="text-title font-extrabold text-slate-900">Re-enroll this phone</h3>
+              <p className="text-sm text-slate-600 mt-1.5 leading-relaxed">
                 Use this when <strong>{device.brand} {device.model}</strong> was factory reset and the lock app is
                 gone. It gets a fresh QR on the same lock, so no new lock is used.
               </p>
             </div>
 
-            <ol className="text-[11px] text-slate-600 space-y-1 list-decimal pl-5">
+            <ol className="p-3 rounded-xl bg-slate-50 border-2 border-slate-200 text-sm text-slate-800 space-y-1.5 list-decimal pl-8">
               <li>Factory reset the phone again and stop on the first Welcome screen.</li>
               <li>Do not add a Google account or finish setup.</li>
               <li>Tap 6 times, connect Wi-Fi and scan the new QR.</li>
             </ol>
 
             {isLocked && (
-              <p className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800">
+              <p className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">
                 This phone is locked now. It comes back unlocked, so lock it again after it connects if money is
                 still owed.
               </p>
@@ -722,7 +722,7 @@ export const DeviceDetailPage: React.FC = () => {
               <button
                 onClick={handleReEnroll}
                 disabled={actionProcessing || reEnrollReason.trim().length < 5}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/30"
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-md"
               >
                 {actionProcessing ? 'Working...' : 'Re-enroll and show QR'}
               </button>
@@ -734,7 +734,7 @@ export const DeviceDetailPage: React.FC = () => {
       {/* MODAL: Send Message Dialog */}
       {showMessageModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white p-6 rounded-3xl max-w-md w-full space-y-4 shadow-2xl">
+          <div className="bg-white p-6 rounded-3xl max-w-md w-full space-y-4 shadow-overlay border-2 border-ink-900">
             <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
               <MessageSquare className="w-4 h-4 text-blue-600" /> Send Push Notification Alert
             </div>

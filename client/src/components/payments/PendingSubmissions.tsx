@@ -52,14 +52,14 @@ export const PendingSubmissions: React.FC<{ onVerified: () => void }> = ({ onVer
   if (submissions.length === 0) return null;
 
   return (
-    <div className="bg-white rounded-3xl border border-amber-200 shadow-card overflow-hidden">
+    <div className="bg-white rounded-3xl border-2 border-ink-900 shadow-card overflow-hidden">
       <div className="p-4 border-b border-amber-100 bg-amber-50 flex items-center gap-2">
         <Inbox className="w-4 h-4 text-amber-600" aria-hidden="true" />
         <div>
           <h2 className="text-xs font-extrabold text-amber-900">
             {submissions.length} payment{submissions.length === 1 ? '' : 's'} customers say they have sent
           </h2>
-          <p className="text-[11px] text-amber-800 mt-0.5">
+          <p className="text-xs text-amber-800 mt-0.5">
             Check each transaction ID against your own account before confirming. Confirming applies the money and
             unlocks the handset.
           </p>
@@ -72,7 +72,7 @@ export const PendingSubmissions: React.FC<{ onVerified: () => void }> = ({ onVer
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-bold text-slate-900">{money(payment.amount)}</span>
-                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                <span className="text-micro uppercase font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
                   {payment.paymentMethod}
                 </span>
               </div>
@@ -80,9 +80,9 @@ export const PendingSubmissions: React.FC<{ onVerified: () => void }> = ({ onVer
                 {payment.customerName}
                 {payment.customerPhone ? ` · ${payment.customerPhone}` : ''}
               </p>
-              <p className="text-[11px] text-slate-500 font-mono mt-0.5">TID {payment.referenceNumber}</p>
-              {payment.notes && <p className="text-[11px] text-slate-500 mt-1">“{payment.notes}”</p>}
-              <p className="text-[10px] text-slate-400 mt-1">
+              <p className="text-xs text-slate-500 font-mono mt-0.5">TID {payment.referenceNumber}</p>
+              {payment.notes && <p className="text-xs text-slate-500 mt-1">“{payment.notes}”</p>}
+              <p className="text-micro text-slate-400 mt-1">
                 Reported {new Date(payment.createdAt).toLocaleString()}
               </p>
             </div>
@@ -91,7 +91,7 @@ export const PendingSubmissions: React.FC<{ onVerified: () => void }> = ({ onVer
               {payment.proofImage && (
                 <button
                   onClick={() => setViewingProof(payment.proofImage)}
-                  className="px-3 py-2 text-[11px] font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1"
+                  className="px-3 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1"
                 >
                   <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" /> Screenshot
                 </button>

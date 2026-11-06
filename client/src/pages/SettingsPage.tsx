@@ -123,16 +123,13 @@ export const SettingsPage: React.FC = () => {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-          Dealer Settings & Enforcement Policies
-        </h1>
-        <p className="text-xs sm:text-sm text-slate-500 mt-1">
-          Configure business details, grace periods, automated device locking rules, and security controls.
-        </p>
+        <p className="eyebrow">Settings</p>
+        <h1 className="mt-1 text-display text-ink-900">Shop settings</h1>
+        <p className="mt-1 max-w-2xl text-body text-ink-500">Your shop details, when late phones get locked, and reset protection.</p>
       </div>
 
       {/* Policy Settings Card */}
-      <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-card space-y-6">
+      <div className="bg-white p-6 sm:p-8 rounded-3xl border-2 border-ink-900 shadow-card space-y-6">
         <div className="flex items-center gap-2.5 pb-4 border-b border-slate-100">
           <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
             <ShieldAlert className="w-5 h-5" />
@@ -150,7 +147,7 @@ export const SettingsPage: React.FC = () => {
               <span className="font-bold text-slate-800">Grace Period Threshold</span>
               <span className="font-extrabold text-blue-600 text-sm">{policy.gracePeriodDays} Days</span>
             </div>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-xs text-slate-500">
               Days past installment due date before device becomes eligible for restriction.
             </p>
             <input
@@ -169,7 +166,7 @@ export const SettingsPage: React.FC = () => {
               <span className="font-bold text-slate-800">Pre-Due Warning Notice</span>
               <span className="font-extrabold text-blue-600 text-sm">{policy.lockWarningDays} Days Prior</span>
             </div>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-xs text-slate-500">
               Dispatch upcoming installment reminder SMS prior to the payment due date.
             </p>
             <input
@@ -189,7 +186,7 @@ export const SettingsPage: React.FC = () => {
           <div className="p-4 bg-slate-50 border rounded-2xl flex items-center justify-between">
             <div>
               <span className="font-bold text-slate-800 text-xs block">Automated Remote Device Locking</span>
-              <span className="text-[11px] text-slate-500">
+              <span className="text-xs text-slate-500">
                 When enabled, devices with unpaid installments exceeding grace period are automatically restricted.
               </span>
             </div>
@@ -205,13 +202,13 @@ export const SettingsPage: React.FC = () => {
           <div className="p-4 bg-slate-50 border rounded-2xl flex items-center justify-between gap-4">
             <div>
               <span className="font-bold text-slate-800 text-xs block">Staged Restrictions (calls → apps → lock)</span>
-              <span className="text-[11px] text-slate-500">
+              <span className="text-xs text-slate-500">
                 1 installment late: outgoing calls and SMS blocked. 2 late: WhatsApp, Facebook, TikTok, YouTube and
                 similar apps paused too. 3 late (or the last installment): full lock. Incoming and emergency calls
                 always work. Off: the first late installment locks the phone. Applies to agreements signed while it is on.
               </span>
               {!policy.autoLockEnabled && policy.stagedRestrictionsEnabled && (
-                <span className="mt-1 block text-[11px] font-bold text-amber-700">
+                <span className="mt-1 block text-xs font-bold text-amber-700">
                   Automated locking is off, so no handset will act on this.
                 </span>
               )}
@@ -233,7 +230,7 @@ export const SettingsPage: React.FC = () => {
                 {policy.offlineLockAfterDays === 0 ? 'Off' : `${policy.offlineLockAfterDays} Days`}
               </span>
             </div>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-xs text-slate-500">
               A phone kept offline cannot receive a lock command. With this on, the phone restricts itself
               after this many days without reaching the server — but only while an installment is actually
               past its grace period, and only for customers whose signed agreement says so. Requires
@@ -256,7 +253,7 @@ export const SettingsPage: React.FC = () => {
               className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-amber-600 mt-2 disabled:opacity-40 disabled:cursor-not-allowed"
             />
             {!policy.autoLockEnabled && policy.offlineLockAfterDays > 0 && (
-              <p className="text-[11px] font-bold text-amber-700">
+              <p className="text-xs font-bold text-amber-700">
                 Automated locking is off, so no handset will act on this.
               </p>
             )}
@@ -270,7 +267,7 @@ export const SettingsPage: React.FC = () => {
                 {parseFrpAccountIds(frpAccountsText).length === 0 ? 'Off' : 'On'}
               </span>
             </div>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-xs text-slate-500">
               Settings-menu resets are already blocked, but a reset from the phone's recovery menu (power +
               volume buttons) wipes the app. With this on, a phone wiped that way cannot be set up again until
               one of these Google accounts signs in — so bring it to the shop and re-enrol it. Applied only
@@ -285,7 +282,7 @@ export const SettingsPage: React.FC = () => {
               className="w-full px-3 py-2 text-xs font-mono bg-white border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
             />
             {frpInvalid.length > 0 && (
-              <p className="text-[11px] font-bold text-red-600">
+              <p className="text-xs font-bold text-rose-600">
                 Not a Google account ID: {frpInvalid.join(', ')}. Use the long number, not an email address.
               </p>
             )}
@@ -295,7 +292,7 @@ export const SettingsPage: React.FC = () => {
           <div className="p-4 bg-slate-50 border rounded-2xl flex items-center justify-between">
             <div>
               <span className="font-bold text-slate-800 text-xs block">Automated Unlock on Verified Payment</span>
-              <span className="text-[11px] text-slate-500">
+              <span className="text-xs text-slate-500">
                 Instantly transmit unlock signal to phone as soon as overdue installment is verified in full.
               </span>
             </div>
@@ -311,7 +308,7 @@ export const SettingsPage: React.FC = () => {
           <div className="p-4 bg-slate-50 border rounded-2xl flex items-center justify-between">
             <div>
               <span className="font-bold text-slate-800 text-xs block">Emergency Dialing Access (1122 / 15)</span>
-              <span className="text-[11px] text-slate-500">
+              <span className="text-xs text-slate-500">
                 Always allow emergency outgoing phone calls even in restricted lock mode (Mandatory Regulatory Policy).
               </span>
             </div>
@@ -328,7 +325,7 @@ export const SettingsPage: React.FC = () => {
           <button
             onClick={handleSavePolicy}
             disabled={saving}
-            className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/30 transition-all"
+            className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-md transition-all"
           >
             <Save className="w-4 h-4" />
             <span>{saving ? 'Saving...' : 'Save Policy Settings'}</span>
@@ -337,7 +334,7 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       {/* Business Profile Card */}
-      <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-card space-y-6">
+      <div className="bg-white p-6 sm:p-8 rounded-3xl border-2 border-ink-900 shadow-card space-y-6">
         <div className="flex items-center gap-2.5 pb-4 border-b border-slate-100">
           <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
             <Building2 className="w-5 h-5 text-blue-600" />

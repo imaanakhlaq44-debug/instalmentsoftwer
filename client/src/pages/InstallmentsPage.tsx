@@ -93,12 +93,9 @@ export const InstallmentsPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-            Installment Plans & Schedules
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Financing duration, monthly maturity, repayment balances, and automated grace-period overdue management.
-          </p>
+          <p className="eyebrow">Installments</p>
+          <h1 className="mt-1 text-display text-ink-900">Installment plans</h1>
+          <p className="mt-1 max-w-2xl text-body text-ink-500">Each customer's monthly plan: what is paid, what is due next and what is late.</p>
         </div>
 
         <div className="flex items-center gap-3 self-start sm:self-auto">
@@ -111,7 +108,7 @@ export const InstallmentsPage: React.FC = () => {
         <button
           onClick={handleRunOverdueEngine}
           disabled={evaluatingOverdue}
-          className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-amber-500/20 transition-all self-start sm:self-auto"
+          className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md transition-all self-start sm:self-auto"
         >
           <RefreshCw className={`w-4 h-4 ${evaluatingOverdue ? 'animate-spin' : ''}`} />
           <span>{evaluatingOverdue ? 'Evaluating...' : 'Run Automated Overdue Engine'}</span>
@@ -121,7 +118,7 @@ export const InstallmentsPage: React.FC = () => {
       </div>
 
       {/* Filter Tabs */}
-      <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-card flex items-center gap-2 overflow-x-auto">
+      <div className="bg-white p-4 rounded-3xl border-2 border-ink-900 shadow-card flex items-center gap-2 overflow-x-auto">
         {['ALL', 'CURRENT', 'OVERDUE', 'DUE_SOON', 'COMPLETED'].map((tab) => (
           <button
             key={tab}
@@ -138,7 +135,7 @@ export const InstallmentsPage: React.FC = () => {
       </div>
 
       {/* Plans Table */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-card overflow-hidden">
+      <div className="bg-white rounded-3xl border-2 border-ink-900 shadow-card overflow-hidden">
         {loading ? (
           <div className="py-16 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
             <RefreshCw className="w-4 h-4 animate-spin text-blue-600" /> Loading installment contracts...
@@ -152,7 +149,7 @@ export const InstallmentsPage: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-bold text-slate-600 uppercase tracking-wider">
                   <th className="py-3 px-4">Plan / Contract</th>
                   <th className="py-3 px-4">Customer</th>
                   <th className="py-3 px-4">Financed Phone</th>
@@ -172,11 +169,11 @@ export const InstallmentsPage: React.FC = () => {
                     </td>
                     <td className="py-3.5 px-4">
                       <span className="font-semibold text-slate-800 block">{p.customerName}</span>
-                      <span className="text-[10px] text-slate-400">{p.customerPhone}</span>
+                      <span className="text-micro text-slate-400">{p.customerPhone}</span>
                     </td>
                     <td className="py-3.5 px-4">
                       <span className="font-bold text-slate-900 block">{p.deviceBrand} {p.deviceModel}</span>
-                      <span className="text-[10px] text-slate-400 font-mono">IMEI: {p.deviceImei}</span>
+                      <span className="text-micro text-slate-400 font-mono">IMEI: {p.deviceImei}</span>
                     </td>
                     <td className="py-3.5 px-4 font-semibold text-slate-700">
                       Rs. {Number(p.totalAmount).toLocaleString()}
@@ -186,7 +183,7 @@ export const InstallmentsPage: React.FC = () => {
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="space-y-1">
-                        <div className="flex justify-between text-[11px] font-semibold text-slate-700">
+                        <div className="flex justify-between text-xs font-semibold text-slate-700">
                           <span>{p.paidInstallments}/{p.totalInstallments} Months</span>
                           <span>{Math.round((p.paidInstallments / p.totalInstallments) * 100)}%</span>
                         </div>

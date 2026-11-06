@@ -128,7 +128,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in overflow-y-auto">
-      <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-8">
+      <div className="bg-white w-full max-w-2xl rounded-3xl shadow-overlay border-2 border-ink-900 overflow-hidden my-8">
         {/* Header */}
         <div className="px-6 py-4 bg-navy-950 text-white flex items-center justify-between">
           <div>
@@ -349,7 +349,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                 <p className="text-xs font-bold text-slate-800">Phone check</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">Android version</label>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Android version</label>
                     <select
                       value={formData.android}
                       onChange={(e) => setFormData({ ...formData, android: e.target.value as AndroidVersion })}
@@ -362,7 +362,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">Google Play Store on this phone?</label>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Google Play Store on this phone?</label>
                     <select
                       value={formData.playStore ? 'yes' : 'no'}
                       onChange={(e) => setFormData({ ...formData, playStore: e.target.value === 'yes' })}
@@ -515,11 +515,11 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
               </div>
 
               {noLock ? (
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-700 leading-relaxed">
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 leading-relaxed">
                 <strong>Sold without a lock:</strong> this phone cannot run the lock app, so it will not be locked or restricted. The installment plan, reminders and the signed agreement apply as usual.
               </div>
               ) : (
-              <div className="p-3 bg-amber-50 border border-amber-200/80 rounded-xl text-[11px] text-amber-800 leading-relaxed">
+              <div className="p-3 bg-amber-50 border border-amber-200/80 rounded-xl text-xs text-amber-800 leading-relaxed">
                 <strong>Consent & Enforcement Notice:</strong> Customer consents to DPC-based remote restricted locking in case installments become overdue past the {formData.gracePeriodDays}-day grace threshold. Emergency calls remain accessible.
               </div>
               )}
@@ -622,7 +622,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                   <button
                     type="button"
                     onClick={() => setQrFull(true)}
-                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 shadow-md shadow-blue-600/30"
+                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 shadow-md"
                   >
                     <Maximize2 className="w-4 h-4" /> Show QR full screen
                   </button>
@@ -652,7 +652,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
               <button
                 type="button"
                 onClick={copyTokenToClipboard}
-                className="mx-auto flex items-center gap-2 text-[11px] font-mono text-slate-500 hover:text-slate-800"
+                className="mx-auto flex items-center gap-2 text-xs font-mono text-slate-500 hover:text-slate-800"
                 title="Copy the code, for typing in by hand"
               >
                 Code: {createdResult.enrollmentToken?.token} <Copy className="w-3.5 h-3.5" />
@@ -715,7 +715,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                   }
                   setStep(step + 1);
                 }}
-                className="flex items-center gap-1.5 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/30 transition-all"
+                className="flex items-center gap-1.5 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-md transition-all"
               >
                 Next <ArrowRight className="w-3.5 h-3.5" />
               </button>
@@ -723,7 +723,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
               <button
                 onClick={handleCreate}
                 disabled={submitting}
-                className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/30 transition-all"
+                className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md transition-all"
               >
                 {submitting ? 'Registering...' : noLock ? 'Approve & Register Sale' : 'Approve & Generate QR'}
               </button>

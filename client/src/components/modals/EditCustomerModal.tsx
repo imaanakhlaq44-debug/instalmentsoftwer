@@ -110,7 +110,7 @@ export const EditCustomerModal: React.FC<Props> = ({ customer, onClose, onSaved 
     >
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-3xl w-full max-w-lg my-8 shadow-2xl border border-slate-200"
+        className="bg-white rounded-3xl w-full max-w-lg my-8 shadow-overlay border-2 border-ink-900"
         noValidate
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
@@ -120,7 +120,7 @@ export const EditCustomerModal: React.FC<Props> = ({ customer, onClose, onSaved 
             </div>
             <div>
               <h2 className="text-sm font-bold text-slate-900">Edit customer</h2>
-              <p className="text-[11px] text-slate-500">Correct details captured at the counter</p>
+              <p className="text-xs text-slate-500">Correct details captured at the counter</p>
             </div>
           </div>
           <button
@@ -170,9 +170,9 @@ export const EditCustomerModal: React.FC<Props> = ({ customer, onClose, onSaved 
                 />
               )}
               {fieldErrors[key] ? (
-                <p className="mt-1 text-[11px] text-rose-600">{fieldErrors[key]}</p>
+                <p className="mt-1 text-xs text-rose-600">{fieldErrors[key]}</p>
               ) : hint ? (
-                <p className="mt-1 text-[11px] text-slate-400">{hint}</p>
+                <p className="mt-1 text-xs text-slate-400">{hint}</p>
               ) : null}
             </div>
           ))}
