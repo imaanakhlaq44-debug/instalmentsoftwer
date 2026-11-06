@@ -1,6 +1,8 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.js';
+import { ApiService } from '../../services/api.js';
 import { navItemsForRole, NAV_GROUPS, type NavGroup } from './navItems.js';
 
 /**
@@ -25,10 +27,22 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export const Sidebar: React.FC = () => {
-  const { role, dealer, user } = useAuth();
+  const { role, dealer, user, selectedDealerId, setSelectedDealerId } = useAuth();
+  const navigate = useNavigate();
+  const isPlatform = role === 'SUPER_ADMIN';
+  const viewingShop = isPlatform && Boolean(selectedDealerId);
+
+  // A super admin has no shop of their own, so the open shop's name is looked up.
+  const [shopName, setShopName] = useState<string | null>(null);
+  useEffect(() => {
+    if (!viewingShop) return;
+    ApiService.getLicenses()
+      .then((res) => setShopName((res.dealers ?? []).find((d: any) => d.dealerId === selectedDealerId)?.dealerName ?? null))
+      .catch(() => setShopName(null));
+  }, [viewingShop, selectedDealerId]);
 
   // Menu is derived from the signed-in role, so nothing unreachable is shown.
-  const navItems = navItemsForRole(role);
+  const navItems = navItemsForRole(role, viewingShop);
   const groups = NAV_GROUPS.map((group: NavGroup) => ({
     group,
     items: navItems.filter((i) => i.group === group),
@@ -50,14 +64,31 @@ export const Sidebar: React.FC = () => {
         <span className="text-lede font-black uppercase tracking-[-0.01em] text-ink-900">Almas SDM</span>
       </div>
 
-      {/* Whose books are on screen. For a super admin this is the only thing
-          distinguishing one dealership's data from another's. */}
-      <div className="mx-3 mb-2 rounded-md border-2 border-ink-900 bg-sun-100 px-3 py-2.5 shadow-[3px_3px_0_#0F1419]">
-        <p className="eyebrow">{role === 'SUPER_ADMIN' ? 'Viewing' : 'Dealership'}</p>
-        <p className="mt-0.5 truncate text-caption font-bold text-ink-900">
-          {dealer?.name || (role === 'SUPER_ADMIN' ? 'All dealers' : '—')}
-        </p>
-      </div>
+      {/* Whose books are on screen. For the platform owner this says which
+          mode they are in: the whole platform, or one shop opened from it. */}
+      {isPlatform && !viewingShop ? (
+        <div className="mx-3 mb-2 rounded-md border-2 border-ink-900 bg-accent-800 px-3 py-2.5 text-white shadow-[3px_3px_0_#0F1419]">
+          <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-sun-200">Platform admin</p>
+          <p className="mt-0.5 text-caption font-bold">All shops</p>
+        </div>
+      ) : (
+        <div className="mx-3 mb-2 rounded-md border-2 border-ink-900 bg-sun-100 px-3 py-2.5 shadow-[3px_3px_0_#0F1419]">
+          <p className="eyebrow">{viewingShop ? 'Shop open' : 'Dealership'}</p>
+          <p className="mt-0.5 truncate text-caption font-bold text-ink-900">{(viewingShop ? shopName : dealer?.name) || '—'}</p>
+          {viewingShop && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedDealerId(undefined);
+                navigate('/');
+              }}
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border-2 border-ink-900 bg-white px-2 py-1 text-caption font-extrabold text-ink-900 hover:bg-sun-200"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Back to platform
+            </button>
+          )}
+        </div>
+      )}
 
       <nav className="flex-1 overflow-y-auto px-3 py-2">
         {groups.map(({ group, items }) => (

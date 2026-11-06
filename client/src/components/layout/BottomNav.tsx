@@ -4,13 +4,13 @@ import { useAuth } from '../../context/AuthContext.js';
 import { navItemsForRole } from './navItems.js';
 
 /** Which sections earn a slot on the small mobile bar, in priority order. */
-const MOBILE_PRIORITY = ['/', '/devices', '/payments', '/customers', '/installments'];
+const MOBILE_PRIORITY = ['/', '/devices', '/payments', '/customers', '/installments', '/orders', '/shops', '/licenses'];
 
 export const BottomNav: React.FC = () => {
-  const { role } = useAuth();
+  const { role, selectedDealerId } = useAuth();
 
   // Same role-filtered source as the sidebar, trimmed to five slots.
-  const allowed = navItemsForRole(role);
+  const allowed = navItemsForRole(role, Boolean(selectedDealerId));
   const items = MOBILE_PRIORITY.map((path) => allowed.find((i) => i.to === path))
     .filter((i): i is NonNullable<typeof i> => Boolean(i))
     .slice(0, 5)

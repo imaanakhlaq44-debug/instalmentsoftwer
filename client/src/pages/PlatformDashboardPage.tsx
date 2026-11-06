@@ -1,18 +1,21 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, ArrowRight, Clock, KeyRound, MessageCircle, Phone, Store, WifiOff } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import {
+  AlertTriangle, ArrowRight, CheckCircle2, ClipboardList, Clock, KeyRound, MessageCircle, Phone, Store, WifiOff,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { ApiService } from '../services/api.js';
 import { Card, CardHeader, EmptyState, Skeleton } from '../components/ui/Card.js';
 import { money, shortDate } from '../utils/format.js';
 
 /**
- * The super admin's home: the platform, not a shop.
+ * The platform owner's pages: Home, Lock orders and Shops.
  *
  * A shop owner's dashboard is about their customers. The platform owner's day
- * is different — confirm who has paid and give them their locks, see which shops
- * are about to run out, know what was earned, and notice handsets that have gone
- * quiet. Picking a shop (here or in the top bar) still opens that shop's own
- * dashboard, exactly as the shop sees it.
+ * is different: confirm who has paid and give them their locks, see which shops
+ * are about to run out, know what was earned, and notice handsets that have
+ * gone quiet. Opening a shop (from Shops, or the top bar) shows that shop's
+ * own dashboard, exactly as the shop sees it.
  */
 
 interface PackPrice {
@@ -79,14 +82,17 @@ const FLEET_ROWS: { key: string; label: string; dot: string }[] = [
   { key: 'OVERDUE', label: 'Overdue', dot: 'bg-caution-600' },
   { key: 'LOCKED', label: 'Locked', dot: 'bg-critical-600' },
   { key: 'PENDING', label: 'Awaiting QR', dot: 'bg-accent-600' },
-  { key: 'INACTIVE', label: 'Inactive', dot: 'bg-ink-400' },
+  { key: 'INACTIVE', label: 'Released', dot: 'bg-ink-400' },
 ];
 
-export const PlatformDashboardPage: React.FC = () => {
-  const { user, showToast, setSelectedDealerId } = useAuth();
+// ---------------------------------------------------------------------------
+// Shared pieces
+// ---------------------------------------------------------------------------
+
+function usePlatformOverview() {
+  const { showToast } = useAuth();
   const [data, setData] = useState<PlatformOverview | null>(null);
   const [failed, setFailed] = useState(false);
-  const [issuing, setIssuing] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -102,40 +108,193 @@ export const PlatformDashboardPage: React.FC = () => {
     load();
   }, [load]);
 
+  return { data, failed, load };
+}
+
+/** Opens one shop's own dashboard. */
+function useOpenShop() {
+  const { setSelectedDealerId } = useAuth();
+  const navigate = useNavigate();
+  return (dealerId: string) => {
+    setSelectedDealerId(dealerId);
+    navigate('/');
+    window.scrollTo(0, 0);
+  };
+}
+
+const ContactButtons: React.FC<{ phone: string }> = ({ phone }) => (
+  <>
+    <a className="btn-secondary py-1.5 text-caption" href={`https://wa.me/${whatsappNumber(phone)}`} target="_blank" rel="noopener">
+      <MessageCircle className="h-4 w-4" aria-hidden="true" /> WhatsApp
+    </a>
+    <a className="btn-secondary py-1.5 text-caption" href={`tel:${phone}`}>
+      <Phone className="h-4 w-4" aria-hidden="true" /> Call
+    </a>
+  </>
+);
+
+const PageHeader: React.FC<{ eyebrow: string; title: string; children?: React.ReactNode }> = ({ eyebrow, title, children }) => (
+  <header>
+    <p className="eyebrow">{eyebrow}</p>
+    <h1 className="mt-1 text-display text-ink-900">{title}</h1>
+    {children && <p className="mt-1 max-w-2xl text-body text-ink-500">{children}</p>}
+  </header>
+);
+
+const RetryLine: React.FC<{ onRetry: () => void }> = ({ onRetry }) => (
+  <p className="text-center text-caption text-ink-500">
+    <button type="button" className="underline" onClick={onRetry}>
+      Try again
+    </button>
+  </p>
+);
+
+/** The orders list: shops that asked for a pack and have not been given it yet. */
+const OrdersList: React.FC<{ data: PlatformOverview | null; reload: () => Promise<void> }> = ({ data, reload }) => {
+  const { showToast } = useAuth();
+  const [issuing, setIssuing] = useState<string | null>(null);
+
   const issue = async (shop: WaitingShop) => {
     const ok = window.confirm(
       `Has ${shop.name} paid ${money(shop.requestedPack.totalPrice)}?\n\n` +
-        `This issues ${shop.requestedPack.size} locks to them now and cannot be undone.`
+        `This gives them ${shop.requestedPack.size} locks now and cannot be undone.`
     );
     if (!ok) return;
     try {
       setIssuing(shop.dealerId);
       const res = await ApiService.issueLicensePack({ dealerId: shop.dealerId, size: shop.requestedPack.size });
-      showToast(res.message || `${shop.requestedPack.size} locks issued to ${shop.name}`, 'success');
-      await load();
+      showToast(res.message || `${shop.requestedPack.size} locks given to ${shop.name}`, 'success');
+      await reload();
     } catch (err: any) {
-      showToast(err?.message || 'Could not issue the locks', 'error');
+      showToast(err?.message || 'Could not give the locks', 'error');
     } finally {
       setIssuing(null);
     }
   };
 
+  if (!data) return <Skeleton className="h-20" />;
+  if (data.awaitingPayment.length === 0) {
+    return (
+      <EmptyState
+        icon={<CheckCircle2 className="h-6 w-6" aria-hidden="true" />}
+        title="No orders waiting"
+        body="When a shop signs up and picks a pack, its order appears here."
+      />
+    );
+  }
+  return (
+    <ul className="space-y-3">
+      {data.awaitingPayment.map((s) => (
+        <li
+          key={s.dealerId}
+          className="flex flex-col gap-3 rounded-md border-2 border-ink-900 bg-sun-100 p-4 lg:flex-row lg:items-center lg:justify-between"
+        >
+          <div className="min-w-0">
+            <p className="text-lede font-extrabold text-ink-900">{s.name}</p>
+            <p className="text-caption text-ink-700">
+              {s.ownerName} · {s.city} · signed up {shortDate(s.createdAt)}
+            </p>
+            <p className="mt-1 text-body text-ink-900">
+              Ordered <b>{s.requestedPack.size} locks</b> · {money(s.requestedPack.unitPrice)} each · to pay{' '}
+              <b>{money(s.requestedPack.totalPrice)}</b>
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <ContactButtons phone={s.phone} />
+            <button type="button" className="btn-primary py-1.5 text-caption" disabled={issuing !== null} onClick={() => issue(s)}>
+              <KeyRound className="h-4 w-4" aria-hidden="true" />
+              {issuing === s.dealerId ? 'Giving locks…' : `Paid: give ${s.requestedPack.size} locks`}
+            </button>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Home
+// ---------------------------------------------------------------------------
+
+const TodoTile: React.FC<{
+  count: number | undefined;
+  title: string;
+  done: string;
+  action: string;
+  to: string;
+  tone: 'caution' | 'critical' | 'accent';
+  icon: React.ReactNode;
+}> = ({ count, title, done, action, to, tone, icon }) => {
+  const busy = (count ?? 0) > 0;
+  const tones = {
+    caution: 'bg-sun-100',
+    critical: 'bg-critical-50',
+    accent: 'bg-accent-50',
+  };
+  return (
+    <Link to={to} className={`surface-interactive flex flex-col gap-2 p-5 ${busy ? tones[tone] : 'bg-paper-50'}`}>
+      <span className="flex items-center gap-2 text-ink-700">{icon}</span>
+      <span className="figure text-3xl">{count ?? '—'}</span>
+      <span className="text-body font-bold text-ink-900">{busy ? title : done}</span>
+      <span className="mt-auto inline-flex items-center gap-1 text-caption font-extrabold text-accent-700">
+        {action} <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+      </span>
+    </Link>
+  );
+};
+
+export const PlatformDashboardPage: React.FC = () => {
+  const { user } = useAuth();
+  const { data, failed, load } = usePlatformOverview();
+  const openShop = useOpenShop();
+
   const firstName = (user?.name || 'there').split(' ')[0];
   const t = data?.totals;
-  const watchList = (data?.shops ?? []).filter((s) => s.outOfLocks || s.runningLow);
+  const lowShops = (data?.shops ?? []).filter((s) => s.outOfLocks || s.runningLow);
   const fleetTotal = Object.values(data?.fleet.byStatus ?? {}).reduce((a, b) => a + b, 0);
+  const topShops = [...(data?.shops ?? [])].sort((a, b) => b.devices.total - a.devices.total).slice(0, 5);
 
   return (
     <div className="space-y-6">
-      <header>
-        <p className="eyebrow">Platform</p>
-        <h1 className="mt-1 text-display text-ink-900">Salam, {firstName}</h1>
-        <p className="mt-1 text-body text-ink-500">
-          {t ? `${t.shops} shops · ${t.locksConsumed} phones under lock · ${t.shopsAwaitingPayment} waiting to pay` : 'Loading the platform…'}
-        </p>
-      </header>
+      <PageHeader eyebrow="Platform" title={`Salam, ${firstName}`}>
+        {t ? `${t.shops} shops · ${t.locksConsumed} phones under lock` : 'Loading the platform…'}
+      </PageHeader>
 
-      {/* Money first: what the platform has earned. */}
+      {/* What needs doing today, each with the one place to go and do it. */}
+      <section aria-labelledby="todo-heading" className="space-y-3">
+        <h2 id="todo-heading" className="text-title font-extrabold text-ink-900">To do today</h2>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <TodoTile
+            count={data?.awaitingPayment.length}
+            title="Lock orders waiting for payment"
+            done="No orders waiting"
+            action="Open lock orders"
+            to="/orders"
+            tone="caution"
+            icon={<ClipboardList className="h-5 w-5" aria-hidden="true" />}
+          />
+          <TodoTile
+            count={data ? lowShops.length : undefined}
+            title="Shops running out of locks"
+            done="Every shop has locks"
+            action="Open shops"
+            to="/shops"
+            tone="critical"
+            icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
+          />
+          <TodoTile
+            count={data?.fleet.stale}
+            title={`Phones silent for ${data?.fleet.staleAfterDays ?? 7}+ days`}
+            done="Every phone is checking in"
+            action="Open shops"
+            to="/shops"
+            tone="accent"
+            icon={<WifiOff className="h-5 w-5" aria-hidden="true" />}
+          />
+        </div>
+      </section>
+
+      {/* Money: what the platform has earned. */}
       <div className="surface grid divide-y-2 divide-paper-300 sm:grid-cols-3 sm:divide-x-2 sm:divide-y-0">
         <div className="p-5">
           <p className="eyebrow">Earned this month</p>
@@ -154,56 +313,134 @@ export const PlatformDashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* The one thing that needs the platform owner every day. */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader
+            title="Biggest shops"
+            hint="By phones under management"
+            action={
+              <Link to="/shops" className="btn-ghost px-2 py-1 text-caption">
+                All shops <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+              </Link>
+            }
+          />
+          <div className="mt-3">
+            {!data ? (
+              <Skeleton className="h-32" />
+            ) : topShops.length === 0 ? (
+              <EmptyState icon={<Store className="h-6 w-6" aria-hidden="true" />} title="No shops yet" body="Shops appear here as soon as they register." />
+            ) : (
+              <ul className="divide-y divide-paper-300">
+                {topShops.map((s) => (
+                  <li key={s.dealerId} className="flex items-center justify-between gap-3 py-2.5">
+                    <span className="min-w-0">
+                      <span className="block truncate font-bold text-ink-900">{s.name}</span>
+                      <span className="block text-caption text-ink-500">
+                        {s.city} · {s.devices.total} phones · {s.available} locks left
+                      </span>
+                    </span>
+                    <button type="button" className="btn-secondary shrink-0 py-1 text-caption" onClick={() => openShop(s.dealerId)}>
+                      Open shop
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </Card>
+
+        {/* Every phone on the platform. */}
+        <Card>
+          <CardHeader title="All phones" hint="Every handset across all shops" />
+          <div className="mt-3 space-y-2">
+            {FLEET_ROWS.map((r) => (
+              <div key={r.key} className="flex items-center justify-between text-body">
+                <span className="flex items-center gap-2 text-ink-700">
+                  <span className={`h-2.5 w-2.5 rounded-full ${r.dot}`} aria-hidden="true" />
+                  {r.label}
+                </span>
+                <span className="tabular font-bold text-ink-900">{data?.fleet.byStatus[r.key] ?? 0}</span>
+              </div>
+            ))}
+            <p className="border-t-2 border-dashed border-paper-400 pt-2 text-caption text-ink-500">{fleetTotal} phones in total</p>
+          </div>
+        </Card>
+      </div>
+
+      {failed && <RetryLine onRetry={load} />}
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Lock orders
+// ---------------------------------------------------------------------------
+
+export const PlatformOrdersPage: React.FC = () => {
+  const { data, failed, load } = usePlatformOverview();
+  const lowShops = (data?.shops ?? []).filter((s) => (s.outOfLocks || s.runningLow) && s.packsBought > 0);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader eyebrow="Platform" title="Lock orders">
+        A shop orders a pack of locks when it signs up. Once its payment reaches you, give it the locks here.
+      </PageHeader>
+
+      <ol className="grid gap-3 sm:grid-cols-3">
+        {[
+          ['1', 'The shop orders', 'It signs up and picks a pack of locks.'],
+          ['2', 'The shop pays you', 'By JazzCash, Easypaisa or bank. Check that the money arrived.'],
+          ['3', 'You give the locks', 'Press "Paid: give locks". The shop can sell at once.'],
+        ].map(([n, title, body]) => (
+          <li key={n} className="surface flex gap-3 p-4">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-ink-900 bg-sun-400 font-black text-ink-900">
+              {n}
+            </span>
+            <span>
+              <span className="block font-extrabold text-ink-900">{title}</span>
+              <span className="block text-caption text-ink-500">{body}</span>
+            </span>
+          </li>
+        ))}
+      </ol>
+
+      <Card>
+        <CardHeader title="Waiting for payment" hint="Newest sign-ups and the pack each one ordered" />
+        <div className="mt-4">
+          <OrdersList data={data} reload={load} />
+        </div>
+      </Card>
+
       <Card>
         <CardHeader
-          title="Waiting to pay"
-          hint="New shops that signed up. Issue their locks once the money has arrived."
+          title="Likely to order soon"
+          hint="Paying shops with five locks or fewer left"
+          action={
+            <Link to="/licenses" className="btn-ghost px-2 py-1 text-caption">
+              Give a pack <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+          }
         />
-        <div className="mt-4">
+        <div className="mt-3">
           {!data ? (
-            <Skeleton className="h-20" />
-          ) : data.awaitingPayment.length === 0 ? (
-            <EmptyState icon={<Clock className="h-6 w-6" aria-hidden="true" />} title="Nobody is waiting" body="New sign-ups appear here with the pack they asked for." />
+            <Skeleton className="h-16" />
+          ) : lowShops.length === 0 ? (
+            <p className="text-body text-ink-500">Every paying shop has locks to spare.</p>
           ) : (
-            <ul className="space-y-3">
-              {data.awaitingPayment.map((s) => (
-                <li
-                  key={s.dealerId}
-                  className="flex flex-col gap-3 rounded-md border-2 border-ink-900 bg-sun-100 p-4 lg:flex-row lg:items-center lg:justify-between"
-                >
-                  <div className="min-w-0">
-                    <p className="text-lede font-extrabold text-ink-900">{s.name}</p>
-                    <p className="text-caption text-ink-700">
-                      {s.ownerName} · {s.city} · signed up {shortDate(s.createdAt)}
-                    </p>
-                    <p className="mt-1 text-body text-ink-900">
-                      Wants <b>{s.requestedPack.size} locks</b> · {money(s.requestedPack.unitPrice)} each ·{' '}
-                      <b>{money(s.requestedPack.totalPrice)}</b>
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <a
-                      className="btn-secondary py-1.5 text-caption"
-                      href={`https://wa.me/${whatsappNumber(s.phone)}`}
-                      target="_blank"
-                      rel="noopener"
-                    >
-                      <MessageCircle className="h-4 w-4" aria-hidden="true" /> WhatsApp
-                    </a>
-                    <a className="btn-secondary py-1.5 text-caption" href={`tel:${s.phone}`}>
-                      <Phone className="h-4 w-4" aria-hidden="true" /> Call
-                    </a>
-                    <button
-                      type="button"
-                      className="btn-primary py-1.5 text-caption"
-                      disabled={issuing !== null}
-                      onClick={() => issue(s)}
-                    >
-                      <KeyRound className="h-4 w-4" aria-hidden="true" />
-                      {issuing === s.dealerId ? 'Issuing…' : `Paid — issue ${s.requestedPack.size} locks`}
-                    </button>
-                  </div>
+            <ul className="divide-y divide-paper-300">
+              {lowShops.map((s) => (
+                <li key={s.dealerId} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <AlertTriangle
+                      className={`h-4 w-4 shrink-0 ${s.outOfLocks ? 'text-critical-600' : 'text-caution-600'}`}
+                      aria-hidden="true"
+                    />
+                    <span className="truncate font-bold text-ink-900">{s.name}</span>
+                    <span className="tabular text-caption font-bold text-ink-700">{s.available} locks left</span>
+                  </span>
+                  <span className="flex flex-wrap gap-2">
+                    <ContactButtons phone={s.phone} />
+                  </span>
                 </li>
               ))}
             </ul>
@@ -211,132 +448,100 @@ export const PlatformDashboardPage: React.FC = () => {
         </div>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Every shop, and how many locks it has left. */}
-        <Card className="lg:col-span-2" flush>
-          <div className="p-5 pb-3">
-            <CardHeader title="Shops" hint="Locks left, phones under management, and what each has paid" />
+      {failed && <RetryLine onRetry={load} />}
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Shops
+// ---------------------------------------------------------------------------
+
+export const PlatformShopsPage: React.FC = () => {
+  const { data, failed, load } = usePlatformOverview();
+  const openShop = useOpenShop();
+
+  return (
+    <div className="space-y-6">
+      <PageHeader eyebrow="Platform" title="Shops">
+        Every shop on the platform: locks left, phones under management and what it has paid. Open a shop to see its
+        dashboard exactly as the shop sees it.
+      </PageHeader>
+
+      <Card flush>
+        {!data ? (
+          <div className="p-5">
+            <Skeleton className="h-40" />
           </div>
-          {!data ? (
-            <div className="p-5 pt-0">
-              <Skeleton className="h-40" />
-            </div>
-          ) : data.shops.length === 0 ? (
-            <div className="p-5 pt-0">
-              <EmptyState icon={<Store className="h-6 w-6" aria-hidden="true" />} title="No shops yet" body="Shops appear here as soon as they register." />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-body">
-                <thead>
-                  <tr className="border-y-2 border-ink-900 bg-paper-200/60 text-micro font-extrabold uppercase tracking-[0.1em] text-ink-700">
-                    <th className="px-5 py-2.5">Shop</th>
-                    <th className="px-3 py-2.5 text-right">Locks left</th>
-                    <th className="px-3 py-2.5 text-right">Phones</th>
-                    <th className="px-3 py-2.5 text-right">Paid</th>
-                    <th className="px-5 py-2.5" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-paper-300">
-                  {data.shops.map((s) => (
-                    <tr key={s.dealerId} className="hover:bg-sun-100/60">
-                      <td className="px-5 py-3">
-                        <p className="font-bold text-ink-900">{s.name}</p>
-                        <p className="text-caption text-ink-500">
-                          {s.city} · {s.ownerName}
-                        </p>
-                      </td>
-                      <td className="px-3 py-3 text-right tabular">
-                        <span className={s.outOfLocks ? 'font-bold text-critical-700' : s.runningLow ? 'font-bold text-caution-700' : 'text-ink-900'}>
-                          {s.available}
-                        </span>
-                        {s.requestedPack && s.packsBought === 0 && (
-                          <span className="ml-2 status-pill status-pending">unpaid</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-3 text-right tabular text-ink-900">
-                        {s.devices.total}
-                        {s.devices.locked > 0 && <span className="ml-1 text-caption text-critical-700">({s.devices.locked} locked)</span>}
-                      </td>
-                      <td className="px-3 py-3 text-right tabular text-ink-900">{money(s.billed)}</td>
-                      <td className="px-5 py-3 text-right">
-                        <button
-                          type="button"
-                          className="btn-ghost px-2 py-1 text-caption"
-                          onClick={() => {
-                            setSelectedDealerId(s.dealerId);
-                            window.scrollTo(0, 0);
-                          }}
-                          aria-label={`Open ${s.name}`}
-                        >
-                          Open <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
-
-        <div className="space-y-6">
-          {/* Shops about to be unable to sell. */}
-          <Card>
-            <CardHeader title="Running out" hint="Five locks or fewer left" />
-            <div className="mt-3">
-              {!data ? (
-                <Skeleton className="h-16" />
-              ) : watchList.length === 0 ? (
-                <p className="text-body text-ink-500">Every paying shop has locks to spare.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {watchList.map((s) => (
-                    <li key={s.dealerId} className="flex items-center justify-between gap-2">
-                      <span className="flex min-w-0 items-center gap-2">
-                        <AlertTriangle className={`h-4 w-4 shrink-0 ${s.outOfLocks ? 'text-critical-600' : 'text-caution-600'}`} aria-hidden="true" />
-                        <span className="truncate font-semibold text-ink-900">{s.name}</span>
+        ) : data.shops.length === 0 ? (
+          <div className="p-5">
+            <EmptyState icon={<Store className="h-6 w-6" aria-hidden="true" />} title="No shops yet" body="Shops appear here as soon as they register." />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-body">
+              <thead>
+                <tr className="border-b-2 border-ink-900 bg-paper-200/60 text-micro font-extrabold uppercase tracking-[0.1em] text-ink-700">
+                  <th className="px-5 py-3">Shop</th>
+                  <th className="px-3 py-3 text-right">Locks left</th>
+                  <th className="px-3 py-3 text-right">Phones</th>
+                  <th className="px-3 py-3 text-right">Paid</th>
+                  <th className="px-5 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-paper-300">
+                {data.shops.map((s) => (
+                  <tr key={s.dealerId} className="hover:bg-sun-100/60">
+                    <td className="px-5 py-3">
+                      <p className="font-bold text-ink-900">{s.name}</p>
+                      <p className="text-caption text-ink-500">
+                        {s.city} · {s.ownerName} · {s.phone}
+                      </p>
+                    </td>
+                    <td className="px-3 py-3 text-right tabular">
+                      <span className={s.outOfLocks ? 'font-bold text-critical-700' : s.runningLow ? 'font-bold text-caution-700' : 'text-ink-900'}>
+                        {s.available}
                       </span>
-                      <span className="tabular text-caption font-bold text-ink-700">{s.available} left</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </Card>
+                      {s.requestedPack && s.packsBought === 0 && <span className="ml-2 status-pill status-pending">unpaid</span>}
+                    </td>
+                    <td className="px-3 py-3 text-right tabular text-ink-900">
+                      {s.devices.total}
+                      {s.devices.locked > 0 && <span className="ml-1 text-caption text-critical-700">({s.devices.locked} locked)</span>}
+                    </td>
+                    <td className="px-3 py-3 text-right tabular text-ink-900">{money(s.billed)}</td>
+                    <td className="px-5 py-3">
+                      <span className="flex justify-end gap-2">
+                        <a
+                          className="btn-ghost px-2 py-1 text-caption"
+                          href={`https://wa.me/${whatsappNumber(s.phone)}`}
+                          target="_blank"
+                          rel="noopener"
+                          aria-label={`WhatsApp ${s.name}`}
+                        >
+                          <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                        </a>
+                        <button type="button" className="btn-secondary py-1 text-caption" onClick={() => openShop(s.dealerId)}>
+                          Open shop <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                        </button>
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
 
-          {/* Every phone on the platform, and the ones that went quiet. */}
-          <Card>
-            <CardHeader title="Phones" hint="Every handset across all shops" />
-            <div className="mt-3 space-y-2">
-              {FLEET_ROWS.map((r) => (
-                <div key={r.key} className="flex items-center justify-between text-body">
-                  <span className="flex items-center gap-2 text-ink-700">
-                    <span className={`h-2.5 w-2.5 rounded-full ${r.dot}`} aria-hidden="true" />
-                    {r.label}
-                  </span>
-                  <span className="tabular font-bold text-ink-900">{data?.fleet.byStatus[r.key] ?? 0}</span>
-                </div>
-              ))}
-              <p className="border-t-2 border-dashed border-paper-400 pt-2 text-caption text-ink-500">{fleetTotal} phones in total</p>
-              {data && data.fleet.stale > 0 && (
-                <p className="flex items-center gap-2 rounded-md border-2 border-ink-900 bg-critical-50 px-3 py-2 text-caption font-semibold text-critical-700">
-                  <WifiOff className="h-4 w-4 shrink-0" aria-hidden="true" />
-                  {data.fleet.stale} managed phones have not checked in for {data.fleet.staleAfterDays}+ days
-                </p>
-              )}
-            </div>
-          </Card>
-        </div>
-      </div>
-
-      {failed && (
-        <p className="text-center text-caption text-ink-500">
-          <button type="button" className="underline" onClick={load}>
-            Try again
-          </button>
+      {data && data.fleet.stale > 0 && (
+        <p className="flex items-center gap-2 rounded-md border-2 border-ink-900 bg-critical-50 px-3 py-2 text-caption font-semibold text-critical-700">
+          <Clock className="h-4 w-4 shrink-0" aria-hidden="true" />
+          {data.fleet.stale} managed phones have not checked in for {data.fleet.staleAfterDays}+ days. Open their shop to
+          see which.
         </p>
       )}
+
+      {failed && <RetryLine onRetry={load} />}
     </div>
   );
 };

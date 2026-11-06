@@ -10,7 +10,7 @@ import { LoginPage } from './pages/LoginPage.js';
 import { RegisterPage } from './pages/RegisterPage.js';
 import { ChangePasswordPage } from './pages/ChangePasswordPage.js';
 import { DashboardPage } from './pages/DashboardPage.js';
-import { PlatformDashboardPage } from './pages/PlatformDashboardPage.js';
+import { PlatformDashboardPage, PlatformOrdersPage, PlatformShopsPage } from './pages/PlatformDashboardPage.js';
 import { useAuth } from './context/AuthContext.js';
 
 /**
@@ -23,7 +23,8 @@ const HomePage: React.FC = () => {
   if (!selectedDealerId) return <PlatformDashboardPage />;
   return (
     <div className="space-y-4">
-      <button type="button" className="btn-secondary py-1.5 text-caption" onClick={() => setSelectedDealerId(undefined)}>
+      {/* On a phone there is no sidebar, so the way back to the platform is here. */}
+      <button type="button" className="btn-secondary py-1.5 text-caption lg:hidden" onClick={() => setSelectedDealerId(undefined)}>
         ← Back to platform
       </button>
       <DashboardPage />
@@ -94,6 +95,8 @@ export function App() {
               <Route path="/transactions" element={<RequireRole roles={[...STAFF]}><TransactionsPage /></RequireRole>} />
               <Route path="/notifications" element={<RequireRole roles={[...ALL]}><NotificationsPage /></RequireRole>} />
 
+              <Route path="/orders" element={<RequireRole roles={["SUPER_ADMIN"]}><PlatformOrdersPage /></RequireRole>} />
+              <Route path="/shops" element={<RequireRole roles={["SUPER_ADMIN"]}><PlatformShopsPage /></RequireRole>} />
               <Route path="/simulator" element={<RequireRole roles={["SUPER_ADMIN"]}><SimulatorPage /></RequireRole>} />
               <Route path="/enrollment" element={<RequireRole roles={[...STAFF]}><EnrollmentPage /></RequireRole>} />
 

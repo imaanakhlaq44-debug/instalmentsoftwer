@@ -80,7 +80,7 @@ export const Navbar: React.FC = () => {
   const activeDealerLabel = isSuperAdmin
     ? selectedDealerId
       ? dealers.find((d) => d.id === selectedDealerId)?.name ?? selectedDealerId
-      : 'All dealers'
+      : 'All shops'
     : dealer?.name ?? '—';
 
   const menuItem =
@@ -129,12 +129,14 @@ export const Navbar: React.FC = () => {
 
               {showDealerMenu && (
                 <div className="absolute right-0 z-50 mt-1.5 max-h-80 w-72 overflow-y-auto rounded-lg border-2 border-ink-900 bg-paper-50 py-1 shadow-overlay">
-                  <p className="eyebrow px-3 py-1.5">View dealership</p>
+                  <p className="eyebrow px-3 py-1.5">Open a shop</p>
                   <button
                     type="button"
                     onClick={() => {
                       setSelectedDealerId(undefined);
                       setShowDealerMenu(false);
+                      // Platform and shop have different menus: start each at its home.
+                      navigate('/');
                     }}
                     className={menuItem}
                   >
@@ -142,7 +144,7 @@ export const Navbar: React.FC = () => {
                       className={`h-3.5 w-3.5 ${selectedDealerId ? 'invisible' : 'text-accent-700'}`}
                       aria-hidden="true"
                     />
-                    All dealers
+                    All shops (platform)
                   </button>
                   {dealers.map((d) => (
                     <button
@@ -151,6 +153,7 @@ export const Navbar: React.FC = () => {
                       onClick={() => {
                         setSelectedDealerId(d.id);
                         setShowDealerMenu(false);
+                        navigate('/');
                       }}
                       className={menuItem}
                     >
@@ -173,19 +176,22 @@ export const Navbar: React.FC = () => {
 
           <LanguageToggle />
 
-          <button
-            type="button"
-            onClick={() => navigate('/notifications')}
-            className="btn-ghost relative h-9 w-9 rounded-md p-0"
-            aria-label={unreadCount > 0 ? `${unreadCount} pending notifications` : 'Notifications'}
-          >
-            <Bell className="h-4 w-4" aria-hidden="true" />
-            {unreadCount > 0 && (
-              <span className="absolute right-1 top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-critical-600 px-1 text-micro font-medium tabular text-white ring-2 ring-paper-100">
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </span>
+          {/* A shop's customer messages; the platform view has none of its own. */}
+          {!(isSuperAdmin && !selectedDealerId) && (
+            <button
+              type="button"
+              onClick={() => navigate('/notifications')}
+              className="btn-ghost relative h-9 w-9 rounded-md p-0"
+              aria-label={unreadCount > 0 ? `${unreadCount} pending notifications` : 'Notifications'}
+            >
+              <Bell className="h-4 w-4" aria-hidden="true" />
+              {unreadCount > 0 && (
+                <span className="absolute right-1 top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-critical-600 px-1 text-micro font-medium tabular text-white ring-2 ring-paper-100">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </button>
             )}
-          </button>
 
           {/* Profile menu — the old role switcher lived here. It rewrote the
               user's role in the database, letting anyone become super admin. */}
