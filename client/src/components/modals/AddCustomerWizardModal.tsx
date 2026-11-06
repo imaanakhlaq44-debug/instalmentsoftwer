@@ -11,8 +11,12 @@ import {
   ArrowRight,
   ArrowLeft,
   Copy,
-  ExternalLink,
   ShieldCheck,
+  Maximize2,
+  Wifi,
+  Hand,
+  RotateCcw,
+  AlertTriangle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PHONE_BRANDS } from '../../utils/brands.js';
@@ -30,6 +34,8 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [createdResult, setCreatedResult] = useState<any>(null);
+  // An older phone cannot read a small QR off a laptop screen.
+  const [qrFull, setQrFull] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -557,58 +563,127 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
           )}
 
           {step === 5 && createdResult?.enrollmentToken && (
-            <div className="space-y-5 text-center py-2">
-              <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-
-              <div>
-                <h3 className="text-base font-bold text-slate-900">Device Ready for Enrollment</h3>
+            <div className="space-y-5">
+              <div className="text-center">
+                <h3 className="text-lg font-extrabold text-slate-900">Scan this QR on the customer's phone</h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  Scan this QR code during initial Android device setup or test immediately in the simulator.
+                  {formData.brand} {formData.model} for {formData.customerName}. Valid for 1 hour, this phone only.
                 </p>
               </div>
 
-              {/* QR Code Container */}
-              <div className="p-6 bg-slate-900 text-white rounded-3xl max-w-xs mx-auto shadow-xl space-y-4">
-                <div className="bg-white p-4 rounded-2xl mx-auto inline-block">
-                  <QrCode className="w-40 h-40 text-slate-900" />
+              <div className="grid gap-5 sm:grid-cols-[auto,1fr] items-center">
+                {/* The real code: the server renders it, the dashboard never draws one */}
+                <div className="mx-auto">
+                  {createdResult.qrImageDataUrl ? (
+                    <button
+                      type="button"
+                      onClick={() => setQrFull(true)}
+                      title="Show full screen"
+                      className="block rounded-2xl border-2 border-slate-900 bg-white p-2 shadow-[4px_4px_0_#0f172a] hover:-translate-y-0.5 transition-transform"
+                    >
+                      <img
+                        src={createdResult.qrImageDataUrl}
+                        alt="QR code to scan on the new phone"
+                        className="w-56 h-56 [image-rendering:pixelated]"
+                      />
+                    </button>
+                  ) : (
+                    <div className="w-56 h-56 rounded-2xl border-2 border-dashed border-slate-300 grid place-items-center text-xs text-slate-500 p-4 text-center">
+                      Open the QR Enrollment page to show this phone's QR.
+                    </div>
+                  )}
                 </div>
 
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                    Enrollment Token Code
-                  </span>
-                  <div className="font-mono text-xs font-bold text-emerald-400 bg-slate-800/90 py-1.5 px-3 rounded-lg mt-1 break-all flex items-center justify-center gap-2">
-                    <span>{createdResult.enrollmentToken?.token}</span>
-                    <button onClick={copyTokenToClipboard} title="Copy Token">
-                      <Copy className="w-3.5 h-3.5 text-slate-300 hover:text-white" />
-                    </button>
-                  </div>
-                </div>
+                <ol className="space-y-3 text-sm">
+                  <li className="flex gap-3">
+                    <span className="w-8 h-8 shrink-0 rounded-full bg-blue-50 text-blue-700 grid place-items-center"><RotateCcw className="w-4 h-4" /></span>
+                    <span><strong className="block text-slate-900">Factory reset the phone</strong><span className="text-xs text-slate-500">Stop on the first Welcome screen.</span></span>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="w-8 h-8 shrink-0 rounded-full bg-blue-50 text-blue-700 grid place-items-center"><Hand className="w-4 h-4" /></span>
+                    <span><strong className="block text-slate-900">Tap 6 times on one blank spot</strong><span className="text-xs text-slate-500">Away from the Start button. A QR scanner opens.</span></span>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="w-8 h-8 shrink-0 rounded-full bg-blue-50 text-blue-700 grid place-items-center"><Wifi className="w-4 h-4" /></span>
+                    <span><strong className="block text-slate-900">Connect Wi-Fi, then scan</strong><span className="text-xs text-slate-500">Show the QR full screen, brightness up, phone 20 to 30 cm away.</span></span>
+                  </li>
+                </ol>
               </div>
 
-              {/* Actions */}
-              <div className="flex items-center justify-center gap-3 pt-2">
+              {createdResult.qrProvisioningReady === false && (
+                <div className="flex gap-2 p-3 rounded-xl border border-rose-200 bg-rose-50 text-xs text-rose-800">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>The app download is not set up on this server, so this QR cannot install the app yet.</span>
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5">
+                {createdResult.qrImageDataUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setQrFull(true)}
+                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 shadow-md shadow-blue-600/30"
+                  >
+                    <Maximize2 className="w-4 h-4" /> Show QR full screen
+                  </button>
+                )}
                 <button
+                  type="button"
                   onClick={() => {
                     onSuccess();
-                    navigate(`/simulator?deviceId=${createdResult.device?.id}`);
+                    navigate(`/enrollment?device=${createdResult.device?.id}`);
                   }}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl flex items-center gap-2 shadow-lg shadow-indigo-600/30"
+                  className="px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 text-sm font-bold rounded-xl"
                 >
-                  <ExternalLink className="w-3.5 h-3.5" /> Test in Phone Simulator
+                  Open QR page
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     onSuccess();
                     onClose();
                   }}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl"
+                  className="px-4 py-2.5 text-slate-600 hover:text-slate-900 text-sm font-semibold rounded-xl"
                 >
-                  Done & View Dashboard
+                  Done
                 </button>
               </div>
+
+              <button
+                type="button"
+                onClick={copyTokenToClipboard}
+                className="mx-auto flex items-center gap-2 text-[11px] font-mono text-slate-500 hover:text-slate-800"
+                title="Copy the code, for typing in by hand"
+              >
+                Code: {createdResult.enrollmentToken?.token} <Copy className="w-3.5 h-3.5" />
+              </button>
+
+              {qrFull && createdResult.qrImageDataUrl && (
+                <div
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="QR code, full screen"
+                  className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-white p-4"
+                  onClick={() => setQrFull(false)}
+                >
+                  <img
+                    src={createdResult.qrImageDataUrl}
+                    alt="QR code to scan on the new phone"
+                    className="aspect-square w-[min(92vw,82vh)] [image-rendering:pixelated]"
+                  />
+                  <p className="text-center text-sm font-bold text-slate-900">
+                    Brightness up. Hold the phone 20 to 30 cm away, straight on. Tap anywhere to close.
+                  </p>
+                  <button
+                    type="button"
+                    className="absolute right-4 top-4 rounded-full border-2 border-slate-900 bg-white p-2"
+                    aria-label="Close full screen QR"
+                    onClick={() => setQrFull(false)}
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
