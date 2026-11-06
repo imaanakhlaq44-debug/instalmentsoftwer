@@ -1,325 +1,447 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Copy,
+  Hand,
+  Loader2,
+  QrCode,
+  RefreshCw,
+  ScanLine,
+  Smartphone,
+  Wifi,
+} from 'lucide-react';
 import { ApiService } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.js';
 import { Pagination } from '../components/ui/Pagination.js';
 import { usePagination } from '../hooks/usePagination.js';
+import { Card, CardHeader, EmptyState, Skeleton } from '../components/ui/Card.js';
 
-import {
-  QrCode,
-  Smartphone,
-  Copy,
-  RefreshCw,
-  Clock,
-  ShieldCheck,
-  CheckCircle2,
-  AlertCircle,
-  ExternalLink,
-  PlusCircle,
-  X,
-} from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { QRType } from '../types/index.js';
+/**
+ * Connect a phone.
+ *
+ * The counter flow is: pick the phone the customer is buying, show its QR,
+ * scan it on the new handset. The QR is always issued for one particular
+ * device, because a handset provisioned from a QR that names no device has
+ * nothing to attach to and the server refuses it. The page used to offer four
+ * "profiles" that differed only in their label; they are gone.
+ */
+
+interface AwaitingDevice {
+  id: string;
+  dealerId?: string;
+  brand: string;
+  model: string;
+  imei?: string;
+  maskedImei?: string;
+  customerName: string;
+  customerPhone?: string;
+  createdAt?: string;
+}
+
+interface ActiveQr {
+  deviceId: string;
+  token: string;
+  expiresAt: string;
+  image?: string;
+  ready: boolean;
+  warning?: string;
+}
+
+/** "1h 59m", "12m", "expired" — counting down to the code's expiry. */
+export function timeLeft(expiresAt: string, now: number): string {
+  const ms = new Date(expiresAt).getTime() - now;
+  if (!Number.isFinite(ms) || ms <= 0) return 'expired';
+  const mins = Math.ceil(ms / 60000);
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+const imeiTail = (d: AwaitingDevice) => {
+  const raw = d.imei || d.maskedImei || '';
+  const digits = raw.replace(/\D/g, '');
+  return digits ? `IMEI …${digits.slice(-4)}` : '';
+};
+
+const STEPS = [
+  {
+    icon: Smartphone,
+    title: 'Switch on the new phone',
+    body: 'It must be brand new or factory reset. Stop on the first "Welcome" screen.',
+  },
+  {
+    icon: Hand,
+    title: 'Tap the screen 6 times',
+    body: 'Tap any empty part of the Welcome screen six times quickly. A QR scanner opens.',
+  },
+  {
+    icon: Wifi,
+    title: 'Connect to Wi-Fi',
+    body: 'Use the shop Wi-Fi, or turn on a hotspot from another phone. Needed for about 2 minutes.',
+  },
+  {
+    icon: ScanLine,
+    title: 'Scan this QR',
+    body: 'The phone downloads the Almas SDM app, checks it, and joins your shop by itself.',
+  },
+  {
+    icon: CheckCircle2,
+    title: 'Finish setup with the customer',
+    body: 'The phone shows as Active on your dashboard. One lock is used for this phone.',
+  },
+];
 
 export const EnrollmentPage: React.FC = () => {
   const { selectedDealerId, showToast } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
 
-  const [tokens, setTokens] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeQrType, setActiveQrType] = useState<QRType>('STANDARD');
-  const [activeGeneratedToken, setActiveGeneratedToken] = useState<any | null>(null);
+  const [awaiting, setAwaiting] = useState<AwaitingDevice[] | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(params.get('device'));
+  const [qr, setQr] = useState<ActiveQr | null>(null);
   const [generating, setGenerating] = useState(false);
-  /** The rendered provisioning QR, and whether it can actually provision a phone. */
-  const [activeQr, setActiveQr] = useState<{ image?: string; ready: boolean; warning?: string } | null>(null);
+  const [tokens, setTokens] = useState<any[]>([]);
+  const [loadingTokens, setLoadingTokens] = useState(true);
+  const [now, setNow] = useState(() => Date.now());
 
   const paged = usePagination([selectedDealerId]);
 
-  const qrCategories: { type: QRType; title: string; desc: string; badge: string }[] = [
-    {
-      type: 'STANDARD',
-      title: 'Standard Enrollment QR',
-      desc: 'Default Android Enterprise DPC zero-touch & 6-tap provisioning bundle.',
-      badge: 'Recommended',
-    },
-    {
-      type: 'PRO',
-      title: 'Advanced / Pro Enrollment QR',
-      desc: 'Hardened Knox Guard & OEM security policy wrapper with offline enforcement.',
-      badge: 'High Security',
-    },
-    {
-      type: 'LEGACY',
-      title: 'Legacy Enrollment QR',
-      desc: 'Universal compatibility profile for older Android 10-12 devices.',
-      badge: 'Compatibility',
-    },
-    {
-      type: 'QC',
-      title: 'Quality Check QR',
-      desc: 'Bench-testing and diagnostic verification profile prior to customer handover.',
-      badge: 'Testing',
-    },
-  ];
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
 
-  const loadTokens = async () => {
+  const loadAwaiting = useCallback(async () => {
     try {
-      setLoading(true);
-      const res = await ApiService.getEnrollmentTokens({ dealerId: selectedDealerId, ...paged.params });
-      const data = res.data;
-      paged.setPagination(res.pagination);
-      setTokens(data);
-      if (data.length > 0 && !activeGeneratedToken) {
-        setActiveGeneratedToken(data[0]);
-      }
+      const res = await ApiService.getDevices({ dealerId: selectedDealerId, status: 'PENDING', limit: 50 });
+      setAwaiting(res.data ?? []);
     } catch (err: any) {
-      showToast(err.message, 'error');
-    } finally {
-      setLoading(false);
+      setAwaiting([]);
+      showToast(err?.message || 'Could not load phones waiting for a QR', 'error');
     }
-  };
+  }, [selectedDealerId, showToast]);
+
+  const loadTokens = useCallback(async () => {
+    try {
+      setLoadingTokens(true);
+      const res = await ApiService.getEnrollmentTokens({ dealerId: selectedDealerId, ...paged.params });
+      paged.setPagination(res.pagination);
+      setTokens(res.data ?? []);
+    } catch (err: any) {
+      showToast(err?.message || 'Could not load recent QR codes', 'error');
+    } finally {
+      setLoadingTokens(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDealerId, paged.page, paged.limit, showToast]);
+
+  useEffect(() => {
+    loadAwaiting();
+  }, [loadAwaiting]);
 
   useEffect(() => {
     loadTokens();
+  }, [loadTokens]);
+
+  const generate = useCallback(
+    async (deviceId: string) => {
+      try {
+        setGenerating(true);
+        setSelectedId(deviceId);
+        // A super admin looking at every shop issues the QR in the phone's own shop.
+        const owner = awaiting?.find((d) => d.id === deviceId)?.dealerId;
+        const res = await ApiService.generateEnrollmentToken({
+          dealerId: selectedDealerId ?? owner,
+          deviceId,
+          qrType: 'STANDARD',
+          expiresInMinutes: 120,
+        });
+        setQr({
+          deviceId,
+          token: res.token.token,
+          expiresAt: res.token.expiresAt,
+          image: res.qrImageDataUrl,
+          ready: res.qrProvisioningReady !== false,
+          warning: res.qrWarning,
+        });
+        loadTokens();
+      } catch (err: any) {
+        showToast(err?.message || 'Could not create the QR', 'error');
+      } finally {
+        setGenerating(false);
+      }
+    },
+    [selectedDealerId, awaiting, showToast, loadTokens]
+  );
+
+  // Arriving from a device's page (?device=…) opens its QR straight away.
+  useEffect(() => {
+    const fromLink = params.get('device');
+    if (fromLink && !qr && !generating) generate(fromLink);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDealerId, paged.page, paged.limit]);
+  }, []);
 
-  const handleGenerateNewQR = async (type: QRType) => {
-    try {
-      setGenerating(true);
-      setActiveQrType(type);
-      const res = await ApiService.generateEnrollmentToken({
-        dealerId: selectedDealerId,
-        qrType: type,
-        expiresInMinutes: 120,
-      });
-      setActiveGeneratedToken(res.token);
-      setActiveQr({
-        image: res.qrImageDataUrl,
-        ready: res.qrProvisioningReady !== false,
-        warning: res.qrWarning,
-      });
-      showToast(`Generated new ${type} Enrollment QR token!`, 'success');
-      loadTokens();
-    } catch (err: any) {
-      showToast(err.message, 'error');
-    } finally {
-      setGenerating(false);
-    }
+  const selected = useMemo(
+    () => awaiting?.find((d) => d.id === (qr?.deviceId ?? selectedId)) ?? null,
+    [awaiting, qr, selectedId]
+  );
+
+  const copy = (text: string) => {
+    navigator.clipboard?.writeText(text);
+    showToast('Code copied', 'info');
   };
 
-  const copyToken = (tokStr: string) => {
-    navigator.clipboard.writeText(tokStr);
-    showToast('Enrollment code copied to clipboard!', 'info');
-  };
+  const expired = qr ? timeLeft(qr.expiresAt, now) === 'expired' : false;
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-            QR Provisioning & Device Enrollment
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Generate single-use expirable QR codes for standard and advanced mobile device enrollment.
+          <p className="eyebrow">QR enrollment</p>
+          <h1 className="mt-1 text-display text-ink-900">Connect a new phone</h1>
+          <p className="mt-1 max-w-xl text-body text-ink-500">
+            Choose the phone the customer is buying, then scan its QR on the handset. Takes about 3 minutes.
           </p>
         </div>
-
-        <button
-          onClick={() => handleGenerateNewQR(activeQrType)}
-          disabled={generating}
-          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-blue-600/30 transition-all self-start sm:self-auto"
-        >
-          <RefreshCw className={`w-4 h-4 ${generating ? 'animate-spin' : ''}`} />
-          <span>{generating ? 'Generating...' : 'Regenerate QR Token'}</span>
+        <button type="button" className="btn-secondary self-start" onClick={() => navigate('/')}>
+          + New financed sale
         </button>
-      </div>
+      </header>
 
-      {/* QR Profile Shortcuts Selector */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {qrCategories.map((c) => (
-          <div
-            key={c.type}
-            onClick={() => handleGenerateNewQR(c.type)}
-            className={`p-5 rounded-3xl border transition-all cursor-pointer group ${
-              activeQrType === c.type
-                ? 'bg-navy-950 text-white border-slate-800 shadow-xl shadow-navy-950/10 ring-2 ring-blue-500'
-                : 'bg-white text-slate-800 border-slate-200/80 hover:border-slate-300 shadow-card'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span
-                className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
-                  activeQrType === c.type
-                    ? 'bg-blue-500/20 text-blue-300 border border-blue-400/30'
-                    : 'bg-slate-100 text-slate-600'
-                }`}
-              >
-                {c.badge}
-              </span>
-              <QrCode
-                className={`w-5 h-5 ${
-                  activeQrType === c.type ? 'text-blue-400' : 'text-slate-400 group-hover:text-blue-600'
-                }`}
-              />
-            </div>
-            <h2 className="text-sm font-extrabold mt-3">{c.title}</h2>
-            <p
-              className={`text-xs mt-1 leading-relaxed ${
-                activeQrType === c.type ? 'text-slate-300' : 'text-slate-500'
-              }`}
-            >
-              {c.desc}
-            </p>
+      <div className="grid gap-6 lg:grid-cols-5">
+        {/* Step 1: which phone */}
+        <Card className="lg:col-span-2" flush>
+          <div className="p-5 pb-3">
+            <CardHeader title="1. Choose the phone" hint="Phones registered for a sale and not yet connected" />
           </div>
-        ))}
-      </div>
+          <div className="max-h-[32rem] overflow-y-auto px-3 pb-4">
+            {awaiting === null ? (
+              <div className="space-y-2 px-2">
+                <Skeleton className="h-16" />
+                <Skeleton className="h-16" />
+              </div>
+            ) : awaiting.length === 0 ? (
+              <EmptyState
+                icon={<Smartphone className="h-6 w-6" aria-hidden="true" />}
+                title="No phone is waiting"
+                body="Register the sale first (New financed sale). The phone then appears here, ready for its QR."
+              />
+            ) : (
+              <ul className="space-y-2">
+                {awaiting.map((d) => {
+                  const active = d.id === (qr?.deviceId ?? selectedId);
+                  return (
+                    <li key={d.id}>
+                      <button
+                        type="button"
+                        onClick={() => generate(d.id)}
+                        disabled={generating}
+                        aria-pressed={active}
+                        className={`flex w-full items-center gap-3 rounded-md border-2 px-3 py-3 text-left transition ${
+                          active
+                            ? 'border-ink-900 bg-sun-400 shadow-[3px_3px_0_#0F1419]'
+                            : 'border-transparent hover:border-ink-900 hover:bg-sun-100'
+                        }`}
+                      >
+                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md border-2 border-ink-900 bg-white">
+                          <Smartphone className="h-5 w-5 text-ink-900" aria-hidden="true" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-extrabold text-ink-900">
+                            {d.brand} {d.model}
+                          </span>
+                          <span className="block truncate text-caption text-ink-700">
+                            {d.customerName}
+                            {imeiTail(d) ? ` · ${imeiTail(d)}` : ''}
+                          </span>
+                        </span>
+                        <QrCode className={`h-5 w-5 shrink-0 ${active ? 'text-ink-900' : 'text-ink-400'}`} aria-hidden="true" />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </Card>
 
-      {/* Active QR Display & Instructions Card */}
-      {activeGeneratedToken && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-card items-center">
-          {/* Left: Visual QR Box */}
-          <div className="lg:col-span-5 flex flex-col items-center justify-center p-6 bg-slate-950 text-white rounded-3xl shadow-xl space-y-4 text-center">
-            <div className="bg-white p-4 rounded-2xl shadow-md">
-              {activeQr?.image ? (
-                <img
-                  src={activeQr.image}
-                  alt="Android provisioning QR code"
-                  className="w-48 h-48"
-                />
-              ) : (
-                <QrCode className="w-48 h-48 text-slate-900" />
+        {/* Step 2: the QR and how to use it */}
+        <Card className="lg:col-span-3">
+          <CardHeader
+            title="2. Scan it on the phone"
+            hint={selected ? `${selected.brand} ${selected.model} for ${selected.customerName}` : 'Choose a phone to show its QR'}
+            action={
+              qr && (
+                <button
+                  type="button"
+                  className="btn-ghost px-2 py-1 text-caption"
+                  onClick={() => generate(qr.deviceId)}
+                  disabled={generating}
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${generating ? 'animate-spin' : ''}`} aria-hidden="true" /> New QR
+                </button>
+              )
+            }
+          />
+
+          <div className="mt-5 grid items-start gap-6 md:grid-cols-[auto,1fr]">
+            <div className="mx-auto w-full max-w-[18rem]">
+              <div className="relative grid aspect-square place-items-center rounded-lg border-2 border-ink-900 bg-white p-3 shadow-[5px_5px_0_#0F1419]">
+                {generating ? (
+                  <Loader2 className="h-10 w-10 animate-spin text-ink-400" aria-label="Creating QR" />
+                ) : qr?.image ? (
+                  <img
+                    src={qr.image}
+                    alt="QR code to scan on the new phone"
+                    className={`h-full w-full ${expired ? 'opacity-20' : ''}`}
+                  />
+                ) : (
+                  <div className="text-center text-ink-400">
+                    <QrCode className="mx-auto h-16 w-16" aria-hidden="true" />
+                    <p className="mt-2 text-caption">The QR appears here</p>
+                  </div>
+                )}
+                {expired && (
+                  <button
+                    type="button"
+                    className="btn-primary absolute"
+                    onClick={() => qr && generate(qr.deviceId)}
+                  >
+                    Expired, make a new QR
+                  </button>
+                )}
+              </div>
+
+              {qr && (
+                <div className="mt-4 space-y-2">
+                  <p className="flex items-center justify-center gap-1.5 text-caption font-bold text-ink-700">
+                    <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+                    {expired ? 'This QR has expired' : `Valid for ${timeLeft(qr.expiresAt, now)}, one phone only`}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => copy(qr.token)}
+                    className="flex w-full items-center justify-center gap-2 rounded-md border-2 border-dashed border-paper-400 bg-paper-50 px-3 py-2 font-mono text-caption text-ink-700 hover:border-ink-900"
+                    title="Copy the code, for typing in by hand"
+                  >
+                    {qr.token}
+                    <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                </div>
+              )}
+
+              {qr && !qr.ready && (
+                <div className="mt-3 flex gap-2 rounded-md border-2 border-critical-600 bg-critical-50 p-3 text-caption text-critical-700">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>
+                    <b>This QR cannot set up a new phone yet.</b> {qr.warning}
+                  </span>
+                </div>
               )}
             </div>
 
-            {activeQr && !activeQr.ready && (
-              <div className="text-[11px] text-left bg-amber-500/15 border border-amber-400/40 text-amber-200 rounded-xl p-3">
-                <strong className="block text-amber-100">This QR will not provision a new phone yet.</strong>
-                {activeQr.warning}
-              </div>
-            )}
-
-            <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
-                Single-Use Enrollment Token
-              </span>
-              <div className="font-mono text-xs font-bold text-emerald-400 bg-slate-800/90 py-2 px-3 rounded-xl mt-1 flex items-center justify-center gap-2">
-                <span>{activeGeneratedToken.token}</span>
-                <button onClick={() => copyToken(activeGeneratedToken.token)} title="Copy Code">
-                  <Copy className="w-3.5 h-3.5 text-slate-300 hover:text-white" />
-                </button>
-              </div>
-            </div>
-
-            <button
-              onClick={() => navigate(`/simulator`)}
-              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
-            >
-              <ExternalLink className="w-3.5 h-3.5" /> Test in Phone Simulator
-            </button>
+            <ol className="space-y-3">
+              {STEPS.map((s, i) => (
+                <li key={s.title} className="flex gap-3">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md border-2 border-ink-900 bg-sun-100 text-ink-900">
+                    <s.icon className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block font-extrabold text-ink-900">
+                      {i + 1}. {s.title}
+                    </span>
+                    <span className="block text-caption text-ink-700">{s.body}</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
           </div>
+        </Card>
+      </div>
 
-          {/* Right: Enrollment Details & Security Guide */}
-          <div className="lg:col-span-7 space-y-4">
-            <div>
-              <span className="text-xs uppercase font-bold text-blue-600 tracking-wider">
-                {activeGeneratedToken.qrType || activeQrType} Profile Ready
-              </span>
-              <h2 className="text-xl font-extrabold text-slate-900 mt-0.5">Android Device Provisioning Instructions</h2>
-              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                To link a newly unboxed phone to this dealer account, follow the standardized Android Enterprise enrollment workflow:
-              </p>
-            </div>
-
-            {/* Step list */}
-            <div className="space-y-3 text-xs">
-              <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-start gap-3">
-                <span className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0">1</span>
-                <div>
-                  <span className="font-bold text-slate-900">Power on New Phone & Tap Welcome Screen 6 Times</span>
-                  <p className="text-slate-500 text-[11px] mt-0.5">Tap anywhere on the initial setup welcome screen to activate the built-in Android QR code camera scanner.</p>
-                </div>
-              </div>
-
-              <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-start gap-3">
-                <span className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0">2</span>
-                <div>
-                  <span className="font-bold text-slate-900">Scan this QR Code</span>
-                  <p className="text-slate-500 text-[11px] mt-0.5">The phone will automatically download and install the official Almas SDM Device Policy Controller (DPC).</p>
-                </div>
-              </div>
-
-              <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-start gap-3">
-                <span className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0">3</span>
-                <div>
-                  <span className="font-bold text-slate-900">Hand Device to Financed Customer</span>
-                  <p className="text-slate-500 text-[11px] mt-0.5">Device status will automatically switch to <strong>ACTIVE</strong> in your dashboard once handshake completes.</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-2xl text-[11px] text-blue-800">
-              🔒 <strong>Security Guarantee:</strong> This token does not contain any plain-text retailer credentials or WiFi passwords. It expires automatically in 2 hours.
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* History of Generated Tokens */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-card overflow-hidden">
-        <div className="p-4 border-b border-slate-100 font-bold text-slate-900 text-xs">
-          Recent Enrollment Token History
+      {/* Recent codes */}
+      <Card flush>
+        <div className="p-5 pb-3">
+          <CardHeader title="Recent QR codes" hint="Each code works once, for the phone it was made for, for 2 hours" />
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left text-body">
             <thead>
-              <tr className="border-b bg-slate-50 text-slate-400 text-[10px] uppercase">
-                <th className="py-2.5 px-4">Token Code</th>
-                <th className="py-2.5 px-4">Type</th>
-                <th className="py-2.5 px-4">Assigned Phone / Customer</th>
-                <th className="py-2.5 px-4">Status</th>
-                <th className="py-2.5 px-4">Expires At</th>
-                <th className="py-2.5 px-4 text-right">Action</th>
+              <tr className="border-y-2 border-ink-900 bg-paper-200/60 text-micro font-extrabold uppercase tracking-[0.1em] text-ink-700">
+                <th className="px-5 py-2.5">Phone and customer</th>
+                <th className="px-3 py-2.5">Code</th>
+                <th className="px-3 py-2.5">Status</th>
+                <th className="px-3 py-2.5">Expires</th>
+                <th className="px-5 py-2.5" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {tokens.map((t) => (
-                <tr key={t.id} className="hover:bg-slate-50">
-                  <td className="py-3 px-4 font-mono font-bold text-slate-800">{t.token}</td>
-                  <td className="py-3 px-4 font-semibold text-slate-700">{t.qrType}</td>
-                  <td className="py-3 px-4 text-slate-600">{t.deviceInfo || 'Unassigned'}</td>
-                  <td className="py-3 px-4">
-                    <span
-                      className={`status-pill text-[10px] ${
-                        t.status === 'ENROLLED' ? 'status-active' : t.isExpired ? 'status-inactive' : 'status-pending'
-                      }`}
-                    >
-                      {t.status}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-slate-500 text-[11px]">{new Date(t.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                  <td className="py-3 px-4 text-right">
-                    <button
-                      onClick={() => copyToken(t.token)}
-                      className="p-1 text-slate-500 hover:text-blue-600 rounded"
-                      title="Copy Code"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                    </button>
+            <tbody className="divide-y divide-paper-300">
+              {loadingTokens && tokens.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-5 py-4">
+                    <Skeleton className="h-8" />
                   </td>
                 </tr>
-              ))}
+              ) : tokens.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-5 py-6 text-center text-caption text-ink-500">
+                    No QR codes yet.
+                  </td>
+                </tr>
+              ) : (
+                tokens.map((t) => (
+                  <tr key={t.id} className="hover:bg-sun-100/60">
+                    <td className="px-5 py-3">
+                      {t.deviceInfo && t.deviceInfo !== 'Unassigned' ? (
+                        <>
+                          <span className="block font-bold text-ink-900">{t.deviceInfo}</span>
+                          {t.customerName && t.customerName !== 'Unassigned' && (
+                            <span className="block text-caption text-ink-500">{t.customerName}</span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-ink-400">Not linked to a phone (cannot be used)</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-3 font-mono text-caption text-ink-700">{t.token ?? '—'}</td>
+                    <td className="px-3 py-3">
+                      <span
+                        className={`status-pill ${
+                          t.status === 'ENROLLED' ? 'status-active' : t.isExpired ? 'status-inactive' : 'status-pending'
+                        }`}
+                      >
+                        {t.status === 'ENROLLED' ? 'Connected' : t.isExpired ? 'Expired' : 'Waiting for scan'}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3 text-caption text-ink-500">
+                      {t.status === 'ENROLLED' || t.isExpired ? '—' : timeLeft(t.expiresAt, now)}
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      {t.token && (
+                        <button type="button" onClick={() => copy(t.token)} className="btn-ghost px-2 py-1" aria-label="Copy code">
+                          <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
           <Pagination
             pagination={paged.pagination}
             onPageChange={paged.setPage}
             onLimitChange={paged.setLimit}
-            itemLabel="enrollment codes"
-            disabled={loading}
+            itemLabel="QR codes"
+            disabled={loadingTokens}
           />
         </div>
-      </div>
+      </Card>
     </div>
   );
 };
+
+export default EnrollmentPage;
