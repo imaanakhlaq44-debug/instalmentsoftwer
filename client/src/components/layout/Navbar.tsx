@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.js';
 import { ApiService } from '../../services/api.js';
+import { LanguageToggle } from '../../i18n/LanguageContext.js';
 
 /**
  * The top bar: search, whose books you are looking at, what is waiting, who you
@@ -169,6 +170,8 @@ export const Navbar: React.FC = () => {
               )}
             </div>
           )}
+
+          <LanguageToggle />
 
           <button
             type="button"
