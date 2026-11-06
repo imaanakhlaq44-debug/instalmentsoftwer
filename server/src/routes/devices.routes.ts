@@ -363,6 +363,87 @@ devicesRouter.post(
   })
 );
 
+/**
+ * Re-enrol a phone that was wiped.
+ *
+ * A recovery-mode reset erases the lock app, and with Factory Reset
+ * Protection the phone then comes back to the shop. The server never hears
+ * about the wipe, so the record still says ACTIVE (or LOCKED), and an enrolled
+ * device is refused a new QR. This puts the record back to PENDING so the shop
+ * can show a fresh QR. Re-enrolment reuses the lock the phone already holds.
+ *
+ * The old installation's credentials are dropped: that copy of the app is gone,
+ * and nothing else should be able to check in as this phone.
+ */
+const reEnrollSchema = z.object({
+  reason: z.string().trim().min(5, 'Please give a reason of at least 5 characters.').max(500),
+});
+
+const RE_ENROLLABLE = ['ENROLLED', 'ACTIVE', 'OVERDUE', 'LOCK_PENDING', 'LOCKED', 'UNLOCK_PENDING'];
+
+devicesRouter.post(
+  '/:id/re-enroll',
+  requireDealerAdmin,
+  validateBody(reEnrollSchema),
+  asyncHandler(async (req, res) => {
+    const user = getAuthUser(req);
+    const device = await repo.devices.findById(routeParam(req, 'id'));
+    if (!device) throw AppError.notFound('Device');
+    assertDealerAccess(req, device.dealerId, 'device');
+
+    if (device.noLock) {
+      throw AppError.badRequest('This phone was sold without a lock, so it has no QR code.');
+    }
+    if (device.status === 'PENDING') {
+      throw AppError.badRequest('This phone is already waiting for its QR scan. Open the QR Enrollment page.');
+    }
+    if (!RE_ENROLLABLE.includes(device.status)) {
+      throw AppError.badRequest(`A ${device.status.toLowerCase()} device cannot be re-enrolled.`);
+    }
+
+    const reason = (req.body as z.infer<typeof reEnrollSchema>).reason;
+    const nowIso = new Date().toISOString();
+
+    const updated = await repo.devices.update(device.id, {
+      status: 'PENDING',
+      isOnline: false,
+      // A key set to undefined is cleared (see toUpdate).
+      pendingCommand: undefined,
+      pendingCommandAt: undefined,
+      offlineLockActive: false,
+      offlineLockSince: undefined,
+      authTokenHash: undefined,
+      authTokenIssuedAt: undefined,
+      updatedAt: nowIso,
+    });
+    if (!updated) throw AppError.notFound('Device');
+
+    await deviceManagementService.recordAction({
+      deviceId: device.id,
+      dealerId: device.dealerId,
+      userId: user.userId,
+      userName: user.name,
+      action: 'STATUS_CHANGE',
+      reason: `Set for re-enrolment (was ${device.status}) by ${user.name}. Reason: ${reason}`,
+      ipAddress: clientIp(req),
+    });
+
+    await AuditService.log({
+      dealerId: device.dealerId,
+      userId: user.userId,
+      actorName: user.name,
+      actorRole: user.role,
+      action: 'DEVICE_RE_ENROLL',
+      targetType: 'DEVICE',
+      targetId: device.id,
+      details: `${device.brand} ${device.model} was set back to PENDING for a new QR (was ${device.status}). Reason: ${reason}`,
+      ipAddress: clientIp(req),
+    });
+
+    res.json(sanitizeDevice(updated, user.role));
+  })
+);
+
 devicesRouter.get('/:id/actions', requireDealerStaff, asyncHandler(async (req, res) => {
   const device = await repo.devices.findById(routeParam(req, 'id'));
   if (!device) throw AppError.notFound('Device');
