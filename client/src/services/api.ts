@@ -185,6 +185,11 @@ export class ApiService {
     return this.request<any>(`/devices/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
   }
 
+  /** A wiped phone: back to PENDING so the shop can show a fresh QR. */
+  static reEnrollDevice(id: string, data: { reason: string }) {
+    return this.request<any>(`/devices/${id}/re-enroll`, { method: 'POST', body: JSON.stringify(data) });
+  }
+
   static correctImei(id: string, data: { imei: string; reason: string }) {
     return this.request<any>(`/devices/${id}/correct-imei`, { method: 'POST', body: JSON.stringify(data) });
   }

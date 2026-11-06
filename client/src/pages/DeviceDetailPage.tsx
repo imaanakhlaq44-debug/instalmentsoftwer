@@ -48,6 +48,8 @@ export const DeviceDetailPage: React.FC = () => {
   const [messageContent, setMessageContent] = useState('Please visit the shop or transfer installment via JazzCash.');
   const [actionProcessing, setActionProcessing] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showReEnrollModal, setShowReEnrollModal] = useState(false);
+  const [reEnrollReason, setReEnrollReason] = useState('Phone was factory reset from recovery mode');
   /** The signed consent this device's lock rests on, if it has one. */
   const [contract, setContract] = useState<any>(null);
 
@@ -107,6 +109,20 @@ export const DeviceDetailPage: React.FC = () => {
       showToast(res.message || 'Device unlocked', 'success');
       setShowUnlockModal(false);
       loadDeviceDetail();
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      setActionProcessing(false);
+    }
+  };
+
+  const handleReEnroll = async () => {
+    try {
+      setActionProcessing(true);
+      await ApiService.reEnrollDevice(device.id, { reason: reEnrollReason });
+      showToast('Ready for a new QR. Scan it on the reset phone.', 'success');
+      setShowReEnrollModal(false);
+      navigate(`/enrollment?device=${device.id}`);
     } catch (err: any) {
       showToast(err.message, 'error');
     } finally {
@@ -225,6 +241,16 @@ export const DeviceDetailPage: React.FC = () => {
               >
                 <Pencil className="w-4 h-4 text-amber-600" /> Edit Device
               </button>
+
+              {!device.noLock && !isPending && device.status !== 'INACTIVE' && device.status !== 'REMOVED' && (
+                <button
+                  onClick={() => setShowReEnrollModal(true)}
+                  title="The phone was factory reset and the app is gone"
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all"
+                >
+                  <RefreshCw className="w-4 h-4 text-blue-600" /> Re-enroll
+                </button>
+              )}
 
               <button
                 onClick={handleReboot}
@@ -642,6 +668,63 @@ export const DeviceDetailPage: React.FC = () => {
                 className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/30"
               >
                 {actionProcessing ? 'Authorizing...' : 'Confirm Unlock'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showReEnrollModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white p-6 rounded-3xl max-w-md w-full space-y-4 shadow-2xl border border-blue-100">
+            <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mx-auto">
+              <RefreshCw className="w-6 h-6" />
+            </div>
+
+            <div className="text-center">
+              <h3 className="text-base font-extrabold text-slate-900">Re-enroll this phone</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Use this when <strong>{device.brand} {device.model}</strong> was factory reset and the lock app is
+                gone. It gets a fresh QR on the same lock, so no new lock is used.
+              </p>
+            </div>
+
+            <ol className="text-[11px] text-slate-600 space-y-1 list-decimal pl-5">
+              <li>Factory reset the phone again and stop on the first Welcome screen.</li>
+              <li>Do not add a Google account or finish setup.</li>
+              <li>Tap 6 times, connect Wi-Fi and scan the new QR.</li>
+            </ol>
+
+            {isLocked && (
+              <p className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800">
+                This phone is locked now. It comes back unlocked, so lock it again after it connects if money is
+                still owed.
+              </p>
+            )}
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Reason</label>
+              <input
+                type="text"
+                value={reEnrollReason}
+                onChange={(e) => setReEnrollReason(e.target.value)}
+                className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => setShowReEnrollModal(false)}
+                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReEnroll}
+                disabled={actionProcessing || reEnrollReason.trim().length < 5}
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/30"
+              >
+                {actionProcessing ? 'Working...' : 'Re-enroll and show QR'}
               </button>
             </div>
           </div>
