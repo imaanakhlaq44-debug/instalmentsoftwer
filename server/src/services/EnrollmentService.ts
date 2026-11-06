@@ -128,25 +128,32 @@ export class EnrollmentService {
     token: EnrollmentToken,
     tx?: Tx
   ): Promise<{ payload: string; imageDataUrl: string; provisioningReady: boolean; warning?: string }> {
-    const dealer = await repo.dealers.findById(token.dealerId, tx);
     const dpc = config.dpc;
 
+    /**
+     * Every character makes the QR denser, and a dense QR shown on a laptop
+     * screen is one an older phone's setup scanner simply never reads: the
+     * camera opens and nothing happens. So the payload carries only what the
+     * phone needs: the component in its short form, the two extras the app
+     * reads (token and server), and a short download link on our own domain
+     * that redirects to the APK.
+     */
     const payload: Record<string, unknown> = {
-      'android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME': dpc.adminComponent,
+      'android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME': shortComponent(dpc.adminComponent),
       'android.app.extra.PROVISIONING_LEAVE_ALL_SYSTEM_APPS_ENABLED': dpc.leaveSystemAppsEnabled,
       'android.app.extra.PROVISIONING_SKIP_ENCRYPTION': dpc.skipEncryption,
       'android.app.extra.PROVISIONING_ADMIN_EXTRAS_BUNDLE': {
-        // Read by EmiDeviceAdminReceiver.onProfileProvisioningComplete.
+        // The only two keys AlmasDeviceAdminReceiver reads.
         enrollmentToken: token.token,
         serverUrl: dpc.serverUrl || `http://localhost:${config.port}/api/dpc`,
-        dealerCode: dealer?.code ?? token.dealerId,
-        qrType: token.qrType,
-        expiresAt: token.expiresAt,
       },
     };
 
     if (dpc.apkUrl) {
-      payload['android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION'] = dpc.apkUrl;
+      // GET /api/dpc/apk redirects to DPC_APK_URL; the setup wizard follows it.
+      payload['android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION'] = dpc.serverUrl
+        ? `${dpc.serverUrl.replace(/\/+$/, '')}/apk`
+        : dpc.apkUrl;
     }
     if (dpc.apkSignatureChecksum) {
       payload['android.app.extra.PROVISIONING_DEVICE_ADMIN_SIGNATURE_CHECKSUM'] = dpc.apkSignatureChecksum;
@@ -168,10 +175,14 @@ export class EnrollmentService {
        * be a real code — the dashboard used to draw a QR-shaped icon, which
        * looks identical in a screenshot and provisions nothing.
        */
+      // Low error correction keeps the code coarse enough for an older
+      // phone to read off a screen; a screen does not get dirty or torn, which
+      // is what the higher levels are for. A full quiet zone and a large
+      // bitmap keep it sharp when shown full screen.
       imageDataUrl: await QRCode.toDataURL(payloadString, {
-        errorCorrectionLevel: 'M',
-        margin: 2,
-        width: 512,
+        errorCorrectionLevel: 'L',
+        margin: 4,
+        width: 1024,
       }),
       provisioningReady: missing.length === 0,
       warning: missing.length
@@ -317,4 +328,17 @@ export class EnrollmentService {
       throw err;
     }
   }
+}
+
+/**
+ * 'pk.app/pk.app.admin.Receiver' to 'pk.app/.admin.Receiver'. Android expands a
+ * leading dot against the package (ComponentName.unflattenFromString), and the
+ * shorter form is a smaller QR.
+ */
+export function shortComponent(component: string): string {
+  const slash = component.indexOf('/');
+  if (slash < 0) return component;
+  const pkg = component.slice(0, slash);
+  const cls = component.slice(slash + 1);
+  return cls.startsWith(pkg + '.') ? `${pkg}/${cls.slice(pkg.length)}` : component;
 }

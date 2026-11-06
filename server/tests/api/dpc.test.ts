@@ -408,6 +408,26 @@ describe('the enrollment QR a factory-reset phone scans', () => {
     expect(extras.serverUrl).toEqual(expect.any(String));
   });
 
+  it('stays small enough for an older phone to scan off a screen', async () => {
+    const device = (await repo.devices.findFirst({ dealerId: 'dealer-1', status: 'PENDING' }))!;
+
+    const res = await as(ACCOUNTS.dealerStaff)
+      .post('/api/enrollment/generate')
+      .send({ deviceId: device.id, qrType: 'STANDARD' });
+
+    const payload = JSON.parse(res.body.qrPayloadString);
+    // Only what the phone reads; every extra character makes the code denser.
+    expect(Object.keys(payload['android.app.extra.PROVISIONING_ADMIN_EXTRAS_BUNDLE']).sort())
+      .toEqual(['enrollmentToken', 'serverUrl']);
+    expect(payload['android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME'])
+      .toBe('pk.almassdm.dpc/.admin.AlmasDeviceAdminReceiver');
+  });
+
+  it('has no app download to redirect to when none is configured', async () => {
+    const res = await anonymous().get('/api/dpc/apk');
+    expect(res.status).toBe(404);
+  });
+
   it('renders a real QR image rather than leaving the dashboard to draw one', async () => {
     const device = (await repo.devices.findFirst({ dealerId: 'dealer-1', status: 'PENDING' }))!;
 

@@ -1,3 +1,4 @@
+import { config } from '../config.js';
 import { Router } from 'express';
 import { z } from 'zod';
 
@@ -305,6 +306,19 @@ dpcRouter.post(
     res.json({ status: result.status, commandCleared: result.applied, message: result.message });
   })
 );
+
+// ---------------------------------------------------------------------------
+// APK — a short, stable download link for the provisioning QR. The long
+// release URL made the QR too dense for older phones to scan off a screen.
+// ---------------------------------------------------------------------------
+
+dpcRouter.get('/apk', (_req, res) => {
+  if (!config.dpc.apkUrl) {
+    res.status(404).json({ error: 'No app download is configured on this server.' });
+    return;
+  }
+  res.redirect(302, config.dpc.apkUrl);
+});
 
 // ---------------------------------------------------------------------------
 // POLICY — what to show, for a handset that restarted and needs to re-render

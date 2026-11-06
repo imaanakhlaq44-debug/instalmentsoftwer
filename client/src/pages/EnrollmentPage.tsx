@@ -7,11 +7,13 @@ import {
   Copy,
   Hand,
   Loader2,
+  Maximize2,
   QrCode,
   RefreshCw,
   ScanLine,
   Smartphone,
   Wifi,
+  X,
 } from 'lucide-react';
 import { ApiService } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.js';
@@ -106,6 +108,9 @@ export const EnrollmentPage: React.FC = () => {
   const [tokens, setTokens] = useState<any[]>([]);
   const [loadingTokens, setLoadingTokens] = useState(true);
   const [now, setNow] = useState(() => Date.now());
+  // An older phone cannot read a small QR off a laptop screen; full screen
+  // gives its setup scanner several pixels per square.
+  const [fullScreen, setFullScreen] = useState(false);
 
   const paged = usePagination([selectedDealerId]);
 
@@ -296,7 +301,7 @@ export const EnrollmentPage: React.FC = () => {
                   <img
                     src={qr.image}
                     alt="QR code to scan on the new phone"
-                    className={`h-full w-full ${expired ? 'opacity-20' : ''}`}
+                    className={`h-full w-full [image-rendering:pixelated] ${expired ? 'opacity-20' : ''}`}
                   />
                 ) : (
                   <div className="text-center text-ink-400">
@@ -317,6 +322,11 @@ export const EnrollmentPage: React.FC = () => {
 
               {qr && (
                 <div className="mt-4 space-y-2">
+                  {!expired && (
+                    <button type="button" className="btn-primary w-full justify-center" onClick={() => setFullScreen(true)}>
+                      <Maximize2 className="h-4 w-4" aria-hidden="true" /> Show QR full screen
+                    </button>
+                  )}
                   <p className="flex items-center justify-center gap-1.5 text-caption font-bold text-ink-700">
                     <Clock className="h-3.5 w-3.5" aria-hidden="true" />
                     {expired ? 'This QR has expired' : `Valid for ${timeLeft(qr.expiresAt, now)}, one phone only`}
@@ -440,6 +450,32 @@ export const EnrollmentPage: React.FC = () => {
           />
         </div>
       </Card>
+      {fullScreen && qr?.image && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="QR code, full screen"
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-white p-4"
+          onClick={() => setFullScreen(false)}
+        >
+          <img
+            src={qr.image}
+            alt="QR code to scan on the new phone"
+            className="aspect-square w-[min(92vw,82vh)] [image-rendering:pixelated]"
+          />
+          <p className="text-center text-sm font-bold text-ink-900">
+            Turn screen brightness up. Hold the phone 20 to 30 cm away, straight on. Tap anywhere to close.
+          </p>
+          <button
+            type="button"
+            className="absolute right-4 top-4 rounded-full border-2 border-ink-900 bg-white p-2"
+            aria-label="Close full screen QR"
+            onClick={() => setFullScreen(false)}
+          >
+            <X className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

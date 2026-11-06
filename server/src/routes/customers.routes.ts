@@ -410,8 +410,14 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
       })
     : undefined;
 
+  // The real QR, so the sale screen can show it straight away. It used to show
+  // a QR-shaped icon there, which a phone's scanner reads as nothing at all.
+  const qr = enrollmentToken ? await EnrollmentService.buildQrPayload(enrollmentToken) : undefined;
+
   res.status(201).json({
     success: true,
+    qrImageDataUrl: qr?.imageDataUrl,
+    qrProvisioningReady: qr?.provisioningReady,
     customer: sanitizeCustomer(result.customer, user.role, user.customerId),
     device: result.device ? sanitizeDevice(result.device, user.role) : undefined,
     plan: result.plan,
