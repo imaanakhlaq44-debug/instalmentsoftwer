@@ -8,7 +8,7 @@ import { EnrollmentService } from '../services/EnrollmentService.js';
 import { offlineLockDaysFor } from '../services/OfflineLockPolicy.js';
 import { amountOutstanding, DEFAULT_POLICY } from '../services/InstallmentMath.js';
 import {
-  requireDealerStaff, getAuthUser, resolveDealerScope, assertDealerAccess, clientIp,
+  requireSuperAdmin, getAuthUser, resolveDealerScope, assertDealerAccess, clientIp,
 } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
@@ -17,8 +17,9 @@ import { sanitizeDevice } from '../utils/mask.js';
 
 export const simulatorRouter = Router();
 
-// The simulator can lock and unlock real records — it is a staff tool.
-simulatorRouter.use(requireDealerStaff);
+// The simulator can lock and unlock real records, and its controls mean
+// nothing to a shop. It is a platform tool, for the platform admin only.
+simulatorRouter.use(requireSuperAdmin);
 
 /** Virtual phones the simulator can drive, scoped to the caller's dealership. */
 simulatorRouter.get('/devices', asyncHandler(async (req, res) => {

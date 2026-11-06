@@ -34,7 +34,7 @@ export const DevicesPage: React.FC = () => {
   const initialStatus = searchParams.get('status') || 'ALL';
   const initialSearch = searchParams.get('search') || '';
 
-  const { selectedDealerId, showToast, isStaff, isDealerAdmin } = useAuth();
+  const { selectedDealerId, showToast, isStaff, isDealerAdmin, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
 
   const [devices, setDevices] = useState<any[]>([]);
@@ -189,7 +189,7 @@ export const DevicesPage: React.FC = () => {
             columns={deviceCsvColumns}
             filenamePrefix="devices"
           />
-          {isStaff && (
+          {isSuperAdmin && (
           <button
             onClick={() => navigate('/simulator')}
             className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-xl text-xs font-bold transition-all"
@@ -427,8 +427,8 @@ export const DevicesPage: React.FC = () => {
                             </button>
                           ))}
 
-                          {/* Simulator Link — staff tool, not customer-facing */}
-                          {isStaff && (
+                          {/* Simulator link: a platform tool, not for shops */}
+                          {isSuperAdmin && (
                           <button
                             onClick={() => navigate(`/simulator?deviceId=${d.id}`)}
                             className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"

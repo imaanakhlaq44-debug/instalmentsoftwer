@@ -225,6 +225,26 @@ class LockController(context: Context) {
             clearRestriction(UserManager.DISALLOW_ADD_USER)
             dpm.setUninstallBlocked(admin, appContext.packageName, false)
         }.onFailure { Log.w(TAG, "Could not release management: ${it.message}") }
+        stepDown()
+    }
+
+    /**
+     * Gives up device-owner rights, last of all.
+     *
+     * Everything above needs those rights, so this has to come after it. Until
+     * this runs Android refuses to uninstall a device owner, even with the
+     * uninstall block lifted, so without it a paid-off customer would be left
+     * with an app they cannot remove. It cannot be undone: managing the phone
+     * again means a factory reset and a fresh QR enrolment.
+     */
+    @Suppress("DEPRECATION") // still the only way for a device owner to step down by itself
+    private fun stepDown() {
+        runCatching { dpm.clearDeviceOwnerApp(appContext.packageName) }
+            .onFailure { Log.w(TAG, "Could not give up device owner: ${it.message}") }
+        // With device owner gone, the plain device-admin grant is what still
+        // blocks an uninstall.
+        runCatching { dpm.removeActiveAdmin(admin) }
+            .onFailure { Log.w(TAG, "Could not remove device admin: ${it.message}") }
     }
 
     // -----------------------------------------------------------------------

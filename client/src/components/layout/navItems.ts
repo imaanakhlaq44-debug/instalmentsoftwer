@@ -36,7 +36,7 @@ const ADMIN: UserRole[] = ['SUPER_ADMIN', 'DEALER_ADMIN'];
 export const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ALL, group: 'Overview' },
   { to: '/devices', label: 'Devices', icon: Smartphone, roles: ALL, group: 'Portfolio' },
-  { to: '/simulator', label: 'Device Simulator', icon: Radio, roles: STAFF, group: 'Operations', highlight: true },
+  { to: '/simulator', label: 'Device Simulator', icon: Radio, roles: ['SUPER_ADMIN'], group: 'Operations' },
   { to: '/customers', label: 'Customers', icon: Users, roles: STAFF, group: 'Portfolio' },
   { to: '/installments', label: 'Installments', icon: CalendarDays, roles: ALL, group: 'Portfolio' },
   { to: '/payments', label: 'Payments', icon: CreditCard, roles: ALL, group: 'Portfolio' },

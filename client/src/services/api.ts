@@ -190,6 +190,11 @@ export class ApiService {
     return this.request<any>(`/devices/${id}/re-enroll`, { method: 'POST', body: JSON.stringify(data) });
   }
 
+  /** Hands the phone back to its owner: no more lock, and the app can be removed. */
+  static releaseDevice(id: string, data: { reason: string }) {
+    return this.request<any>(`/devices/${id}/release`, { method: 'POST', body: JSON.stringify(data) });
+  }
+
   static correctImei(id: string, data: { imei: string; reason: string }) {
     return this.request<any>(`/devices/${id}/correct-imei`, { method: 'POST', body: JSON.stringify(data) });
   }

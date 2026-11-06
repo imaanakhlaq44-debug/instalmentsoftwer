@@ -80,6 +80,7 @@ class DpcSync(context: Context) {
                 Log.i(TAG, "Server released this device; unwinding management.")
                 lockController.releaseFromManagement()
                 prefs.clear()
+                prefs.released = true
                 CheckInScheduler.cancel(appContext)
                 OfflineWatchdogWorker.cancel(appContext)
                 return Outcome.Released
