@@ -92,7 +92,7 @@ export function App() {
               <Route path="/transactions" element={<RequireRole roles={[...STAFF]}><TransactionsPage /></RequireRole>} />
               <Route path="/notifications" element={<RequireRole roles={[...ALL]}><NotificationsPage /></RequireRole>} />
 
-              <Route path="/simulator" element={<RequireRole roles={[...STAFF]}><SimulatorPage /></RequireRole>} />
+              <Route path="/simulator" element={<RequireRole roles={["SUPER_ADMIN"]}><SimulatorPage /></RequireRole>} />
               <Route path="/enrollment" element={<RequireRole roles={[...STAFF]}><EnrollmentPage /></RequireRole>} />
 
               {/* A customer may read the agreement they signed; only staff may take a signature. */}

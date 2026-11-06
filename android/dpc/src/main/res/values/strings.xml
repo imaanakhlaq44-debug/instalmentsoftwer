@@ -49,4 +49,12 @@
     <string name="error_not_device_owner">Device-owner rights are not held, so the restriction cannot be enforced.</string>
 
     <string name="currency_amount">Rs %1$s</string>
+
+    <!-- Released: the phone belongs to the customer now -->
+    <string name="released_title">This phone is yours</string>
+    <string name="released_body">Your installments are complete, or the shop has released this phone. It is no longer locked or restricted, and reset protection has been removed.</string>
+    <string name="released_remove_hint">You can now remove this app.</string>
+    <string name="released_owner_left">The app could not step down by itself. You can factory reset the phone from Settings to remove it, or ask the shop.</string>
+    <string name="released_remove_app">Remove this app</string>
+    <string name="released_close">Close</string>
 </resources>

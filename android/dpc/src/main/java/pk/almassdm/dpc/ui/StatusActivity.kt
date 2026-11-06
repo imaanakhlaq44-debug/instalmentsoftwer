@@ -48,7 +48,9 @@ class StatusActivity : AppCompatActivity() {
         super.onResume()
 
         if (!prefs.isEnrolled) {
-            startActivity(Intent(this, EnrollActivity::class.java))
+            // A released phone is not waiting to be enrolled: it is the customer's.
+            val next = if (prefs.released) ReleasedActivity::class.java else EnrollActivity::class.java
+            startActivity(Intent(this, next))
             finish()
             return
         }
@@ -115,7 +117,11 @@ class StatusActivity : AppCompatActivity() {
                     }
                 }
                 is DpcSync.Outcome.Failed -> binding.statusLine.text = getString(R.string.error_network)
-                DpcSync.Outcome.Released, DpcSync.Outcome.NotEnrolled -> {
+                DpcSync.Outcome.Released -> {
+                    startActivity(Intent(this@StatusActivity, ReleasedActivity::class.java))
+                    finish()
+                }
+                DpcSync.Outcome.NotEnrolled -> {
                     startActivity(Intent(this@StatusActivity, EnrollActivity::class.java))
                     finish()
                 }

@@ -75,6 +75,7 @@ class Prefs(context: Context) {
             .putString(KEY_DEVICE_ID, deviceId)
             .putString(KEY_DEVICE_TOKEN, deviceToken)
             .remove(KEY_ENROLL_TOKEN)
+            .remove(KEY_RELEASED)
             .apply()
     }
 
@@ -139,6 +140,16 @@ class Prefs(context: Context) {
     /** Used when a handset is released from management. */
     fun clear() = prefs.edit().clear().apply()
 
+    /**
+     * The shop released this phone (paid off, or handed back). Set after
+     * [clear], so it is the one thing that survives the release: it makes the
+     * app open on the "this phone is yours" screen instead of asking to be
+     * enrolled again.
+     */
+    var released: Boolean
+        get() = prefs.getBoolean(KEY_RELEASED, false)
+        set(value) = prefs.edit().putBoolean(KEY_RELEASED, value).apply()
+
     companion object {
         const val DEFAULT_INTERVAL_SECONDS = 900
 
@@ -172,5 +183,6 @@ class Prefs(context: Context) {
         private const val KEY_P_STAGE_APPS = "policy_restricted_apps"
         private const val KEY_STAGE_ON = "stage_restrictions_on"
         private const val KEY_STAGE_SUSPENDED = "stage_suspended_apps"
+        private const val KEY_RELEASED = "released"
     }
 }

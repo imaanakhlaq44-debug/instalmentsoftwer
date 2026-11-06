@@ -158,6 +158,29 @@ rather than install them.
 
 ---
 
+## Letting the phone go
+
+When the last installment is paid, the server marks the device INACTIVE by
+itself. A shop can also do it by hand with **Release phone** on the device
+page. The phone's next check-in is answered `403 no longer under management`,
+and `releaseFromManagement()` undoes everything in this order:
+
+1. staged restrictions and suspended apps
+2. Factory Reset Protection, unconditionally
+3. the lock, the reset and safe-mode blocks, the add-user block and the
+   uninstall block
+4. from 1.2.0, `stepDown()`: `clearDeviceOwnerApp` and `removeActiveAdmin`.
+   It has to come last, because every step above needs device-owner rights.
+   Android will not uninstall a device owner, so before 1.2.0 a paid-off
+   customer could not remove the app. They could only factory reset, which
+   step 3 had made possible again.
+
+The app then opens on `ReleasedActivity` ("This phone is yours"), which offers
+**Remove this app**. Nothing about a release can be undone from the dashboard.
+Managing the phone again means a factory reset and a fresh QR.
+
+---
+
 ## The one rule
 
 `LockController` reports **what it managed to do, not what it was asked to do**.

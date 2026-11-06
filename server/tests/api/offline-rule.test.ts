@@ -338,13 +338,21 @@ describe('the setting itself', () => {
 });
 
 describe('the simulator standing in for the handset', () => {
+  it('is a platform tool: a shop cannot drive it', async () => {
+    const { deviceId } = await enrolledDevice();
+    const res = await as(ACCOUNTS.dealerAdmin)
+      .post('/api/simulator/update-state')
+      .send({ deviceId, action: 'SIMULATE_REBOOT' });
+    expect(res.status).toBe(403);
+  });
+
   it('refuses to self-lock a phone the real rule would never touch', async () => {
     // No signed agreement disclosing the rule, so a real handset would have
     // been handed a limit of zero and would never have done this.
     await setPolicy({ autoLockEnabled: true, offlineLockAfterDays: 7 });
     const { deviceId } = await enrolledDevice();
 
-    const res = await as(ACCOUNTS.dealerStaff)
+    const res = await as(ACCOUNTS.superAdmin)
       .post('/api/simulator/update-state')
       .send({ deviceId, action: 'SIMULATE_OFFLINE_SELF_LOCK' });
 
@@ -357,7 +365,7 @@ describe('the simulator standing in for the handset', () => {
     const { deviceId } = await enrolledDevice();
     await signContractFor(deviceId);
 
-    const res = await as(ACCOUNTS.dealerStaff)
+    const res = await as(ACCOUNTS.superAdmin)
       .post('/api/simulator/update-state')
       .send({ deviceId, action: 'SIMULATE_OFFLINE_SELF_LOCK' });
 

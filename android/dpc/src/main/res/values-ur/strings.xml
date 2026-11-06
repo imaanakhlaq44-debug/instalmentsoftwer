@@ -45,4 +45,12 @@
     <string name="error_not_device_owner">ڈیوائس اونر اختیارات موجود نہیں، اس لیے پابندی لاگو نہیں ہو سکتی۔</string>
 
     <string name="currency_amount">روپے %1$s</string>
+
+    <!-- Released: the phone belongs to the customer now -->
+    <string name="released_title">یہ فون اب آپ کا ہے</string>
+    <string name="released_body">آپ کی قسطیں مکمل ہو گئی ہیں، یا دکان نے یہ فون آزاد کر دیا ہے۔ اب اس پر کوئی لاک یا پابندی نہیں، اور ری سیٹ پروٹیکشن بھی ہٹا دی گئی ہے۔</string>
+    <string name="released_remove_hint">اب آپ یہ ایپ ہٹا سکتے ہیں۔</string>
+    <string name="released_owner_left">ایپ خود نہیں ہٹ سکی۔ آپ سیٹنگز سے فون فیکٹری ری سیٹ کر کے اسے ہٹا سکتے ہیں، یا دکان سے رابطہ کریں۔</string>
+    <string name="released_remove_app">یہ ایپ ہٹائیں</string>
+    <string name="released_close">بند کریں</string>
 </resources>

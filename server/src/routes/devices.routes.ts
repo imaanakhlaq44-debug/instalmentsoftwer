@@ -5,6 +5,7 @@ import { repo, indexBy, groupBy } from '../db/repositories/index.js';
 import { Customer, InstallmentPlan, Installment } from '../types/index.js';
 import { deviceManagementService } from '../services/DeviceManagementService.js';
 import { AuditService } from '../services/AuditService.js';
+import { DeviceReleaseService } from '../services/DeviceReleaseService.js';
 import {
   requireDealerAdmin,
   requireDealerStaff,
@@ -441,6 +442,38 @@ devicesRouter.post(
     });
 
     res.json(sanitizeDevice(updated, user.role));
+  })
+);
+
+/**
+ * Release a phone by hand: paid off another way, returned, or the deal ended.
+ * A plan paid in full releases its phone automatically (PaymentService).
+ */
+const releaseSchema = z.object({
+  reason: z.string().trim().min(5, 'Please give a reason of at least 5 characters.').max(500),
+});
+
+devicesRouter.post(
+  '/:id/release',
+  requireDealerAdmin,
+  validateBody(releaseSchema),
+  asyncHandler(async (req, res) => {
+    const user = getAuthUser(req);
+    const device = await repo.devices.findById(routeParam(req, 'id'));
+    if (!device) throw AppError.notFound('Device');
+    assertDealerAccess(req, device.dealerId, 'device');
+
+    if (device.status === 'INACTIVE') {
+      throw AppError.badRequest('This phone has already been released.');
+    }
+
+    const released = await DeviceReleaseService.release(device, {
+      actor: { userId: user.userId, userName: user.name, userRole: user.role, ipAddress: clientIp(req) },
+      reason: `Reason: ${(req.body as z.infer<typeof releaseSchema>).reason}`,
+      automatic: false,
+    });
+
+    res.json(sanitizeDevice(released, user.role));
   })
 );
 

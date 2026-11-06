@@ -8,6 +8,7 @@ import {
 } from '../types/index.js';
 import { deviceManagementService } from './DeviceManagementService.js';
 import { AuditService } from './AuditService.js';
+import { DeviceReleaseService } from './DeviceReleaseService.js';
 import { AppError } from '../utils/AppError.js';
 import { amountOutstanding, DEFAULT_POLICY } from './InstallmentMath.js';
 
@@ -356,7 +357,27 @@ export class PaymentService {
     }
 
     const summary = await this.recalculatePlan(plan.id, tx, creditBalanceAdded);
-    const unlock = await this.resolveUnlock(plan.id, payment, summary.hasOverdue, tx);
+
+    // The last installment: the phone is the customer's now. Releasing it
+    // supersedes any unlock, since the phone drops every restriction on release.
+    let released = false;
+    if (summary.status === 'COMPLETED') {
+      const device = await repo.devices.findById(plan.deviceId, tx);
+      if (device && DeviceReleaseService.RELEASABLE.has(device.status)) {
+        await DeviceReleaseService.release(
+          device,
+          {
+            actor,
+            reason: `Plan paid in full with receipt ${payment.receiptNumber || payment.referenceNumber || payment.id}.`,
+            automatic: true,
+          },
+          tx
+        );
+        released = true;
+      }
+    }
+
+    const unlock = released ? undefined : await this.resolveUnlock(plan.id, payment, summary.hasOverdue, tx);
 
     const finalPayment = (await repo.payments.findById(payment.id, tx)) || payment;
 
@@ -375,7 +396,8 @@ export class PaymentService {
       `Applied to ${allocations.length} installment(s).` +
         (lateFeeTotal > 0 ? ` Rs. ${lateFeeTotal.toLocaleString()} settled late fees.` : '') +
         (creditBalanceAdded > 0 ? ` Rs. ${creditBalanceAdded.toLocaleString()} carried forward as credit.` : '') +
-        (unlock ? ' Device was auto-unlocked.' : ''),
+        (unlock ? ' Device was auto-unlocked.' : '') +
+        (released ? ' Plan paid in full: the phone was released.' : ''),
       tx
     );
 
@@ -702,7 +724,7 @@ export class PaymentService {
     }
 
     if (params.completed) {
-      parts.push('This financing plan is now fully paid.');
+      parts.push('This financing plan is now fully paid, and the phone has been released from the lock.');
     } else {
       parts.push(`Remaining balance: Rs. ${params.remainingBalance.toLocaleString()}.`);
     }

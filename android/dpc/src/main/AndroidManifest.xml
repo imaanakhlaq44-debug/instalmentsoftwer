@@ -38,6 +38,12 @@
             android:exported="false"
             android:launchMode="singleTask" />
 
+        <!-- "This phone is yours": shown once the shop has released the phone. -->
+        <activity
+            android:name=".ui.ReleasedActivity"
+            android:exported="false"
+            android:launchMode="singleTask" />
+
         <!--
           The lock screen.
 
