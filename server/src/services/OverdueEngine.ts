@@ -150,7 +150,10 @@ export class OverdueEngine {
             !policy.stagedRestrictionsEnabled ||
             stagedFullLockDue(await repo.installments.findByPlan(plan.id));
 
-          if (policy.autoLockEnabled && lockNow && device.status !== 'LOCKED' && device.status !== 'LOCK_PENDING') {
+          // A phone sold without a lock has nothing to lock (and stays PENDING,
+          // so the flagging branch below skips it too). The overdue notice
+          // above still goes out and the plan still shows as overdue.
+          if (!device.noLock && policy.autoLockEnabled && lockNow && device.status !== 'LOCKED' && device.status !== 'LOCK_PENDING') {
             try {
               await deviceManagementService.lockDevice({
                 deviceId: device.id,

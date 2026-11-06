@@ -184,6 +184,12 @@ const createSchema = z.object({
     })
     .optional(),
   qrType: z.enum(['STANDARD', 'PRO', 'LEGACY', 'QC']).default('STANDARD'),
+  /**
+   * The phone cannot be locked (newer Huawei, iPhone, very old Android). The
+   * plan, contract and ledger are kept as for any sale, but no lock is needed
+   * or spent and no QR is issued.
+   */
+  noLock: z.boolean().default(false),
 });
 
 customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncHandler(async (req, res) => {
@@ -228,7 +234,7 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
      * The lock is not spent yet. It is claimed when the handset actually
      * enrols, so a sale that falls through costs the dealer nothing.
      */
-    const locksLeft = await LicenseService.countAvailable(dealerId);
+    const locksLeft = body.noLock ? 1 : await LicenseService.countAvailable(dealerId);
     if (locksLeft <= 0) {
       throw AppError.forbidden(
         'You have no device locks left. Each handset needs its own lock, and a lock is not returned when a plan is paid off. Buy a pack before registering another financed sale.'
@@ -281,6 +287,7 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
         ramStorage: body.device.ramStorage,
         purchasePrice: price,
         status: 'PENDING',
+        noLock: body.noLock,
         lastSeen: nowIso,
         batteryLevel: 100,
         isOnline: false,
@@ -378,7 +385,7 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
       targetType: 'CUSTOMER',
       targetId: customer.id,
       details: device
-        ? `Registered ${customer.name} with financed device ${device.brand} ${device.model} (Rs. ${device.purchasePrice.toLocaleString()}).`
+        ? `Registered ${customer.name} with financed device ${device.brand} ${device.model} (Rs. ${device.purchasePrice.toLocaleString()})${device.noLock ? ', sold without a lock' : ''}.`
         : `Registered customer ${customer.name} with no device.`,
       ipAddress: clientIp(req),
     }, tx);
@@ -393,7 +400,7 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
    * has no nested interactive transactions. Issuing it second is also the right
    * order: a QR must never exist for a device the registration failed to write.
    */
-  const enrollmentToken = result.device
+  const enrollmentToken = result.device && !result.device.noLock
     ? await EnrollmentService.generateToken({
         dealerId,
         deviceId: result.device.id,

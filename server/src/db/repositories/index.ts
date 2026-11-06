@@ -296,6 +296,7 @@ export const devices = {
       customerId?: string;
       status?: string;
       brand?: string;
+      lockable?: boolean;
       search?: string;
     } & PageArgs,
     tx?: Tx
@@ -305,6 +306,7 @@ export const devices = {
     if (args.customerId) where.customerId = args.customerId;
     if (args.status && args.status !== 'ALL') where.status = args.status;
     if (args.brand && args.brand !== 'ALL') where.brand = { equals: args.brand, mode: 'insensitive' };
+    if (args.lockable !== undefined) where.noLock = !args.lockable;
 
     if (args.search) {
       // Searching the customer's name and phone as well is why this reaches

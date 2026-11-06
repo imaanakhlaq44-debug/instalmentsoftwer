@@ -116,7 +116,7 @@ export const EnrollmentPage: React.FC = () => {
 
   const loadAwaiting = useCallback(async () => {
     try {
-      const res = await ApiService.getDevices({ dealerId: selectedDealerId, status: 'PENDING', limit: 50 });
+      const res = await ApiService.getDevices({ dealerId: selectedDealerId, status: 'PENDING', lockable: 'true', limit: 50 });
       setAwaiting(res.data ?? []);
     } catch (err: any) {
       setAwaiting([]);

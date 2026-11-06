@@ -27,6 +27,7 @@ import { Pagination } from '../components/ui/Pagination.js';
 import { ExportButton } from '../components/ui/ExportButton.js';
 import { usePagination } from '../hooks/usePagination.js';
 import { csvMoney, csvDateTime, CsvColumn } from '../utils/csv.js';
+import { PHONE_BRANDS } from '../utils/brands.js';
 
 export const DevicesPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -249,12 +250,9 @@ export const DevicesPage: React.FC = () => {
               className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="ALL">All Brands</option>
-              <option value="Samsung">Samsung</option>
-              <option value="Infinix">Infinix</option>
-              <option value="Tecno">Tecno</option>
-              <option value="Xiaomi">Xiaomi</option>
-              <option value="Vivo">Vivo</option>
-              <option value="Oppo">Oppo</option>
+              {PHONE_BRANDS.map((b) => (
+                <option key={b.value} value={b.value}>{b.label}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -364,7 +362,7 @@ export const DevicesPage: React.FC = () => {
                           }`}
                         >
                           <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                          {d.status}
+                          {d.noLock ? 'NO LOCK' : d.status}
                         </span>
                       </td>
 
@@ -407,7 +405,7 @@ export const DevicesPage: React.FC = () => {
                           )}
 
                           {/* Enforcement — restricted to the shop owner */}
-                          {isDealerAdmin && (!isLocked ? (
+                          {isDealerAdmin && !d.noLock && (!isLocked ? (
                             <button
                               onClick={() => {
                                 setLockModalDevice(d);

@@ -28,6 +28,8 @@ const listQuerySchema = paginationSchema.extend({
   brand: z.string().trim().max(40).optional(),
   customerId: z.string().trim().max(64).optional(),
   dealerId: z.string().trim().max(64).optional(),
+  /** 'true' only phones that can be locked, 'false' only those sold without one. */
+  lockable: z.enum(['true', 'false']).optional(),
 });
 
 /**
@@ -55,6 +57,7 @@ devicesRouter.get(
       customerId: user.role === 'CUSTOMER' ? user.customerId : q.customerId,
       status: q.status,
       brand: q.brand,
+      lockable: q.lockable === undefined ? undefined : q.lockable === 'true',
       search: q.search,
       page: q.page,
       limit: q.limit,

@@ -403,6 +403,12 @@ model Device {
   dpcVersion       String?   @map("dpc_version") @db.VarChar(20)
   /** Last successful DPC check-in, as distinct from any dashboard activity. */
   lastCheckInAt    DateTime? @map("last_check_in_at") @db.Timestamptz(3)
+  /**
+   * Sold on installments without a lock: the phone cannot run the DPC (newer
+   * Huawei, iPhone, Android 7 and older). It stays PENDING for good, gets no
+   * QR, spends no lock and is never sent a command.
+   */
+  noLock           Boolean   @default(false) @map("no_lock")
 
   // --- The offline rule ------------------------------------------------------
   // The handset restricted itself because it had not reached the server for the

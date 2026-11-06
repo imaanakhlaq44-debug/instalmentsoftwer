@@ -217,6 +217,9 @@ export class MockDeviceManagementService implements IDeviceManagementService {
         message: 'A lock command is already queued and will apply when the device reconnects.',
       };
     }
+    if (device.noLock) {
+      throw AppError.badRequest('This phone was sold without a lock, so it cannot be locked.');
+    }
     if (device.status === 'REMOVED' || device.status === 'PENDING') {
       throw AppError.badRequest(
         `This device cannot be locked while its status is ${device.status}. It must be enrolled and active first.`

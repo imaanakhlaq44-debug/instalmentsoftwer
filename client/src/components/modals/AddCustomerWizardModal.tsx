@@ -15,6 +15,8 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { PHONE_BRANDS } from '../../utils/brands.js';
+import { checkPhoneSupport, AndroidVersion } from '../../utils/phoneSupport.js';
 
 interface Props {
   onClose: () => void;
@@ -41,11 +43,15 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
     // Step 2: Device
     brand: 'Samsung',
     model: 'Galaxy A15',
-    imei: `35${Math.floor(1000000000000 + Math.random() * 9000000000000)}`,
-    serialNumber: `SN-SAMS-${Math.floor(100000 + Math.random() * 900000)}`,
+    // Typed from the phone (*#06#). A made-up default never passes the
+    // checksum the server applies, and would invite a wrong IMEI on record.
+    imei: '',
+    serialNumber: '',
     purchasePrice: 54000,
     color: 'Blue Black',
     ramStorage: '6GB / 128GB',
+    android: '11+' as AndroidVersion,
+    playStore: true,
     // Step 3: Financing
     downPayment: 13500,
     totalInstallments: 6,
@@ -57,10 +63,18 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
   const financedAmount = formData.purchasePrice - formData.downPayment;
   const monthlyAmount = Math.round(financedAmount / (formData.totalInstallments || 1));
 
+  // Checked at the counter, before the customer leaves with the phone: a
+  // handset that cannot run the lock app is still a sale, just without a lock.
+  const support = checkPhoneSupport({ brand: formData.brand, android: formData.android, playStore: formData.playStore });
+  const noLock = support.level === 'none';
+
   const handleCreate = async () => {
     try {
       setSubmitting(true);
       const payload = {
+        // A super admin works inside the shop picked at the top; without this the
+        // server cannot tell which shop the sale belongs to and refuses it.
+        dealerId: selectedDealerId || undefined,
         customer: {
           name: formData.customerName,
           phone: formData.customerPhone,
@@ -85,12 +99,13 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
           gracePeriodDays: formData.gracePeriodDays,
         },
         qrType: formData.qrType,
+        noLock,
       };
 
       const res = await ApiService.createCustomerWithDevice(payload);
       setCreatedResult(res);
       setStep(5);
-      showToast('Customer & financed device registered successfully!', 'success');
+      showToast(noLock ? 'Sale registered without a lock.' : 'Customer & financed device registered successfully!', 'success');
     } catch (err: any) {
       showToast(err.message || 'Failed to create record', 'error');
     } finally {
@@ -131,7 +146,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
             { num: 2, label: 'Device' },
             { num: 3, label: 'Financing' },
             { num: 4, label: 'Contract Review' },
-            { num: 5, label: 'Enroll QR' },
+            { num: 5, label: noLock ? 'Done' : 'Enroll QR' },
           ].map((s) => (
             <div
               key={s.num}
@@ -256,12 +271,9 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                     onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
                     className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
                   >
-                    <option value="Samsung">Samsung</option>
-                    <option value="Infinix">Infinix</option>
-                    <option value="Tecno">Tecno</option>
-                    <option value="Xiaomi">Xiaomi / Redmi</option>
-                    <option value="Vivo">Vivo</option>
-                    <option value="Oppo">Oppo</option>
+                    {PHONE_BRANDS.map((b) => (
+                      <option key={b.value} value={b.value}>{b.label}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -323,6 +335,59 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                     onChange={(e) => setFormData({ ...formData, ramStorage: e.target.value })}
                     className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
                   />
+                </div>
+              </div>
+
+              {/* Phone check: can this handset take the lock? */}
+              <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50 space-y-3">
+                <p className="text-xs font-bold text-slate-800">Phone check</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">Android version</label>
+                    <select
+                      value={formData.android}
+                      onChange={(e) => setFormData({ ...formData, android: e.target.value as AndroidVersion })}
+                      disabled={formData.brand === 'Apple'}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm disabled:opacity-50"
+                    >
+                      <option value="11+">Android 11 or newer</option>
+                      <option value="8-10">Android 8, 9 or 10</option>
+                      <option value="7-">Android 7 or older</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">Google Play Store on this phone?</label>
+                    <select
+                      value={formData.playStore ? 'yes' : 'no'}
+                      onChange={(e) => setFormData({ ...formData, playStore: e.target.value === 'yes' })}
+                      disabled={formData.brand === 'Apple'}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm disabled:opacity-50"
+                    >
+                      <option value="yes">Yes, Play Store works</option>
+                      <option value="no">No (AppGallery or none)</option>
+                    </select>
+                  </div>
+                </div>
+                <div
+                  role="status"
+                  className={`p-3 rounded-xl border text-xs leading-relaxed ${
+                    support.level === 'full'
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                      : support.level === 'partial'
+                      ? 'bg-amber-50 border-amber-200 text-amber-900'
+                      : 'bg-rose-50 border-rose-200 text-rose-900'
+                  }`}
+                >
+                  <p className="font-bold">
+                    {support.level === 'full' ? '✓ ' : support.level === 'partial' ? '! ' : '✕ '}
+                    {support.title}
+                  </p>
+                  <p className="mt-0.5">{support.detail}</p>
+                  {noLock && (
+                    <p className="mt-1.5 font-semibold">
+                      No lock will be used and no QR is needed. Take a larger advance or a guarantor for this sale.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -443,14 +508,55 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                 </div>
               </div>
 
+              {noLock ? (
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-700 leading-relaxed">
+                <strong>Sold without a lock:</strong> this phone cannot run the lock app, so it will not be locked or restricted. The installment plan, reminders and the signed agreement apply as usual.
+              </div>
+              ) : (
               <div className="p-3 bg-amber-50 border border-amber-200/80 rounded-xl text-[11px] text-amber-800 leading-relaxed">
                 <strong>Consent & Enforcement Notice:</strong> Customer consents to DPC-based remote restricted locking in case installments become overdue past the {formData.gracePeriodDays}-day grace threshold. Emergency calls remain accessible.
               </div>
+              )}
             </div>
           )}
 
           {/* STEP 5: Enroll Device QR Display */}
-          {step === 5 && createdResult && (
+          {step === 5 && createdResult && !createdResult.enrollmentToken && (
+            <div className="space-y-4 text-center py-4">
+              <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Sale registered without a lock</h3>
+                <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                  No QR is needed for this phone. Get the agreement signed from the customer's page; installments and
+                  reminders run as usual.
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <button
+                  onClick={() => {
+                    onSuccess();
+                    navigate(`/customers/${createdResult.customer?.id}`);
+                  }}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl"
+                >
+                  Open customer
+                </button>
+                <button
+                  onClick={() => {
+                    onSuccess();
+                    onClose();
+                  }}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 5 && createdResult?.enrollmentToken && (
             <div className="space-y-5 text-center py-2">
               <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
                 <CheckCircle2 className="w-6 h-6" />
@@ -544,7 +650,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                 disabled={submitting}
                 className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/30 transition-all"
               >
-                {submitting ? 'Registering...' : 'Approve & Generate QR'}
+                {submitting ? 'Registering...' : noLock ? 'Approve & Register Sale' : 'Approve & Generate QR'}
               </button>
             )}
           </div>

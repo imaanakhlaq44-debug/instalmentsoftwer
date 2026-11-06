@@ -44,6 +44,9 @@ export class EnrollmentService {
       if (device.status === 'ACTIVE' || device.status === 'LOCKED') {
         throw AppError.badRequest('This device is already enrolled and under management.');
       }
+      if (device.noLock) {
+        throw AppError.badRequest('This phone was sold without a lock, so it has no QR code.');
+      }
     }
 
     // Cryptographically random, not a truncated UUID plus a timestamp — the old
