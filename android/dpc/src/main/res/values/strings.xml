@@ -57,4 +57,9 @@
     <string name="released_owner_left">The app could not step down by itself. You can factory reset the phone from Settings to remove it, or ask the shop.</string>
     <string name="released_remove_app">Remove this app</string>
     <string name="released_close">Close</string>
+
+    <!-- Location for recovery: shown every time a location is shared -->
+    <string name="location_channel">Location shared with the shop</string>
+    <string name="location_shared_title">Your location was shared with the shop</string>
+    <string name="location_shared_body">An installment on this phone is overdue, so the shop asked for its location, as your signed agreement allows. It was taken once, and only the shop owner can see it. Pay the overdue amount or contact the shop.</string>
 </resources>

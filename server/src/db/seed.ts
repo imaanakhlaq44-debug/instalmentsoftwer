@@ -272,8 +272,6 @@ export function generateSeedData(): SeedData {
       securityPatch: '2026-06-01',
       lockReason: cfg.lockReason,
       lockMessage: cfg.lockMsg,
-      locationLat: 31.5204 + (idx * 0.005),
-      locationLng: 74.3587 + (idx * 0.004),
       simCarrier: idx % 3 === 0 ? 'Jazz 4G' : idx % 3 === 1 ? 'Zong 4G' : 'Telenor 4G',
       wifiSsid: 'Home_WiFi_5G',
       createdAt: new Date(now.getTime() - (60 - idx) * 86400000).toISOString(),

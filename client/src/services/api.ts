@@ -190,6 +190,15 @@ export class ApiService {
     return this.request<any>(`/devices/${id}/re-enroll`, { method: 'POST', body: JSON.stringify(data) });
   }
 
+  /** Location for recovery: what is known, and whether it may be asked for. Logged on the server. */
+  static getDeviceLocation(id: string) {
+    return this.request<any>(`/devices/${id}/location`);
+  }
+
+  static requestDeviceLocation(id: string, data: { reason: string }) {
+    return this.request<any>(`/devices/${id}/location-request`, { method: 'POST', body: JSON.stringify(data) });
+  }
+
   /** Hands the phone back to its owner: no more lock, and the app can be removed. */
   static releaseDevice(id: string, data: { reason: string }) {
     return this.request<any>(`/devices/${id}/release`, { method: 'POST', body: JSON.stringify(data) });

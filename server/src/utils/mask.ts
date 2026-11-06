@@ -89,12 +89,27 @@ export function sanitizeDevice<
   // `authTokenHash` is destructured out and never re-added. It is the handset's
   // credential: no role has a reason to see it, and it would otherwise ride
   // along in `rest` on every device response in the system.
-  const { imei, serialNumber, authTokenHash: _authTokenHash, ...rest } = device;
+  const { imei, serialNumber, authTokenHash: _authTokenHash, ...withLocation } = device;
+  // Where a customer's phone is never rides along on an ordinary device
+  // response. It is fetched on purpose by an owner (GET /devices/:id/location),
+  // and that fetch is logged.
+  const {
+    locationLat: _lat,
+    locationLng: _lng,
+    locationAccuracy: _acc,
+    locationAt: _at,
+    ...rest
+  } = withLocation as typeof withLocation & {
+    locationLat?: unknown;
+    locationLng?: unknown;
+    locationAccuracy?: unknown;
+    locationAt?: unknown;
+  };
   const view = imeiView(imei, role);
   const allowed = IMEI_FULL_ACCESS.includes(role);
 
   return {
-    ...rest,
+    ...(rest as unknown as Omit<T, 'imei' | 'serialNumber' | 'authTokenHash'>),
     ...view,
     serialNumber: allowed ? serialNumber : undefined,
   };

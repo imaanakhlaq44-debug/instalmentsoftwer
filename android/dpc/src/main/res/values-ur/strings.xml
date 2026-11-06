@@ -53,4 +53,9 @@
     <string name="released_owner_left">ایپ خود نہیں ہٹ سکی۔ آپ سیٹنگز سے فون فیکٹری ری سیٹ کر کے اسے ہٹا سکتے ہیں، یا دکان سے رابطہ کریں۔</string>
     <string name="released_remove_app">یہ ایپ ہٹائیں</string>
     <string name="released_close">بند کریں</string>
+
+    <!-- Location for recovery: shown every time a location is shared -->
+    <string name="location_channel">دکان کو لوکیشن بھیجی گئی</string>
+    <string name="location_shared_title">آپ کی لوکیشن دکان کو بھیجی گئی</string>
+    <string name="location_shared_body">اس فون کی قسط بقایا ہے، اس لیے دکان نے آپ کے دستخط شدہ معاہدے کے مطابق اس کی لوکیشن منگوائی۔ یہ صرف ایک بار لی گئی، اور صرف دکان کا مالک اسے دیکھ سکتا ہے۔ بقایا رقم ادا کریں یا دکان سے رابطہ کریں۔</string>
 </resources>

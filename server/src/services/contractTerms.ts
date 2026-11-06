@@ -23,7 +23,7 @@
  * `termsDiscloseOfflineLock` refuses that version and contracts signed under it
  * keep rendering — and keep meaning — exactly what they said.
  */
-export const CURRENT_TERMS_VERSION = '1.2';
+export const CURRENT_TERMS_VERSION = '1.3';
 
 /**
  * Whether the version somebody signed under actually tells them about the
@@ -44,6 +44,17 @@ export function termsDiscloseOfflineLock(termsVersion: string): boolean {
 export function termsDiscloseStagedRestrictions(termsVersion: string): boolean {
   const [major = 0, minor = 0] = termsVersion.split('.').map((part) => Number(part) || 0);
   return major > 1 || (major === 1 && minor >= 2);
+}
+
+/**
+ * v1.3 adds location for recovery to clause 4: while the handset is restricted
+ * or an installment is overdue, the shop may ask it for its location once at a
+ * time, the customer is told when it does, and it stops once the plan is paid.
+ * Contracts signed under v1.2 or earlier never said so, and are never asked.
+ */
+export function termsDiscloseLocation(termsVersion: string): boolean {
+  const [major = 0, minor = 0] = termsVersion.split('.').map((part) => Number(part) || 0);
+  return major > 1 || (major === 1 && minor >= 3);
 }
 
 /** The facts the document is rendered from, frozen at signing. */
@@ -75,6 +86,8 @@ export interface ContractSnapshot {
   offlineLock?: { enabled: boolean; afterDays: number };
   /** Staged restrictions as they stood at signing. Absent before terms v1.2. */
   stagedRestrictions?: { enabled: boolean };
+  /** Location for recovery as it stood at signing. Absent before terms v1.3. */
+  locationOnRecovery?: { enabled: boolean };
   schedule: { installmentNumber: number; amountDue: number; dueDate: string }[];
   preparedAt: string;
 }
@@ -107,6 +120,7 @@ export function renderClauses(
   let clauses = clausesV1_0(snapshot);
   if (termsDiscloseOfflineLock(termsVersion)) clauses = withOfflineRule(clauses, snapshot);
   if (termsDiscloseStagedRestrictions(termsVersion)) clauses = withStagedRestrictions(clauses, snapshot);
+  if (termsDiscloseLocation(termsVersion)) clauses = withLocationOnRecovery(clauses, snapshot);
   return clauses;
 }
 
@@ -142,6 +156,40 @@ function withOfflineRule(clauses: ContractClause[], snapshot: ContractSnapshot):
             `مسلسل ${days} دن تک یہ رابطہ نہ ہو سکے، تو موبائل خود کو محدود کر دے گا جب تک رابطہ بحال نہ ہو۔ اس لیے موبائل ڈیٹا بند ` +
             `کرنے، سم نکالنے یا فون کو آف لائن رکھنے سے پابندی سے بچا نہیں جا سکتا۔ رابطہ بحال ہوتے ہی اور قسط ادا ہو جانے پر ` +
             `پابندی ختم ہو جائے گی۔`,
+        }
+  );
+}
+
+/**
+ * Clause 4, extended for terms v1.3: location for recovery. It says exactly
+ * when the shop may ask, that the customer is told each time, who sees it, and
+ * when it stops, so that agreeing to it is agreeing to something specific.
+ */
+function withLocationOnRecovery(clauses: ContractClause[], snapshot: ContractSnapshot): ContractClause[] {
+  if (!snapshot.locationOnRecovery?.enabled) return clauses;
+
+  return clauses.map((clause) =>
+    !clause.heading.startsWith('4.')
+      ? clause
+      : {
+          ...clause,
+          body:
+            `${clause.body}
+
+` +
+            `Only while this handset is restricted, or an installment is unpaid after its grace period, ` +
+            `${snapshot.dealer.name} may ask the handset for its current location in order to recover it. ` +
+            `It is taken once for each request, never continuously, the handset shows a notice each time it is ` +
+            `shared, and only the shop's owner can see it. Every request and every view is recorded. Location is ` +
+            `never asked for while the installments are up to date, and stops for good once the plan is paid in full.`,
+          bodyUr:
+            `${clause.bodyUr}
+
+` +
+            `صرف اس وقت جب یہ موبائل بند ہو، یا کوئی قسط مہلت کے بعد بھی ادا نہ ہوئی ہو، ${snapshot.dealer.name} موبائل واپس ` +
+            `حاصل کرنے کے لیے اس کی موجودہ لوکیشن منگوا سکتا ہے۔ ہر درخواست پر صرف ایک بار لوکیشن لی جائے گی، مسلسل نہیں، ` +
+            `ہر بار موبائل پر اطلاع دکھائی جائے گی، اور اسے صرف دکان کا مالک دیکھ سکے گا۔ ہر درخواست اور ہر بار دیکھنا ریکارڈ ہوگا۔ ` +
+            `اقساط وقت پر ادا ہوں تو لوکیشن کبھی نہیں منگوائی جائے گی، اور پوری رقم ادا ہونے پر یہ ہمیشہ کے لیے بند ہو جائے گی۔`,
         }
   );
 }

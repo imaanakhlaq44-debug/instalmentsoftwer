@@ -777,6 +777,35 @@ export const ROMAN_URDU: Record<string, string> = {
   'Shops appear here as soon as they register.': 'Dukanein register hote hi yahan nazar aayengi.',
   Call: 'Call',
   'Giving locks…': 'Locks de rahe hain…',
+
+  // ------------------------------------------------------------- location for recovery
+  'Location for Phone Recovery': 'Phone wapas lene ke liye location',
+  "Lets the shop owner ask a locked or overdue phone for its location, to recover it. Never for a customer who is up to date. The customer's agreement says so, the phone shows them a notice each time, and every request and view is recorded. Applies only to agreements signed while it is on, and needs phone app 1.3 or newer.":
+    'Dukaan ka maalik locked ya late qist wale phone se us ki location mang sakta hai, taake phone wapas mil sake. Jis customer ki qistein theek hain us ki kabhi nahin. Yeh customer ke agreement mein likha hota hai, har dafa phone par notice aata hai, aur har mangna aur dekhna record hota hai. Sirf un agreements par lagu jo is ke on hote hue sign hue, aur phone app 1.3 ya naya chahiye.',
+  'Find this phone': 'Yeh phone dhoondein',
+  'FIND THIS PHONE': 'YEH PHONE DHOONDEIN',
+  "For a locked or overdue phone only, and only if the customer's agreement allows it. Every request and every view is recorded.":
+    'Sirf locked ya late qist wale phone ke liye, aur sirf agar customer ke agreement mein ijazat ho. Har mangna aur dekhna record hota hai.',
+  'Checking…': 'Check ho raha hai…',
+  'Last known location': 'Aakhri maloom location',
+  'Open in Google Maps': 'Google Maps mein kholein',
+  'Waiting for the phone': 'Phone ka intezar',
+  'Reason (recorded)': 'Wajah (record hogi)',
+  'Asking…': 'Mang rahe hain…',
+  'Ask for a new location': 'Nayi location mangein',
+  'Ask the phone for its location': 'Phone se location mangein',
+  'The customer is shown a notice on the phone when it is shared.': 'Location jane par customer ke phone par notice aata hai.',
+  Refresh: 'Dobara dekhein',
+  'Only a locked or overdue phone can be located. This customer is up to date.':
+    'Sirf locked ya late qist wale phone ki location mil sakti hai. Is customer ki qistein theek hain.',
+  'Location for recovery is off. Turn it on in Settings.': 'Location wala system band hai. Settings mein on karein.',
+  'This customer signed an agreement that does not allow location. A new agreement must be signed.':
+    'Is customer ke agreement mein location ki ijazat nahin. Naya agreement sign karwana hoga.',
+  'The customer has not signed a valid agreement for this phone.': 'Customer ne is phone ka sahi agreement sign nahin kiya.',
+  'This phone has been released.': 'Yeh phone azaad ho chuka hai.',
+  'This phone has not been connected yet.': 'Yeh phone abhi jura nahin.',
+  'This phone was sold without a lock, so it has no location.': 'Yeh phone bina lock ke becha gaya, is liye location nahin.',
+  'Asked. The phone answers the next time it connects to the internet.': 'Mang li. Phone agli dafa internet se jurte hi jawab dega.',
 };
 
 /**

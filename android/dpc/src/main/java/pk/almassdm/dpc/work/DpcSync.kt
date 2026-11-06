@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import pk.almassdm.dpc.BuildConfig
 import pk.almassdm.dpc.admin.LockController
+import pk.almassdm.dpc.admin.LocationReporter
 import pk.almassdm.dpc.data.PolicyView
 import pk.almassdm.dpc.data.Prefs
 import pk.almassdm.dpc.net.DpcApi
@@ -55,6 +56,7 @@ class DpcSync(context: Context) {
         lockController.protectInstallation()
         syncFactoryResetProtection(result.policy)
         syncStagedRestrictions(result.policy)
+        answerLocationRequest(api, result.policy)
         CheckInScheduler.schedule(appContext, result.checkInIntervalSeconds)
         OfflineWatchdogWorker.schedule(appContext)
 
@@ -104,6 +106,23 @@ class DpcSync(context: Context) {
 
         reconcile(result.policy)
         return Outcome.Synced(result.policy, null)
+    }
+
+    /**
+     * The shop asked where this phone is, and the server has checked it may.
+     * One fix, a notice to the customer, one report; a failure is simply tried
+     * again at the next check-in while the request is still open.
+     */
+    private fun answerLocationRequest(api: DpcApi, policy: PolicyView) {
+        if (!policy.reportLocation) return
+        val reporter = LocationReporter(appContext)
+        val fix = reporter.takeFix() ?: return
+        try {
+            api.checkIn(Telemetry.collect(appContext).copy(location = fix))
+            reporter.notifyShared()
+        } catch (e: DpcException) {
+            Log.w(TAG, "Could not report the location: ${e.message}")
+        }
     }
 
     /**

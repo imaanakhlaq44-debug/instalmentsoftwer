@@ -6,6 +6,7 @@ import android.os.Build
 import android.telephony.TelephonyManager
 import org.json.JSONObject
 import pk.almassdm.dpc.BuildConfig
+import pk.almassdm.dpc.admin.LocationFix
 import pk.almassdm.dpc.data.Prefs
 import java.time.Instant
 import java.time.ZoneOffset
@@ -14,11 +15,11 @@ import java.time.format.DateTimeFormatter
 /**
  * What a check-in reports about the handset.
  *
- * The server's schema also accepts a Wi-Fi SSID and a GPS fix. Neither is sent.
- * Collecting a customer's home network name and coordinates is not needed to
- * decide whether an installment is overdue, and an app that holds someone's
- * phone should be able to say exactly what it knows about them: the charge
- * level, the OS build, and the network operator's name.
+ * The server's schema also accepts a Wi-Fi SSID, which is never sent. A
+ * location is sent only in answer to `reportLocation` (see LocationReporter):
+ * an app that holds someone's phone should be able to say exactly what it
+ * knows about them, and normally that is the charge level, the OS build and
+ * the network operator's name.
  */
 data class Telemetry(
     val batteryLevel: Int?,
@@ -36,6 +37,8 @@ data class Telemetry(
      */
     val offlineLockActive: Boolean = false,
     val offlineLockSince: Long = 0L,
+    /** Only in the check-in that answers a location request. */
+    val location: LocationFix? = null,
 ) {
     fun toJson(): JSONObject {
         val json = JSONObject().put("dpcVersion", dpcVersion)
@@ -47,6 +50,14 @@ data class Telemetry(
         json.put("offlineLockActive", offlineLockActive)
         if (offlineLockActive && offlineLockSince > 0L) {
             json.put("offlineLockSince", isoUtc(offlineLockSince))
+        }
+        location?.let { fix ->
+            val loc = JSONObject()
+                .put("lat", fix.lat)
+                .put("lng", fix.lng)
+                .put("capturedAt", isoUtc(fix.capturedAt))
+            fix.accuracy?.let { loc.put("accuracy", it.toDouble()) }
+            json.put("location", loc)
         }
         return json
     }

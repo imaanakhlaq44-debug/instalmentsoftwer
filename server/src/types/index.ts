@@ -164,6 +164,10 @@ export interface Device {
    */
   offlineLockActive?: boolean;
   offlineLockSince?: string;
+  locationRequestedAt?: string;
+  locationRequestedBy?: string;
+  locationAt?: string;
+  locationAccuracy?: number;
   /**
    * Sold without a lock because the handset cannot run the DPC. Stays PENDING
    * for good: no QR, no lock spent, no lock command.
@@ -360,6 +364,7 @@ export interface DevicePolicy {
   autoLockEnabled: boolean;
   /** Calls/SMS, then apps, then a full lock, as installments are missed. */
   stagedRestrictionsEnabled?: boolean;
+  locationOnRecoveryEnabled?: boolean;
   autoUnlockEnabled: boolean;
   lockWarningDays: number;
   /**

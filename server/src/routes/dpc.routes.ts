@@ -6,6 +6,7 @@ import { repo } from '../db/repositories/index.js';
 import { EnrollmentService } from '../services/EnrollmentService.js';
 import { offlineLockDaysFor } from '../services/OfflineLockPolicy.js';
 import { RESTRICTED_APPS, restrictionLevelFor } from '../services/StagedRestrictions.js';
+import { LocationService } from '../services/LocationService.js';
 import { deviceManagementService } from '../services/DeviceManagementService.js';
 import { AuditService } from '../services/AuditService.js';
 import { amountOutstanding, DEFAULT_POLICY } from '../services/InstallmentMath.js';
@@ -67,6 +68,12 @@ interface DevicePolicyView {
    */
   restrictionLevel: 0 | 1 | 2;
   restrictedApps: string[];
+  /**
+   * The shop has asked for this phone's location to recover it, and is still
+   * allowed to (signed consent, phone restricted or overdue). The phone takes
+   * one fix, tells the customer, reports it, and the request closes.
+   */
+  reportLocation: boolean;
   contact: { dealerName: string; dealerPhone: string } | null;
 }
 
@@ -97,6 +104,7 @@ async function buildPolicyView(device: Device): Promise<DevicePolicyView> {
     frpAccountIds: unpaid.length > 0 ? policy.frpAccountIds ?? [] : [],
     restrictionLevel,
     restrictedApps: restrictionLevel >= 2 ? [...RESTRICTED_APPS] : [],
+    reportLocation: await LocationService.shouldReport(device, policy),
     contact: dealer ? { dealerName: dealer.name, dealerPhone: dealer.phone } : null,
   };
 }
@@ -155,10 +163,13 @@ const checkInSchema = z.object({
    */
   offlineLockActive: z.boolean().optional(),
   offlineLockSince: z.string().datetime().optional(),
+  /** Sent only in answer to `reportLocation`, and kept only if the request is still open. */
   location: z
     .object({
       lat: z.number().min(-90).max(90),
       lng: z.number().min(-180).max(180),
+      accuracy: z.number().min(0).max(100_000).optional(),
+      capturedAt: z.string().datetime().optional(),
     })
     .optional(),
 });
@@ -191,10 +202,11 @@ dpcRouter.post(
       simCarrier: body.simCarrier ?? device.simCarrier,
       wifiSsid: body.wifiSsid ?? device.wifiSsid,
       dpcVersion: body.dpcVersion ?? device.dpcVersion,
-      locationLat: body.location?.lat ?? device.locationLat,
-      locationLng: body.location?.lng ?? device.locationLng,
       updatedAt: nowIso,
     });
+
+    // A location is stored only in answer to an open, still-permitted request.
+    const located = body.location ? await LocationService.acceptReport(device, body.location) : false;
 
     /**
      * A self-lock is written to the device's timeline the moment the shop first
@@ -227,6 +239,7 @@ dpcRouter.post(
      * here would let the dashboard show a lock that never reached the handset —
      * exactly the dishonesty LOCK_PENDING exists to prevent.
      */
+    const current = located ? (await repo.devices.findById(device.id)) ?? updated : updated;
     const command = updated?.pendingCommand
       ? { type: updated.pendingCommand, issuedAt: updated.pendingCommandAt ?? null }
       : null;
@@ -235,7 +248,7 @@ dpcRouter.post(
       status: updated?.status ?? device.status,
       command,
       checkInIntervalSeconds: 900,
-      policy: await buildPolicyView(updated ?? device),
+      policy: await buildPolicyView(current ?? device),
     });
   })
 );
