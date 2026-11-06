@@ -122,6 +122,8 @@ export interface Device {
    */
   offlineLockActive?: boolean;
   offlineLockSince?: string;
+  /** Sold without a lock (the phone cannot run the app): no QR, no lock commands. */
+  noLock?: boolean;
   customerName?: string;
   customerPhone?: string;
   monthlyAmount?: number;

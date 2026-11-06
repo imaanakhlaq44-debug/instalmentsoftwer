@@ -362,7 +362,7 @@ export const DevicesPage: React.FC = () => {
                           }`}
                         >
                           <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                          {d.status}
+                          {d.noLock ? 'NO LOCK' : d.status}
                         </span>
                       </td>
 
@@ -405,7 +405,7 @@ export const DevicesPage: React.FC = () => {
                           )}
 
                           {/* Enforcement — restricted to the shop owner */}
-                          {isDealerAdmin && (!isLocked ? (
+                          {isDealerAdmin && !d.noLock && (!isLocked ? (
                             <button
                               onClick={() => {
                                 setLockModalDevice(d);

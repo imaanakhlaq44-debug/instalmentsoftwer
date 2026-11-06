@@ -63,7 +63,9 @@ dashboardRouter.get(
       dueToDateSums,
       offlineDevices,
     ] = await Promise.all([
-      prisma.device.groupBy({ by: ['status'], where, _count: { _all: true } }),
+      // Phones sold without a lock sit in PENDING for good; counting them there
+      // would show a QR backlog that can never clear.
+      prisma.device.groupBy({ by: ['status'], where: { ...where, noLock: false }, _count: { _all: true } }),
       prisma.installmentPlan.groupBy({ by: ['status'], where, _count: { _all: true } }),
       prisma.installmentPlan.findMany({ where, distinct: ['customerId'], select: { customerId: true } }),
       prisma.installmentPlan.aggregate({ where, _sum: { remainingBalance: true, outstandingLateFees: true } }),
@@ -84,8 +86,9 @@ dashboardRouter.get(
         where: { ...where, dueDate: { lte: today } },
         _sum: { amountDue: true, amountPaid: true },
       }),
-      prisma.device.count({ where: { ...where, isOnline: false, status: { not: 'REMOVED' } } }),
+      prisma.device.count({ where: { ...where, isOnline: false, noLock: false, status: { not: 'REMOVED' } } }),
     ]);
+    const noLockDevices = await prisma.device.count({ where: { ...where, noLock: true, status: { not: 'REMOVED' } } });
 
     const devices = tally(deviceStatuses, 'status');
     const plans = tally(planStatuses, 'status');
@@ -107,6 +110,7 @@ dashboardRouter.get(
       overdueDevices: countOf(devices, 'OVERDUE'),
       inactiveDevices: countOf(devices, 'INACTIVE', 'REMOVED'),
       offlineDevices,
+      noLockDevices,
 
       totalCustomers: distinctPlanCustomers.length,
       activePlans: totalPlans - countOf(plans, 'COMPLETED', 'CANCELLED'),

@@ -186,7 +186,7 @@ export const DeviceDetailPage: React.FC = () => {
                 }`}
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                {device.status}
+                {device.noLock ? 'NO LOCK' : device.status}
               </span>
             </div>
             <p className="text-xs text-slate-500 font-mono mt-0.5">
@@ -235,7 +235,7 @@ export const DeviceDetailPage: React.FC = () => {
                 <RotateCw className="w-4 h-4" />
               </button>
 
-              {!isLocked ? (
+              {device.noLock ? null : !isLocked ? (
                 <button
                   onClick={() => setShowLockModal(true)}
                   className="flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md shadow-rose-600/30 transition-all"
@@ -261,6 +261,16 @@ export const DeviceDetailPage: React.FC = () => {
         difference: nobody at the counter issued this, and the phone is holding
         itself until it can reach the server again.
       */}
+      {device.noLock && (
+        <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+          <p className="text-xs font-extrabold text-slate-900">Sold without a lock</p>
+          <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+            This phone cannot run the lock app, so it has no QR code and cannot be locked or restricted.
+            Installments, payments, reminders and the signed agreement work as for any other sale.
+          </p>
+        </div>
+      )}
+
       {device.offlineLockActive && (
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl">
           <p className="text-xs font-extrabold text-amber-900">

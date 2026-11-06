@@ -18,5 +18,6 @@ export const PHONE_BRANDS: ReadonlyArray<{ value: string; label: string }> = [
   { value: 'Motorola', label: 'Motorola' },
   { value: 'Google', label: 'Google Pixel' },
   { value: 'OnePlus', label: 'OnePlus' },
+  { value: 'Apple', label: 'Apple iPhone' },
   { value: 'Other', label: 'Other' },
 ];

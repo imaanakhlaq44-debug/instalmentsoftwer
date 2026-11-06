@@ -164,6 +164,11 @@ export interface Device {
    */
   offlineLockActive?: boolean;
   offlineLockSince?: string;
+  /**
+   * Sold without a lock because the handset cannot run the DPC. Stays PENDING
+   * for good: no QR, no lock spent, no lock command.
+   */
+  noLock?: boolean;
 
   createdAt: string;
   updatedAt: string;
