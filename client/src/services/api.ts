@@ -465,17 +465,4 @@ export class ApiService {
   }
 
   // -------------------------------------------------------------------------
-  // Simulator
-  // -------------------------------------------------------------------------
-
-  static getSimulatorDevices() {
-    return this.request<any[]>('/simulator/devices');
-  }
-
-  static updateSimulatorState(data: { deviceId: string; action: string; payload?: unknown }) {
-    return this.request<any>('/simulator/update-state', {
-      method: 'POST',
-      body: JSON.stringify({ ...data, payload: data.payload ?? {} }),
-    });
-  }
 }

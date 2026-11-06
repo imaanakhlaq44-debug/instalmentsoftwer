@@ -203,7 +203,11 @@ app.use('/api/platform', requireAuth, platformRouter);
 app.use('/api/notifications', requireAuth, notificationsRouter);
 app.use('/api/audit-logs', requireAuth, auditRouter);
 app.use('/api/settings', requireAuth, settingsRouter);
-app.use('/api/simulator', requireAuth, simulatorRouter);
+// The simulator stands in for a handset in development and tests. Its actions
+// write to real device records, so it has no place on a live server.
+if (!config.isProduction) {
+  app.use('/api/simulator', requireAuth, simulatorRouter);
+}
 app.use('/api/users', requireAuth, usersRouter);
 
 // ---------------------------------------------------------------------------

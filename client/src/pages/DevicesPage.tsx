@@ -16,7 +16,6 @@ import {
   WifiOff,
   Battery,
   AlertTriangle,
-  Radio,
   PlusCircle,
   X,
   CheckCircle2,
@@ -34,7 +33,7 @@ export const DevicesPage: React.FC = () => {
   const initialStatus = searchParams.get('status') || 'ALL';
   const initialSearch = searchParams.get('search') || '';
 
-  const { selectedDealerId, showToast, isStaff, isDealerAdmin, isSuperAdmin } = useAuth();
+  const { selectedDealerId, showToast, isStaff, isDealerAdmin } = useAuth();
   const navigate = useNavigate();
 
   const [devices, setDevices] = useState<any[]>([]);
@@ -189,14 +188,6 @@ export const DevicesPage: React.FC = () => {
             columns={deviceCsvColumns}
             filenamePrefix="devices"
           />
-          {isSuperAdmin && (
-          <button
-            onClick={() => navigate('/simulator')}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-xl text-xs font-bold transition-all"
-          >
-            <Radio className="w-4 h-4 text-blue-600" /> Phone Simulator
-          </button>
-          )}
           {isStaff && (
           <button
             onClick={() => setShowAddWizard(true)}
@@ -427,16 +418,6 @@ export const DevicesPage: React.FC = () => {
                             </button>
                           ))}
 
-                          {/* Simulator link: a platform tool, not for shops */}
-                          {isSuperAdmin && (
-                          <button
-                            onClick={() => navigate(`/simulator?deviceId=${d.id}`)}
-                            className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Launch in Virtual Simulator"
-                          >
-                            <Radio className="w-4 h-4" />
-                          </button>
-                          )}
                         </div>
                       </td>
                     </tr>
