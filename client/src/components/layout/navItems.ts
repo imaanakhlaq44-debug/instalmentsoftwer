@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Smartphone, Users, CalendarDays, CreditCard, QrCode,
-  KeyRound, Bell, FileSpreadsheet, Settings, Activity, Radio,
+  KeyRound, Bell, FileSpreadsheet, Settings, Activity, Radio, ClipboardList, Store,
 } from 'lucide-react';
 import { UserRole } from '../../types/index.js';
 
@@ -19,7 +19,7 @@ export interface NavItem {
 }
 
 /** Rendered in this order, and only when the role can see something inside. */
-export const NAV_GROUPS = ['Overview', 'Portfolio', 'Operations', 'Administration'] as const;
+export const NAV_GROUPS = ['Platform', 'Overview', 'Portfolio', 'Operations', 'Administration', 'Tools'] as const;
 export type NavGroup = (typeof NAV_GROUPS)[number];
 
 const ALL: UserRole[] = ['SUPER_ADMIN', 'DEALER_ADMIN', 'DEALER_STAFF', 'CUSTOMER'];
@@ -36,7 +36,6 @@ const ADMIN: UserRole[] = ['SUPER_ADMIN', 'DEALER_ADMIN'];
 export const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ALL, group: 'Overview' },
   { to: '/devices', label: 'Devices', icon: Smartphone, roles: ALL, group: 'Portfolio' },
-  { to: '/simulator', label: 'Device Simulator', icon: Radio, roles: ['SUPER_ADMIN'], group: 'Operations' },
   { to: '/customers', label: 'Customers', icon: Users, roles: STAFF, group: 'Portfolio' },
   { to: '/installments', label: 'Installments', icon: CalendarDays, roles: ALL, group: 'Portfolio' },
   { to: '/payments', label: 'Payments', icon: CreditCard, roles: ALL, group: 'Portfolio' },
@@ -48,7 +47,29 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/settings', label: 'Settings', icon: Settings, roles: ADMIN, group: 'Administration' },
 ];
 
-export function navItemsForRole(role: UserRole | null): NavItem[] {
+/**
+ * The platform owner's own menu.
+ *
+ * A super admin looking at every shop at once is running the platform, not a
+ * shop: their work is shops, the locks those shops order, and the money for
+ * them. Customers, installments and QR codes belong to one shop, so they only
+ * appear once a shop is opened (and then as that shop sees them).
+ */
+export const PLATFORM_NAV_ITEMS: NavItem[] = [
+  { to: '/', label: 'Home', icon: LayoutDashboard, roles: ['SUPER_ADMIN'], group: 'Platform' },
+  { to: '/orders', label: 'Lock orders', icon: ClipboardList, roles: ['SUPER_ADMIN'], group: 'Platform' },
+  { to: '/shops', label: 'Shops', icon: Store, roles: ['SUPER_ADMIN'], group: 'Platform' },
+  { to: '/licenses', label: 'Locks sold', icon: KeyRound, roles: ['SUPER_ADMIN'], group: 'Platform' },
+  { to: '/audit-logs', label: 'Activity log', icon: Activity, roles: ['SUPER_ADMIN'], group: 'Tools' },
+  { to: '/simulator', label: 'Device Simulator', icon: Radio, roles: ['SUPER_ADMIN'], group: 'Tools' },
+];
+
+/**
+ * What to show this person. A super admin sees the platform menu until they
+ * open a shop; then they see that shop's menu, exactly as its owner does.
+ */
+export function navItemsForRole(role: UserRole | null, viewingShop = false): NavItem[] {
   if (!role) return [];
+  if (role === 'SUPER_ADMIN' && !viewingShop) return PLATFORM_NAV_ITEMS;
   return NAV_ITEMS.filter((item) => item.roles.includes(role));
 }
