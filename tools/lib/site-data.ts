@@ -1,9 +1,9 @@
 export type CurrencyCode = 'USD' | 'GBP';
-export type ToolSlug = 'prorated-rent' | 'rent-affordability' | 'roommate-rent-split';
-export type ToolId = 'prorated' | 'affordability' | 'roommates';
 
 export const BASE_PATH = '/rentwise';
 export const SITE_URL = 'https://almassdm.pro/rentwise';
+export const SITE_DESCRIPTION = 'Fifteen free rent calculators for US and UK renters: rent affordability, move-in costs, prorated rent, roommate and couple rent splits, utility bills, deposit deadlines, rent vs buy and a lease clause checker.';
+export const SOCIAL_IMAGE = `${SITE_URL}/apartment-dusk.jpg`;
 
 export function sitePath(path: string): string {
   if (path === '/') return `${BASE_PATH}/`;
@@ -31,16 +31,17 @@ export const LOCATIONS: LocationInfo[] = [
   { slug: 'manchester', name: 'Manchester', country: 'UK', currency: 'GBP', note: 'Compare weekly and monthly asking rents on the same basis (weekly × 52 ÷ 12 is a monthly comparison estimate); budget separately for council tax, utilities, and travel.' },
 ];
 
-export const TOOLS: { id: ToolId; slug: ToolSlug; name: string; shortName: string; eyebrow: string; description: string }[] = [
-  { id: 'prorated', slug: 'prorated-rent', name: 'Prorated rent', shortName: 'Prorated rent', eyebrow: 'MOVE-IN MATH', description: 'Get a clear, day-by-day rent amount for a partial month.' },
-  { id: 'affordability', slug: 'rent-affordability', name: 'Rent affordability', shortName: 'Affordability', eyebrow: 'BUDGET CHECK', description: 'Estimate a comfortable budget from gross income and monthly debt.' },
-  { id: 'roommates', slug: 'roommate-rent-split', name: 'Roommate rent split', shortName: 'Roommate split', eyebrow: 'FAIR SHARE', description: 'Balance room size, private baths, views, and parking.' },
-];
+/** The old city routes, each mapped to the suite tool that now renders it. */
+export const LOCATION_TOOLS = [
+  { slug: 'prorated-rent', suiteSlug: 'prorated-rent', phrase: 'prorated rent' },
+  { slug: 'rent-affordability', suiteSlug: 'rent-affordability', phrase: 'rent affordability' },
+  { slug: 'roommate-rent-split', suiteSlug: 'roommate-rent-splitter', phrase: 'roommate rent split' },
+] as const;
 
 export function getLocation(slug: string): LocationInfo | undefined {
   return LOCATIONS.find((location) => location.slug === slug);
 }
 
-export function getTool(slug: string) {
-  return TOOLS.find((tool) => tool.slug === slug);
+export function getLocationTool(slug: string) {
+  return LOCATION_TOOLS.find((tool) => tool.slug === slug);
 }

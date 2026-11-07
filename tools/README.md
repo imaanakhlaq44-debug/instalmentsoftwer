@@ -1,52 +1,53 @@
-# RentWise · RentCalc Suite
+# RentWise
 
-Twelve free, instant rental, roommate and relocation calculators for US and UK planning. Built with Next.js App Router, TypeScript, Tailwind and Lucide; exported to static HTML. All entered figures are processed in the browser, without accounts or calculator API requests.
+Fifteen free rent calculators for US and UK renters, published at `almassdm.pro/rentwise/`. Next.js App Router exported to static HTML; every calculation runs in the browser, with no accounts and no calculator API.
+
+The look follows the Almas SDM marketing site (`site/src/pages/index.html`): cream dotted paper, ink outlines with hard offset shadows, sun and mint accents and Archivo 900 headlines. All styles live in `app/suite.css`.
 
 ## Tools
 
-Dashboard: `/rentwise/`. Calculator pages: `/rentwise/tools/{slug}/`.
+Index: `/rentwise/`. Tool pages: `/rentwise/tools/{slug}/`.
 
-- `rent-affordability` — annual/hourly income, comfortable range, 30%, 3× and 40× screening rules and debt adjustment.
-- `move-in-cash` — first/last rent, refundable deposits, moving and setup costs.
-- `roommate-rent-splitter` — room-area weights, bathroom/view/parking adjustments and cent-accurate totals.
-- `prorated-rent` — inclusive dates, actual calendar months, 30-day and 365-day conventions.
-- `utility-splitter` — variable bills by occupied days, internet shared equally, prior payments and settlements.
-- `rent-increase` — change amount/percentage, dates and non-binding California/England guidance with official sources.
-- `rent-vs-buy` — mortgage amortization, opportunity cost, ownership expenses, sale proceeds and 3/5/10-year comparisons.
-- `moving-cost-estimator` — illustrative vehicle sizing and editable cost/fuel assumptions, not a carrier quote.
-- `commute-vs-rent` — rent plus fuel/transit, annual commute time and time/cash trade-off.
-- `sublease-rate` — inclusive dates, furnished premium and optional utilities.
-- `cap-rate-calculator` — NOI, cap rate, debt service and cash-on-cash return.
-- `rent-per-sqft` — monthly/annual cost per sq ft or sq m and an optional user-provided benchmark.
+| Slug | Tool |
+| --- | --- |
+| `ai-lease-scanner` | Lease clause checker — rule-based red-flag check with an amendment letter (the slug is kept for old links; it is not AI) |
+| `rent-affordability` | 30% rule, 3× income and UK 40× rule, with debt |
+| `move-in-cash` | First/last month, deposit, fees, utility deposits, moving |
+| `roommate-rent-splitter` | Split by room area with bath / view / parking weights, to the cent |
+| `prorated-rent` | Exact days, 30-day month or 365-day year, inclusive dates |
+| `utility-splitter` | Internet equally, other bills by person-days, settle-up |
+| `rent-increase` | Increase %, notice days, California AB 1482 cap, England notice |
+| `rent-vs-buy` | Net cost of renting vs buying, breakeven year |
+| `moving-cost-estimator` | Truck size, round-trip fuel, hire and labor |
+| `commute-vs-rent` | Rent plus commute cost and time for two homes |
+| `sublease-rate` | Daily rate, total and monthly equivalent for a sublet |
+| `cap-rate-calculator` | NOI, cap rate, cash flow, cash-on-cash |
+| `rent-per-sqft` | Rent per sq ft / sq m, with a comparison |
+| `couple-rent-splitter` | Proportional, 50/50 and equal-leftover splits |
+| `security-deposit-refund` | Return deadline and statutory penalty by state / England |
 
-Every tool has copyable result breakdowns and browser print/Save PDF support. The dashboard has search and category filters. Eighteen existing location calculator routes remain available.
+The six `/calculator/{city}/{tool}/` pages from the first version still render (the suite tool plus a local note) but are `noindex` with a canonical pointing at the main tool page.
 
-## Structure
+## Where things are
 
-`source/components/suite/` contains the new client UI; `source/lib/suite-calculations.ts` contains the pure math; `source/lib/tool-registry.ts` controls the dashboard and static routes. The original calculators and location content remain separate for backwards compatibility.
+- `lib/tool-registry.ts` — every tool's name, H1, SEO title, meta description, keywords, the short quotable answer and related tools.
+- `lib/suite-calculations.ts` — the pure maths for all fifteen tools; `lib/lease-rules.ts` — the lease checker's patterns and per-jurisdiction rules.
+- `lib/content/*Guides.ts` — the formula, worked example, rules by location and FAQ under each tool.
+- `lib/content/toolSchema.ts` — JSON-LD: WebPage, WebApplication, BreadcrumbList and FAQPage (built from the same FAQ data the page shows).
+- `components/suite/SuiteApp.tsx` — the index and tool UI; `components/tools/ToolSEOContent.tsx` — the server-rendered guide.
 
-## Build and verification
+## Build and verify
 
 ```sh
-cd source
+cd tools
 npm ci
 npm test
 npm run typecheck
-npm run build
+npm run build      # writes tools/out
 ```
 
-Tests cover all twelve tools, malformed inputs, leap years, inclusive multi-month dates, allocation rounding, mortgage payoff and illustrative California cap boundaries. The export pre-renders the dashboard, 12 standalone tools and 18 existing location pages with canonical/OpenGraph metadata and structured data.
-
-## Helpful guides for all twelve tools
-
-`source/components/tools/ToolSEOContent.tsx` renders reusable, server-generated guides immediately below each standalone calculator workspace. `source/lib/content/toolGuides.ts` retains the first three approved guides unchanged and registers nine further guides from `investmentGuides.ts`, `tenancyGuides.ts`, and `householdGuides.ts`. Every guide includes the implemented formula and assumptions, a worked numerical walkthrough, scoped US/UK legal or practical notes with official references, and at least five native keyboard-accessible FAQ accordions.
-
-`source/lib/content/toolSchema.ts` generates `SoftwareApplication` and `FAQPage` JSON-LD for all twelve pages. Visible FAQ answers and structured data use the same source content. Structured data is descriptive metadata, not a ranking or rich-result guarantee. Legal notes distinguish England from the rest of the UK and do not certify compliance. Calculator defaults remain illustrative, not live market data, quotes, investment advice or legal entitlements.
-
-## Deployment safety
-
-GitHub Actions tests and builds `source/out` on pushes to `main`, then publishes that export to the `hostinger` branch. Hostinger's existing automatic Git integration deploys **only to `public_html/rentwise`**. Never change the project base path or deploy this export to `public_html`; that would overwrite the separate Almas SDM homepage. No DNS changes are needed. The separate `/tools/` directory is updated independently and is not part of the RentWise export.
+`site/build.mjs` copies `tools/out` into `site/dist/rentwise/`, and `.github/workflows/deploy-site.yml` uploads `site/dist` to Hostinger over FTPS on every push to `main` that touches `site/` or `tools/`. Never change `basePath` — it keeps RentWise under `/rentwise` and away from the Almas SDM homepage.
 
 ## Assumptions
 
-Defaults are examples, not live market averages, carrier quotes, or legal determinations. Switching USD/GBP changes currency/area/fuel conventions, not exchange rates: re-enter the values and area for your locale. UK fuel calculations use pounds/litre and imperial mpg; US uses dollars/US gallon and US mpg. Dates include both arrival and departure days; leases may differ. Return forecasts, rent rules, deposit limits and tenancy applicability must be checked against current local requirements. No calculator certifies legal compliance or substitutes for financial advice.
+Defaults are examples, not live market figures, quotes or legal determinations. USD/GBP switches symbols and units (sq ft ↔ sq m, US gallons ↔ litres), not exchange rates. Legal notes are general information for California, New York, Texas, Florida, England and Scotland and do not certify compliance.
