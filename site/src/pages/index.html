@@ -144,6 +144,22 @@ layout: none
   .sec-head p { max-width: 360px; margin: 0; color: var(--ink-2); }
   h3 { margin: 0 0 8px; font-size: 21px; font-weight: 800; line-height: 1.2; }
 
+  /* Guide video: a thumbnail until clicked, then the YouTube player in place */
+  #guide-video { padding-top: 72px; }
+  .vid { position: relative; aspect-ratio: 16 / 9; width: 100%; max-width: 980px; margin: 0 auto; border: var(--b); border-radius: var(--r); box-shadow: 8px 8px 0 var(--ink); overflow: hidden; background: var(--ink); }
+  .vid-btn { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; cursor: pointer; background: var(--ink); display: block; }
+  .vid-btn img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .4s ease, opacity .3s ease; opacity: .92; }
+  .vid-btn:hover img { transform: scale(1.03); opacity: 1; }
+  .vid-play { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(15,20,25,.28); transition: background .3s ease; }
+  .vid-btn:hover .vid-play { background: rgba(15,20,25,.12); }
+  .vid-play span { width: 92px; height: 92px; border-radius: 50%; background: var(--sun); border: var(--b); box-shadow: 4px 4px 0 var(--ink); display: grid; place-items: center; transition: transform .15s ease; }
+  .vid-btn:hover .vid-play span { transform: scale(1.08); }
+  .vid-play svg { width: 34px; height: 34px; margin-inline-start: 6px; fill: var(--ink); }
+  .vid-tag { position: absolute; inset-inline-start: 16px; bottom: 16px; background: var(--paper); border: var(--b); border-radius: 12px; padding: 8px 14px; font-weight: 800; font-size: 15px; color: var(--ink); }
+  .vid-btn:focus-visible { outline: 4px solid var(--sun); outline-offset: -8px; }
+  .vid iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  @media (max-width: 640px) { .vid-play span { width: 70px; height: 70px; } .vid-tag { font-size: 13px; bottom: 10px; inset-inline-start: 10px; } }
+
   /* Steps */
   .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; counter-reset: s; }
   .step { position: relative; background: var(--paper); border: var(--b); border-radius: var(--r); padding: 28px 26px 30px; box-shadow: var(--sh); }
@@ -386,6 +402,22 @@ layout: none
     <span>Samsung</span><span>Infinix</span><span>Tecno</span><span>Xiaomi</span><span>Vivo</span><span>Oppo</span><span>Realme</span><span>itel</span>
     <span>Samsung</span><span>Infinix</span><span>Tecno</span><span>Xiaomi</span><span>Vivo</span><span>Oppo</span><span>Realme</span><span>itel</span>
   </div></div>
+
+  <section id="guide-video">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><span class="kicker"><i></i><span data-ur="گائیڈ ویڈیو">Guide video</span></span><h2 data-ur="پورا سسٹم ایک ویڈیو میں">The whole system in one video</h2></div>
+        <p data-ur="لاگ اِن سے لے کر فون لاک، ادائیگی، لوکیشن اور آخری قسط تک — سب کچھ اردو میں، قدم بہ قدم۔">From login to locking a phone, payments, location and the last instalment — step by step, in Urdu.</p>
+      </div>
+      <div class="vid" id="vid" data-yt="_PvSrPtr4Mg">
+        <button type="button" class="vid-btn" id="vid-btn" aria-label="Play the Almas SDM guide video">
+          <img src="https://i.ytimg.com/vi/_PvSrPtr4Mg/hqdefault.jpg" alt="" loading="lazy" decoding="async" width="480" height="360" />
+          <span class="vid-play" aria-hidden="true"><span><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></svg></span></span>
+          <span class="vid-tag" data-ur="▶ گائیڈ دیکھیں · اردو">▶ Watch the guide · Urdu</span>
+        </button>
+      </div>
+    </div>
+  </section>
 
   <section id="how">
     <div class="wrap">
@@ -679,6 +711,27 @@ layout: none
     function pick(k) { if (timer) { clearInterval(timer); timer = null; } set(k); }
     document.getElementById('b-paid').onclick = function () { pick('paid'); };
     document.getElementById('b-late').onclick = function () { pick('late'); };
+  })();
+
+  // Guide video: load YouTube only when someone presses play, then play it right here.
+  (function () {
+    var box = document.getElementById('vid'), btn = document.getElementById('vid-btn');
+    if (!box || !btn) return;
+    var id = box.getAttribute('data-yt');
+    var img = btn.querySelector('img');
+    var hi = new Image();
+    hi.onload = function () { if (hi.naturalWidth > 200) img.src = hi.src; };
+    hi.src = 'https://i.ytimg.com/vi/' + id + '/maxresdefault.jpg';
+    btn.addEventListener('click', function () {
+      var f = document.createElement('iframe');
+      f.src = 'https://www.youtube-nocookie.com/embed/' + id + '?autoplay=1&rel=0&modestbranding=1&playsinline=1';
+      f.title = 'Almas SDM guide video';
+      f.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+      f.allowFullscreen = true;
+      f.referrerPolicy = 'strict-origin-when-cross-origin';
+      box.replaceChild(f, btn);
+      f.focus();
+    });
   })();
 </script>
 <!-- /home-only -->
