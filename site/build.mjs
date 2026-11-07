@@ -24,6 +24,22 @@ const SRC = path.join(ROOT, 'src');
 const OUT = path.join(ROOT, 'dist');
 
 /**
+ * The home page's testimonials were written as samples to show the design.
+ * Published as if real shops said them they would be fake reviews, so while any
+ * sample remains the whole section is left out of the build. Replace them with
+ * genuine feedback (removing data-sample-testimonial) and it publishes itself.
+ * SHOW_SAMPLE_TESTIMONIALS=1 keeps them in for a local preview.
+ */
+const SHOW_SAMPLES = process.env.SHOW_SAMPLE_TESTIMONIALS === '1';
+const countSamples = (html) => (html.match(/<figure[^>]*\sdata-sample-testimonial/g) || []).length;
+function withoutSampleTestimonials(html) {
+  if (SHOW_SAMPLES) return html;
+  return html.replace(/<!--\s*voices\s*-->[\s\S]*?<!--\s*\/voices\s*-->/g, (block) =>
+    countSamples(block) ? '' : block
+  );
+}
+
+/**
  * Where the "Sign in" button goes.
  *
  * The site is published before the dashboard has a server — it is the thing a
@@ -173,7 +189,7 @@ async function build() {
   await mkdir(OUT, { recursive: true });
 
   for (const file of pages) {
-    const raw = await readFile(path.join(SRC, 'pages', file), 'utf8');
+    const raw = withoutSampleTestimonials(await readFile(path.join(SRC, 'pages', file), 'utf8'));
     const meta = readMeta(raw);
     const body = raw.replace(/<!--\s*meta[\s\S]*?-->/, '').trim();
 
@@ -276,6 +292,17 @@ process.stdout.write(
 );
 if (!process.env.APP_URL) {
   process.stdout.write('  (APP_URL unset — do not publish this build)\n');
+}
+{
+  const home = await readFile(path.join(SRC, 'pages', 'index.html'), 'utf8');
+  const samples = countSamples(home);
+  if (samples) {
+    process.stdout.write(
+      SHOW_SAMPLES
+        ? `  ⚠ ${samples} SAMPLE testimonial(s) shown — local preview only, do not publish this build\n`
+        : `  Testimonials section left out: ${samples} still SAMPLE (replace with real shop feedback to publish it)\n`
+    );
+  }
 }
 
 if (process.argv.includes('--watch')) {

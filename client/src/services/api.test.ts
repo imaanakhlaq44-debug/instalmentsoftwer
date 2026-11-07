@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { ApiService, ApiError, TOKEN_STORAGE_KEY, setUnauthorizedHandler } from './api.js';
+import { ApiService, ApiError, TOKEN_STORAGE_KEY, setUnauthorizedHandler, setWriteGuard, VIEW_ONLY_CODE } from './api.js';
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -214,5 +214,30 @@ describe('mutations', () => {
     await ApiService.login('tariq@almadinamobiles.pk', 'AlmasSdm#2026');
 
     expect(String(spy.mock.calls[0][0])).not.toContain('AlmasSdm');
+  });
+});
+
+describe('write guard (super admin view-only)', () => {
+  afterEach(() => setWriteGuard(null));
+
+  it('refuses a write before it reaches the network', async () => {
+    const spy = stubFetch(() => json({}));
+    setWriteGuard(() => 'view only');
+
+    const err = await ApiService.lockDevice('d1', { reason: 'test' }).catch((e) => e);
+
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err.code).toBe(VIEW_ONLY_CODE);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('still lets reads and sign-out through', async () => {
+    const spy = stubFetch(() => json({}));
+    setWriteGuard(() => 'view only');
+
+    await ApiService.getDevices({});
+    await ApiService.logout();
+
+    expect(spy).toHaveBeenCalledTimes(2);
   });
 });
