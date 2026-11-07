@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { User, Dealer, UserRole } from '../types/index.js';
-import { ApiService, ApiError, TOKEN_STORAGE_KEY, setUnauthorizedHandler } from '../services/api.js';
+import { ApiService, ApiError, TOKEN_STORAGE_KEY, setUnauthorizedHandler, setWriteGuard } from '../services/api.js';
+
+export const VIEW_ONLY_MESSAGE =
+  'This shop is open in view-only mode. Turn on edit mode at the top of the page to make changes.';
 
 type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -18,6 +21,14 @@ interface AuthContextType {
   /** Dealer whose data is currently being viewed. Only a super admin can change it. */
   selectedDealerId: string | undefined;
   setSelectedDealerId: (id: string | undefined) => void;
+  /**
+   * A super admin who opens a shop starts read-only: every write is refused in
+   * the browser until they turn edit mode on. Switching shop or going back to
+   * the platform turns it off again.
+   */
+  isViewOnly: boolean;
+  shopEditMode: boolean;
+  setShopEditMode: (on: boolean) => void;
 
   isAuthenticated: boolean;
   /** True while the stored session is being validated on first load. */
@@ -49,7 +60,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [dealer, setDealer] = useState<Dealer | null>(null);
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_STORAGE_KEY));
-  const [selectedDealerId, setSelectedDealerId] = useState<string | undefined>(undefined);
+  const [selectedDealerId, setSelectedDealerIdState] = useState<string | undefined>(undefined);
+  const [shopEditMode, setShopEditMode] = useState(false);
+  // Every change of shop starts back in view-only.
+  const setSelectedDealerId = useCallback((id: string | undefined) => {
+    setSelectedDealerIdState(id);
+    setShopEditMode(false);
+  }, []);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
@@ -170,6 +187,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const role = user?.role ?? null;
 
+  const isViewOnly = role === 'SUPER_ADMIN' && Boolean(selectedDealerId) && !shopEditMode;
+
+  useEffect(() => {
+    setWriteGuard(isViewOnly ? () => VIEW_ONLY_MESSAGE : null);
+    return () => setWriteGuard(null);
+  }, [isViewOnly]);
+
   const can = useCallback(
     (...roles: UserRole[]) => (role ? roles.includes(role) : false),
     [role]
@@ -186,6 +210,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // the server ignores the parameter anyway, so we never send it.
       if (user?.role === 'SUPER_ADMIN') setSelectedDealerId(id);
     },
+    isViewOnly,
+    shopEditMode,
+    setShopEditMode,
 
     isAuthenticated: Boolean(user && token),
     isBootstrapping,
