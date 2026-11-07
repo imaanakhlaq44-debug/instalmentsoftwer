@@ -56,6 +56,21 @@ export function setUnauthorizedHandler(handler: UnauthorizedHandler | null) {
   onUnauthorized = handler;
 }
 
+type WriteGuard = (method: string, endpoint: string) => string | null;
+let writeGuard: WriteGuard | null = null;
+
+/**
+ * Registered by AuthContext. Returns a message to refuse a write before it
+ * leaves the browser — used to keep a super admin read-only inside a shop they
+ * opened until they deliberately turn edit mode on. Server permissions are
+ * unchanged; this guards against slips, not against a hostile client.
+ */
+export function setWriteGuard(guard: WriteGuard | null) {
+  writeGuard = guard;
+}
+
+export const VIEW_ONLY_CODE = 'VIEW_ONLY';
+
 function buildQuery(params: Record<string, unknown> = {}): string {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
@@ -72,6 +87,12 @@ export class ApiService {
       'Content-Type': 'application/json',
       ...(options.headers as Record<string, string>),
     };
+
+    const method = (options.method ?? 'GET').toUpperCase();
+    if (method !== 'GET' && method !== 'HEAD' && !endpoint.startsWith('/auth/')) {
+      const refusal = writeGuard?.(method, endpoint);
+      if (refusal) throw new ApiError(refusal, 403, VIEW_ONLY_CODE);
+    }
 
     const token = localStorage.getItem(TOKEN_STORAGE_KEY);
     if (token) headers['Authorization'] = `Bearer ${token}`;

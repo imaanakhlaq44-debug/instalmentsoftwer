@@ -733,6 +733,16 @@ export const ROMAN_URDU: Record<string, string> = {
   'Shop open': 'Khuli dukaan',
   'Back to platform': 'Platform par wapas',
   '← Back to platform': '← Platform par wapas',
+  'View only': 'Sirf dekhne ke liye',
+  'You can see everything in this shop but cannot change anything.':
+    'Aap is dukaan ka sab kuch dekh sakte hain, lekin kuch badal nahi sakte.',
+  'Turn on edit mode': 'Edit mode on karein',
+  'Edit mode on': 'Edit mode on hai',
+  'Changes here are real and recorded under your name.':
+    'Yahan ki tabdeeliyan asli hain aur aap ke naam se record hoti hain.',
+  'Back to view-only': 'Wapas sirf dekhne par',
+  'This shop is open in view-only mode. Turn on edit mode at the top of the page to make changes.':
+    'Yeh dukaan sirf dekhne ke liye khuli hai. Kuch badalne ke liye upar se edit mode on karein.',
   'Lock orders': 'Lock ke orders',
   Shops: 'Dukanein',
   'Locks sold': 'Beche gaye locks',
