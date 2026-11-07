@@ -1,86 +1,53 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import RentWiseApp from '@/components/RentWiseApp';
-import { getCalculatorGuide } from '@/lib/seo-content';
-import { absoluteSiteUrl, getLocation, getTool, LOCATIONS, SITE_URL, TOOLS } from '@/lib/site-data';
+import SuiteApp from '@/components/suite/SuiteApp';
+import ToolSEOContent from '@/components/tools/ToolSEOContent';
+import { getToolGuide } from '@/lib/content/toolGuides';
+import { getSuiteTool } from '@/lib/tool-registry';
+import { absoluteSiteUrl, getLocation, getLocationTool, LOCATIONS, LOCATION_TOOLS, SOCIAL_IMAGE } from '@/lib/site-data';
 
 type PageProps = { params: Promise<{ location: string; 'tool-slug': string }> };
 
-function getSearchPhrase(location: NonNullable<ReturnType<typeof getLocation>>, tool: NonNullable<ReturnType<typeof getTool>>) {
-  return tool.id === 'roommates' && location.country === 'UK' ? 'flatmate rent split' : tool.name.toLowerCase();
-}
+export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return LOCATIONS.flatMap((location) => TOOLS.map((tool) => ({ location: location.slug, 'tool-slug': tool.slug })));
+  return LOCATIONS.flatMap((location) => LOCATION_TOOLS.map((tool) => ({ location: location.slug, 'tool-slug': tool.slug })));
+}
+
+function resolve(route: { location: string; 'tool-slug': string }) {
+  const location = getLocation(route.location);
+  const entry = getLocationTool(route['tool-slug']);
+  const tool = entry && getSuiteTool(entry.suiteSlug);
+  if (!location || !entry || !tool) return null;
+  const phrase = entry.slug === 'roommate-rent-split' && location.country === 'UK' ? 'flatmate rent split' : entry.phrase;
+  return { location, entry, tool, phrase };
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const route = await params;
-  const location = getLocation(route.location);
-  const tool = getTool(route['tool-slug']);
-  if (!location || !tool) return { title: 'Calculator not found' };
-
-  const searchPhrase = getSearchPhrase(location, tool);
-  const title = `${searchPhrase.charAt(0).toUpperCase()}${searchPhrase.slice(1)} calculator for ${location.name}`;
-  const description = `Use the free ${searchPhrase} calculator for ${location.name}. See its calculation method, a worked example, and practical local-cost notes.`;
-  const url = absoluteSiteUrl(`/calculator/${location.slug}/${tool.slug}/`);
-  const locale = location.country === 'UK' ? 'en_GB' : 'en_US';
-  const socialImage = `${SITE_URL}/apartment-dusk.jpg`;
-
+  const found = resolve(await params);
+  if (!found) return { title: 'Calculator not found' };
+  const { location, tool, phrase } = found;
+  const title = `${location.name} ${phrase} calculator`;
+  const description = `Free ${phrase} calculator for renters in ${location.name}. ${tool.description}`;
   return {
     title,
     description,
-    alternates: { canonical: url },
-    // The city pages share almost all of their text, and near-duplicate pages
-    // drag down how search engines judge the whole suite. They stay reachable
-    // for visitors and keep passing links, but stay out of the index until each
-    // one carries genuinely local figures (typical rent, deposit caps, rules).
+    // These city pages share the main tool's content. The canonical points at
+    // the main tool page so search engines index that one, and they stay out of
+    // the index until each carries genuinely local figures.
+    alternates: { canonical: absoluteSiteUrl(`/tools/${tool.slug}/`) },
     robots: { index: false, follow: true },
-    openGraph: {
-      title: `${title} | RentWise Tools`, description, url, locale, type: 'website', siteName: 'RentWise Tools',
-      images: [{ url: socialImage, width: 736, height: 1104, alt: 'An evening city apartment, representing a new move' }],
-    },
-    twitter: { card: 'summary_large_image', title: `${title} | RentWise Tools`, description, images: [socialImage] },
+    openGraph: { title, description, url: absoluteSiteUrl(`/calculator/${location.slug}/${found.entry.slug}/`), locale: location.country === 'UK' ? 'en_GB' : 'en_US', type: 'website', siteName: 'RentWise', images: [{ url: SOCIAL_IMAGE, width: 736, height: 1104, alt: 'An evening city apartment' }] },
   };
 }
 
 export default async function LocationToolPage({ params }: PageProps) {
-  const route = await params;
-  const location = getLocation(route.location);
-  const tool = getTool(route['tool-slug']);
-  if (!location || !tool) notFound();
-
-  const guide = getCalculatorGuide(location, tool.id);
-  const searchPhrase = getSearchPhrase(location, tool);
-  const canonical = absoluteSiteUrl(`/calculator/${location.slug}/${tool.slug}/`);
-  const pageTitle = `${location.name} ${searchPhrase} calculator`;
-  const pageDescription = `Use the free ${searchPhrase} calculator for ${location.name}. See its calculation method, a worked example, and practical local-cost notes.`;
-  const breadcrumbData = {
-    '@context': 'https://schema.org',
-    '@graph': [
-      {
-        '@type': 'WebPage',
-        '@id': `${canonical}#webpage`,
-        url: canonical,
-        name: `${pageTitle} | RentWise Tools`,
-        description: pageDescription,
-        inLanguage: location.country === 'UK' ? 'en-GB' : 'en-US',
-        isPartOf: { '@id': `${SITE_URL}/#website` },
-        about: { '@id': `${SITE_URL}/#application` },
-        mainEntity: { '@type': 'SoftwareApplication', name: `${location.name} ${searchPhrase} calculator`, applicationCategory: 'UtilitiesApplication' },
-      },
-      {
-        '@type': 'BreadcrumbList',
-        itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: absoluteSiteUrl('/') },
-          { '@type': 'ListItem', position: 2, name: `${location.name} ${searchPhrase}`, item: canonical },
-        ],
-      },
-    ],
-  };
-
-  return <>
-    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData).replace(/</g, '\\u003c') }} />
-    <RentWiseApp initialCurrency={location.currency} initialTool={tool.id} location={location} />
-  </>;
+  const found = resolve(await params);
+  if (!found) notFound();
+  const { location, tool, phrase } = found;
+  const guide = getToolGuide(tool.slug);
+  const note = <div className="rw-place"><span className="rw-tag">{location.country}</span><div><b>{location.name} renter note</b><p>{location.note}</p></div></div>;
+  return <SuiteApp slug={tool.slug} heading={`${location.name} ${phrase} calculator`} intro={tool.description} note={note} initialCurrency={location.currency}>
+    {guide ? <ToolSEOContent guide={guide} tool={tool} /> : null}
+  </SuiteApp>;
 }

@@ -52,7 +52,7 @@ export const toolGuides: Record<string, ToolGuide> = {
         'Count May 15 through May 31 inclusive: 31 − 15 + 1 = 17 occupied days.',
         'Exact calendar method: May has 31 days, so daily rent is $1,800 ÷ 31 = $58.064516…',
         'Multiply $58.064516… by 17 = $987.0967…, rounded to $987.10.',
-        'For comparison, fixed 30-day method gives $1,800 ÷ 30 × 17 = $1,020.00; annual method gives $1,800 × 12 ÷ 365 × 17 = $1,004.38.',
+        'For comparison, fixed 30-day method gives $1,800 ÷ 30 × 17 = $1,020.00; annual method gives $1,800 × 12 ÷ 365 × 17 = $1,006.03.',
       ],
       takeaway: 'The method materially changes the estimate. Check the lease or ask the landlord which convention applies; neither a universal US nor UK rule mandates one of these calculator methods.',
     },

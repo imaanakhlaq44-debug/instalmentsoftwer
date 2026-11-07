@@ -1,7 +1,8 @@
+import { checkLease, amendmentLetter, JURISDICTION_NAMES, type Finding, type Jurisdiction } from './lease-rules';
 export type Currency = 'USD' | 'GBP';
 export type Unit = 'money' | 'percent' | 'number' | 'text';
 export type CalculationRow = { label: string; value: number; unit?: Unit; textValue?: string };
-export type CalculationResult = { headline: string; value: number; unit?: Unit; textValue?: string; rows: CalculationRow[]; notes: string[]; status?: 'good' | 'warn' | 'alert'; error?: string };
+export type CalculationResult = { headline: string; value: number; unit?: Unit; textValue?: string; rows: CalculationRow[]; notes: string[]; status?: 'good' | 'warn' | 'alert'; error?: string; findings?: Finding[]; letter?: string };
 
 /** UI input contract (all dates ISO YYYY-MM-DD). */
 export const toolDefaults: Record<string, Record<string, any>> = {
@@ -19,7 +20,7 @@ export const toolDefaults: Record<string, Record<string, any>> = {
   'rent-per-sqft': { rent: 2000, area: 1000, benchmark: 0 },
   'couple-rent-splitter': { rent: 2400, incomeA: 5000, incomeB: 3000, otherSharedExpenses: 0 },
   'security-deposit-refund': { depositAmount: 2000, state: 'california', moveOutDate: '2026-05-01', returnedAmount: 0 },
-  'ai-lease-scanner': { jurisdiction: 'california', clauseCategory: 'deposit-fees', clauseText: 'Tenant agrees that the $2,000 security deposit is strictly non-refundable as a standard turnover cleaning fee upon lease termination.', monthlyRent: 2000 },
+  'ai-lease-scanner': { jurisdiction: 'california', clauseCategory: 'deposit-fees', clauseText: 'Tenant agrees that the $2,000 security deposit is strictly non-refundable as a standard turnover cleaning fee upon lease termination.' },
 };
 
 const money = (n:number) => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -53,13 +54,13 @@ function compareRentBuy(v:any,c:Currency):CalculationResult {
  for(let y=horizon;y>=1;y--){if(points[y].buy>points[y].rent)break;stable=y;}
  const rows:CalculationRow[]=[3,5,10].flatMap(y=>[{label:`Year ${y} net cost — renting`,value:points[y].rent,unit:'money' as Unit},{label:`Year ${y} net cost — buying`,value:points[y].buy,unit:'money' as Unit}]);
  rows.push({label:'Estimated monthly mortgage principal + interest',value:m.payment,unit:'money'},{label:`Your ${years}-year stay — renting net cost`,value:points[years].rent,unit:'money'},{label:`Your ${years}-year stay — buying net cost`,value:points[years].buy,unit:'money'});
- return {...result(stable?`Modeled buy breakeven: year ${stable}`:`No lasting buy breakeven within ${horizon} years`,stable||0,rows,[`Model horizon: ${horizon} years. Breakeven means buying stays cheaper at every annual checkpoint from that year to this horizon; future results are not guaranteed.`,`Monthly amortization; rent and home value compound at your annual assumptions. Includes entered property tax, insurance, maintenance, buying costs and selling fees. Rent net cost subtracts the investment gain on the down payment only. Does not invest monthly cash-flow differences or buying costs, model tax relief, inflation-adjust costs to present value, or predict repairs. Negative net cost means modeled gains exceed outlays, not guaranteed profit.`, `Currency: ${c}. All growth and return rates are assumptions, not forecasts.`],stable?'good':'warn','number'),...(stable?{}:{textValue:'Not reached'})};
+ return {...result(stable?'Buying becomes cheaper from':`No lasting buy breakeven within ${horizon} years`,stable||0,rows,[`Model horizon: ${horizon} years. Breakeven means buying stays cheaper at every annual checkpoint from that year to this horizon; future results are not guaranteed.`,`Monthly amortization; rent and home value compound at your annual assumptions. Includes entered property tax, insurance, maintenance, buying costs and selling fees. Rent net cost subtracts the investment gain on the down payment only. Does not invest monthly cash-flow differences or buying costs, model tax relief, inflation-adjust costs to present value, or predict repairs. Negative net cost means modeled gains exceed outlays, not guaranteed profit.`, `Currency: ${c}. All growth and return rates are assumptions, not forecasts.`],stable?'good':'warn','number'),textValue:stable?`Year ${stable}`:'Not reached'};
 }
 export function calculateTool(slug:string,v:Record<string,any>,currency:'USD'|'GBP'):CalculationResult {
  try {
  switch(slug){
  case 'prorated-rent': {const rent=num(v,'monthlyRent'),a=date({...v,moveInDate:v.moveInDate??v.moveIn},'moveInDate')!,b=date({...v,moveOutDate:v.moveOutDate??v.moveOut},'moveOutDate',true); let mode=v.method??v.mode??'exact'; mode=mode==='thirty'?'30-day':mode==='annual'?'365-day':mode; if(!['exact','30-day','365-day'].includes(mode))throw Error('method must be exact, thirty, or annual.'); let total=0,occupied=0; const end=b||new Date(Date.UTC(a.getUTCFullYear(),a.getUTCMonth()+1,0)); if(end<a)throw Error('moveOut must be on or after moveIn.'); let cur=new Date(a); while(cur<=end){let last=new Date(Date.UTC(cur.getUTCFullYear(),cur.getUTCMonth()+1,0));let segEnd=last<end?last:end;let count=daysBetween(cur,segEnd)+1;const divisor=mode==='exact'?daysIn(cur):mode==='30-day'?30:365; total+=(mode==='365-day'?rent*12/365:rent/divisor)*count;occupied+=count;cur=new Date(Date.UTC(cur.getUTCFullYear(),cur.getUTCMonth()+1,1));} const div=mode==='exact'?daysIn(a):mode==='30-day'?30:365;return result('Prorated rent owed',total,[{label:'Daily rate (move-in month)',value:mode==='365-day'?rent*12/365:rent/div},{label:'Occupied days (inclusive)',value:occupied,unit:'number'},{label:'Days saved in move-in month',value:a.getUTCDate()-1,unit:'number'},{label:'Total unoccupied days in covered months',value:a.getUTCDate()-1+daysIn(end)-end.getUTCDate(),unit:'number'}],[mode==='365-day'?'365-day convention: monthly rent × 12 ÷ 365, allocated by occupied calendar day.':'Dates are counted inclusively; exact mode prorates each calendar month using its actual day count.']);}
- case 'rent-affordability': {const annual=v.incomeMode==='hourly'?num(v,'hourlyWage')*num(v,'hoursPerWeek',0,168)*52:num(v,'annualIncome');const debt=num(v,'debt');const monthly=annual/12, comfy=monthly*.25, max=monthly*.30, surplus=max-debt;return result('Maximum recommended monthly rent',max,[{label:'Low comfortable rent (20% gross)',value:monthly*.20},{label:'Comfortable rent (25% gross)',value:comfy},{label:'Risk threshold (35% gross)',value:monthly*.35},{label:'30% gross guideline',value:max},{label:'3× monthly gross income',value:monthly/3},{label:'UK 40× annual income',value:annual/40},{label:'Monthly gross income',value:monthly},{label:'Monthly debt payments',value:debt},{label:'30% guideline after debt',value:Math.max(0,surplus)}],[`Income mode: ${v.incomeMode==='hourly'?'hourly wage × hours/week × 52':'annual gross income'}. Guidelines are screening rules, not a guarantee of affordability.`],debt>max?'warn':'good');}
+ case 'rent-affordability': {const annual=v.incomeMode==='hourly'?num(v,'hourlyWage')*num(v,'hoursPerWeek',0,168)*52:num(v,'annualIncome');const debt=num(v,'debt');const monthly=annual/12, comfy=monthly*.25, max=monthly*.30, surplus=max-debt;return result('Rent at 30% of gross income',max,[{label:'Low comfortable rent (20% gross)',value:monthly*.20},{label:'Comfortable rent (25% gross)',value:comfy},{label:'Risk threshold (35% gross)',value:monthly*.35},{label:'30% gross guideline',value:max},{label:'3× monthly gross income',value:monthly/3},{label:'UK 40× annual income',value:annual/40},{label:'Monthly gross income',value:monthly},{label:'Monthly debt payments',value:debt},{label:'30% guideline after debt',value:Math.max(0,surplus)}],[`Income mode: ${v.incomeMode==='hourly'?'hourly wage × hours/week × 52':'annual gross income'}. Guidelines are screening rules, not a guarantee of affordability.`,...(debt>0?[debt>=max?`Your monthly debt payments are at or above the 30% figure, so that guideline leaves nothing for rent — treat the lower figures with caution.`:`After your monthly debt payments, the 30% guideline leaves ${currency==='GBP'?'£':'$'}${Math.round(surplus).toLocaleString('en-US')} a month for rent.`]:[])],debt>max?'warn':'good');}
  case 'roommate-rent-splitter': {const total=num(v,'totalRent'),rooms=v.rooms;if(!Array.isArray(rooms)||rooms.length<1||rooms.length>50)throw Error('rooms must contain 1–50 entries.');let raw=rooms.map((r:any,i:number)=>{const area=Number(r.area);if(!Number.isFinite(area)||area<=0)throw Error(`Room ${i+1} area must be positive.`);return {name:String(r.name||`Room ${i+1}`),weight:area*(1+(r.bath?.15:0)+(r.view?.05:0)+(r.parking?.10:0))};});const sum=raw.reduce((s:number,r:any)=>s+r.weight,0);let cents=Math.round(total*100),used=0;const alloc=raw.map((r:any,i:number)=>{const share=i===raw.length-1?cents-used:Math.floor(cents*r.weight/sum);used+=share;return {label:r.name,value:share/100,unit:'money' as Unit};});return result('Total allocated rent',total,[...alloc,...raw.map((r:any)=>({label:`${r.name} share`,value:r.weight/sum*100,unit:'percent' as Unit}))],['Base weight is room area; private bath +15%, view/balcony +5%, parking +10%. Percentages are relative weights, and final allocation reconciles to the rent to the cent.']);}
  case 'rent-vs-buy': return compareRentBuy(v,currency);
  case 'rent-increase': {const old=num(v,'currentRent'),next=num(v,'newRent');const notice=date(v,'noticeDate',true),effective=date(v,'renewalDate',true);const diff=next-old,pct=old?diff/old*100:0,j=String(v.jurisdiction||'').toLowerCase(),cpi=num(v,'cpi',0,100);const notes=['This is a calculator, not legal advice; notice periods and rent-control coverage depend on location, property and tenancy. No compliance determination is made.'];let status:CalculationResult['status']='good',days:number|undefined; if(notice&&effective&&effective<notice)throw Error('Increase effective date must not be before the notice date.'); if(notice&&effective)days=daysBetween(notice,effective);const ca=j.includes('california')||j==='ca',eng=j.includes('england')||j==='uk';if(old===0)throw Error('currentRent must be greater than zero to calculate an increase percentage.');if(ca){notes.push('California AB 1482 generally uses the lower of 5% + applicable CPI or 10% for covered units; illustrative only, not a legal determination. Coverage and notice rules vary. The CPI entered is illustrative, not fetched. Check [California Attorney General guidance](https://oag.ca.gov/tenants).');const cap=Math.min(10,5+cpi);if(pct>cap+1e-9)status='warn';if(notice&&effective){days=daysBetween(notice,effective);const required=pct>10+1e-9?90:30;if(days<required){notes.push(`Notice appears short: ${days} days supplied; ${required} days shown as an illustrative minimum.`);status='warn';}}}if(eng){notes.push('England only: from 1 May 2026, assured periodic rent increases generally require at least TWO CALENDAR MONTHS notice and can occur only once a year. Different tenancies and other UK nations have different rules. No compliance determination is made. Check [official England guidance](https://housinghub.campaign.gov.uk/private-renting-is-changing/).');if(notice&&effective){const due=new Date(notice);const day=due.getUTCDate();due.setUTCMonth(due.getUTCMonth()+2);if(due.getUTCDate()<day)due.setUTCDate(0);days=daysBetween(notice,effective);if(effective<due){notes.push(`Notice appears short: ${days} days supplied; effective date is earlier than two calendar months after notice.`);status='warn';}}}return result('Proposed rent increase',diff,[{label:'Increase percentage',value:pct,unit:'percent'},{label:'New monthly rent',value:next},...(days===undefined?[]:[{label:'Notice period (days)',value:days,unit:'number' as Unit}]),...(ca?[{label:'Illustrative AB 1482 cap (if covered)',value:Math.min(10,5+cpi),unit:'percent' as Unit}]:[])],notes,status);}
@@ -71,13 +72,15 @@ export function calculateTool(slug:string,v:Record<string,any>,currency:'USD'|'G
  case 'cap-rate-calculator': {const price=num(v,'price',0.01),rent=num(v,'rent'),tax=num(v,'taxes'),ins=num(v,'insurance'),maintPct=num(v,'maintenancePct',0,100),vac=num(v,'vacancy',0,100),other=num(v,'otherExpenses'),downPct=num(v,'downPayment',0,100),rate=num(v,'interest',0,100),years=num(v,'loanYears',1,50),closing=num(v,'closingCosts');const gross=rent*12,noi=gross*(1-vac/100)-tax-ins-price*maintPct/100-other,cap=noi/price*100,loan=price*(1-downPct/100),payment=mortgage(loan,rate,years).payment,annualCF=noi-payment*12,cashInvested=downPct*price/100+closing,coc=cashInvested?annualCF/cashInvested*100:0;return result('Capitalization rate',cap,[{label:'Annual net operating income (NOI)',value:noi},{label:'Cap rate',value:cap,unit:'percent'},{label:'Annual cash flow after debt service',value:annualCF},{label:'Cash-on-cash return',value:coc,unit:cashInvested?'percent':'text',...(cashInvested?{}:{textValue:'Not defined: no cash invested'})},{label:'Annual gross rent',value:gross},{label:'Annual debt service (P&I)',value:payment*12}],['Estimate: vacancy applied to gross rent; maintenance based on purchase price; excludes management, utilities and taxes not entered. Cap rate excludes financing; cash-on-cash uses down payment plus closing costs.'],noi<0?'alert':'good','percent');}
  case 'rent-per-sqft': {const rent=num(v,'rent'),area=num(v,'area',0.01),bench=num(v,'benchmark');const rate=rent/area;return result('Monthly rent per area unit',rate,[{label:`Monthly rate / ${currency==='GBP'?'sq m':'sq ft'}`,value:rate},{label:`Annual rate / ${currency==='GBP'?'sq m':'sq ft'}`,value:rate*12},...(bench>0?[{label:'Entered benchmark (monthly)',value:bench},{label:'Difference vs benchmark',value:rate-bench}]:[])],['Benchmark is user-provided; no market standard is assumed. Area units must match the benchmark (sq ft or sq m).']);}
  case 'couple-rent-splitter': {
-  const rent=num(v,'rent',0.01), incA=num(v,'incomeA',0.01), incB=num(v,'incomeB',0.01), bills=v.otherSharedExpenses?num(v,'otherSharedExpenses',0):0;
+  const rent=num(v,'rent',0.01), incA=num(v,'incomeA'), incB=num(v,'incomeB'), bills=num(v,'otherSharedExpenses');
+  if(incA+incB<=0) throw Error('Enter at least one partner take-home pay.');
   const totalInc=incA+incB, sharePctA=(incA/totalInc)*100, sharePctB=(incB/totalInc)*100;
   const propRentA=rent*(incA/totalInc), propRentB=rent*(incB/totalInc), equalRent=rent/2;
   const equalCashA=Math.min(rent,Math.max(0,(rent+incA-incB)/2)), equalCashB=rent-equalCashA;
   const totalObligation=rent+bills, propTotalA=totalObligation*(incA/totalInc), propTotalB=totalObligation*(incB/totalInc);
   const rentToIncomePct=(rent/totalInc)*100;
-  return result(`Proportional split: Partner 1 pays ${Math.round(sharePctA)}%, Partner 2 pays ${Math.round(sharePctB)}%`,propRentA,[
+  const roundedA=Math.round(sharePctA);
+  return result(`Proportional split: Partner 1 pays ${roundedA}%, Partner 2 pays ${100-roundedA}%`,propRentA,[
     {label:'Partner 1 proportional rent',value:propRentA,unit:'money'},
     {label:'Partner 2 proportional rent',value:propRentB,unit:'money'},
     {label:'Partner 1 income share',value:sharePctA,unit:'percent'},
@@ -95,117 +98,49 @@ export function calculateTool(slug:string,v:Record<string,any>,currency:'USD'|'G
   ],rentToIncomePct>35?'warn':'good');
  }
  case 'security-deposit-refund': {
-  const deposit=num(v,'depositAmount',0.01), state=String(v.state||'california').toLowerCase(), moveOut=date(v,'moveOutDate',true)||new Date('2026-05-01T00:00:00Z'), returned=v.returnedAmount?num(v,'returnedAmount',0):0;
-  const rules:Record<string,{days:number;penaltyMultiplier:number;fixedPenalty:number;citation:string}>={
-    'california':{days:21,penaltyMultiplier:2,fixedPenalty:0,citation:'Cal. Civ. Code § 1950.5 (21 days; up to 2× statutory damages for bad faith)'},
-    'new-york':{days:14,penaltyMultiplier:2,fixedPenalty:0,citation:'N.Y. Gen. Oblig. Law § 7-108 (14 days; failure forfeits right to retain deposit)'},
-    'texas':{days:30,penaltyMultiplier:3,fixedPenalty:100,citation:'Tex. Prop. Code § 92.103-92.109 (30 days; $100 + 3× improperly withheld amount)'},
-    'florida':{days:15,penaltyMultiplier:0,fixedPenalty:0,citation:'Fla. Stat. § 83.49 (15 days if no claim; 30 days to claim with itemized notice)'},
-    'uk':{days:10,penaltyMultiplier:3,fixedPenalty:0,citation:'UK Housing Act 2004 (10 days; 1× to 3× compensation for unprotected deposits)'},
-    'general':{days:30,penaltyMultiplier:1,fixedPenalty:0,citation:'General guidance: most statutory rules require return within 14–30 days'}
+  const deposit=num(v,'depositAmount',0.01), state=String(v.state||'california').toLowerCase(), returned=num(v,'returnedAmount');
+  if(!v.moveOutDate) throw Error('Enter your move-out date to work out the deadline.');
+  const moveOut=date(v,'moveOutDate')!;
+  if(returned>deposit) throw Error('The amount returned cannot be more than the deposit.');
+  const rules:Record<string,{name:string;days:number;depositMultiple:number;withheldMultiple:number;fixed:number;citation:string;start:string;penalty:string}>={
+    'california':{name:'California',days:21,depositMultiple:2,withheldMultiple:0,fixed:0,citation:'Cal. Civ. Code § 1950.5(g) and (l)',start:'after you move out',penalty:'In bad faith, a court may award up to twice the deposit in statutory damages, on top of the amount owed.'},
+    'new-york':{name:'New York',days:14,depositMultiple:2,withheldMultiple:0,fixed:0,citation:'N.Y. Gen. Oblig. Law § 7-108(1-a)',start:'after you move out',penalty:'A landlord who misses the 14-day itemised statement loses the right to keep any of the deposit; a wilful violation can bring punitive damages of up to twice the deposit.'},
+    'texas':{name:'Texas',days:30,depositMultiple:0,withheldMultiple:3,fixed:100,citation:'Tex. Prop. Code §§ 92.103 and 92.109',start:'after you move out and give a written forwarding address',penalty:'Bad-faith withholding makes the landlord liable for $100 plus three times the amount wrongfully withheld, plus reasonable attorney’s fees.'},
+    'florida':{name:'Florida',days:15,depositMultiple:0,withheldMultiple:0,fixed:0,citation:'Fla. Stat. § 83.49(3)',start:'after you move out',penalty:'If the landlord does not return the deposit in 15 days or send written notice of a claim within 30 days, it loses the right to make a claim on the deposit.'},
+    'england':{name:'England',days:10,depositMultiple:0,withheldMultiple:0,fixed:0,citation:'Housing Act 2004 ss.213–214; tenancy deposit scheme rules',start:'after you and the landlord agree how much you get back',penalty:'Deposit penalties in England apply when the deposit was not protected in a government-backed scheme within 30 days: a court can order 1 to 3 times the deposit. Disputes about deductions go to the scheme’s free resolution service.'},
+    'general':{name:'General estimate',days:30,depositMultiple:0,withheldMultiple:0,fixed:0,citation:'State security-deposit statute',start:'after you move out (many states use 14–30 days)',penalty:'Penalties vary by state. Check your state’s security-deposit statute.'}
   };
-  const rule=rules[state]||rules['general'], deadlineDate=new Date(moveOut.getTime()+rule.days*86400000), deadlineStr=deadlineDate.toISOString().slice(0,10);
-  const unreturned=Math.max(0,deposit-returned), maxPenalty=(unreturned*rule.penaltyMultiplier)+rule.fixedPenalty;
-  return result(`Statutory deadline: ${rule.days} days (${deadlineStr})`,unreturned,[
-    {label:'Original deposit paid',value:deposit,unit:'money'},
-    {label:'Amount currently unreturned',value:unreturned,unit:'money'},
-    {label:'Statutory deadline (calendar days)',value:rule.days,unit:'number'},
-    {label:'Potential statutory penalty for bad-faith withholding',value:maxPenalty,unit:'money'},
-    {label:'Total potential recovery (deposit + max penalties)',value:unreturned+maxPenalty,unit:'money'}
-  ],[
-    `Statutory authority: ${rule.citation}.`,
-    'Deadlines begin when tenancy ends and the tenant provides a forwarding address in writing.',
-    'Landlords must generally provide an itemized statement with repair receipts for any deductions beyond normal wear and tear.'
-  ],'good');
+  const rule=rules[state==='uk'?'england':state]||rules['general'];
+  const deadline=new Date(moveOut.getTime()+rule.days*86400000);
+  const deadlineText=rule.name==='England'?'10 days after you agree':new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}).format(deadline);
+  const unreturned=deposit-returned, penalty=deposit*rule.depositMultiple+unreturned*rule.withheldMultiple+(rule.withheldMultiple&&unreturned>0?rule.fixed:0);
+  const rows:CalculationRow[]=[
+    {label:'Return period',value:rule.days,unit:'text',textValue:`${rule.days} days ${rule.start}`},
+    {label:'Deposit paid',value:deposit},
+    {label:'Still not returned',value:unreturned},
+  ];
+  if(penalty>0&&unreturned>0) rows.push({label:'Maximum statutory penalty (bad faith)',value:penalty},{label:'Most you could claim (unreturned + penalty)',value:unreturned+penalty});
+  return {...result(`Deposit due back by`,0,rows,[
+    `${rule.name}: ${rule.citation}. ${rule.penalty}`,
+    'Give your forwarding address in writing and keep dated move-out photos. Landlords can deduct for unpaid rent and damage beyond normal wear and tear, with an itemised statement.',
+  ],unreturned>0?'warn':'good'),unit:'text',textValue:deadlineText};
  }
  case 'ai-lease-scanner': {
-  const rent = typeof v.monthlyRent === 'number' ? v.monthlyRent : Number(v.monthlyRent) || 2000;
-  const jurisdiction = String(v.jurisdiction || 'california').toLowerCase();
-  const clauseText = String(v.clauseText || '').trim();
-  const lower = clauseText.toLowerCase();
-
-  let severity: 'alert' | 'warn' | 'good' = 'good';
-  let score = 15;
-  let category = 'Standard Term';
-  let statute = 'Compliant with US & UK statutory tenant codes';
-  let issue = 'No statutory tenant rights violations detected in the submitted clause text.';
-  let enforceability = 'Presumed enforceable under standard lease contract rules.';
-  let exposure = 0;
-  let counterLetter = 'This clause appears within standard statutory guidelines. Ensure terms match local market conventions.';
-
-  if (!clauseText) {
-    severity = 'warn';
-    score = 0;
-    category = 'Incomplete Input';
-    issue = 'Please paste a lease clause above to scan for statutory violations and predatory terms.';
-    enforceability = 'Not evaluated';
-    counterLetter = 'Please paste your lease text above to generate a formal counter-letter.';
-  } else if (lower.includes('non-refundable') || lower.includes('nonrefundable') || (lower.includes('deposit') && lower.includes('cleaning fee')) || lower.includes('turnover fee') || lower.includes('refurbishment fee') || lower.includes('forfeited upon move-out')) {
-    severity = 'alert';
-    score = 95;
-    category = 'Prohibited Non-Refundable Deposit / Fee';
-    const isUK = jurisdiction === 'england' || jurisdiction === 'scotland';
-    statute = isUK ? 'UK Tenant Fees Act 2019 (Schedule 1 Prohibited Payments)' : jurisdiction === 'new-york' ? 'N.Y. General Obligations Law § 7-108' : 'California Civil Code § 1950.5(m)';
-    issue = isUK ? 'Under the Tenant Fees Act 2019, compulsory cleaning, turnover or checkout fees are prohibited payments.' : 'State law strictly prohibits labeling any residential deposit as non-refundable. Security deposits remain tenant funds held in trust.';
-    enforceability = 'Void and unenforceable as a matter of public policy';
-    exposure = rent;
-    counterLetter = `Dear Landlord/Property Manager,\n\nRegarding the draft lease agreement, Clause [Clause Number] specifies a non-refundable cleaning/turnover fee. Under ${isUK ? 'the UK Tenant Fees Act 2019' : 'applicable statutory tenant protection laws'}, all compulsory payments outside permitted rent and refundable security deposits are prohibited.\n\nWe kindly request that this clause be amended to reflect that the security deposit is fully refundable in accordance with statutory guidelines.`;
-  } else if (lower.includes('enter at any time') || lower.includes('without notice') || (lower.includes('waive') && lower.includes('notice')) || lower.includes('immediate access') || (lower.includes('discretion') && lower.includes('inspect'))) {
-    severity = 'alert';
-    score = 90;
-    category = 'Unlawful Waiver of Entry Notice';
-    const isUK = jurisdiction === 'england' || jurisdiction === 'scotland';
-    statute = isUK ? 'Landlord & Tenant Act 1985 § 11(6) & Protection from Eviction Act 1977' : jurisdiction === 'florida' ? 'Florida Statutes § 83.53' : 'California Civil Code § 1954 & § 1953(a)(1)';
-    issue = isUK ? 'Tenants possess the fundamental right to quiet enjoyment; landlords must give at least 24 hours written notice.' : 'Landlords are legally required to provide advance written notice (typically 24 hours) prior to non-emergency visits during reasonable hours.';
-    enforceability = 'Void ab initio (Statutory right cannot be waived by contract)';
-    exposure = 500;
-    counterLetter = `Dear Landlord/Property Manager,\n\nWe noticed the entry provisions in Clause [Clause Number]. Under ${isUK ? 'Section 11(6) of the Landlord and Tenant Act 1985' : 'applicable state landlord-tenant laws'}, residential tenants are entitled to at least 24 hours advance written notice prior to non-emergency entry.\n\nWe request that the clause be revised to specify a minimum 24-hour written notice during normal business hours.`;
-  } else if (lower.includes('tenant responsible for all repairs') || lower.includes('maintain the heating') || lower.includes('plumbing repairs') || (lower.includes('repair') && lower.includes('regardless of cause')) || lower.includes('structural')) {
-    severity = 'alert';
-    score = 88;
-    category = 'Unlawful Transfer of Habitability / Structural Repairs';
-    const isUK = jurisdiction === 'england' || jurisdiction === 'scotland';
-    statute = isUK ? 'Landlord and Tenant Act 1985 Section 11 (Statutory Repair Obligations)' : 'Implied Warranty of Habitability (Non-Waivable Housing Code)';
-    issue = isUK ? 'Section 11 of the Landlord and Tenant Act 1985 places an absolute, non-delegable duty on the landlord to keep structure, heating, water, and sanitation in repair.' : 'The landlord is statutorily mandated to maintain the property in a habitable condition. Shifting structural or heating repairs to tenants violates habitability laws.';
-    enforceability = 'Void term under statutory public policy';
-    exposure = rent * 1.5;
-    counterLetter = `Dear Landlord/Property Manager,\n\nIn reviewing Clause [Clause Number], the language suggests tenant responsibility for structural, plumbing, and heating repairs. Under ${isUK ? 'Section 11 of the Landlord and Tenant Act 1985' : 'the statutory Implied Warranty of Habitability'}, maintenance of essential building systems remains the non-delegable responsibility of the property owner.\n\nWe ask that this provision be adjusted to clarify that tenant obligations are limited to routine cleanliness and repairing damages caused by tenant negligence.`;
-  } else if (lower.includes('checkout fee') || lower.includes('check-out fee') || lower.includes('inventory fee') || lower.includes('renewal fee') || lower.includes('professional carpet clean') || lower.includes('admin fee') || lower.includes('reference fee')) {
-    severity = 'alert';
-    score = 94;
-    category = 'Prohibited Administrative / Checkout Charges';
-    statute = 'UK Tenant Fees Act 2019 / Unfair Contract Terms Regulations';
-    issue = 'Charging tenants for routine tenancy renewals, inventory checkouts, or mandatory professional cleaning requirements violates statutory tenant fee bans.';
-    enforceability = 'Prohibited payment subject to statutory fines and sanctions';
-    exposure = 300;
-    counterLetter = `Dear Landlord/Property Manager,\n\nPlease remove the checkout/administrative fee listed in Clause [Clause Number]. Under the Tenant Fees Act 2019, charging tenants for inventory checks, renewals, or checkout inspections is classified as a prohibited payment.\n\nThank you for updating the draft agreement accordingly.`;
-  } else if (lower.includes('no overnight guests') || lower.includes('guest fee') || lower.includes('visitor fee') || (lower.includes('guests') && (lower.includes('curfew') || lower.includes('not permitted')))) {
-    severity = 'warn';
-    score = 65;
-    category = 'Unreasonable Restriction on Quiet Enjoyment';
-    statute = 'Covenant of Quiet Enjoyment & Unfair Terms Guidance';
-    issue = 'While landlords may prevent unauthorized permanent occupants (over 14 consecutive days), blanket bans on occasional overnight guests or charging daily guest fees are deemed unconscionable.';
-    enforceability = 'Likely unenforceable if challenged in court';
-    exposure = 200;
-    counterLetter = `Dear Landlord/Property Manager,\n\nWe would like to clarify the guest policy in Clause [Clause Number]. We propose clarifying that reasonable occasional overnight guests are permitted for up to 14 consecutive days without fee.`;
-  }
-
-  const headline = severity === 'alert'
-    ? `Risk Score: ${score}/100 · Critical Red Flag Detected`
-    : severity === 'warn'
-    ? `Risk Score: ${score}/100 · Caution / Unfair Term`
-    : `Risk Score: ${score}/100 · Standard Term`;
-
-  return result(headline, score, [
-    { label: 'Statutory compliance status', value: 0, unit: 'text', textValue: severity === 'alert' ? 'STATUTORY VIOLATION DETECTED' : severity === 'warn' ? 'POTENTIAL UNFAIR TERM' : 'COMPLIANT' },
-    { label: 'Governing statutory authority', value: 0, unit: 'text', textValue: statute },
-    { label: 'Enforceability in court', value: 0, unit: 'text', textValue: enforceability },
-    { label: 'Potential financial exposure / savings', value: exposure, unit: 'money' },
-  ], [
-    `Analysis: ${issue}`,
-    `Statutory Authority: ${statute}.`,
-    `Negotiation Letter / Counter-Proposal:\n${counterLetter}`,
-  ], severity, 'number');
+  const allowed=['california','new-york','texas','florida','england','scotland','general'];
+  const j=(allowed.includes(String(v.jurisdiction))?String(v.jurisdiction):'general') as Jurisdiction;
+  const text=String(v.clauseText||'').trim();
+  if(!text) throw Error('Paste a lease clause, or pick one of the examples, to check it.');
+  if(text.length>20000) throw Error('Paste up to 20,000 characters at a time.');
+  const findings=checkLease(text,j);
+  const alerts=findings.filter(f=>f.severity==='alert').length, warns=findings.filter(f=>f.severity==='warn').length;
+  const status:CalculationResult['status']=alerts?'alert':warns?'warn':'good';
+  const headline=findings.length?'Points to raise before signing':'Common red flags found';
+  return {...result(headline,findings.length,[
+    {label:'Rules checked for',value:0,unit:'text',textValue:JURISDICTION_NAMES[j]},
+    {label:'Likely unlawful or void',value:alerts,unit:'number'},
+    {label:'Worth negotiating',value:warns,unit:'number'},
+    {label:'For information',value:findings.length-alerts-warns,unit:'number'},
+  ],[findings.length?'Each point above shows the matching sentence and the rule it relates to. Send the amendment request before you sign.':'Nothing matched the common red flags this checker looks for. That does not mean the clause is lawful — it only checks a fixed list of well-known problem terms.','This is a pattern check, not legal advice. For a tenancy dispute, contact a tenant union, Citizens Advice / Shelter (UK), or a local legal aid office.'],status,'number'),textValue:findings.length?String(findings.length):'None',findings,letter:amendmentLetter(findings,j)};
  }
  default:return err(`Unknown calculator slug: ${slug}`);
  }

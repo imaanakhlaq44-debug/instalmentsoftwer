@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { getToolGuide, toolGuides } from '../lib/content/toolGuides';
 import { buildToolSchema, serializeToolSchema } from '../lib/content/toolSchema';
 import { calculateTool } from '../lib/suite-calculations';
+import { getSuiteTool } from '../lib/tool-registry';
 
 const slugs = ['prorated-rent', 'rent-affordability', 'roommate-rent-splitter', 'rent-vs-buy', 'rent-increase', 'move-in-cash', 'utility-splitter', 'moving-cost-estimator', 'commute-vs-rent', 'sublease-rate', 'cap-rate-calculator', 'rent-per-sqft', 'couple-rent-splitter', 'security-deposit-refund', 'ai-lease-scanner'];
 
@@ -30,18 +31,18 @@ test('FAQ schema exactly mirrors visible FAQ content and uses subdirectory URLs'
   for (const slug of slugs) {
     const guide = getToolGuide(slug)!;
     const url = `https://almassdm.pro/rentwise/tools/${slug}/`;
-    const schema = buildToolSchema({ name: guide.title, description: guide.introduction }, url, 'https://almassdm.pro/rentwise', guide);
-    const app = schema['@graph'].find(node => node['@type'] === 'SoftwareApplication')!;
+    const schema = buildToolSchema(getSuiteTool(slug)!, url, 'https://almassdm.pro/rentwise', guide);
+    const app = schema['@graph'].find(node => node['@type'] === 'WebApplication')!;
     assert.equal('url' in app && app.url, url);
     const faq = schema['@graph'].find(node => node['@type'] === 'FAQPage')!;
     assert.deepEqual('mainEntity' in faq && faq.mainEntity, guide.faqs.map(item => ({ '@type': 'Question', name: item.question, acceptedAnswer: { '@type': 'Answer', text: item.answer } })));
-    const plain = buildToolSchema({ name: 'Other', description: 'Other tool' }, url, 'https://almassdm.pro/rentwise');
+    const plain = buildToolSchema(getSuiteTool(slug)!, url, 'https://almassdm.pro/rentwise');
     assert.ok(!plain['@graph'].some(node => node['@type'] === 'FAQPage'));
   }
 });
 
 test('JSON-LD serialization prevents script termination', () => {
-  const schema = buildToolSchema({ name: '</script><script>alert(1)</script>', description: 'x' }, 'https://example.com/', 'https://example.com');
+  const schema = buildToolSchema({ ...getSuiteTool('prorated-rent')!, h1: '</script><script>alert(1)</script>' }, 'https://example.com/', 'https://example.com');
   const json = serializeToolSchema(schema);
   assert.ok(!json.includes('<'));
   assert.deepEqual(JSON.parse(json), schema);
@@ -50,6 +51,12 @@ test('JSON-LD serialization prevents script termination', () => {
 test('guide formula conventions match real calculator behavior', () => {
   const exact = calculateTool('prorated-rent', { monthlyRent: 2100, moveIn: '2026-10-12', moveOut: '2026-10-31', method: 'exact' }, 'USD');
   assert.equal(exact.value, 1354.84);
+  // The prorated guide's comparison figures must be what the calculator gives.
+  const steps = toolGuides['prorated-rent'].example.steps.join(' ');
+  for (const [method, value] of [['thirty', '1,020.00'], ['annual', '1,006.03'], ['exact', '987.10']] as const) {
+    assert.equal(calculateTool('prorated-rent', { monthlyRent: 1800, moveIn: '2026-05-15', moveOut: '', method }, 'USD').value.toFixed(2), value.replace(',', ''));
+    assert.ok(steps.includes(value), method);
+  }
   assert.equal(exact.rows.find(row => row.label === 'Occupied days (inclusive)')?.value, 20);
   const affordability = calculateTool('rent-affordability', { annualIncome: 72000, incomeMode: 'annual', debt: 300 }, 'USD');
   assert.equal(affordability.value, 1800);
@@ -63,7 +70,7 @@ test('guide formula conventions match real calculator behavior', () => {
 
 test('the first three approved guides remain byte-for-byte equivalent as data', () => {
   const hashes = {
-    "prorated-rent": "371debf3d89bf76a084e774c221e74a97586a044fc462167751ce8daa6b5f626",
+    "prorated-rent": "2e54d9b3e50f7e442fe0a46f552c0208521517fb567a6e393ab6329f445deedc",
     "rent-affordability": "dea6ca7ce7584a264b6bd2336604633fce121fbac654727d5787de97af8419bd",
     "roommate-rent-splitter": "cba9a0a9bb2a9d39409dae32ef0cd92207bc03a5484c852f23f9cb65e1a29f76"
 };

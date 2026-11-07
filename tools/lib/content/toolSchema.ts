@@ -1,63 +1,65 @@
 import type { ToolGuide } from './toolGuides';
+import type { SuiteTool } from '../tool-registry';
 
-type SchemaTool = { name: string; description: string };
+const ORIGIN = 'https://almassdm.pro';
+const FINANCE = new Set(['Budget', 'Planning', 'Investment', 'Roommates', 'Moving']);
 
+type SchemaTool = Pick<SuiteTool, 'name' | 'h1' | 'description' | 'category' | 'answer'> & Partial<SuiteTool>;
+
+/**
+ * JSON-LD for one tool page: the page (with the short answer marked as
+ * speakable), the calculator itself, where it sits, and the FAQ — built from
+ * the same data the page shows, so the two never disagree.
+ */
 export function buildToolSchema(tool: SchemaTool, url: string, siteUrl: string, guide?: ToolGuide) {
   return {
     '@context': 'https://schema.org',
     '@graph': [
       {
-        '@type': guide ? 'SoftwareApplication' : 'WebApplication',
-        '@id': `${url}#calculator`,
-        name: tool.name,
-        description: tool.description,
+        '@type': 'WebPage',
+        '@id': `${url}#webpage`,
         url,
-        applicationCategory: 'LegalService, FinanceApplication',
+        name: tool.seoTitle || tool.h1,
+        description: tool.metaDescription || tool.description,
+        inLanguage: 'en',
+        isPartOf: { '@type': 'WebSite', '@id': `${siteUrl}/#website`, name: 'RentWise', url: `${siteUrl}/` },
+        breadcrumb: { '@id': `${url}#breadcrumb` },
+        mainEntity: { '@id': `${url}#app` },
+        speakable: { '@type': 'SpeakableSpecification', cssSelector: ['.rw-answer p'] },
+      },
+      {
+        '@type': 'WebApplication',
+        '@id': `${url}#app`,
+        name: tool.h1,
+        alternateName: tool.name,
+        description: tool.description,
+        abstract: tool.answer,
+        url,
+        applicationCategory: FINANCE.has(tool.category) ? 'FinanceApplication' : 'UtilitiesApplication',
         operatingSystem: 'Any',
+        browserRequirements: 'Requires JavaScript',
         isAccessibleForFree: true,
         offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-        featureList: [
-          'Instant in-browser audit',
-          'Statutory legal clause cross-referencing',
-          'US state and UK tenancy rule compliance',
-          'Automated landlord counter-negotiation letter',
-        ],
-        provider: {
-          '@type': 'Organization',
-          name: 'RentWise Tools',
-          url: 'https://almassdm.pro/rentwise/',
-        },
-        spatialCoverage: [
-          { '@type': 'Place', name: 'United States' },
-          { '@type': 'Place', name: 'United Kingdom' },
-        ],
+        ...(guide ? { featureList: guide.formula.methods.map((m) => m.name) } : {}),
+        provider: { '@type': 'Organization', name: 'Almas SDM', url: `${ORIGIN}/` },
+        spatialCoverage: [{ '@type': 'Country', name: 'United States' }, { '@type': 'Country', name: 'United Kingdom' }],
       },
       {
         '@type': 'BreadcrumbList',
+        '@id': `${url}#breadcrumb`,
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'RentCalc Suite', item: `${siteUrl}/` },
-          { '@type': 'ListItem', position: 2, name: tool.name, item: url },
+          { '@type': 'ListItem', position: 1, name: 'Almas SDM', item: `${ORIGIN}/` },
+          { '@type': 'ListItem', position: 2, name: 'RentWise', item: `${siteUrl}/` },
+          { '@type': 'ListItem', position: 3, name: tool.h1, item: url },
         ],
       },
       ...(guide ? [{
         '@type': 'FAQPage',
         '@id': `${url}#faq`,
-        mainEntity: guide.faqs.map(faq => ({
+        mainEntity: guide.faqs.map((faq) => ({
           '@type': 'Question',
           name: faq.question,
           acceptedAnswer: { '@type': 'Answer', text: faq.answer },
-        })),
-      }] : []),
-      ...(guide?.example?.steps ? [{
-        '@type': 'HowTo',
-        '@id': `${url}#howto`,
-        name: guide.title || `How to calculate ${tool.name}`,
-        description: guide.introduction,
-        step: guide.example.steps.map((step, index) => ({
-          '@type': 'HowToStep',
-          position: index + 1,
-          name: `Step ${index + 1}`,
-          text: step,
         })),
       }] : []),
     ],
@@ -65,6 +67,6 @@ export function buildToolSchema(tool: SchemaTool, url: string, siteUrl: string, 
 }
 
 /** Escape HTML-significant characters before placing JSON in a script element. */
-export function serializeToolSchema(schema: ReturnType<typeof buildToolSchema>) {
+export function serializeToolSchema(schema: object) {
   return JSON.stringify(schema).replace(/</g, '\\u003c');
 }
