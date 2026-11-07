@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { KeyRound, Lock, AlertTriangle, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { ApiService } from '../services/api.js';
@@ -60,12 +60,24 @@ export const LicensesPage: React.FC = () => {
   const [customSize, setCustomSize] = useState('');
   const customPrice = priceForPack(Number(customSize));
 
+  // A super admin issues packs from this page, so it keeps its own list of
+  // every shop and its own choice of whom a pack is for. That choice starts
+  // from the shop picked in the top bar but does not depend on it: the top-bar
+  // switcher is easy to miss, and "Issue" must never fail for want of it.
+  const [allDealers, setAllDealers] = useState<DealerSummary[]>([]);
+  const [targetId, setTargetId] = useState<string>(selectedDealerId ?? '');
+  const packsRef = useRef<HTMLDivElement>(null);
+
   const load = async () => {
     try {
-      const data = await ApiService.getLicenses(selectedDealerId);
+      const [data, everyone] = await Promise.all([
+        ApiService.getLicenses(selectedDealerId),
+        isSuperAdmin && selectedDealerId ? ApiService.getLicenses() : Promise.resolve(null),
+      ]);
       setDealers(data.dealers ?? []);
       setPacks(data.packs ?? []);
       setCatalogue(data.catalogue ?? []);
+      if (isSuperAdmin) setAllDealers((everyone ?? data).dealers ?? []);
     } catch (err: any) {
       showToast(err?.message || 'Could not load licence data', 'error');
       setDealers([]);
@@ -74,23 +86,32 @@ export const LicensesPage: React.FC = () => {
 
   useEffect(() => {
     load();
+    if (selectedDealerId) setTargetId(selectedDealerId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDealerId]);
 
-  /**
-   * Only a super admin can mint locks, and only against one dealership at a
-   * time — issuing while looking at "all dealers" would have no answer to the
-   * question "for whom".
-   */
+  // With only one shop on the platform there is nobody else to choose.
+  useEffect(() => {
+    if (!targetId && allDealers.length === 1) setTargetId(allDealers[0].dealerId);
+  }, [allDealers, targetId]);
+
+  const target = allDealers.find((d) => d.dealerId === targetId) ?? null;
+
+  const chooseTarget = (id: string) => {
+    setTargetId(id);
+    packsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  /** Only a super admin can mint locks, and always for one named shop. */
   const issue = async (size: number) => {
-    if (!selectedDealerId) {
-      showToast('Choose a dealership before issuing a pack.', 'error');
+    if (!target) {
+      showToast('Pick the shop in "Issue locks to" first.', 'error');
       return;
     }
     try {
       setIssuing(size);
-      const res = await ApiService.issueLicensePack({ dealerId: selectedDealerId, size });
-      showToast(res.message || `${size} locks issued`, 'success');
+      const res = await ApiService.issueLicensePack({ dealerId: target.dealerId, size });
+      showToast(res.message || `${size} locks issued to ${target.dealerName}`, 'success');
       await load();
     } catch (err: any) {
       showToast(err.message, 'error');
@@ -155,7 +176,7 @@ export const LicensesPage: React.FC = () => {
         </Card>
       )}
 
-      {mine?.outOfLocks && (
+      {!isSuperAdmin && mine?.outOfLocks && (
         <div className="flex items-start gap-3 rounded-lg border border-critical-200 bg-critical-50 px-4 py-3">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-critical-600" aria-hidden="true" />
           <p className="text-body text-critical-700">
@@ -168,11 +189,50 @@ export const LicensesPage: React.FC = () => {
       {/* What a pack costs. Shown to everyone — a shop owner should be able to
           see the price without asking — but only a super admin can issue one,
           because nothing here takes payment. */}
+      <div ref={packsRef} className="scroll-mt-24">
       <Card>
         <CardHeader
-          title="Packs"
-          hint={isSuperAdmin ? 'Issue after payment has cleared' : 'Contact the platform to buy'}
+          title={isSuperAdmin ? 'Issue locks' : 'Packs'}
+          hint={
+            isSuperAdmin
+              ? 'Pick the shop, then the pack. Issue after payment has cleared.'
+              : 'Contact the platform to buy'
+          }
         />
+        {isSuperAdmin && (
+          <div className="mt-5 flex flex-wrap items-end gap-3">
+            <label className="block">
+              <span className="field-label">Issue locks to</span>
+              <select
+                className="input w-full sm:w-80"
+                value={targetId}
+                onChange={(e) => setTargetId(e.target.value)}
+                aria-label="Shop to issue locks to"
+              >
+                <option value="">Choose a shop…</option>
+                {allDealers.map((d) => (
+                  <option key={d.dealerId} value={d.dealerId}>
+                    {d.dealerName} · {d.dealerCity} · {d.available} left
+                  </option>
+                ))}
+              </select>
+            </label>
+            {target && (
+              <p className="pb-2 text-body text-ink-700">
+                {target.outOfLocks ? (
+                  <span className="text-critical-700">
+                    {target.dealerName} has no locks left and cannot enrol a handset.
+                  </span>
+                ) : (
+                  <>
+                    {target.dealerName} has <span className="tabular">{target.available}</span>{' '}
+                    {target.available === 1 ? 'lock' : 'locks'} left.
+                  </>
+                )}
+              </p>
+            )}
+          </div>
+        )}
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {catalogue.map((option) => (
             <div key={option.size} className="well p-4">
@@ -185,10 +245,14 @@ export const LicensesPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => issue(option.size)}
-                  disabled={issuing !== null}
+                  disabled={issuing !== null || !target}
                   className="btn-secondary mt-3 w-full py-1.5 text-caption"
                 >
-                  {issuing === option.size ? 'Issuing…' : 'Issue to this dealer'}
+                  {issuing === option.size
+                    ? 'Issuing…'
+                    : target
+                      ? `Issue to ${target.dealerName}`
+                      : 'Pick a shop first'}
                 </button>
               )}
             </div>
@@ -218,22 +282,25 @@ export const LicensesPage: React.FC = () => {
             <button
               type="button"
               onClick={() => customPrice && issue(customPrice.size)}
-              disabled={!customPrice || issuing !== null}
+              disabled={!customPrice || !target || issuing !== null}
               className="btn-primary py-2 text-caption"
             >
-              {customPrice && issuing === customPrice.size ? 'Issuing…' : `Issue ${customPrice ? customPrice.size : ''} locks`}
+              {customPrice && issuing === customPrice.size
+                ? 'Issuing…'
+                : `Issue ${customPrice ? customPrice.size : ''} locks${target ? ` to ${target.dealerName}` : ''}`}
             </button>
           </div>
         )}
       </Card>
+      </div>
 
       {/* A super admin's view of the platform: who is about to run out. */}
-      {isSuperAdmin && (dealers?.length ?? 0) > 1 && (
+      {isSuperAdmin && !selectedDealerId && allDealers.length > 0 && (
         <Card>
           <CardHeader title="Dealerships" hint="Locks left, and what each has spent" />
           <div className="mt-4">
             <Rows>
-              {dealers!.map((d) => (
+              {allDealers.map((d) => (
                 <li key={d.dealerId} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-body font-medium text-ink-900">{d.dealerName}</p>
@@ -248,6 +315,13 @@ export const LicensesPage: React.FC = () => {
                   ) : (
                     <span className="text-body text-ink-700 tabular">{d.available} left</span>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => chooseTarget(d.dealerId)}
+                    className="btn-secondary shrink-0 px-3 py-1 text-caption"
+                  >
+                    Issue locks
+                  </button>
                 </li>
               ))}
             </Rows>
