@@ -152,6 +152,18 @@ customersRouter.get('/:id', asyncHandler(async (req, res) => {
 // CREATE (customer + optional device + financing plan)
 // ---------------------------------------------------------------------------
 
+/** Both spellings a CNIC may be stored under: 35202-1234567-1 and 3520212345671. */
+function cnicForms(cnic: string): string[] {
+  const digits = cnic.replace(/\D/g, '');
+  if (digits.length !== 13) return [cnic.trim()];
+  return [`${digits.slice(0, 5)}-${digits.slice(5, 12)}-${digits.slice(12)}`, digits];
+}
+
+/** Names compared without case, extra spaces or dots: "M. Aslam" ≠ "Muhammad Aslam", but "muhammad  ASLAM" = "Muhammad Aslam". */
+function comparableName(name: string): string {
+  return name.toLowerCase().replace(/[.]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 const createSchema = z.object({
   dealerId: z.string().trim().max(64).optional(),
   customer: z.object({
@@ -207,17 +219,39 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
 
   const normalizedPhone = normalizePhone(body.customer.phone);
 
-  // Duplicate guard — the same person being entered twice at the counter is the
-  // single most common data-quality problem in these shops.
-  const duplicate = await repo.customers.findDuplicate({
-    dealerId,
-    cnic: body.customer.cnic,
-    phone: normalizedPhone,
-  });
-  if (duplicate) {
-    throw AppError.conflict(
-      `A customer with this ${duplicate.cnic === body.customer.cnic ? 'CNIC' : 'phone number'} already exists: ${duplicate.name}.`
-    );
+  /**
+   * One person, many phones.
+   *
+   * A CNIC already on file is the same customer coming back for a second or
+   * third handset. The sale is added to that record rather than refused, so
+   * their plans, payments and history stay together. Entering the same person
+   * twice with no phone to sell is still a duplicate, and so is a CNIC typed
+   * under somebody else's name — that is far more often a wrong CNIC than a
+   * returning customer.
+   */
+  const sameCnic = await repo.customers.findFirst({ dealerId, cnic: { in: cnicForms(body.customer.cnic) } });
+  let returningCustomer: Customer | undefined;
+  if (sameCnic) {
+    if (!body.device) {
+      throw AppError.conflict(`A customer with this CNIC already exists: ${sameCnic.name}.`);
+    }
+    if (comparableName(sameCnic.name) !== comparableName(body.customer.name)) {
+      throw AppError.conflict(
+        `This CNIC is already on file for ${sameCnic.name}. To sell them another phone, enter the name exactly as on file. ` +
+          'If this is a different person, check the CNIC.'
+      );
+    }
+    returningCustomer = sameCnic;
+  } else {
+    // A phone number already used by a different CNIC is still refused.
+    const duplicate = await repo.customers.findDuplicate({
+      dealerId,
+      cnic: body.customer.cnic,
+      phone: normalizedPhone,
+    });
+    if (duplicate) {
+      throw AppError.conflict(`A customer with this phone number already exists: ${duplicate.name}.`);
+    }
   }
 
   if (body.device) {
@@ -248,7 +282,11 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
   const result = await runInTransaction(async (tx: Tx) => {
     const nowIso = new Date().toISOString();
 
-    const customer = await repo.customers.create({
+    const customer = returningCustomer
+      ? returningCustomer.active
+        ? returningCustomer
+        : ((await repo.customers.update(returningCustomer.id, { active: true }, tx)) ?? returningCustomer)
+      : await repo.customers.create({
       id: `cust-${uuidv4().substring(0, 8)}`,
       dealerId,
       name: body.customer.name,
@@ -381,10 +419,12 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
       userId: user.userId,
       actorName: user.name,
       actorRole: user.role,
-      action: 'CUSTOMER_CREATED',
+      action: returningCustomer ? 'CUSTOMER_SALE_ADDED' : 'CUSTOMER_CREATED',
       targetType: 'CUSTOMER',
       targetId: customer.id,
-      details: device
+      details: returningCustomer && device
+        ? `Added another financed device for returning customer ${customer.name}: ${device.brand} ${device.model} (Rs. ${device.purchasePrice.toLocaleString()})${device.noLock ? ', sold without a lock' : ''}.`
+        : device
         ? `Registered ${customer.name} with financed device ${device.brand} ${device.model} (Rs. ${device.purchasePrice.toLocaleString()})${device.noLock ? ', sold without a lock' : ''}.`
         : `Registered customer ${customer.name} with no device.`,
       ipAddress: clientIp(req),
