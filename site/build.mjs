@@ -127,7 +127,7 @@ function homeJsonLd() {
         contactPoint: {
           '@type': 'ContactPoint',
           contactType: 'sales',
-          telephone: '+447521606952',
+          telephone: '+923211144477',
           availableLanguage: ['en', 'ur'],
         },
       },

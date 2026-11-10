@@ -15,7 +15,7 @@ import { MAX_PACK_SIZE, PACK_PRESETS, money, priceForPack } from '../utils/packP
  * shop at WhatsApp to pay, so nobody is surprised at the counter.
  */
 
-const WHATSAPP_NUMBER = '447521606952';
+const WHATSAPP_NUMBER = '923211144477';
 
 interface Form {
   name: string;
