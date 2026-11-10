@@ -4,6 +4,7 @@ import android.util.Log
 import org.json.JSONException
 import org.json.JSONObject
 import pk.almassdm.dpc.BuildConfig
+import pk.almassdm.dpc.admin.AttestationReport
 import pk.almassdm.dpc.admin.DeviceIntegrity
 import pk.almassdm.dpc.data.CheckInResult
 import pk.almassdm.dpc.data.EnrollResult
@@ -36,12 +37,14 @@ class DpcApi(private val baseUrl: String, private val credential: String? = null
         deviceId: String?,
         dpcVersion: String,
         hardware: DeviceIntegrity.HardwareSnapshot? = null,
+        attestation: AttestationReport? = null,
     ): EnrollResult {
         val body = JSONObject()
             .put("token", enrollmentToken)
             .put("dpcVersion", dpcVersion)
         if (!deviceId.isNullOrBlank()) body.put("deviceId", deviceId)
         hardware?.appendToJson(body)
+        attestation?.let { body.put("attestation", it.toJson()) }
 
         val json = request("POST", "enroll", body, authenticated = false)
         return EnrollResult(
@@ -60,6 +63,7 @@ class DpcApi(private val baseUrl: String, private val credential: String? = null
             command = PendingCommand.fromJson(json.optJSONObject("command")),
             checkInIntervalSeconds = json.optInt("checkInIntervalSeconds", Prefs.DEFAULT_INTERVAL_SECONDS),
             policy = PolicyView.fromJson(json.optJSONObject("policy") ?: JSONObject()),
+            attestationChallenge = json.optString("attestationChallenge").takeIf { it.isNotBlank() },
         )
     }
 

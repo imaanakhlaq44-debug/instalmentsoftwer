@@ -123,6 +123,8 @@ data class CheckInResult(
     val command: PendingCommand?,
     val checkInIntervalSeconds: Int,
     val policy: PolicyView,
+    /** Set when the server wants a fresh secure-chip attestation (base64url). */
+    val attestationChallenge: String? = null,
 )
 
 /** The answer to an enrolment: the credential, transmitted exactly once. */

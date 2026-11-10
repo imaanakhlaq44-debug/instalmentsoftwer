@@ -3,7 +3,9 @@ package pk.almassdm.dpc.work
 import android.content.Context
 import android.util.Log
 import pk.almassdm.dpc.BuildConfig
+import pk.almassdm.dpc.admin.AttestationChallenge
 import pk.almassdm.dpc.admin.DeviceIntegrityCollector
+import pk.almassdm.dpc.admin.KeyAttestor
 import pk.almassdm.dpc.admin.LockController
 import pk.almassdm.dpc.admin.LocationReporter
 import pk.almassdm.dpc.data.PolicyView
@@ -39,11 +41,17 @@ class DpcSync(context: Context) {
     fun enroll(code: String, serverUrl: String): PolicyView {
         val api = DpcApi(baseUrl = serverUrl)
         val hardware = DeviceIntegrityCollector.collect(appContext)
+        // The secure chip's own word on which phone this is, signed over a
+        // challenge bound to this enrollment code.
+        val attestation = runCatching {
+            KeyAttestor.attest(appContext, AttestationChallenge.forEnrollment(code))
+        }.getOrNull()
         val result = api.enroll(
             enrollmentToken = code.trim(),
             deviceId = null,
             dpcVersion = BuildConfig.VERSION_NAME,
             hardware = hardware,
+            attestation = attestation,
         )
 
         if (result.deviceId.isBlank() || result.deviceToken.isBlank()) {
@@ -75,8 +83,12 @@ class DpcSync(context: Context) {
         if (!prefs.isEnrolled) return Outcome.NotEnrolled
 
         val api = DpcApi(prefs)
+        // Answer an outstanding attestation challenge, if the server sent one.
+        val attestation = AttestationChallenge.decode(prefs.attestationChallenge)?.let { challenge ->
+            runCatching { KeyAttestor.attest(appContext, challenge) }.getOrNull()
+        }
         val result = try {
-            api.checkIn(Telemetry.collect(appContext))
+            api.checkIn(Telemetry.collect(appContext).copy(attestation = attestation))
         } catch (e: DpcException) {
             if (e.statusCode == 403) {
                 // "This device is no longer under management." A repossessed or
@@ -96,6 +108,7 @@ class DpcSync(context: Context) {
         prefs.savePolicy(result.policy)
         prefs.checkInIntervalSeconds = result.checkInIntervalSeconds
         prefs.lastCheckInAt = System.currentTimeMillis()
+        prefs.attestationChallenge = result.attestationChallenge
         lockController.protectInstallation()
         CheckInScheduler.schedule(appContext, result.checkInIntervalSeconds)
         OfflineWatchdogWorker.schedule(appContext)

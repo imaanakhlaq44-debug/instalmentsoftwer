@@ -121,12 +121,24 @@ export function sanitizeDevice<
     locationLng: _lng,
     locationAccuracy: _acc,
     locationAt: _at,
+    // The outstanding attestation challenge is between the server and the
+    // handset; nobody on the dashboard needs it.
+    attestationChallenge: _challenge,
+    attestationChallengeAt: _challengeAt,
+    attestedImeis,
+    attestedSerial,
+    enrolledSerial,
     ...rest
   } = withLocation as typeof withLocation & {
     locationLat?: unknown;
     locationLng?: unknown;
     locationAccuracy?: unknown;
     locationAt?: unknown;
+    attestationChallenge?: unknown;
+    attestationChallengeAt?: unknown;
+    attestedImeis?: string[];
+    attestedSerial?: string;
+    enrolledSerial?: string;
   };
   const view = imeiView(imei, role);
   const allowed = IMEI_FULL_ACCESS.includes(role);
@@ -142,6 +154,14 @@ export function sanitizeDevice<
     maskedReportedImei: reportedImei ? maskImei(reportedImei) : undefined,
     reportedImeis: allowed ? reportedImeis : undefined,
     reportedSerial: allowed ? reportedSerial : undefined,
+    ...(attestedImeis && attestedImeis.length > 0
+      ? {
+          attestedImeis: allowed ? attestedImeis : undefined,
+          maskedAttestedImeis: attestedImeis.map((v) => maskImei(v)),
+        }
+      : {}),
+    ...(attestedSerial && allowed ? { attestedSerial } : {}),
+    ...(enrolledSerial && allowed ? { enrolledSerial } : {}),
   };
 }
 

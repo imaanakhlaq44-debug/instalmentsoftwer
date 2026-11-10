@@ -342,6 +342,20 @@ devicesRouter.post(
       tamperFlags: [],
       tamperDetectedAt: undefined,
       tamperReason: undefined,
+      enrolledSerial: undefined,
+      attestationChallenge: undefined,
+      attestationChallengeAt: undefined,
+      attestationStatus: undefined,
+      attestationReason: undefined,
+      attestationCheckedAt: undefined,
+      attestedAt: undefined,
+      attestationSecurityLevel: undefined,
+      attestedImeis: [],
+      attestedSerial: undefined,
+      attestedBrand: undefined,
+      attestedModel: undefined,
+      attestedBootLocked: undefined,
+      attestedBootState: undefined,
       updatedAt: new Date().toISOString(),
     });
     if (!updated) throw AppError.notFound('Device');
@@ -436,6 +450,20 @@ devicesRouter.post(
       tamperDetectedAt: undefined,
       tamperReason: undefined,
       integrityCheckedAt: undefined,
+      enrolledSerial: undefined,
+      attestationChallenge: undefined,
+      attestationChallengeAt: undefined,
+      attestationStatus: undefined,
+      attestationReason: undefined,
+      attestationCheckedAt: undefined,
+      attestedAt: undefined,
+      attestationSecurityLevel: undefined,
+      attestedImeis: [],
+      attestedSerial: undefined,
+      attestedBrand: undefined,
+      attestedModel: undefined,
+      attestedBootLocked: undefined,
+      attestedBootState: undefined,
       updatedAt: nowIso,
     });
     if (!updated) throw AppError.notFound('Device');
@@ -575,6 +603,9 @@ devicesRouter.post(
       tamperFlags: [],
       tamperDetectedAt: undefined,
       tamperReason: undefined,
+      // The shop has looked at the phone in person: whatever serial it reports
+      // next becomes the pin, so a repaired board is not flagged again.
+      enrolledSerial: undefined,
       updatedAt: new Date().toISOString(),
     });
     if (!updated) throw AppError.notFound('Device');

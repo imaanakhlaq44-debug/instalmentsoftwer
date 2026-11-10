@@ -67,6 +67,11 @@ class Prefs(context: Context) {
         get() = prefs.getLong(KEY_OFFLINE_LOCK_SINCE, 0L)
         set(value) = prefs.edit().putLong(KEY_OFFLINE_LOCK_SINCE, value).apply()
 
+    /** A secure-chip attestation challenge from the server, answered on the next check-in. */
+    var attestationChallenge: String?
+        get() = prefs.getString(KEY_ATTESTATION_CHALLENGE, null)
+        set(value) = prefs.edit().putString(KEY_ATTESTATION_CHALLENGE, value).apply()
+
     val offlineLockActive: Boolean
         get() = offlineLockSince > 0L && lockApplied
 
@@ -184,5 +189,6 @@ class Prefs(context: Context) {
         private const val KEY_STAGE_ON = "stage_restrictions_on"
         private const val KEY_STAGE_SUSPENDED = "stage_suspended_apps"
         private const val KEY_RELEASED = "released"
+        private const val KEY_ATTESTATION_CHALLENGE = "attestation_challenge"
     }
 }

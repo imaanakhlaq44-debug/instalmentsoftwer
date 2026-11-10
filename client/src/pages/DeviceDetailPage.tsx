@@ -36,6 +36,21 @@ const TAMPER_FLAG_LABELS: Record<string, string> = {
   ROOTED: 'Rooted handset',
   CUSTOM_ROM_TEST_KEYS: 'Custom OS (test-keys)',
   DEVICE_OWNER_LOST: 'Device Owner lost',
+  SERIAL_MISMATCH: 'Serial number changed',
+  ATTESTED_IMEI_MISMATCH: 'Chip IMEI mismatch',
+  ATTESTATION_INVALID: 'Forged hardware proof',
+  ATTESTATION_REVOKED: 'Revoked hardware key',
+};
+
+/** What the secure-chip check last said, for the Security Status card. */
+const ATTESTATION_STATUS_LABELS: Record<string, string> = {
+  VERIFIED: 'Hardware verified',
+  INVALID: 'Hardware proof failed',
+  UNTRUSTED_ROOT: 'Hardware proof not from Google',
+  REVOKED: 'Hardware key revoked',
+  CHALLENGE_MISMATCH: 'Hardware check pending',
+  SOFTWARE_ONLY: 'No hardware proof (software only)',
+  UNAVAILABLE: 'Phone cannot give hardware proof',
 };
 
 export const DeviceDetailPage: React.FC = () => {
@@ -229,6 +244,14 @@ export const DeviceDetailPage: React.FC = () => {
     Date.now() - lastContactMs >= 72 * 3_600_000;
 
   const reportedImeiDisplay = device.reportedImei || device.maskedReportedImei;
+  const attestedImeis: string[] = Array.isArray(device.attestedImeis)
+    ? device.attestedImeis
+    : Array.isArray(device.maskedAttestedImeis)
+    ? device.maskedAttestedImeis
+    : [];
+  const attestationLabel = device.attestationStatus
+    ? ATTESTATION_STATUS_LABELS[device.attestationStatus] ?? device.attestationStatus
+    : null;
   const securitySummary = device.noLock
     ? { label: 'Unprotected (No Lock)', color: 'text-slate-600', icon: AlertTriangle, iconColor: 'text-slate-400' }
     : hasTamperAlert
@@ -467,6 +490,18 @@ export const DeviceDetailPage: React.FC = () => {
                 <span className="font-mono font-bold text-rose-950">{device.reportedSerial}</span>
               </div>
             )}
+            {device.enrolledSerial && (
+              <div>
+                <span className="text-micro font-semibold text-rose-700 block">Serial at Enrollment</span>
+                <span className="font-mono font-bold text-rose-950">{device.enrolledSerial}</span>
+              </div>
+            )}
+            {attestedImeis.length > 0 && (
+              <div>
+                <span className="text-micro font-semibold text-rose-700 block">Chip IMEI (factory)</span>
+                <span className="font-mono font-bold text-rose-950">{attestedImeis.join(', ')}</span>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -569,6 +604,21 @@ export const DeviceDetailPage: React.FC = () => {
           </div>
           <p className={`text-sm font-extrabold mt-2 ${securitySummary.color}`}>{securitySummary.label}</p>
           <span className="text-micro text-slate-400 font-mono">Patch: {device.securityPatch}</span>
+          {attestationLabel && !device.noLock && (
+            <span
+              className={`mt-1 block text-micro font-bold ${
+                device.attestationStatus === 'VERIFIED'
+                  ? 'text-emerald-700'
+                  : device.attestationStatus === 'INVALID' || device.attestationStatus === 'REVOKED'
+                  ? 'text-rose-700'
+                  : 'text-slate-500'
+              }`}
+              title={device.attestationReason || undefined}
+            >
+              {attestationLabel}
+              {device.attestationStatus === 'VERIFIED' && device.attestedModel ? ` · ${device.attestedModel}` : ''}
+            </span>
+          )}
         </div>
       </div>
 
