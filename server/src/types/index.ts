@@ -188,6 +188,28 @@ export interface Device {
   tamperDetectedAt?: string;
   tamperReason?: string;
   integrityCheckedAt?: string;
+  /** Serial pinned from the first post-enrollment report (raw only for privileged roles). */
+  enrolledSerial?: string;
+
+  // --- Hardware key attestation ----------------------------------------------
+  /** Outstanding check-in challenge. Never leaves the server except to its handset. */
+  attestationChallenge?: string;
+  attestationChallengeAt?: string;
+  /** VERIFIED | INVALID | UNTRUSTED_ROOT | REVOKED | CHALLENGE_MISMATCH | SOFTWARE_ONLY | UNAVAILABLE */
+  attestationStatus?: string;
+  attestationReason?: string;
+  attestationCheckedAt?: string;
+  /** Last time a VERIFIED attestation was received. */
+  attestedAt?: string;
+  attestationSecurityLevel?: string;
+  /** Factory IMEIs from the secure chip (raw only for privileged roles). */
+  attestedImeis?: string[];
+  maskedAttestedImeis?: string[];
+  attestedSerial?: string;
+  attestedBrand?: string;
+  attestedModel?: string;
+  attestedBootLocked?: boolean;
+  attestedBootState?: string;
 
   createdAt: string;
   updatedAt: string;

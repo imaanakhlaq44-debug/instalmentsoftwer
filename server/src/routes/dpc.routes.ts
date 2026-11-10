@@ -130,6 +130,18 @@ const imeiArraySchema = z
   .max(4)
   .optional();
 
+/**
+ * A hardware key attestation chain: base64 DER certificates, leaf first. Real
+ * chains are 3–5 certificates of about 1 KB each.
+ */
+const attestationSchema = z
+  .object({
+    chain: z.array(z.string().trim().max(16_384).regex(/^[A-Za-z0-9+/=]*$/)).max(8).optional(),
+    idsAttested: z.boolean().optional(),
+    error: z.string().trim().max(300).optional(),
+  })
+  .optional();
+
 const enrollSchema = z.object({
   token: z.string().trim().min(8, 'Enrollment code is required.').max(120),
   /** Only needed for a token issued without a device attached. */
@@ -139,6 +151,7 @@ const enrollSchema = z.object({
   serialNumber: z.string().trim().max(64).optional(),
   isDeviceOwner: z.boolean().optional(),
   integrity: integritySchema,
+  attestation: attestationSchema,
 });
 
 dpcRouter.post(
@@ -156,6 +169,7 @@ dpcRouter.post(
         serialNumber: body.serialNumber,
         isDeviceOwner: body.isDeviceOwner,
         integrity: body.integrity,
+        attestation: body.attestation,
       },
       ipAddress: clientIp(req),
     });
@@ -186,6 +200,7 @@ const checkInSchema = z.object({
   serialNumber: z.string().trim().max(64).optional(),
   isDeviceOwner: z.boolean().optional(),
   integrity: integritySchema,
+  attestation: attestationSchema,
   /**
    * The handset reporting that it restricted itself under the offline rule
    * while it could not reach anybody. It is a report of something already done,
@@ -243,6 +258,7 @@ dpcRouter.post(
         serialNumber: body.serialNumber,
         isDeviceOwner: body.isDeviceOwner,
         integrity: body.integrity,
+        attestation: body.attestation,
       },
       nowIso,
       ip
@@ -287,11 +303,16 @@ dpcRouter.post(
       ? { type: current.pendingCommand, issuedAt: current.pendingCommandAt ?? null }
       : null;
 
+    // Once a day the handset is asked to prove, with its secure chip, which
+    // phone it is. It answers on its next check-in.
+    const attestationChallenge = await DeviceIntegrityService.attestationChallengeFor(current);
+
     res.json({
       status: current.status,
       command,
       checkInIntervalSeconds: 900,
       policy: await buildPolicyView(current),
+      ...(attestationChallenge ? { attestationChallenge } : {}),
     });
   })
 );

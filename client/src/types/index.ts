@@ -135,6 +135,21 @@ export interface Device {
   tamperDetectedAt?: string;
   tamperReason?: string;
   integrityCheckedAt?: string;
+  /** Serial pinned after enrollment (privileged roles only). */
+  enrolledSerial?: string;
+  /** Secure-chip (TEE/StrongBox) attestation, verified against Google's root. */
+  attestationStatus?: string;
+  attestationReason?: string;
+  attestationCheckedAt?: string;
+  attestedAt?: string;
+  attestationSecurityLevel?: string;
+  attestedImeis?: string[];
+  maskedAttestedImeis?: string[];
+  attestedSerial?: string;
+  attestedBrand?: string;
+  attestedModel?: string;
+  attestedBootLocked?: boolean;
+  attestedBootState?: string;
   /** Sold without a lock (the phone cannot run the app): no QR, no lock commands. */
   noLock?: boolean;
   customerName?: string;

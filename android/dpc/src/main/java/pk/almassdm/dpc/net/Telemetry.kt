@@ -7,6 +7,7 @@ import android.telephony.TelephonyManager
 import org.json.JSONArray
 import org.json.JSONObject
 import pk.almassdm.dpc.BuildConfig
+import pk.almassdm.dpc.admin.AttestationReport
 import pk.almassdm.dpc.admin.DeviceIntegrity
 import pk.almassdm.dpc.admin.DeviceIntegrityCollector
 import pk.almassdm.dpc.admin.LocationFix
@@ -47,6 +48,8 @@ data class Telemetry(
     val serialNumber: String? = null,
     val isDeviceOwner: Boolean? = null,
     val integrity: DeviceIntegrity.Report? = null,
+    /** Secure-chip attestation, only in the check-in that answers a server challenge. */
+    val attestation: AttestationReport? = null,
 ) {
     fun toJson(): JSONObject {
         val json = JSONObject().put("dpcVersion", dpcVersion)
@@ -73,6 +76,7 @@ data class Telemetry(
         serialNumber?.takeIf { it.isNotBlank() }?.let { json.put("serialNumber", it) }
         isDeviceOwner?.let { json.put("isDeviceOwner", it) }
         integrity?.let { json.put("integrity", it.toJson()) }
+        attestation?.let { json.put("attestation", it.toJson()) }
         return json
     }
 
@@ -103,6 +107,10 @@ data class Telemetry(
                 telephony.networkOperatorName
             }.getOrNull()
 
+            // Read on every check-in, not only at enrollment: an IMEI or serial
+            // that changes after the phone left the shop is the whole point.
+            val hardware = runCatching { DeviceIntegrityCollector.collect(context) }.getOrNull()
+
             return Telemetry(
                 batteryLevel = battery,
                 osVersion = Build.VERSION.RELEASE,
@@ -111,6 +119,10 @@ data class Telemetry(
                 dpcVersion = BuildConfig.VERSION_NAME,
                 offlineLockActive = prefs.offlineLockActive,
                 offlineLockSince = prefs.offlineLockSince,
+                imeis = hardware?.imeis.orEmpty(),
+                serialNumber = hardware?.serialNumber,
+                isDeviceOwner = hardware?.isDeviceOwner,
+                integrity = hardware?.integrity,
             )
         }
     }

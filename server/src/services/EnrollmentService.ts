@@ -251,7 +251,8 @@ export class EnrollmentService {
       device,
       params.telemetry,
       nowIso,
-      params.ipAddress
+      params.ipAddress,
+      params.token
     );
 
     /**

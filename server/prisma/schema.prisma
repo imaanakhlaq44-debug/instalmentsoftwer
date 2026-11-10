@@ -442,6 +442,25 @@ model Device {
   tamperReason       String?   @map("tamper_reason") @db.VarChar(500)
   integrityCheckedAt DateTime? @map("integrity_checked_at") @db.Timestamptz(3)
 
+  // Serial number pinned the first time the enrolled handset reported one.
+  // A later check-in with a different serial is a different phone.
+  enrolledSerial String? @map("enrolled_serial") @db.VarChar(64)
+
+  // --- Hardware key attestation (TEE/StrongBox-signed device identity) -------
+  attestationChallenge     String?   @map("attestation_challenge") @db.VarChar(64)
+  attestationChallengeAt   DateTime? @map("attestation_challenge_at") @db.Timestamptz(3)
+  attestationStatus        String?   @map("attestation_status") @db.VarChar(24)
+  attestationReason        String?   @map("attestation_reason") @db.VarChar(300)
+  attestationCheckedAt     DateTime? @map("attestation_checked_at") @db.Timestamptz(3)
+  attestedAt               DateTime? @map("attested_at") @db.Timestamptz(3)
+  attestationSecurityLevel String?   @map("attestation_security_level") @db.VarChar(16)
+  attestedImeis            String[]  @default([]) @map("attested_imeis")
+  attestedSerial           String?   @map("attested_serial") @db.VarChar(64)
+  attestedBrand            String?   @map("attested_brand") @db.VarChar(64)
+  attestedModel            String?   @map("attested_model") @db.VarChar(64)
+  attestedBootLocked       Boolean?  @map("attested_boot_locked")
+  attestedBootState        String?   @map("attested_boot_state") @db.VarChar(16)
+
   createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime        @default(now()) @map("updated_at") @db.Timestamptz(3)
 
