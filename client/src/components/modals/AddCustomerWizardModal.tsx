@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
-import { ApiService } from '../../services/api.js';
+import { ApiError, ApiService } from '../../services/api.js';
+import {
+  SaleErrors,
+  SaleField,
+  fieldsFromServer,
+  firstBadStep,
+  validateSaleStep,
+} from '../../utils/saleValidation.js';
 import { useAuth } from '../../context/AuthContext.js';
 import {
   X,
@@ -66,6 +73,47 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
     qrType: 'STANDARD',
   });
 
+  // Field-level problems, from the step checks or from the server's 422 details.
+  const [errors, setErrors] = useState<SaleErrors>({});
+
+  /** Updates one box and clears its error, so the red goes away as the shop fixes it. */
+  const setField = <K extends keyof typeof formData>(key: K, value: (typeof formData)[K]) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+    if (errors[key as SaleField]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[key as SaleField];
+        return next;
+      });
+    }
+  };
+
+  const inputClass = (field: SaleField, extra = '') =>
+    `w-full px-3.5 py-2 rounded-xl border text-sm focus:ring-2 ${extra} ${
+      errors[field]
+        ? 'border-rose-500 bg-rose-50/40 focus:ring-rose-500/20 focus:border-rose-600'
+        : 'border-slate-200 focus:ring-blue-500/20 focus:border-blue-600'
+    }`;
+
+  const fieldError = (field: SaleField) =>
+    errors[field] ? (
+      <p role="alert" className="mt-1 text-xs font-medium text-rose-600">
+        {errors[field]}
+      </p>
+    ) : null;
+
+  /** Checks the current step; on a problem, marks the boxes and stays put. */
+  const goNext = () => {
+    const stepErrors = validateSaleStep(step, formData);
+    if (Object.keys(stepErrors).length > 0) {
+      setErrors(stepErrors);
+      showToast('Please fix the fields marked in red.', 'error');
+      return;
+    }
+    setErrors({});
+    setStep(step + 1);
+  };
+
   const financedAmount = formData.purchasePrice - formData.downPayment;
   const monthlyAmount = Math.round(financedAmount / (formData.totalInstallments || 1));
 
@@ -75,6 +123,19 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
   const noLock = support.level === 'none';
 
   const handleCreate = async () => {
+    // Re-check every step: a shop can go Back and change a box after passing it.
+    const allErrors: SaleErrors = {
+      ...validateSaleStep(1, formData),
+      ...validateSaleStep(2, formData),
+      ...validateSaleStep(3, formData),
+    };
+    const badStep = firstBadStep(allErrors);
+    if (badStep) {
+      setErrors(allErrors);
+      setStep(badStep);
+      showToast('Please fix the fields marked in red.', 'error');
+      return;
+    }
     try {
       setSubmitting(true);
       const payload = {
@@ -113,7 +174,18 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
       setStep(5);
       showToast(noLock ? 'Sale registered without a lock.' : 'Customer & financed device registered successfully!', 'success');
     } catch (err: any) {
-      showToast(err.message || 'Failed to create record', 'error');
+      // A 422 names each bad field: mark it and take the shop to its step,
+      // instead of a bare "not valid" that points nowhere.
+      const serverErrors = err instanceof ApiError ? fieldsFromServer(err.details) : {};
+      const badStep = firstBadStep(serverErrors);
+      if (badStep) {
+        setErrors(serverErrors);
+        setStep(badStep);
+        showToast(Object.values(serverErrors)[0] || 'Please fix the fields marked in red.', 'error');
+      } else {
+        const detail = err instanceof ApiError ? err.details?.map((d) => d.message).join(' ') : '';
+        showToast(detail || err.message || 'Failed to create record', 'error');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -197,9 +269,11 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                     required
                     placeholder="e.g. Muhammad Aslam"
                     value={formData.customerName}
-                    onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                    onChange={(e) => setField('customerName', e.target.value)}
+                    aria-invalid={!!errors.customerName}
+                    className={inputClass('customerName')}
                   />
+                  {fieldError('customerName')}
                 </div>
 
                 <div>
@@ -209,9 +283,11 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                     required
                     placeholder="0300-1234567"
                     value={formData.customerPhone}
-                    onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                    onChange={(e) => setField('customerPhone', e.target.value)}
+                    aria-invalid={!!errors.customerPhone}
+                    className={inputClass('customerPhone')}
                   />
+                  {fieldError('customerPhone')}
                 </div>
 
                 <div>
@@ -221,9 +297,11 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                     required
                     placeholder="35202-1234567-1"
                     value={formData.customerCnic}
-                    onChange={(e) => setFormData({ ...formData, customerCnic: e.target.value })}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                    onChange={(e) => setField('customerCnic', e.target.value)}
+                    aria-invalid={!!errors.customerCnic}
+                    className={inputClass('customerCnic')}
                   />
+                  {fieldError('customerCnic')}
                 </div>
 
                 <div>
@@ -232,31 +310,37 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                     type="text"
                     placeholder="House / Street / City"
                     value={formData.customerAddress}
-                    onChange={(e) => setFormData({ ...formData, customerAddress: e.target.value })}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                    onChange={(e) => setField('customerAddress', e.target.value)}
+                    aria-invalid={!!errors.customerAddress}
+                    className={inputClass('customerAddress')}
                   />
+                  {fieldError('customerAddress')}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Emergency Contact Person</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Emergency Contact Person *</label>
                   <input
                     type="text"
                     placeholder="e.g. Asif Aslam (Brother)"
                     value={formData.emergencyName}
-                    onChange={(e) => setFormData({ ...formData, emergencyName: e.target.value })}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                    onChange={(e) => setField('emergencyName', e.target.value)}
+                    aria-invalid={!!errors.emergencyName}
+                    className={inputClass('emergencyName')}
                   />
+                  {fieldError('emergencyName')}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Emergency Phone</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Emergency Phone *</label>
                   <input
                     type="text"
                     placeholder="0321-7654321"
                     value={formData.emergencyPhone}
-                    onChange={(e) => setFormData({ ...formData, emergencyPhone: e.target.value })}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                    onChange={(e) => setField('emergencyPhone', e.target.value)}
+                    aria-invalid={!!errors.emergencyPhone}
+                    className={inputClass('emergencyPhone')}
                   />
+                  {fieldError('emergencyPhone')}
                 </div>
               </div>
             </div>
@@ -290,9 +374,11 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                     required
                     placeholder="e.g. Galaxy A15 / Note 30 Pro"
                     value={formData.model}
-                    onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                    onChange={(e) => setField('model', e.target.value)}
+                    aria-invalid={!!errors.model}
+                    className={inputClass('model')}
                   />
+                  {fieldError('model')}
                 </div>
 
                 <div>
@@ -302,9 +388,11 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                     required
                     placeholder="15-digit IMEI"
                     value={formData.imei}
-                    onChange={(e) => setFormData({ ...formData, imei: e.target.value })}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm font-mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                    onChange={(e) => setField('imei', e.target.value)}
+                    aria-invalid={!!errors.imei}
+                    className={inputClass('imei', 'font-mono')}
                   />
+                  {fieldError('imei')}
                 </div>
 
                 <div>
@@ -312,9 +400,11 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                   <input
                     type="text"
                     value={formData.serialNumber}
-                    onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm font-mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                    onChange={(e) => setField('serialNumber', e.target.value)}
+                    aria-invalid={!!errors.serialNumber}
+                    className={inputClass('serialNumber', 'font-mono')}
                   />
+                  {fieldError('serialNumber')}
                 </div>
 
                 <div>
@@ -322,15 +412,14 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                   <input
                     type="number"
                     value={formData.purchasePrice}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        purchasePrice: Number(e.target.value),
-                        downPayment: Math.round(Number(e.target.value) * 0.25),
-                      })
-                    }
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm font-bold focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                    onChange={(e) => {
+                      setField('purchasePrice', Number(e.target.value));
+                      setField('downPayment', Math.round(Number(e.target.value) * 0.25));
+                    }}
+                    aria-invalid={!!errors.purchasePrice}
+                    className={inputClass('purchasePrice', 'font-bold')}
                   />
+                  {fieldError('purchasePrice')}
                 </div>
 
                 <div>
@@ -338,9 +427,11 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                   <input
                     type="text"
                     value={formData.ramStorage}
-                    onChange={(e) => setFormData({ ...formData, ramStorage: e.target.value })}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                    onChange={(e) => setField('ramStorage', e.target.value)}
+                    aria-invalid={!!errors.ramStorage}
+                    className={inputClass('ramStorage')}
                   />
+                  {fieldError('ramStorage')}
                 </div>
               </div>
 
@@ -412,17 +503,19 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                   <input
                     type="number"
                     value={formData.downPayment}
-                    onChange={(e) => setFormData({ ...formData, downPayment: Number(e.target.value) })}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm font-bold focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                    onChange={(e) => setField('downPayment', Number(e.target.value))}
+                    aria-invalid={!!errors.downPayment}
+                    className={inputClass('downPayment', 'font-bold')}
                   />
+                  {fieldError('downPayment')}
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Number of Months *</label>
                   <select
                     value={formData.totalInstallments}
-                    onChange={(e) => setFormData({ ...formData, totalInstallments: Number(e.target.value) })}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                    onChange={(e) => setField('totalInstallments', Number(e.target.value))}
+                    className={inputClass('totalInstallments')}
                   >
                     <option value={3}>3 Months</option>
                     <option value={6}>6 Months</option>
@@ -436,9 +529,11 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                   <input
                     type="date"
                     value={formData.firstDueDate}
-                    onChange={(e) => setFormData({ ...formData, firstDueDate: e.target.value })}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                    onChange={(e) => setField('firstDueDate', e.target.value)}
+                    aria-invalid={!!errors.firstDueDate}
+                    className={inputClass('firstDueDate')}
                   />
+                  {fieldError('firstDueDate')}
                 </div>
 
                 <div>
@@ -446,9 +541,11 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                   <input
                     type="number"
                     value={formData.gracePeriodDays}
-                    onChange={(e) => setFormData({ ...formData, gracePeriodDays: Number(e.target.value) })}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                    onChange={(e) => setField('gracePeriodDays', Number(e.target.value))}
+                    aria-invalid={!!errors.gracePeriodDays}
+                    className={inputClass('gracePeriodDays')}
                   />
+                  {fieldError('gracePeriodDays')}
                 </div>
               </div>
 
@@ -704,17 +801,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
 
             {step < 4 ? (
               <button
-                onClick={() => {
-                  if (step === 1 && (!formData.customerName || !formData.customerPhone)) {
-                    showToast('Please enter customer name and phone', 'error');
-                    return;
-                  }
-                  if (step === 2 && (!formData.model || !formData.imei)) {
-                    showToast('Please enter device model and IMEI', 'error');
-                    return;
-                  }
-                  setStep(step + 1);
-                }}
+                onClick={goNext}
                 className="flex items-center gap-1.5 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-md transition-all"
               >
                 Next <ArrowRight className="w-3.5 h-3.5" />
