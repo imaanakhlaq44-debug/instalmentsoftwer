@@ -1,0 +1,6 @@
+# Social media images: served only to whoever has the exact link.
+# No directory listing, and search engines are told not to index them.
+Options -Indexes
+<IfModule mod_headers.c>
+  Header set X-Robots-Tag "noindex, nofollow, noimageindex"
+</IfModule>
