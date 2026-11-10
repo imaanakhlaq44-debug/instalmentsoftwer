@@ -88,6 +88,50 @@ describe('registration', () => {
     expect(res.body.error).toMatch(/CNIC/i);
   });
 
+  it('adds a second phone to a returning customer instead of refusing the CNIC', async () => {
+    const first = await register();
+
+    const res = await as(ACCOUNTS.dealerStaff).post('/api/customers').send({
+      customer: { ...registration.customer, name: '  lifecycle test   CUSTOMER ', cnic: '3520212345671' },
+      device: { ...registration.device, imei: '490154203237518' },
+      plan: registration.plan,
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body.customer.id).toBe(first.body.customer.id);
+    expect(res.body.device.customerId).toBe(first.body.customer.id);
+    expect(await repo.devices.findByCustomer(first.body.customer.id)).toHaveLength(2);
+    expect(await repo.customers.count({ dealerId: 'dealer-1', cnic: { in: ['35202-1234567-1', '3520212345671'] } })).toBe(1);
+  });
+
+  it('refuses a known CNIC under a different name, since that is usually a wrong CNIC', async () => {
+    await register();
+
+    const res = await as(ACCOUNTS.dealerStaff).post('/api/customers').send({
+      customer: { ...registration.customer, name: 'Someone Else' },
+      device: { ...registration.device, imei: '490154203237518' },
+      plan: registration.plan,
+    });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/already on file for Lifecycle Test Customer/);
+  });
+
+  it('reactivates a deactivated customer who comes back for another phone', async () => {
+    const first = await register();
+    await repo.customers.update(first.body.customer.id, { active: false });
+
+    const res = await as(ACCOUNTS.dealerStaff).post('/api/customers').send({
+      customer: registration.customer,
+      device: { ...registration.device, imei: '490154203237518' },
+      plan: registration.plan,
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body.customer.id).toBe(first.body.customer.id);
+    expect((await repo.customers.findById(first.body.customer.id))!.active).toBe(true);
+  });
+
   it('rejects a duplicate phone number within the same dealership', async () => {
     await register();
 
