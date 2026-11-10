@@ -58,6 +58,16 @@ export class DeviceReleaseService {
         locationAt: undefined,
         locationRequestedAt: undefined,
         locationRequestedBy: undefined,
+        // Handed-back phones retain no prior security/integrity flags.
+        reportedImei: undefined,
+        reportedImeis: [],
+        reportedSerial: undefined,
+        imeiVerifiedAt: undefined,
+        isDeviceOwner: undefined,
+        tamperFlags: [],
+        tamperDetectedAt: undefined,
+        tamperReason: undefined,
+        integrityCheckedAt: undefined,
         updatedAt: new Date().toISOString(),
       },
       tx

@@ -12,12 +12,14 @@
       agreement allowing it, at a shop owner's request, and the customer is
       notified every time. See admin/LocationReporter.kt.
 
-      Still deliberately absent: phone-state. Nothing needs the customer's
-      number or call log.
+      Phone-state (app 1.4+): declared solely so Device Owner can read the
+      handset's hardware IMEI(s) and serial number for anti-tamper verification
+      against the financed sale record. Never used for call logs or contacts.
     -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
 
     <application
         android:name=".AlmasApp"

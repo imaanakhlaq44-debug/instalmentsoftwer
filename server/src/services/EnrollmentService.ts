@@ -7,6 +7,7 @@ import { repo } from '../db/repositories/index.js';
 import { runInTransaction, Tx } from '../db/prisma.js';
 import { EnrollmentToken, QRType, Device, UserRole } from '../types/index.js';
 import { deviceManagementService } from './DeviceManagementService.js';
+import { DeviceIntegrityService, TelemetryPayload } from './DeviceIntegrityService.js';
 import { AuditService } from './AuditService.js';
 import { LicenseService } from './LicenseService.js';
 import { AppError } from '../utils/AppError.js';
@@ -205,6 +206,7 @@ export class EnrollmentService {
     deviceId?: string;
     /** DPC build on the handset, recorded for support. */
     dpcVersion?: string;
+    telemetry?: TelemetryPayload;
     ipAddress?: string;
   }): Promise<{ success: boolean; device: Device; deviceToken: string; message: string }> {
     const tokenRecord = await repo.enrollmentTokens.findByToken(params.token);
@@ -241,6 +243,16 @@ export class EnrollmentService {
 
     const device = await repo.devices.findById(targetDeviceId);
     if (!device) throw AppError.notFound('Device');
+
+    // Verify hardware identity & integrity telemetry BEFORE claiming the QR or spending
+    // a dealer lock, so a swapped handset cannot burn a licence.
+    const nowIso = new Date().toISOString();
+    const { updates: telemetryUpdates } = await DeviceIntegrityService.processEnrollmentTelemetry(
+      device,
+      params.telemetry,
+      nowIso,
+      params.ipAddress
+    );
 
     /**
      * The lock is spent here, and only here.
@@ -288,12 +300,15 @@ export class EnrollmentService {
        * working the moment a new one completes.
        */
       const credentials = issueDeviceToken();
-      await repo.devices.update(device.id, {
-        authTokenHash: credentials.tokenHash,
-        authTokenIssuedAt: new Date().toISOString(),
-        dpcVersion: params.dpcVersion,
-        updatedAt: new Date().toISOString(),
-      });
+      const updatedDevice =
+        (await repo.devices.update(device.id, {
+          ...telemetryUpdates,
+          authTokenHash: credentials.tokenHash,
+          authTokenIssuedAt: nowIso,
+          lastCheckInAt: nowIso,
+          dpcVersion: params.dpcVersion,
+          updatedAt: nowIso,
+        })) ?? result.device;
 
       await repo.enrollmentTokens.update(tokenRecord.id, {
         status: 'ENROLLED',
@@ -318,7 +333,7 @@ export class EnrollmentService {
 
       return {
         success: true,
-        device: result.device,
+        device: updatedDevice,
         deviceToken: credentials.token,
         message: `${device.brand} ${device.model} was enrolled successfully and is now active.`,
       };

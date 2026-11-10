@@ -296,6 +296,16 @@ export const SettingsPage: React.FC = () => {
               while money is owed; it is removed automatically once the plan is paid off. Enter the numeric
               Google account ID (not the email), one per line, up to 5.
             </p>
+            {parseFrpAccountIds(frpAccountsText).length === 0 && (
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs space-y-1">
+                <p className="font-bold">Factory Reset Protection is currently OFF</p>
+                <p>
+                  Without at least one Google Account ID here, someone who wipes a financed phone from the recovery
+                  menu (power + volume buttons) can set it up again as a fresh phone without returning to the shop.
+                  Add your shop's numeric Google Account ID below and save policy settings.
+                </p>
+              </div>
+            )}
             <textarea
               value={frpAccountsText}
               onChange={(e) => setFrpAccountsText(e.target.value)}

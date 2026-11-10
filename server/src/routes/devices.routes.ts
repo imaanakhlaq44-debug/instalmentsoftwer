@@ -32,6 +32,8 @@ const listQuerySchema = paginationSchema.extend({
   dealerId: z.string().trim().max(64).optional(),
   /** 'true' only phones that can be locked, 'false' only those sold without one. */
   lockable: z.enum(['true', 'false']).optional(),
+  /** 'true' only phones with active tamper/integrity alerts. */
+  tamper: z.enum(['true', 'false']).optional(),
 });
 
 /**
@@ -60,6 +62,7 @@ devicesRouter.get(
       status: q.status,
       brand: q.brand,
       lockable: q.lockable === undefined ? undefined : q.lockable === 'true',
+      tamper: q.tamper === undefined ? undefined : q.tamper === 'true',
       search: q.search,
       page: q.page,
       limit: q.limit,
@@ -331,6 +334,14 @@ devicesRouter.post(
     const previous = device.imei;
     const updated = await repo.devices.update(device.id, {
       imei: body.imei,
+      // Re-verify hardware telemetry against the corrected IMEI at next check-in.
+      reportedImei: undefined,
+      reportedImeis: [],
+      reportedSerial: undefined,
+      imeiVerifiedAt: undefined,
+      tamperFlags: [],
+      tamperDetectedAt: undefined,
+      tamperReason: undefined,
       updatedAt: new Date().toISOString(),
     });
     if (!updated) throw AppError.notFound('Device');
@@ -416,6 +427,15 @@ devicesRouter.post(
       offlineLockSince: undefined,
       authTokenHash: undefined,
       authTokenIssuedAt: undefined,
+      reportedImei: undefined,
+      reportedImeis: [],
+      reportedSerial: undefined,
+      imeiVerifiedAt: undefined,
+      isDeviceOwner: undefined,
+      tamperFlags: [],
+      tamperDetectedAt: undefined,
+      tamperReason: undefined,
+      integrityCheckedAt: undefined,
       updatedAt: nowIso,
     });
     if (!updated) throw AppError.notFound('Device');
@@ -529,3 +549,58 @@ devicesRouter.get('/:id/actions', requireDealerStaff, asyncHandler(async (req, r
 
   res.json(await repo.deviceActionLogs.findByDevice(device.id, 200));
 }));
+
+/**
+ * Acknowledge / resolve a security tamper alert on a device once the shop has
+ * inspected the handset in person. Preserves existing enforcement status.
+ */
+const clearTamperSchema = z.object({
+  reason: z.string().trim().min(5, 'Please give a reason of at least 5 characters.').max(500),
+});
+
+devicesRouter.post(
+  '/:id/clear-tamper',
+  requireDealerAdmin,
+  validateBody(clearTamperSchema),
+  asyncHandler(async (req, res) => {
+    const user = getAuthUser(req);
+    const device = await repo.devices.findById(routeParam(req, 'id'));
+    if (!device) throw AppError.notFound('Device');
+    assertDealerAccess(req, device.dealerId, 'device');
+
+    const reason = (req.body as z.infer<typeof clearTamperSchema>).reason;
+    const previousFlags = device.tamperFlags ?? [];
+
+    const updated = await repo.devices.update(device.id, {
+      tamperFlags: [],
+      tamperDetectedAt: undefined,
+      tamperReason: undefined,
+      updatedAt: new Date().toISOString(),
+    });
+    if (!updated) throw AppError.notFound('Device');
+
+    await deviceManagementService.recordAction({
+      deviceId: device.id,
+      dealerId: device.dealerId,
+      userId: user.userId,
+      userName: user.name,
+      action: 'STATUS_CHANGE',
+      reason: `Security alert resolved (${previousFlags.join(', ') || 'none'}) by ${user.name}. Reason: ${reason}`,
+      ipAddress: clientIp(req),
+    });
+
+    await AuditService.log({
+      dealerId: device.dealerId,
+      userId: user.userId,
+      actorName: user.name,
+      actorRole: user.role,
+      action: 'SECURITY_ALERT_RESOLVED',
+      targetType: 'DEVICE',
+      targetId: device.id,
+      details: `${user.name} cleared security tamper flag(s) [${previousFlags.join(', ') || 'none'}] on ${device.brand} ${device.model}. Reason: ${reason}`,
+      ipAddress: clientIp(req),
+    });
+
+    res.json(sanitizeDevice(updated, user.role));
+  })
+);

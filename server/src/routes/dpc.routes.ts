@@ -7,6 +7,7 @@ import { EnrollmentService } from '../services/EnrollmentService.js';
 import { offlineLockDaysFor } from '../services/OfflineLockPolicy.js';
 import { RESTRICTED_APPS, restrictionLevelFor } from '../services/StagedRestrictions.js';
 import { LocationService } from '../services/LocationService.js';
+import { DeviceIntegrityService } from '../services/DeviceIntegrityService.js';
 import { deviceManagementService } from '../services/DeviceManagementService.js';
 import { AuditService } from '../services/AuditService.js';
 import { amountOutstanding, DEFAULT_POLICY } from '../services/InstallmentMath.js';
@@ -114,11 +115,30 @@ async function buildPolicyView(device: Device): Promise<DevicePolicyView> {
 // credential, which is why it is single-use, short-lived and device-bound.
 // ---------------------------------------------------------------------------
 
+const integritySchema = z
+  .object({
+    rooted: z.boolean().optional(),
+    bootloaderUnlocked: z.boolean().optional(),
+    testKeys: z.boolean().optional(),
+    verifiedBootState: z.string().trim().max(32).optional(),
+    flashLocked: z.string().trim().max(16).optional(),
+  })
+  .optional();
+
+const imeiArraySchema = z
+  .array(z.string().trim().regex(/^\d{14,16}$/))
+  .max(4)
+  .optional();
+
 const enrollSchema = z.object({
   token: z.string().trim().min(8, 'Enrollment code is required.').max(120),
   /** Only needed for a token issued without a device attached. */
   deviceId: z.string().trim().max(64).optional(),
   dpcVersion: z.string().trim().max(20).optional(),
+  imeis: imeiArraySchema,
+  serialNumber: z.string().trim().max(64).optional(),
+  isDeviceOwner: z.boolean().optional(),
+  integrity: integritySchema,
 });
 
 dpcRouter.post(
@@ -131,6 +151,12 @@ dpcRouter.post(
       token: body.token,
       deviceId: body.deviceId,
       dpcVersion: body.dpcVersion,
+      telemetry: {
+        imeis: body.imeis,
+        serialNumber: body.serialNumber,
+        isDeviceOwner: body.isDeviceOwner,
+        integrity: body.integrity,
+      },
       ipAddress: clientIp(req),
     });
 
@@ -156,6 +182,10 @@ const checkInSchema = z.object({
   simCarrier: z.string().trim().max(40).optional(),
   wifiSsid: z.string().trim().max(60).optional(),
   dpcVersion: z.string().trim().max(20).optional(),
+  imeis: imeiArraySchema,
+  serialNumber: z.string().trim().max(64).optional(),
+  isDeviceOwner: z.boolean().optional(),
+  integrity: integritySchema,
   /**
    * The handset reporting that it restricted itself under the offline rule
    * while it could not reach anybody. It is a report of something already done,
@@ -182,6 +212,7 @@ dpcRouter.post(
     const device = getDevice(req);
     const body = req.body as z.infer<typeof checkInSchema>;
     const nowIso = new Date().toISOString();
+    const ip = clientIp(req);
 
     const offlineLockActive = body.offlineLockActive === true;
     const wasOfflineLocked = device.offlineLockActive === true;
@@ -205,8 +236,20 @@ dpcRouter.post(
       updatedAt: nowIso,
     });
 
+    const afterIntegrity = await DeviceIntegrityService.processCheckInTelemetry(
+      updated ?? device,
+      {
+        imeis: body.imeis,
+        serialNumber: body.serialNumber,
+        isDeviceOwner: body.isDeviceOwner,
+        integrity: body.integrity,
+      },
+      nowIso,
+      ip
+    );
+
     // A location is stored only in answer to an open, still-permitted request.
-    const located = body.location ? await LocationService.acceptReport(device, body.location) : false;
+    const located = body.location ? await LocationService.acceptReport(afterIntegrity.device, body.location) : false;
 
     /**
      * A self-lock is written to the device's timeline the moment the shop first
@@ -228,7 +271,7 @@ dpcRouter.post(
           : 'The handset lifted the restriction it had applied under the offline rule, having reached ' +
             'this server again.',
         deviceAck: true,
-        ipAddress: clientIp(req),
+        ipAddress: ip,
       });
     }
 
@@ -239,16 +282,16 @@ dpcRouter.post(
      * here would let the dashboard show a lock that never reached the handset —
      * exactly the dishonesty LOCK_PENDING exists to prevent.
      */
-    const current = located ? (await repo.devices.findById(device.id)) ?? updated : updated;
-    const command = updated?.pendingCommand
-      ? { type: updated.pendingCommand, issuedAt: updated.pendingCommandAt ?? null }
+    const current = (located ? await repo.devices.findById(device.id) : afterIntegrity.device) ?? afterIntegrity.device;
+    const command = current.pendingCommand
+      ? { type: current.pendingCommand, issuedAt: current.pendingCommandAt ?? null }
       : null;
 
     res.json({
-      status: updated?.status ?? device.status,
+      status: current.status,
       command,
       checkInIntervalSeconds: 900,
-      policy: await buildPolicyView(current ?? device),
+      policy: await buildPolicyView(current),
     });
   })
 );

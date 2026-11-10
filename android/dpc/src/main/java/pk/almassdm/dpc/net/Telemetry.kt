@@ -4,8 +4,11 @@ import android.content.Context
 import android.os.BatteryManager
 import android.os.Build
 import android.telephony.TelephonyManager
+import org.json.JSONArray
 import org.json.JSONObject
 import pk.almassdm.dpc.BuildConfig
+import pk.almassdm.dpc.admin.DeviceIntegrity
+import pk.almassdm.dpc.admin.DeviceIntegrityCollector
 import pk.almassdm.dpc.admin.LocationFix
 import pk.almassdm.dpc.data.Prefs
 import java.time.Instant
@@ -39,6 +42,11 @@ data class Telemetry(
     val offlineLockSince: Long = 0L,
     /** Only in the check-in that answers a location request. */
     val location: LocationFix? = null,
+    /** Dual-SIM IMEIs read with Device Owner privileges; verified server-side. */
+    val imeis: List<String> = emptyList(),
+    val serialNumber: String? = null,
+    val isDeviceOwner: Boolean? = null,
+    val integrity: DeviceIntegrity.Report? = null,
 ) {
     fun toJson(): JSONObject {
         val json = JSONObject().put("dpcVersion", dpcVersion)
@@ -59,6 +67,12 @@ data class Telemetry(
             fix.accuracy?.let { loc.put("accuracy", it.toDouble()) }
             json.put("location", loc)
         }
+        if (imeis.isNotEmpty()) {
+            json.put("imeis", JSONArray(imeis))
+        }
+        serialNumber?.takeIf { it.isNotBlank() }?.let { json.put("serialNumber", it) }
+        isDeviceOwner?.let { json.put("isDeviceOwner", it) }
+        integrity?.let { json.put("integrity", it.toJson()) }
         return json
     }
 

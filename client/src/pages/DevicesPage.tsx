@@ -32,6 +32,7 @@ export const DevicesPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialStatus = searchParams.get('status') || 'ALL';
   const initialSearch = searchParams.get('search') || '';
+  const initialTamper = searchParams.get('tamper') === 'true';
 
   const { selectedDealerId, showToast, isStaff, isDealerAdmin } = useAuth();
   const navigate = useNavigate();
@@ -41,10 +42,11 @@ export const DevicesPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [activeStatusTab, setActiveStatusTab] = useState<string>(initialStatus);
   const [selectedBrand, setSelectedBrand] = useState<string>('ALL');
+  const [tamperOnly, setTamperOnly] = useState<boolean>(initialTamper);
   const [showAddWizard, setShowAddWizard] = useState(false);
 
   // Declared after the filters it watches, so changing any of them resets to page 1.
-  const paged = usePagination([searchQuery, activeStatusTab, selectedBrand, selectedDealerId]);
+  const paged = usePagination([searchQuery, activeStatusTab, selectedBrand, tamperOnly, selectedDealerId]);
 
   // Lock Confirmation Modal State
   const [lockModalDevice, setLockModalDevice] = useState<any | null>(null);
@@ -70,6 +72,7 @@ export const DevicesPage: React.FC = () => {
     search: searchQuery || undefined,
     status: activeStatusTab === 'ALL' ? undefined : activeStatusTab,
     brand: selectedBrand === 'ALL' ? undefined : selectedBrand,
+    tamper: tamperOnly ? 'true' : undefined,
     dealerId: selectedDealerId,
     ...extra,
   });
@@ -104,9 +107,13 @@ export const DevicesPage: React.FC = () => {
   };
 
   useEffect(() => {
+    setTamperOnly(searchParams.get('tamper') === 'true');
+  }, [searchParams]);
+
+  useEffect(() => {
     loadDevices();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDealerId, activeStatusTab, selectedBrand, paged.page, paged.limit]);
+  }, [selectedDealerId, activeStatusTab, selectedBrand, tamperOnly, paged.page, paged.limit]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -216,6 +223,25 @@ export const DevicesPage: React.FC = () => {
               {tab === 'ALL' ? 'All Devices' : tab}
             </button>
           ))}
+          <button
+            onClick={() => {
+              const next = !tamperOnly;
+              setTamperOnly(next);
+              const nextParams = new URLSearchParams(searchParams);
+              if (next) nextParams.set('tamper', 'true');
+              else nextParams.delete('tamper');
+              setSearchParams(nextParams, { replace: true });
+            }}
+            aria-pressed={tamperOnly}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              tamperOnly
+                ? 'bg-rose-600 text-white shadow-sm'
+                : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
+            }`}
+          >
+            <ShieldAlert className="w-3.5 h-3.5" aria-hidden="true" />
+            <span>Tamper Alerts</span>
+          </button>
         </div>
 
         {/* Search & Brand Filter Controls */}
@@ -289,6 +315,16 @@ export const DevicesPage: React.FC = () => {
                   const isLocked = d.status === 'LOCKED' || d.status === 'LOCK_PENDING';
                   const isOverdue = d.status === 'OVERDUE';
                   const isPending = d.status === 'PENDING';
+                  const hasTamper = (d.tamperFlags?.length ?? 0) > 0 || Boolean(d.tamperDetectedAt);
+                  const lastContactIso = d.lastCheckInAt || d.lastSeen;
+                  const lastContactMs = lastContactIso ? Date.parse(lastContactIso) : NaN;
+                  const isSilent72h =
+                    !d.noLock &&
+                    d.status !== 'PENDING' &&
+                    d.status !== 'INACTIVE' &&
+                    d.status !== 'REMOVED' &&
+                    Number.isFinite(lastContactMs) &&
+                    Date.now() - lastContactMs >= 72 * 3_600_000;
 
                   return (
                     <tr key={d.id} className="hover:bg-slate-50/80 transition-colors group">
@@ -338,20 +374,34 @@ export const DevicesPage: React.FC = () => {
 
                       {/* Status */}
                       <td className="py-3.5 px-4">
-                        <span
-                          className={`status-pill ${
-                            isLocked
-                              ? 'status-locked'
-                              : isOverdue
-                              ? 'status-overdue'
-                              : isPending
-                              ? 'status-pending'
-                              : 'status-active'
-                          }`}
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                          {d.noLock ? 'NO LOCK' : d.status}
-                        </span>
+                        <div className="flex flex-col items-start gap-1">
+                          <span
+                            className={`status-pill ${
+                              isLocked
+                                ? 'status-locked'
+                                : isOverdue
+                                ? 'status-overdue'
+                                : isPending
+                                ? 'status-pending'
+                                : 'status-active'
+                            }`}
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                            {d.noLock ? 'NO LOCK' : d.status}
+                          </span>
+                          {hasTamper && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-micro font-bold text-rose-700">
+                              <ShieldAlert className="w-3 h-3 shrink-0" aria-hidden="true" />
+                              <span>Tamper Alert</span>
+                            </span>
+                          )}
+                          {!hasTamper && isSilent72h && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-micro font-bold text-amber-800">
+                              <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden="true" />
+                              <span>{'Silent (>72h)'}</span>
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Last Seen & Connectivity */}

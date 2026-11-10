@@ -81,15 +81,38 @@ export function cnicView(cnic: string | undefined, role: UserRole): { cnic: stri
  * number stripped unless the role is permitted to see them.
  */
 export function sanitizeDevice<
-  T extends { imei?: string; serialNumber?: string; authTokenHash?: string }
+  T extends {
+    imei?: string;
+    serialNumber?: string;
+    authTokenHash?: string;
+    reportedImei?: string;
+    reportedImeis?: string[];
+    reportedSerial?: string;
+  }
 >(
   device: T,
   role: UserRole
-): Omit<T, 'imei' | 'serialNumber' | 'authTokenHash'> & ImeiView & { serialNumber?: string } {
+): Omit<T, 'imei' | 'serialNumber' | 'authTokenHash' | 'reportedImei' | 'reportedImeis' | 'reportedSerial'> &
+  ImeiView & {
+    serialNumber?: string;
+    reportedImei?: string;
+    maskedReportedImei?: string;
+    reportedImeis?: string[];
+    reportedSerial?: string;
+  } {
   // `authTokenHash` is destructured out and never re-added. It is the handset's
   // credential: no role has a reason to see it, and it would otherwise ride
   // along in `rest` on every device response in the system.
-  const { imei, serialNumber, authTokenHash: _authTokenHash, ...withLocation } = device;
+  // Reported hardware IDs are stripped with the same rule as `imei` & `serialNumber`.
+  const {
+    imei,
+    serialNumber,
+    authTokenHash: _authTokenHash,
+    reportedImei,
+    reportedImeis,
+    reportedSerial,
+    ...withLocation
+  } = device;
   // Where a customer's phone is never rides along on an ordinary device
   // response. It is fetched on purpose by an owner (GET /devices/:id/location),
   // and that fetch is logged.
@@ -109,9 +132,16 @@ export function sanitizeDevice<
   const allowed = IMEI_FULL_ACCESS.includes(role);
 
   return {
-    ...(rest as unknown as Omit<T, 'imei' | 'serialNumber' | 'authTokenHash'>),
+    ...(rest as unknown as Omit<
+      T,
+      'imei' | 'serialNumber' | 'authTokenHash' | 'reportedImei' | 'reportedImeis' | 'reportedSerial'
+    >),
     ...view,
     serialNumber: allowed ? serialNumber : undefined,
+    reportedImei: allowed ? reportedImei : undefined,
+    maskedReportedImei: reportedImei ? maskImei(reportedImei) : undefined,
+    reportedImeis: allowed ? reportedImeis : undefined,
+    reportedSerial: allowed ? reportedSerial : undefined,
   };
 }
 

@@ -816,6 +816,44 @@ export const ROMAN_URDU: Record<string, string> = {
   'This phone has not been connected yet.': 'Yeh phone abhi jura nahin.',
   'This phone was sold without a lock, so it has no location.': 'Yeh phone bina lock ke becha gaya, is liye location nahin.',
   'Asked. The phone answers the next time it connects to the internet.': 'Mang li. Phone agli dafa internet se jurte hi jawab dega.',
+
+  // ------------------------------------------------------------- security hardening & anti-tamper
+  'Factory Reset Protection is currently OFF': 'Format se hifazat (FRP) abhi OFF hai',
+  "Without at least one Google Account ID here, someone who wipes a financed phone from the recovery menu (power + volume buttons) can set it up again as a fresh phone without returning to the shop. Add your shop's numeric Google Account ID below and save policy settings.":
+    'Agar yahan kam az kam ek Google Account ID nahin hai, to koi bhi recovery menu (power + volume button) se phone format karke dukaan par laaye baghair naya phone chala sakta hai. Neeche apni dukaan ka number wala Google Account ID daalein aur settings mehfooz karein.',
+  'Factory Reset Protection is off for this shop': 'Is dukaan ke liye Format se hifazat (FRP) off hai',
+  'Add at least one Google Account ID in Settings before scanning QR codes so recovery-mode resets lock the phone back to your shop.':
+    'QR scan karne se pehle Settings mein kam az kam ek Google Account ID daalein taake recovery se format hone par bhi phone aap ki dukaan ke baghair na khule.',
+  'Open Settings': 'Settings kholein',
+  'Tamper Alerts': 'Chher-chhar Alerts',
+  'Tamper Alert': 'Chher-chhar Alert',
+  'Silent (>72h)': 'Khamosh (>72h)',
+  'No DPC app': 'Lock app nahin',
+  'Not reported yet': 'Abhi report nahin aayi',
+  'Not Device Owner': 'Device Owner nahin',
+  'Unprotected (No Lock)': 'Bina hifazat (No Lock)',
+  'Awaiting first check-in': 'Pehle raabte ka intezar',
+  Verified: 'Tasdeeq shuda',
+  'Security & hardware integrity alert': 'Hifazat aur hardware ki chher-chhar ka alert',
+  'Resolve Alert': 'Alert hal karein',
+  'Resolve Security Alert': 'Hifazat alert hal karein',
+  'Clear the active security alert once the handset has been inspected. Existing lock status will not change.':
+    'Phone ko khud check karne ke baad yeh alert band karein. Mojooda lock ki haalat nahin badlegi.',
+  'Inspection Note': 'Jaanch ka note',
+  'Registered IMEI': 'Darj IMEI',
+  'Reported IMEI': 'Phone ka bataya IMEI',
+  'Reported Slots': 'Phone ki batayi slots',
+  'Reported Serial': 'Phone ka bataya Serial',
+  'Not reported': 'Bataya nahin gaya',
+  'IMEI mismatch': 'IMEI farq',
+  'Bootloader unlocked': 'Bootloader khula hai',
+  'Rooted handset': 'Root shuda phone',
+  'Custom OS (test-keys)': 'Badla hua Android (test-keys)',
+  'Device Owner lost': 'Device Owner khatam',
+  'DPC is not active as Device Owner — OS-level lock and anti-reset protections cannot be enforced until the handset is wiped and re-enrolled.':
+    'App abhi Device Owner nahin hai — phone ko format karke dobara QR se jorne tak lock aur anti-reset qawaid nahin chalenge.',
+  'This handset has not checked in for over 72 hours — verify whether it is offline, powered off, or tampered with.':
+    'Yeh phone 72 ghante se ziada waqt se server se nahin jura — check karein ke band hai, offline hai ya koi chher-chhar hui hai.',
 };
 
 /**
@@ -844,4 +882,7 @@ export const ROMAN_URDU_PATTERNS: Array<[RegExp, string]> = [
   [/^(\d+) locks sold$/, '$1 locks beche'],
   [/^(\d+) phones in total$/, 'kul $1 phones'],
   [/^Down payment collected at the time of sale for (.+)\.$/, '$1 ka advance, sale ke waqt wusool.'],
+  [/^(\d+) device\(s\) have active hardware or tamper alerts waiting for inspection$/, '$1 phone(s) par hardware ya chher-chhar ka alert hai, jaanch zaroori hai'],
+  [/^(\d+) managed phone\(s\) have been silent for over 72 hours$/, '$1 phone(s) 72 ghante se ziada waqt se khamosh hain'],
+  [/^Detected (.+)$/, 'Pata chala: $1'],
 ];

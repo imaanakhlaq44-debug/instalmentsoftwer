@@ -174,6 +174,21 @@ export interface Device {
    */
   noLock?: boolean;
 
+  // --- Hardware identity & tamper detection ----------------------------------
+  /** Primary hardware identifier reported by DPC (raw only for Dealer Admin / Super Admin). */
+  reportedImei?: string;
+  /** Masked reported hardware identifier computed during sanitization. */
+  maskedReportedImei?: string;
+  /** Dual-SIM identifiers reported by DPC (raw only for Dealer Admin / Super Admin). */
+  reportedImeis?: string[];
+  reportedSerial?: string;
+  imeiVerifiedAt?: string;
+  isDeviceOwner?: boolean;
+  tamperFlags?: string[];
+  tamperDetectedAt?: string;
+  tamperReason?: string;
+  integrityCheckedAt?: string;
+
   createdAt: string;
   updatedAt: string;
 }

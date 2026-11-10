@@ -297,6 +297,7 @@ export const devices = {
       status?: string;
       brand?: string;
       lockable?: boolean;
+      tamper?: boolean;
       search?: string;
     } & PageArgs,
     tx?: Tx
@@ -307,6 +308,9 @@ export const devices = {
     if (args.status && args.status !== 'ALL') where.status = args.status;
     if (args.brand && args.brand !== 'ALL') where.brand = { equals: args.brand, mode: 'insensitive' };
     if (args.lockable !== undefined) where.noLock = !args.lockable;
+    if (args.tamper !== undefined) {
+      where.tamperDetectedAt = args.tamper ? { not: null } : null;
+    }
 
     if (args.search) {
       // Searching the customer's name and phone as well is why this reaches

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, QrCode, RefreshCw, ArrowRight, BadgeCheck, Wallet, ShieldAlert, TrendingUp } from 'lucide-react';
+import { Plus, QrCode, RefreshCw, ArrowRight, BadgeCheck, Wallet, ShieldAlert, TrendingUp, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { ApiService } from '../services/api.js';
 import { AddCustomerWizardModal } from '../components/modals/AddCustomerWizardModal.js';
@@ -44,6 +44,8 @@ interface Stats {
   collectedThisMonth: number;
   pendingVerificationAmount: number;
   collectionRatePercentage: number;
+  tamperAlertDevices?: number;
+  silentDevices?: number;
 }
 
 export const DashboardPage: React.FC = () => {
@@ -260,6 +262,34 @@ export const DashboardPage: React.FC = () => {
             customer-reported payments is waiting for you to confirm it
           </span>
           <ArrowRight className="h-4 w-4 shrink-0 text-accent-700" aria-hidden="true" />
+        </button>
+      )}
+
+      {isStaff && (stats?.tamperAlertDevices ?? 0) > 0 && (
+        <button
+          type="button"
+          onClick={() => navigate('/devices?tamper=true')}
+          className="flex w-full items-center gap-3 rounded-lg border-2 border-rose-300 bg-rose-50 px-4 py-3 text-left transition-colors hover:bg-rose-100"
+        >
+          <ShieldAlert className="h-5 w-5 shrink-0 text-rose-700" aria-hidden="true" />
+          <span className="flex-1 text-body font-medium text-rose-950">
+            {`${stats?.tamperAlertDevices} device(s) have active hardware or tamper alerts waiting for inspection`}
+          </span>
+          <ArrowRight className="h-4 w-4 shrink-0 text-rose-700" aria-hidden="true" />
+        </button>
+      )}
+
+      {isStaff && (stats?.silentDevices ?? 0) > 0 && (
+        <button
+          type="button"
+          onClick={() => navigate('/notifications')}
+          className="flex w-full items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-left transition-colors hover:bg-amber-100"
+        >
+          <AlertTriangle className="h-5 w-5 shrink-0 text-amber-700" aria-hidden="true" />
+          <span className="flex-1 text-body font-medium text-amber-950">
+            {`${stats?.silentDevices} managed phone(s) have been silent for over 72 hours`}
+          </span>
+          <ArrowRight className="h-4 w-4 shrink-0 text-amber-700" aria-hidden="true" />
         </button>
       )}
 

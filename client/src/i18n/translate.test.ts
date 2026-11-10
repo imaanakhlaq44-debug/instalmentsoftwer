@@ -15,6 +15,13 @@ describe('toRomanUrdu', () => {
 
   it('fills in numbers', () => {
     expect(toRomanUrdu('2 of 6 Months Paid')).toBe('6 mein se 2 mahine ada');
+    expect(toRomanUrdu('3 device(s) have active hardware or tamper alerts waiting for inspection')).toBe(
+      '3 phone(s) par hardware ya chher-chhar ka alert hai, jaanch zaroori hai'
+    );
+    expect(toRomanUrdu('2 managed phone(s) have been silent for over 72 hours')).toBe(
+      '2 phone(s) 72 ghante se ziada waqt se khamosh hain'
+    );
+    expect(toRomanUrdu('Tamper Alert')).toBe('Chher-chhar Alert');
   });
 
   it('leaves unknown text, names and figures alone', () => {

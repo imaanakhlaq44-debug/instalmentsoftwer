@@ -26,8 +26,11 @@ class BootReceiver : BroadcastReceiver() {
         val prefs = Prefs(context)
         if (!prefs.isEnrolled) return
 
+        val lockController = LockController(context)
+        lockController.protectInstallation()
+
         if (prefs.lockApplied) {
-            LockController(context).applyLock(prefs.cachedPolicy().emergencyCallsAllowed)
+            lockController.applyLock(prefs.cachedPolicy().emergencyCallsAllowed)
         }
 
         CheckInScheduler.schedule(context, prefs.checkInIntervalSeconds)

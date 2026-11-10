@@ -30,6 +30,14 @@ import {
   FileText,
 } from 'lucide-react';
 
+const TAMPER_FLAG_LABELS: Record<string, string> = {
+  IMEI_MISMATCH: 'IMEI mismatch',
+  BOOTLOADER_UNLOCKED: 'Bootloader unlocked',
+  ROOTED: 'Rooted handset',
+  CUSTOM_ROM_TEST_KEYS: 'Custom OS (test-keys)',
+  DEVICE_OWNER_LOST: 'Device Owner lost',
+};
+
 export const DeviceDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -52,6 +60,8 @@ export const DeviceDetailPage: React.FC = () => {
   const [reEnrollReason, setReEnrollReason] = useState('Phone was factory reset from recovery mode');
   const [showReleaseModal, setShowReleaseModal] = useState(false);
   const [releaseReason, setReleaseReason] = useState('');
+  const [showClearTamperModal, setShowClearTamperModal] = useState(false);
+  const [clearTamperReason, setClearTamperReason] = useState('Handset inspected in shop; confirmed authentic');
   /** The signed consent this device's lock rests on, if it has one. */
   const [contract, setContract] = useState<any>(null);
 
@@ -146,6 +156,20 @@ export const DeviceDetailPage: React.FC = () => {
     }
   };
 
+  const handleClearTamperAlert = async () => {
+    try {
+      setActionProcessing(true);
+      await ApiService.clearTamperAlert(device.id, { reason: clearTamperReason });
+      showToast('Security alert resolved', 'success');
+      setShowClearTamperModal(false);
+      loadDeviceDetail();
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      setActionProcessing(false);
+    }
+  };
+
   const handleSendMessage = async () => {
     try {
       setActionProcessing(true);
@@ -191,6 +215,32 @@ export const DeviceDetailPage: React.FC = () => {
   const isPending = device.status === 'PENDING';
   /** Handed back to its owner: paid off, or released by the shop. */
   const isReleased = device.status === 'INACTIVE';
+
+  const tamperFlags: string[] = Array.isArray(device.tamperFlags) ? device.tamperFlags : [];
+  const hasTamperAlert = tamperFlags.length > 0 || Boolean(device.tamperDetectedAt);
+  const lastContactIso = device.lastCheckInAt || device.lastSeen;
+  const lastContactMs = lastContactIso ? Date.parse(lastContactIso) : NaN;
+  const isSilentOver72h =
+    !device.noLock &&
+    !isPending &&
+    !isReleased &&
+    device.status !== 'REMOVED' &&
+    Number.isFinite(lastContactMs) &&
+    Date.now() - lastContactMs >= 72 * 3_600_000;
+
+  const reportedImeiDisplay = device.reportedImei || device.maskedReportedImei;
+  const securitySummary = device.noLock
+    ? { label: 'Unprotected (No Lock)', color: 'text-slate-600', icon: AlertTriangle, iconColor: 'text-slate-400' }
+    : hasTamperAlert
+    ? { label: 'Tamper Alert', color: 'text-rose-700', icon: ShieldAlert, iconColor: 'text-rose-600' }
+    : device.isDeviceOwner === false
+    ? { label: 'Not Device Owner', color: 'text-amber-700', icon: AlertTriangle, iconColor: 'text-amber-600' }
+    : isSilentOver72h
+    ? { label: 'Silent (>72h)', color: 'text-amber-700', icon: AlertTriangle, iconColor: 'text-amber-600' }
+    : !device.lastCheckInAt && !device.integrityCheckedAt
+    ? { label: 'Awaiting first check-in', color: 'text-slate-600', icon: Clock, iconColor: 'text-slate-400' }
+    : { label: 'Verified', color: 'text-emerald-700', icon: ShieldCheck, iconColor: 'text-emerald-500' };
+  const SecurityStatusIcon = securitySummary.icon;
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -349,6 +399,101 @@ export const DeviceDetailPage: React.FC = () => {
         </div>
       )}
 
+      {hasTamperAlert && (
+        <div className="p-4 bg-rose-50 border-2 border-rose-300 rounded-2xl space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+            <div className="flex items-start gap-2.5">
+              <ShieldAlert className="w-5 h-5 text-rose-700 shrink-0 mt-0.5" aria-hidden="true" />
+              <div className="space-y-1">
+                <p className="text-sm font-extrabold text-rose-950">Security & hardware integrity alert</p>
+                {device.tamperDetectedAt && (
+                  <p className="text-micro font-mono text-rose-700">
+                    {`Detected ${new Date(device.tamperDetectedAt).toLocaleString()}`}
+                  </p>
+                )}
+              </div>
+            </div>
+            {isDealerAdmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  setClearTamperReason('Handset inspected in shop; confirmed authentic');
+                  setShowClearTamperModal(true);
+                }}
+                className="px-3.5 py-2 bg-rose-700 hover:bg-rose-800 text-white rounded-xl text-xs font-bold shrink-0 self-start"
+              >
+                Resolve Alert
+              </button>
+            )}
+          </div>
+
+          {tamperFlags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {tamperFlags.map((flag) => (
+                <span
+                  key={flag}
+                  className="inline-flex items-center rounded-full bg-rose-200/80 px-2.5 py-0.5 text-micro font-extrabold text-rose-950"
+                >
+                  {TAMPER_FLAG_LABELS[flag] ?? flag}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {device.tamperReason && (
+            <p className="text-xs text-rose-900 leading-relaxed">{device.tamperReason}</p>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-2 border-t border-rose-200/80 text-xs">
+            <div>
+              <span className="text-micro font-semibold text-rose-700 block">Registered IMEI</span>
+              <span className="font-mono font-bold text-rose-950">{device.imei || device.maskedImei}</span>
+            </div>
+            <div>
+              <span className="text-micro font-semibold text-rose-700 block">Reported IMEI</span>
+              <span className="font-mono font-bold text-rose-950">
+                {reportedImeiDisplay || 'Not reported'}
+              </span>
+            </div>
+            {Array.isArray(device.reportedImeis) && device.reportedImeis.length > 0 && (
+              <div>
+                <span className="text-micro font-semibold text-rose-700 block">Reported Slots</span>
+                <span className="font-mono font-bold text-rose-950">{device.reportedImeis.join(', ')}</span>
+              </div>
+            )}
+            {device.reportedSerial && (
+              <div>
+                <span className="text-micro font-semibold text-rose-700 block">Reported Serial</span>
+                <span className="font-mono font-bold text-rose-950">{device.reportedSerial}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {!device.noLock && !isPending && !isReleased && device.status !== 'REMOVED' && (device.isDeviceOwner === false || isSilentOver72h) && (
+        <div className="p-4 bg-amber-50 border border-amber-300 rounded-2xl space-y-1.5">
+          {device.isDeviceOwner === false && (
+            <div className="flex items-start gap-2.5 text-xs text-amber-950">
+              <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" aria-hidden="true" />
+              <p>
+                DPC is not active as Device Owner — OS-level lock and anti-reset protections cannot be enforced until
+                the handset is wiped and re-enrolled.
+              </p>
+            </div>
+          )}
+          {isSilentOver72h && (
+            <div className="flex items-start gap-2.5 text-xs text-amber-950">
+              <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" aria-hidden="true" />
+              <p>
+                This handset has not checked in for over 72 hours — verify whether it is offline, powered off, or
+                tampered with.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 5 Health Status Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {/* Connectivity */}
@@ -404,16 +549,25 @@ export const DeviceDetailPage: React.FC = () => {
             <Smartphone className="w-4 h-4 text-slate-400" />
           </div>
           <p className="text-sm font-extrabold text-slate-900 mt-2">{device.osVersion}</p>
-          <span className="text-micro text-slate-400">DPC Client 2.4</span>
+          <span className="text-micro text-slate-400">
+            {device.noLock
+              ? 'No DPC app'
+              : device.dpcVersion
+              ? `DPC v${device.dpcVersion}`
+              : 'Not reported yet'}
+          </span>
+          {device.isDeviceOwner === false && !device.noLock && (
+            <span className="mt-1 block text-micro font-bold text-amber-700">Not Device Owner</span>
+          )}
         </div>
 
-        {/* Security Patch */}
+        {/* Security Status */}
         <div className="p-4 bg-white rounded-2xl border-2 border-ink-900 shadow-card">
           <div className="flex items-center justify-between text-slate-400 text-xs">
             <span>Security Status</span>
-            <ShieldCheck className="w-4 h-4 text-emerald-500" />
+            <SecurityStatusIcon className={`w-4 h-4 ${securitySummary.iconColor}`} />
           </div>
-          <p className="text-sm font-extrabold text-emerald-700 mt-2">Enforced</p>
+          <p className={`text-sm font-extrabold mt-2 ${securitySummary.color}`}>{securitySummary.label}</p>
           <span className="text-micro text-slate-400 font-mono">Patch: {device.securityPatch}</span>
         </div>
       </div>
@@ -875,6 +1029,50 @@ export const DeviceDetailPage: React.FC = () => {
           onClose={() => setShowEditModal(false)}
           onSaved={loadDeviceDetail}
         />
+      )}
+
+      {showClearTamperModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white p-6 rounded-3xl max-w-md w-full space-y-4 shadow-overlay border-2 border-ink-900">
+            <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center mx-auto">
+              <ShieldAlert className="w-6 h-6" />
+            </div>
+
+            <div className="text-center">
+              <h3 className="text-title font-extrabold text-slate-900">Resolve Security Alert</h3>
+              <p className="text-sm text-slate-600 mt-1.5 leading-relaxed">
+                Clear the active security alert once the handset has been inspected. Existing lock status will not
+                change.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Inspection Note</label>
+              <input
+                type="text"
+                value={clearTamperReason}
+                onChange={(e) => setClearTamperReason(e.target.value)}
+                className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-rose-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => setShowClearTamperModal(false)}
+                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleClearTamperAlert}
+                disabled={actionProcessing || clearTamperReason.trim().length < 5}
+                className="px-5 py-2 bg-rose-700 hover:bg-rose-800 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-md"
+              >
+                {actionProcessing ? 'Working...' : 'Resolve Alert'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -4,6 +4,7 @@ import android.util.Log
 import org.json.JSONException
 import org.json.JSONObject
 import pk.almassdm.dpc.BuildConfig
+import pk.almassdm.dpc.admin.DeviceIntegrity
 import pk.almassdm.dpc.data.CheckInResult
 import pk.almassdm.dpc.data.EnrollResult
 import pk.almassdm.dpc.data.PendingCommand
@@ -30,11 +31,17 @@ class DpcApi(private val baseUrl: String, private val credential: String? = null
     )
 
     /** POST /enroll — the only unauthenticated call, and the only time the token is seen. */
-    fun enroll(enrollmentToken: String, deviceId: String?, dpcVersion: String): EnrollResult {
+    fun enroll(
+        enrollmentToken: String,
+        deviceId: String?,
+        dpcVersion: String,
+        hardware: DeviceIntegrity.HardwareSnapshot? = null,
+    ): EnrollResult {
         val body = JSONObject()
             .put("token", enrollmentToken)
             .put("dpcVersion", dpcVersion)
         if (!deviceId.isNullOrBlank()) body.put("deviceId", deviceId)
+        hardware?.appendToJson(body)
 
         val json = request("POST", "enroll", body, authenticated = false)
         return EnrollResult(

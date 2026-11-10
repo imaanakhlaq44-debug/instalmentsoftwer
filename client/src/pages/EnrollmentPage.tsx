@@ -97,7 +97,7 @@ const STEPS = [
 ];
 
 export const EnrollmentPage: React.FC = () => {
-  const { selectedDealerId, showToast } = useAuth();
+  const { selectedDealerId, showToast, isDealerAdmin, user } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
 
@@ -108,6 +108,7 @@ export const EnrollmentPage: React.FC = () => {
   const [tokens, setTokens] = useState<any[]>([]);
   const [loadingTokens, setLoadingTokens] = useState(true);
   const [now, setNow] = useState(() => Date.now());
+  const [frpConfigured, setFrpConfigured] = useState<boolean | null>(null);
   // An older phone cannot read a small QR off a laptop screen; full screen
   // gives its setup scanner several pixels per square.
   const [fullScreen, setFullScreen] = useState(false);
@@ -150,6 +151,26 @@ export const EnrollmentPage: React.FC = () => {
   useEffect(() => {
     loadTokens();
   }, [loadTokens]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!isDealerAdmin || (user?.role === 'SUPER_ADMIN' && !selectedDealerId)) {
+      setFrpConfigured(null);
+      return;
+    }
+    ApiService.getSettings(selectedDealerId)
+      .then((data) => {
+        if (cancelled) return;
+        const ids = data?.policy?.frpAccountIds;
+        setFrpConfigured(Array.isArray(ids) && ids.length > 0);
+      })
+      .catch(() => {
+        if (!cancelled) setFrpConfigured(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isDealerAdmin, user?.role, selectedDealerId]);
 
   const generate = useCallback(
     async (deviceId: string) => {
@@ -215,6 +236,28 @@ export const EnrollmentPage: React.FC = () => {
           + New financed sale
         </button>
       </header>
+
+      {frpConfigured === false && (
+        <div className="flex flex-col gap-3 rounded-2xl border-2 border-amber-400 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" aria-hidden="true" />
+            <div className="space-y-0.5 text-xs text-amber-900">
+              <p className="text-sm font-extrabold">Factory Reset Protection is off for this shop</p>
+              <p>
+                Add at least one Google Account ID in Settings before scanning QR codes so recovery-mode resets lock the
+                phone back to your shop.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/settings')}
+            className="btn-secondary shrink-0 self-start sm:self-auto"
+          >
+            Open Settings
+          </button>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-5">
         {/* Step 1: which phone */}

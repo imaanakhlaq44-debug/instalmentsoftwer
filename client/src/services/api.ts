@@ -229,6 +229,11 @@ export class ApiService {
     return this.request<any>(`/devices/${id}/correct-imei`, { method: 'POST', body: JSON.stringify(data) });
   }
 
+  /** Acknowledge and clear a resolved security tamper alert on a device. */
+  static clearTamperAlert(id: string, data: { reason: string }) {
+    return this.request<any>(`/devices/${id}/clear-tamper`, { method: 'POST', body: JSON.stringify(data) });
+  }
+
   // -------------------------------------------------------------------------
   // Customers
   // -------------------------------------------------------------------------

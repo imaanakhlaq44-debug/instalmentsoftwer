@@ -58,6 +58,14 @@ class LockController(context: Context) {
             addRestriction(UserManager.DISALLOW_FACTORY_RESET)
             addRestriction(UserManager.DISALLOW_SAFE_BOOT)
             addRestriction(UserManager.DISALLOW_ADD_USER)
+            // Day-1 anti-tamper hardening (v1.4+): close USB debugging (ADB) and
+            // unknown-source APK sideloading immediately at enrollment, rather than
+            // waiting until a payment is missed. Lifted only in releaseFromManagement().
+            addRestriction(UserManager.DISALLOW_DEBUGGING_FEATURES)
+            addRestriction(UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                addRestriction(UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES_GLOBALLY)
+            }
         }.onFailure { Log.w(TAG, "Could not harden the installation: ${it.message}") }
     }
 
@@ -223,6 +231,11 @@ class LockController(context: Context) {
             clearRestriction(UserManager.DISALLOW_FACTORY_RESET)
             clearRestriction(UserManager.DISALLOW_SAFE_BOOT)
             clearRestriction(UserManager.DISALLOW_ADD_USER)
+            clearRestriction(UserManager.DISALLOW_DEBUGGING_FEATURES)
+            clearRestriction(UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                clearRestriction(UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES_GLOBALLY)
+            }
             dpm.setUninstallBlocked(admin, appContext.packageName, false)
         }.onFailure { Log.w(TAG, "Could not release management: ${it.message}") }
         stepDown()
@@ -278,8 +291,8 @@ class LockController(context: Context) {
                 )
             }
 
-            // ADB is a way around a kiosk, so it closes for the duration of the
-            // lock and reopens when the payment is made.
+            // Ensure ADB stays closed while restricted (also enforced Day 1 by
+            // protectInstallation, and never lifted by releaseLock()).
             addRestriction(UserManager.DISALLOW_DEBUGGING_FEATURES)
 
             becomeHomeActivity()
@@ -308,7 +321,8 @@ class LockController(context: Context) {
 
         return try {
             surrenderHomeActivity()
-            clearRestriction(UserManager.DISALLOW_DEBUGGING_FEATURES)
+            // Keep USB debugging (DISALLOW_DEBUGGING_FEATURES) closed between
+            // periodic payment unlocks; it is cleared only in releaseFromManagement().
             runCatching { dpm.setLockTaskPackages(admin, emptyArray()) }
 
             prefs.lockApplied = false

@@ -89,6 +89,21 @@ dashboardRouter.get(
       prisma.device.count({ where: { ...where, isOnline: false, noLock: false, status: { not: 'REMOVED' } } }),
     ]);
     const noLockDevices = await prisma.device.count({ where: { ...where, noLock: true, status: { not: 'REMOVED' } } });
+    const silentCutoff = new Date(now.getTime() - 72 * 3_600_000);
+    const [tamperAlertDevices, silentDevices] = await Promise.all([
+      prisma.device.count({ where: { ...where, tamperDetectedAt: { not: null }, status: { not: 'REMOVED' } } }),
+      prisma.device.count({
+        where: {
+          ...where,
+          noLock: false,
+          status: { in: ['ACTIVE', 'OVERDUE', 'LOCK_PENDING', 'LOCKED', 'UNLOCK_PENDING'] },
+          OR: [
+            { lastCheckInAt: { lt: silentCutoff } },
+            { lastCheckInAt: null, lastSeen: { lt: silentCutoff } },
+          ],
+        },
+      }),
+    ]);
 
     const devices = tally(deviceStatuses, 'status');
     const plans = tally(planStatuses, 'status');
@@ -111,6 +126,8 @@ dashboardRouter.get(
       inactiveDevices: countOf(devices, 'INACTIVE', 'REMOVED'),
       offlineDevices,
       noLockDevices,
+      tamperAlertDevices,
+      silentDevices,
 
       totalCustomers: distinctPlanCustomers.length,
       activePlans: totalPlans - countOf(plans, 'COMPLETED', 'CANCELLED'),

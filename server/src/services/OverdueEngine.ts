@@ -5,6 +5,7 @@ import {
   Installment, InstallmentPlan, Device, DevicePolicy, Notification,
 } from '../types/index.js';
 import { deviceManagementService } from './DeviceManagementService.js';
+import { DeviceIntegrityService } from './DeviceIntegrityService.js';
 import { AuditService } from './AuditService.js';
 import { calculateLateFee, daysBetween, DEFAULT_POLICY, toDateOnly } from './InstallmentMath.js';
 import { stagedFullLockDue } from './StagedRestrictions.js';
@@ -32,6 +33,12 @@ export class OverdueEngine {
   public static async runEvaluation(currentDateStr?: string): Promise<OverdueEvaluationResult> {
     const today = currentDateStr ? new Date(currentDateStr) : new Date();
     const todayStr = toDateOnly(today);
+
+    try {
+      await DeviceIntegrityService.flagSilentDevices(today);
+    } catch (err) {
+      console.error('[overdue] Silent-device check failed:', err);
+    }
 
     const result: OverdueEvaluationResult = {
       evaluatedCount: 0,

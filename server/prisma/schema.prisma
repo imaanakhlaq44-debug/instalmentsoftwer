@@ -429,6 +429,19 @@ model Device {
   offlineLockActive Boolean   @default(false) @map("offline_lock_active")
   offlineLockSince  DateTime? @map("offline_lock_since") @db.Timestamptz(3)
 
+  // --- Hardware identity & tamper detection ----------------------------------
+  // Reported by DPC telemetry when Device Owner grants hardware ID access.
+  // Verified against the registered `imei` on enrollment and every check-in.
+  reportedImei       String?   @map("reported_imei") @db.VarChar(20)
+  reportedImeis      String[]  @default([]) @map("reported_imeis")
+  reportedSerial     String?   @map("reported_serial") @db.VarChar(64)
+  imeiVerifiedAt     DateTime? @map("imei_verified_at") @db.Timestamptz(3)
+  isDeviceOwner      Boolean?  @map("is_device_owner")
+  tamperFlags        String[]  @default([]) @map("tamper_flags")
+  tamperDetectedAt   DateTime? @map("tamper_detected_at") @db.Timestamptz(3)
+  tamperReason       String?   @map("tamper_reason") @db.VarChar(500)
+  integrityCheckedAt DateTime? @map("integrity_checked_at") @db.Timestamptz(3)
+
   createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime        @default(now()) @map("updated_at") @db.Timestamptz(3)
 
@@ -442,6 +455,7 @@ model Device {
 
   @@index([dealerId])
   @@index([dealerId, status])
+  @@index([dealerId, tamperDetectedAt])
   @@index([customerId])
   @@index([dealerId, brand])
   // Every DPC request looks the device up by this hash before anything else.

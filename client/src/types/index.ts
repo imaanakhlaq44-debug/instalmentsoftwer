@@ -122,6 +122,19 @@ export interface Device {
    */
   offlineLockActive?: boolean;
   offlineLockSince?: string;
+  /** DPC version string reported by the handset on enrollment/check-in. */
+  dpcVersion?: string;
+  /** Hardware identity & integrity telemetry reported by the handset. */
+  reportedImei?: string;
+  maskedReportedImei?: string;
+  reportedImeis?: string[];
+  reportedSerial?: string;
+  imeiVerifiedAt?: string;
+  isDeviceOwner?: boolean;
+  tamperFlags?: string[];
+  tamperDetectedAt?: string;
+  tamperReason?: string;
+  integrityCheckedAt?: string;
   /** Sold without a lock (the phone cannot run the app): no QR, no lock commands. */
   noLock?: boolean;
   customerName?: string;

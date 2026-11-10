@@ -3,6 +3,7 @@ package pk.almassdm.dpc.work
 import android.content.Context
 import android.util.Log
 import pk.almassdm.dpc.BuildConfig
+import pk.almassdm.dpc.admin.DeviceIntegrityCollector
 import pk.almassdm.dpc.admin.LockController
 import pk.almassdm.dpc.admin.LocationReporter
 import pk.almassdm.dpc.data.PolicyView
@@ -37,10 +38,12 @@ class DpcSync(context: Context) {
     @Throws(DpcException::class)
     fun enroll(code: String, serverUrl: String): PolicyView {
         val api = DpcApi(baseUrl = serverUrl)
+        val hardware = DeviceIntegrityCollector.collect(appContext)
         val result = api.enroll(
             enrollmentToken = code.trim(),
             deviceId = null,
             dpcVersion = BuildConfig.VERSION_NAME,
+            hardware = hardware,
         )
 
         if (result.deviceId.isBlank() || result.deviceToken.isBlank()) {
@@ -93,6 +96,7 @@ class DpcSync(context: Context) {
         prefs.savePolicy(result.policy)
         prefs.checkInIntervalSeconds = result.checkInIntervalSeconds
         prefs.lastCheckInAt = System.currentTimeMillis()
+        lockController.protectInstallation()
         CheckInScheduler.schedule(appContext, result.checkInIntervalSeconds)
         OfflineWatchdogWorker.schedule(appContext)
         syncFactoryResetProtection(result.policy)

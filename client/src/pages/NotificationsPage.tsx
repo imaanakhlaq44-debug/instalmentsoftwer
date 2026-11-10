@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext.js';
 import { Pagination } from '../components/ui/Pagination.js';
 import { usePagination } from '../hooks/usePagination.js';
 
-import { Bell, MessageSquare, Send, RefreshCw, Smartphone, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Bell, MessageSquare, Send, RefreshCw, Smartphone, CheckCircle2, AlertTriangle, ShieldAlert } from 'lucide-react';
 
 export const NotificationsPage: React.FC = () => {
   const { selectedDealerId, showToast } = useAuth();
@@ -217,22 +217,47 @@ export const NotificationsPage: React.FC = () => {
               <div className="p-12 text-center text-xs text-slate-400">No notifications dispatched yet.</div>
             ) : (
               <div className="divide-y divide-slate-100">
-                {notifications.map((n) => (
-                  <div key={n.id} className="p-4 hover:bg-slate-50 transition-colors space-y-1 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-800 flex items-center gap-1.5">
-                        <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
-                        {n.title}
-                      </span>
-                      <span className="text-micro text-slate-400">{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                {notifications.map((n) => {
+                  const isSecurityAlert = n.type === 'SECURITY_ALERT';
+                  return (
+                    <div
+                      key={n.id}
+                      className={`p-4 transition-colors space-y-1 text-xs ${
+                        isSecurityAlert ? 'bg-rose-50/70 hover:bg-rose-50' : 'hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span
+                          className={`font-bold flex items-center gap-1.5 ${
+                            isSecurityAlert ? 'text-rose-900' : 'text-slate-800'
+                          }`}
+                        >
+                          {isSecurityAlert ? (
+                            <ShieldAlert className="w-3.5 h-3.5 text-rose-600 shrink-0" aria-hidden="true" />
+                          ) : (
+                            <MessageSquare className="w-3.5 h-3.5 text-blue-600 shrink-0" aria-hidden="true" />
+                          )}
+                          {n.title}
+                        </span>
+                        <span className="text-micro text-slate-400 shrink-0">
+                          {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <p className={`${isSecurityAlert ? 'text-rose-950' : 'text-slate-600'} text-xs leading-relaxed`}>
+                        {n.message}
+                      </p>
+                      <div className="flex items-center justify-between text-micro text-slate-500 pt-1 gap-2 flex-wrap">
+                        <span>
+                          Customer: {n.customerName}
+                          {n.deviceModel && n.deviceModel !== 'N/A' ? ` · ${n.deviceModel}` : ''} ({n.channel})
+                        </span>
+                        <span className={`${isSecurityAlert ? 'text-rose-700' : 'text-emerald-600'} font-semibold`}>
+                          {n.status} ✓
+                        </span>
+                      </div>
                     </div>
-                    <p className="text-slate-600 text-xs leading-relaxed">{n.message}</p>
-                    <div className="flex items-center justify-between text-micro text-slate-400 pt-1">
-                      <span>Customer: {n.customerName} ({n.channel})</span>
-                      <span className="text-emerald-600 font-semibold">{n.status} ✓</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
                 <Pagination
                   pagination={paged.pagination}
                   onPageChange={paged.setPage}
