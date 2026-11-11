@@ -511,3 +511,53 @@ export interface NotificationTemplate {
   subjectTemplate: string;
   bodyTemplate: string;
 }
+
+// ---------------------------------------------------------------------------
+// Handset compatibility tests
+// ---------------------------------------------------------------------------
+
+/** The checklist, in the order a tester walks it at the counter. */
+export const HANDSET_TEST_STEPS = [
+  'QR_PROVISIONING',
+  'ENROL',
+  'LOCK',
+  'UNLOCK',
+  'LOCK_AFTER_REBOOT',
+  'STAGED_RESTRICTIONS',
+  'OFFLINE_SELF_LOCK',
+  'FACTORY_RESET_PROTECTION',
+  'RE_ENROL',
+] as const;
+
+export type HandsetTestStepKey = (typeof HANDSET_TEST_STEPS)[number];
+export type HandsetTestStepResult = 'PASS' | 'FAIL' | 'NOT_TESTED';
+export type HandsetTestOverall = 'PASS' | 'FAIL' | 'PARTIAL' | 'NOT_TESTED';
+
+export interface HandsetTestStep {
+  result: HandsetTestStepResult;
+  notes?: string;
+}
+
+export type HandsetTestSteps = Record<HandsetTestStepKey, HandsetTestStep>;
+
+/** One real phone put through the lock app's checklist. */
+export interface HandsetTest {
+  id: string;
+  /** Absent for a test the platform ran itself. */
+  dealerId?: string;
+  brand: string;
+  model: string;
+  androidVersion: string;
+  oemBuild?: string;
+  dpcVersion: string;
+  steps: HandsetTestSteps;
+  overallResult: HandsetTestOverall;
+  notes?: string;
+  testedById?: string;
+  testedByName: string;
+  testedAt: string;
+  published: boolean;
+  publishedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}

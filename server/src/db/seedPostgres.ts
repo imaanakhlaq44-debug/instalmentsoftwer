@@ -100,6 +100,7 @@ const ALL_TABLES = [
   'notification_templates',
   'contracts',
   'audit_logs',
+  'handset_tests',
   'customers',
   'users',
   'device_policies',

@@ -29,6 +29,7 @@ import { usersRouter } from './routes/users.routes.js';
 import { dpcRouter } from './routes/dpc.routes.js';
 import { smsRelayRouter } from './routes/smsRelay.routes.js';
 import { contractsRouter } from './routes/contracts.routes.js';
+import { handsetTestsRouter, publicTestedPhonesRouter } from './routes/handsetTests.routes.js';
 
 const app = express();
 
@@ -40,6 +41,15 @@ app.disable('x-powered-by');
 // ---------------------------------------------------------------------------
 // Security middleware
 // ---------------------------------------------------------------------------
+/** An unauthenticated route gets a budget of its own, well under the dashboard's. */
+const publicLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please slow down and try again shortly.', code: 'RATE_LIMITED' },
+});
+
 app.use(
   helmet({
     // The API serves JSON only; a restrictive CSP costs nothing here.
@@ -48,6 +58,14 @@ app.use(
     referrerPolicy: { policy: 'no-referrer' },
   })
 );
+
+/**
+ * The public "tested phones" list. Mounted before the CORS allow-list on
+ * purpose: the marketing site is on another origin and reads this from the
+ * visitor's browser. It is GET-only, carries no credentials and returns only
+ * what the platform published — see the router for what that is.
+ */
+app.use('/api/public/tested-phones', publicLimiter, publicTestedPhonesRouter);
 
 app.use(
   cors({
@@ -199,6 +217,7 @@ app.use('/api/transactions', requireAuth, transactionsRouter);
 app.use('/api/enrollment', requireAuth, enrollmentRouter);
 app.use('/api/contracts', requireAuth, contractsRouter);
 app.use('/api/licenses', requireAuth, licensesRouter);
+app.use('/api/handset-tests', requireAuth, handsetTestsRouter);
 app.use('/api/platform', requireAuth, platformRouter);
 app.use('/api/notifications', requireAuth, notificationsRouter);
 app.use('/api/audit-logs', requireAuth, auditRouter);
