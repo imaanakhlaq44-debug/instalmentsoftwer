@@ -153,6 +153,14 @@ enum DeviceLicenseStatus {
   VOID
 }
 
+/// A shop's order for a pack of locks, from payment claim to decision.
+enum LockOrderStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
 enum LateFeeType {
   FIXED
   PERCENTAGE
@@ -237,6 +245,7 @@ model Dealer {
   auditLogs        AuditLog[]
   licensePacks     LicensePack[]
   deviceLicenses   DeviceLicense[]
+  lockOrders       LockOrder[]
   devicePolicy     DevicePolicy?
   notifications    Notification[]
   smsRelays        SmsRelay[]
@@ -267,6 +276,7 @@ model LicensePack {
 
   dealer   Dealer          @relation(fields: [dealerId], references: [id], onDelete: Cascade)
   licenses DeviceLicense[]
+  order    LockOrder?
 
   @@index([dealerId])
   @@map("license_packs")
@@ -304,6 +314,65 @@ model DeviceLicense {
   @@index([dealerId, status])
   @@index([packId])
   @@map("device_licenses")
+}
+
+/**
+ * A shop's order for a pack of locks.
+ *
+ * The shop picks a size, pays the platform outside the system (JazzCash,
+ * Easypaisa, bank) and reports the transfer here. Nothing is minted by the
+ * order itself: a super admin checks the money arrived and approves, and only
+ * that approval issues the pack. The price is fixed on the order at the moment
+ * it is placed, so a later change to the price list cannot alter what the shop
+ * was told to pay.
+ *
+ * `packId` is unique: one order can produce at most one pack, whatever the
+ * application does.
+ */
+model LockOrder {
+  id              String          @id
+  dealerId        String          @map("dealer_id")
+  size            Int
+  unitPrice       Int             @map("unit_price")
+  totalPrice      Int             @map("total_price")
+  status          LockOrderStatus @default(PENDING)
+  paymentMethod   PaymentMethod   @map("payment_method")
+  /** The transfer's own reference, as the shop typed it. */
+  transactionId   String          @map("transaction_id") @db.VarChar(60)
+  /** What the shop says it sent. Compared with totalPrice by the reviewer. */
+  amountPaid      Int             @map("amount_paid")
+  /** Optional screenshot of the transfer, as a downscaled data URL. */
+  proofImage      String?         @map("proof_image") @db.Text
+  note            String?         @db.VarChar(500)
+  submittedById   String          @map("submitted_by_id") @db.VarChar(64)
+  submittedByName String          @map("submitted_by_name") @db.VarChar(120)
+  reviewedById    String?         @map("reviewed_by_id") @db.VarChar(64)
+  reviewedByName  String?         @map("reviewed_by_name") @db.VarChar(120)
+  reviewedAt      DateTime?       @map("reviewed_at") @db.Timestamptz(3)
+  rejectionReason String?         @map("rejection_reason") @db.VarChar(500)
+  packId          String?         @unique @map("pack_id")
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  dealer Dealer       @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  pack   LicensePack? @relation(fields: [packId], references: [id], onDelete: SetNull)
+
+  @@index([dealerId, createdAt(sort: Desc)])
+  @@index([status, createdAt])
+  @@map("lock_orders")
+}
+
+/**
+ * Platform-wide settings the super admin edits from the dashboard, one row per
+ * setting. Today: the payment instructions shown to a shop buying locks.
+ */
+model PlatformSetting {
+  id            String   @id @db.VarChar(60)
+  value         String   @db.Text
+  updatedById   String?  @map("updated_by_id") @db.VarChar(64)
+  updatedByName String?  @map("updated_by_name") @db.VarChar(120)
+  updatedAt     DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+
+  @@map("platform_settings")
 }
 
 model User {

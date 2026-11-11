@@ -82,6 +82,12 @@ export interface IssuePackParams {
   reference?: string;
   actor: { id?: string; name: string };
   /**
+   * The price already agreed for this pack, when there is one. A lock order
+   * fixes its price the moment the shop places it; approving it days later must
+   * issue the pack at that price, not at whatever the tiers say by then.
+   */
+  price?: { unitPrice: number; totalPrice: number };
+  /**
    * Joins a transaction already in progress, which dealer sign-up needs: the
    * shop, its owner login and its first pack have to land together. Prisma has
    * no nested interactive transactions, so a caller that is already inside one
@@ -119,8 +125,8 @@ export class LicenseService {
           id: packId,
           dealerId: params.dealerId,
           size: option.size,
-          unitPrice: option.unitPrice,
-          totalPrice: option.totalPrice,
+          unitPrice: params.price?.unitPrice ?? option.unitPrice,
+          totalPrice: params.price?.totalPrice ?? option.totalPrice,
           reference: params.reference?.trim() || null,
           issuedById: params.actor.id ?? null,
           issuedByName: params.actor.name,
