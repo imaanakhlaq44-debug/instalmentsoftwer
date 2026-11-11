@@ -6,6 +6,7 @@ import { ExportButton } from '../components/ui/ExportButton.js';
 import { ReceiptModal } from '../components/modals/ReceiptModal.js';
 import { usePagination } from '../hooks/usePagination.js';
 import { SubmitPaymentCard } from '../components/payments/SubmitPaymentCard.js';
+import { PayNowCard } from '../components/payments/PayNowCard.js';
 import { PendingSubmissions } from '../components/payments/PendingSubmissions.js';
 import { csvMoney, csvDateTime, CsvColumn } from '../utils/csv.js';
 import {
@@ -174,6 +175,7 @@ export const PaymentsPage: React.FC = () => {
       </div>
 
       {/* A customer reports what they have sent; staff work through what has been reported. */}
+      {isCustomer && <PayNowCard onPaid={loadData} />}
       {isCustomer && <SubmitPaymentCard onSubmitted={loadData} />}
       {isStaff && <PendingSubmissions onVerified={loadData} />}
 

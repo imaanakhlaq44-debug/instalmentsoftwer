@@ -339,6 +339,27 @@ export class ApiService {
     return this.request<any>(`/payments/${paymentId}/receipt`);
   }
 
+  /** Whether this shop takes online payments, and through which gateway. Normally `enabled: false`. */
+  static getGatewayOptions() {
+    return this.request<{ enabled: boolean; providers: { id: string; label: string }[] }>('/payment-gateway/options');
+  }
+
+  /** Starts a hosted checkout. The reply says where to send the browser; nothing is paid yet. */
+  static createGatewayCheckout(data: { planId: string; amount: number; provider?: string }) {
+    return this.request<{
+      reference: string;
+      amount: number;
+      redirect: { url: string; method: 'POST'; fields: Record<string, string> };
+    }>('/payment-gateway/checkout', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  /** How a checkout ended, as the server recorded it — not as a URL claims it did. */
+  static getGatewayCheckout(reference: string) {
+    return this.request<{ reference: string; amount: number; status: string; paymentId?: string; receiptNumber?: string }>(
+      `/payment-gateway/checkouts/${encodeURIComponent(reference)}`
+    );
+  }
+
   // -------------------------------------------------------------------------
   // Transactions
   // -------------------------------------------------------------------------

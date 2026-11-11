@@ -452,6 +452,16 @@ export const ROMAN_URDU: Record<string, string> = {
     'Tasdeeq se pehle har transaction ID apne account se milayein. Tasdeeq karte hi raqam qist mein lagti hai aur phone unlock hota hai.',
   Screenshot: 'Screenshot',
   'Already paid? Tell the shop': 'Payment kar di? Dukaan ko batayein',
+  'Pay your installment online': 'Apni qist online ada karein',
+  "You will pay on the payment company's own secure page. Your installment is marked paid as soon as they confirm it.":
+    'Aap payment company ke apne mehfooz page par ada karenge. Jaise hi woh tasdeeq karein, aap ki qist ada shuda ho jayegi.',
+  'Amount to pay': 'Ada karne ki raqam',
+  'Opening…': 'Khul raha hai…',
+  'Payment received. Thank you.': 'Payment mil gayi. Shukriya.',
+  'The payment was not completed. No money was added to your account.':
+    'Payment mukammal nahi hui. Aap ke account mein koi raqam shamil nahi hui.',
+  'Your payment reached the gateway but could not be added to your account automatically. The shop has been told and will sort it out. Please do not pay again.':
+    'Aap ki payment gateway tak pohanch gayi lekin khud ba khud account mein shamil nahi ho saki. Dukaan ko bata diya gaya hai, woh isay theek kar denge. Meharbani kar ke dobara payment na karein.',
   'If you have transferred your installment, enter the transaction ID here. The shop will check it against their account. Your phone unlocks once they confirm it — this form does not unlock it by itself.':
     'Agar aap ne qist bhej di hai to transaction ID yahan likhein. Dukaan apne account se check karegi. Unke tasdeeq karne par phone unlock hoga — yeh form khud unlock nahin karta.',
   'Which phone': 'Kaun sa phone',
@@ -908,6 +918,7 @@ export const ROMAN_URDU_PATTERNS: Array<[RegExp, string]> = [
   [/^Showing (\d+)[–-](\d+) of (\d+)$/, '$3 mein se $1–$2'],
   [/^(\d+) (?:installment|instalment)s? overdue$/, '$1 qist late'],
   [/^Salam, (.+)$/, 'Salam, $1'],
+  [/^Pay now · (.+)$/, 'Abhi ada karein · $1'],
   [/^(\d+) active plans · (\d+) customers$/, '$1 chalu plans · $2 customers'],
   [/^(\d+) days? late$/, '$1 din late'],
   [/^· (\d+) instalments?$/, '· $1 qistein'],
