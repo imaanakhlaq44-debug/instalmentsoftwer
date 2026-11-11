@@ -141,6 +141,84 @@ page: dpc
   </div>
 </section>
 
+<!-- tested-phones -->
+<!-- Phones the lock app has actually been run on. The rows come from the
+     dashboard (a super admin publishes a phone test there); nothing is written
+     here by hand. The section stays hidden until the list arrives with at least
+     one phone in it, so an empty list shows nothing rather than a placeholder. -->
+<section class="band" id="tested-phones" hidden>
+  <h2 class="font-serif text-section text-ink-900" data-ur="آزمائے ہوئے فون">Tested phones</h2>
+  <p class="mt-3 max-w-2xl text-lede text-ink-700" data-ur="یہ وہ فون ہیں جن پر لاک ایپ اصل میں چلا کر دیکھی گئی ہے: کیو آر سے سیٹ اپ، لاک، ان لاک، ری اسٹارٹ اور فیکٹری ری سیٹ۔ جو فون یہاں نہیں، وہ ابھی آزمایا نہیں گیا — اِس کا مطلب یہ نہیں کہ وہ نہیں چلتا۔">
+    These are the phones the lock app has actually been run on: QR setup, lock, unlock, restart and
+    factory reset. A phone that is not listed has not been tested yet — it does not mean it will not work.
+  </p>
+  <div class="surface mt-6 overflow-x-auto">
+    <table class="w-full text-start text-body">
+      <thead>
+        <tr class="border-b border-paper-300 text-caption text-ink-400">
+          <th class="px-5 py-3 text-start font-semibold" data-ur="فون">Phone</th>
+          <th class="px-5 py-3 text-start font-semibold" data-ur="اینڈرائیڈ">Android</th>
+          <th class="px-5 py-3 text-start font-semibold" data-ur="نتیجہ">Result</th>
+        </tr>
+      </thead>
+      <tbody id="tested-phones-rows"></tbody>
+    </table>
+  </div>
+</section>
+<script>
+  (function () {
+    var section = document.getElementById('tested-phones');
+    var body = document.getElementById('tested-phones-rows');
+    if (!section || !body || !window.fetch) return;
+
+    var RESULTS = {
+      PASS: { en: 'Works', ur: 'چلتا ہے', cls: 'text-emerald-700' },
+      PARTIAL: { en: 'Partly tested', ur: 'جزوی طور پر آزمایا گیا', cls: 'text-ink-700' },
+      FAIL: { en: 'Does not work yet', ur: 'ابھی نہیں چلتا', cls: 'text-red-700' }
+    };
+
+    function cell(text, cls) {
+      var td = document.createElement('td');
+      td.className = 'px-5 py-3 ' + (cls || 'text-ink-700');
+      td.textContent = text;
+      return td;
+    }
+
+    fetch('{{apiUrl}}/public/tested-phones', { credentials: 'omit' })
+      .then(function (res) { return res.ok ? res.json() : { phones: [] }; })
+      .then(function (data) {
+        var phones = (data && data.phones) || [];
+        var urdu = document.documentElement.lang === 'ur';
+        var shown = 0;
+
+        phones.forEach(function (phone) {
+          var result = RESULTS[phone.overallResult];
+          if (!result || !phone.brand || !phone.model) return;
+
+          var tr = document.createElement('tr');
+          tr.className = 'border-b border-paper-300 last:border-0';
+          tr.appendChild(cell(phone.brand + ' ' + phone.model, 'font-semibold text-ink-900'));
+          tr.appendChild(cell(String(phone.androidVersion || '')));
+
+          // Same convention as the rest of the page, so the language toggle
+          // translates these rows along with everything else.
+          var verdict = cell(urdu ? result.ur : result.en, 'font-semibold ' + result.cls);
+          verdict.setAttribute('data-en', result.en);
+          verdict.setAttribute('data-ur', result.ur);
+          tr.appendChild(verdict);
+
+          body.appendChild(tr);
+          shown++;
+        });
+
+        // Nothing published, or nothing usable: the section never appears.
+        if (shown > 0) section.hidden = false;
+      })
+      .catch(function () { /* The API is unreachable: show nothing. */ });
+  })();
+</script>
+<!-- /tested-phones -->
+
 <section class="band">
   <h2 class="reveal font-serif text-section text-ink-900" data-ur="دکان کے کاؤنٹر والا فون">The shop's own counter phone</h2>
   <p class="mt-3 max-w-2xl text-lede text-ink-700" data-ur="ایک دوسری، بہت چھوٹی ایپ ہے جو آپ اپنی دکان کے کسی فون پر لگاتے ہیں۔ یہ یاد دہانیوں کی قطار لے کر اُسی فون کی سم سے بھیجتی ہے۔ گاہک کے فون سے اس کا کوئی تعلق نہیں۔">

@@ -86,6 +86,14 @@ real address.
 Every run logs the value it built with, so a deploy that published the wrong
 button is visible in the log rather than only in the page.
 
+The same variable switches on the **Tested phones** section of the handset-app
+page. That list is not written into the site: it is read in the visitor's
+browser from the dashboard's public endpoint (`/api/public/tested-phones`), so
+a phone appears the moment a super admin ticks **Show on website** on a phone
+test, with no rebuild. While `SITE_APP_URL` is unset the section is left out of
+the build, and once it is set the section still stays hidden until at least one
+phone test has been published.
+
 To see either build locally:
 
 ```bash
