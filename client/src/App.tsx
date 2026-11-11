@@ -41,6 +41,7 @@ import { TransactionsPage } from './pages/TransactionsPage.js';
 import { EnrollmentPage } from './pages/EnrollmentPage.js';
 import { ContractPage } from './pages/ContractPage.js';
 import { LicensesPage } from './pages/LicensesPage.js';
+import { HandsetTestsPage } from './pages/HandsetTestsPage.js';
 import { NotificationsPage } from './pages/NotificationsPage.js';
 import { AuditLogsPage } from './pages/AuditLogsPage.js';
 import { SettingsPage } from './pages/SettingsPage.js';
@@ -96,6 +97,7 @@ export function App() {
 
               <Route path="/orders" element={<RequireRole roles={["SUPER_ADMIN"]}><PlatformOrdersPage /></RequireRole>} />
               <Route path="/shops" element={<RequireRole roles={["SUPER_ADMIN"]}><PlatformShopsPage /></RequireRole>} />
+              <Route path="/handset-tests" element={<RequireRole roles={[...STAFF]}><HandsetTestsPage /></RequireRole>} />
               <Route path="/enrollment" element={<RequireRole roles={[...STAFF]}><EnrollmentPage /></RequireRole>} />
 
               {/* A customer may read the agreement they signed; only staff may take a signature. */}

@@ -458,6 +458,32 @@ export class ApiService {
     return this.request<any>('/notifications/send', { method: 'POST', body: JSON.stringify(data) });
   }
 
+  // -------------------------------------------------------------------------
+  // Handset compatibility tests
+  // -------------------------------------------------------------------------
+
+  static getHandsetTests(params: Record<string, unknown> = {}) {
+    return this.request<Paged<any> & { facets: { brands: string[]; androidVersions: string[] } }>(
+      `/handset-tests${buildQuery(params)}`
+    );
+  }
+
+  static createHandsetTest(data: Record<string, unknown>) {
+    return this.request<any>('/handset-tests', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  static updateHandsetTest(id: string, data: Record<string, unknown>) {
+    return this.request<any>(`/handset-tests/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+  }
+
+  static publishHandsetTest(id: string, published: boolean) {
+    return this.request<any>(`/handset-tests/${id}/publish`, { method: 'PATCH', body: JSON.stringify({ published }) });
+  }
+
+  static deleteHandsetTest(id: string) {
+    return this.request<any>(`/handset-tests/${id}`, { method: 'DELETE' });
+  }
+
   static getAuditLogs(params: Record<string, unknown> = {}) {
     return this.request<Paged<any> & { facets: any }>(`/audit-logs${buildQuery(params)}`);
   }
