@@ -17,9 +17,10 @@ import {
   CreditCard,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { WhatsAppButton } from '../components/whatsapp/WhatsAppButton.js';
 
 export const InstallmentsPage: React.FC = () => {
-  const { selectedDealerId, showToast, isDealerAdmin } = useAuth();
+  const { selectedDealerId, showToast, isDealerAdmin, isStaff } = useAuth();
   const navigate = useNavigate();
 
   const [plans, setPlans] = useState<any[]>([]);
@@ -211,7 +212,15 @@ export const InstallmentsPage: React.FC = () => {
                         {p.status}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-right">
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap space-x-1.5">
+                      {isStaff && p.status !== 'COMPLETED' && p.status !== 'CANCELLED' && (
+                        <WhatsAppButton
+                          customerId={p.customerId}
+                          customerName={p.customerName}
+                          planId={p.id}
+                          kind={p.status === 'OVERDUE' ? 'OVERDUE' : 'DUE_REMINDER'}
+                        />
+                      )}
                       <button
                         onClick={() => navigate(`/devices/${p.deviceId}`)}
                         className="px-3 py-1.5 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 rounded-lg text-xs font-semibold text-slate-700 transition-colors"

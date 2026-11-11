@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext.js';
 import { Pagination } from '../components/ui/Pagination.js';
 import { ExportButton } from '../components/ui/ExportButton.js';
 import { ReceiptModal } from '../components/modals/ReceiptModal.js';
+import { WhatsAppButton } from '../components/whatsapp/WhatsAppButton.js';
 import { usePagination } from '../hooks/usePagination.js';
 import { SubmitPaymentCard } from '../components/payments/SubmitPaymentCard.js';
 import { PendingSubmissions } from '../components/payments/PendingSubmissions.js';
@@ -259,6 +260,14 @@ export const PaymentsPage: React.FC = () => {
                           >
                             Receipt
                           </button>
+                          {isStaff && !p.reversedAt && p.customerId && (
+                            <WhatsAppButton
+                              customerId={p.customerId}
+                              customerName={p.customerName ?? 'customer'}
+                              paymentId={p.id}
+                              kind="PAYMENT_RECEIVED"
+                            />
+                          )}
                           {/* Reversal moves real money back — owner only. */}
                           {isDealerAdmin && !p.reversedAt && (
                             <button

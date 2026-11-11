@@ -3,11 +3,18 @@ import { ApiService } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.js';
 import { Pagination } from '../components/ui/Pagination.js';
 import { usePagination } from '../hooks/usePagination.js';
+import { WhatsAppButton, type WhatsAppKind } from '../components/whatsapp/WhatsAppButton.js';
 
-import { Bell, MessageSquare, Send, RefreshCw, Smartphone, CheckCircle2, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { Bell, MessageSquare, MessageCircle, Send, RefreshCw, Smartphone, CheckCircle2, AlertTriangle, ShieldAlert } from 'lucide-react';
+
+/** The WhatsApp message that follows up a queued notification of each type. */
+const whatsappKindFor = (type: string): WhatsAppKind =>
+  type === 'PAYMENT_OVERDUE' ? 'OVERDUE' : type === 'DEVICE_LOCKED' ? 'LOCK_WARNING' : 'DUE_REMINDER';
 
 export const NotificationsPage: React.FC = () => {
-  const { selectedDealerId, showToast } = useAuth();
+  const { selectedDealerId, showToast, isStaff } = useAuth();
+  /** Whether the server holds WhatsApp Business API credentials. Almost always false. */
+  const [whatsappCloudEnabled, setWhatsappCloudEnabled] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   // Surfaced in the UI so nobody assumes a queued message actually reached a phone.
   const [deliveryNote, setDeliveryNote] = useState<string | null>(null);
@@ -38,6 +45,7 @@ export const NotificationsPage: React.FC = () => {
       setDeliveryNote(notifs.deliveryEnabled ? null : notifs.deliveryNote);
       setDeliveryEnabled(!!notifs.deliveryEnabled);
       setRelays(notifs.relays ?? []);
+      setWhatsappCloudEnabled(!!notifs.whatsappCloudEnabled);
       setTemplates(tmpls);
     } catch (err: any) {
       showToast(err.message, 'error');
@@ -108,6 +116,23 @@ export const NotificationsPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* WhatsApp: what works today, and what needs an account. */}
+      <div className="flex items-start gap-3 p-4 rounded-2xl bg-white border-2 border-ink-900 shadow-card">
+        <MessageCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" aria-hidden="true" />
+        <div>
+          <p className="text-sm font-bold text-slate-900">WhatsApp</p>
+          <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
+            Use the WhatsApp button beside any customer to open your own WhatsApp with the reminder already written.
+            You press send yourself.
+          </p>
+          <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+            {whatsappCloudEnabled
+              ? 'Automatic WhatsApp is connected. A message shows SENT once WhatsApp accepts it — that is not proof it was delivered.'
+              : 'Automatic WhatsApp is not connected. That needs a WhatsApp Business API account from Meta.'}
+          </p>
+        </div>
+      </div>
 
       {/* Paired phones */}
       <div className="bg-white rounded-3xl border-2 border-ink-900 shadow-card p-5 sm:p-6 space-y-4">
@@ -251,8 +276,17 @@ export const NotificationsPage: React.FC = () => {
                           Customer: {n.customerName}
                           {n.deviceModel && n.deviceModel !== 'N/A' ? ` · ${n.deviceModel}` : ''} ({n.channel})
                         </span>
-                        <span className={`${isSecurityAlert ? 'text-rose-700' : 'text-emerald-600'} font-semibold`}>
-                          {n.status} ✓
+                        <span className="flex items-center gap-2">
+                          {isStaff && n.customerId && !isSecurityAlert && (
+                            <WhatsAppButton
+                              customerId={n.customerId}
+                              customerName={n.customerName}
+                              kind={whatsappKindFor(n.type)}
+                            />
+                          )}
+                          <span className={`${isSecurityAlert ? 'text-rose-700' : 'text-emerald-600'} font-semibold`}>
+                            {n.status} ✓
+                          </span>
                         </span>
                       </div>
                     </div>

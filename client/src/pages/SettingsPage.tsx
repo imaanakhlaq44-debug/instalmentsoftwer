@@ -48,7 +48,11 @@ export const SettingsPage: React.FC = () => {
     offlineLockAfterDays: 0,
     customerReminderEnabled: true,
     emergencyCallsAllowed: true,
+    whatsappLanguage: 'ROMAN_UR',
+    reminderChannel: 'SMS',
   });
+  /** Whether the server holds WhatsApp Business API credentials. */
+  const [whatsappCloudEnabled, setWhatsappCloudEnabled] = useState(false);
 
   // Factory Reset Protection accounts, one Google account id per line.
   const [frpAccountsText, setFrpAccountsText] = useState('');
@@ -81,7 +85,10 @@ export const SettingsPage: React.FC = () => {
           offlineLockAfterDays: data.policy.offlineLockAfterDays ?? 0,
           customerReminderEnabled: data.policy.customerReminderEnabled,
           emergencyCallsAllowed: data.policy.emergencyCallsAllowed,
+          whatsappLanguage: data.policy.whatsappLanguage ?? 'ROMAN_UR',
+          reminderChannel: data.policy.reminderChannel ?? 'SMS',
         });
+        setWhatsappCloudEnabled(!!data.whatsappCloudEnabled);
         setFrpAccountsText((data.policy.frpAccountIds ?? []).join('\n'));
       }
     } catch (err: any) {
@@ -100,7 +107,12 @@ export const SettingsPage: React.FC = () => {
       setSaving(true);
       await ApiService.updatePolicy({
         dealerId: selectedDealerId,
-        policyData: { ...policy, frpAccountIds: parseFrpAccountIds(frpAccountsText) },
+        policyData: {
+          ...policy,
+          // The server refuses WHATSAPP while no Business API is connected.
+          reminderChannel: whatsappCloudEnabled ? policy.reminderChannel : undefined,
+          frpAccountIds: parseFrpAccountIds(frpAccountsText),
+        },
       });
       showToast('Financing & lock enforcement policies updated!', 'success');
     } catch (err: any) {
@@ -355,6 +367,49 @@ export const SettingsPage: React.FC = () => {
               onChange={(e) => setPolicy({ ...policy, autoUnlockEnabled: e.target.checked })}
               className="w-5 h-5 text-emerald-600 rounded-lg focus:ring-emerald-500 cursor-pointer"
             />
+          </div>
+
+          {/* WhatsApp messages */}
+          <div className="p-4 bg-slate-50 border rounded-2xl space-y-3">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <span className="font-bold text-slate-800 text-xs block">WhatsApp message language</span>
+                <span className="text-xs text-slate-500">
+                  The language of the reminder that opens in your WhatsApp when you press the WhatsApp button.
+                </span>
+              </div>
+              <select
+                aria-label="WhatsApp message language"
+                value={policy.whatsappLanguage}
+                onChange={(e) => setPolicy({ ...policy, whatsappLanguage: e.target.value })}
+                className="px-3 py-2 text-xs bg-white border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                <option value="ROMAN_UR">Roman Urdu</option>
+                <option value="UR">اردو (Urdu)</option>
+                <option value="EN">English</option>
+              </select>
+            </div>
+
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <span className="font-bold text-slate-800 text-xs block">Send automatic reminders by</span>
+                <span className="text-xs text-slate-500">
+                  {whatsappCloudEnabled
+                    ? 'SMS goes out from your paired phone. WhatsApp goes out through the WhatsApp Business API.'
+                    : 'Automatic WhatsApp is not connected, so automatic reminders stay on SMS. The WhatsApp button still works.'}
+                </span>
+              </div>
+              <select
+                aria-label="Send automatic reminders by"
+                value={whatsappCloudEnabled ? policy.reminderChannel : 'SMS'}
+                disabled={!whatsappCloudEnabled}
+                onChange={(e) => setPolicy({ ...policy, reminderChannel: e.target.value })}
+                className="px-3 py-2 text-xs bg-white border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-60"
+              >
+                <option value="SMS">SMS</option>
+                <option value="WHATSAPP">WhatsApp</option>
+              </select>
+            </div>
           </div>
 
           {/* Emergency Calls */}

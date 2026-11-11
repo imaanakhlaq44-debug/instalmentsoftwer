@@ -406,6 +406,8 @@ export class ApiService {
         /** True only when a paired phone has actually been heard from recently. */
         deliveryEnabled: boolean;
         deliveryNote: string;
+        /** True only when WhatsApp Business Cloud API credentials are configured on the server. */
+        whatsappCloudEnabled?: boolean;
         relays: {
           id: string;
           name: string;
@@ -452,6 +454,21 @@ export class ApiService {
 
   static revokeSmsRelay(id: string) {
     return this.request<any>(`/notifications/relays/${id}/revoke`, { method: 'POST', body: '{}' });
+  }
+
+  /**
+   * The WhatsApp message for one customer, written by the server from the
+   * plan's figures, with its wa.me link. Fetching it records nothing.
+   */
+  static getWhatsAppMessage(params: Record<string, unknown>) {
+    return this.request<{ message: string; url: string; phone: string; waNumber: string; language: string }>(
+      `/notifications/whatsapp/message${buildQuery(params)}`
+    );
+  }
+
+  /** Records that a staff member opened WhatsApp with that message. Opened — not sent. */
+  static recordWhatsAppOpened(data: Record<string, unknown>) {
+    return this.request<any>('/notifications/whatsapp/opened', { method: 'POST', body: JSON.stringify(data) });
   }
 
   static sendNotification(data: unknown) {
