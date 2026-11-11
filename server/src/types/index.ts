@@ -425,6 +425,10 @@ export interface DevicePolicy {
    */
   frpAccountIds?: string[];
   customerReminderEnabled: boolean;
+  /** Language of the click-to-WhatsApp messages this shop sends. */
+  whatsappLanguage?: 'UR' | 'ROMAN_UR' | 'EN';
+  /** Where automatic reminders are queued. */
+  reminderChannel?: 'SMS' | 'WHATSAPP';
   emergencyCallsAllowed: boolean;
   paymentMethodsOnLock: string[];
 
@@ -448,7 +452,7 @@ export interface Notification {
   customerId?: string;
   deviceId?: string;
   type: 'PAYMENT_DUE' | 'PAYMENT_OVERDUE' | 'DEVICE_LOCKED' | 'DEVICE_UNLOCKED' | 'DEVICE_OFFLINE' | 'ENROLLMENT_SUCCESS' | 'SECURITY_ALERT';
-  channel: 'IN_APP' | 'SMS' | 'EMAIL' | 'PUSH';
+  channel: 'IN_APP' | 'SMS' | 'EMAIL' | 'PUSH' | 'WHATSAPP';
   title: string;
   message: string;
   status: 'QUEUED' | 'SENT' | 'DELIVERED' | 'FAILED';

@@ -115,7 +115,7 @@ customersRouter.get('/:id', asyncHandler(async (req, res) => {
     throw AppError.notFound('Customer');
   }
 
-  const [devices, plans, installments, payments, notifications] = await Promise.all([
+  const [devices, plans, installments, payments, notifications, whatsappOpens] = await Promise.all([
     repo.devices.findByCustomer(customer.id),
     repo.installmentPlans.findByCustomer(customer.id),
     repo.installments.findMany({
@@ -128,6 +128,15 @@ customersRouter.get('/:id', asyncHandler(async (req, res) => {
       orderBy: { createdAt: 'desc' },
       take: 50,
     }),
+    // Who at the shop opened WhatsApp to this customer, and when. Staff only:
+    // it names employees, which a customer login has no business seeing.
+    user.role === 'CUSTOMER'
+      ? Promise.resolve([])
+      : repo.auditLogs.findMany({
+          where: { action: 'WHATSAPP_OPENED', targetType: 'CUSTOMER', targetId: customer.id },
+          orderBy: { createdAt: 'desc' },
+          take: 20,
+        }),
   ]);
 
   res.json({
@@ -137,6 +146,12 @@ customersRouter.get('/:id', asyncHandler(async (req, res) => {
     installments,
     payments,
     notifications,
+    whatsappOpens: whatsappOpens.map((log) => ({
+      id: log.id,
+      actorName: log.actorName,
+      details: log.details,
+      createdAt: log.createdAt,
+    })),
     summary: {
       totalFinanced: plans.reduce((s, p) => s + p.financedAmount, 0),
       outstandingBalance: plans.reduce((s, p) => s + (p.remainingBalance || 0), 0),

@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import { OverdueEngine } from './OverdueEngine.js';
 import { repo } from '../db/repositories/index.js';
 import { config } from '../config.js';
+import { WhatsAppDispatchService } from './whatsapp/WhatsAppDispatchService.js';
 
 export interface SchedulerHandle {
   stop(): void;
@@ -22,7 +23,23 @@ const OVERDUE_CRON = '30 0 * * *';
 /** Hourly cleanup of expired enrollment QR tokens. */
 const TOKEN_CLEANUP_CRON = '5 * * * *';
 
+/** Every two minutes, and only when WhatsApp Cloud API credentials are configured. */
+const WHATSAPP_CRON = '*/2 * * * *';
+
 const TIMEZONE = 'Asia/Karachi';
+
+async function dispatchWhatsApp(): Promise<void> {
+  try {
+    const result = await WhatsAppDispatchService.dispatchQueued();
+    if (result.claimed > 0) {
+      console.log(
+        `[scheduler] WhatsApp: ${result.sent} accepted, ${result.requeued} back on the queue, ${result.failed} failed.`
+      );
+    }
+  } catch (err) {
+    console.error('[scheduler] WhatsApp dispatch failed:', err);
+  }
+}
 
 async function runOverdueEvaluation(): Promise<void> {
   const startedAt = Date.now();
@@ -65,6 +82,15 @@ export function startScheduler(): SchedulerHandle {
   console.log(`[scheduler] Overdue evaluation scheduled at "${OVERDUE_CRON}" (${TIMEZONE}).`);
   console.log(`[scheduler] Enrollment token cleanup scheduled at "${TOKEN_CLEANUP_CRON}" (${TIMEZONE}).`);
 
+  const whatsappJob = WhatsAppDispatchService.isEnabled()
+    ? cron.schedule(WHATSAPP_CRON, () => void dispatchWhatsApp(), { timezone: TIMEZONE })
+    : undefined;
+  console.log(
+    whatsappJob
+      ? `[scheduler] WhatsApp Cloud API delivery is ON — queue checked at "${WHATSAPP_CRON}".`
+      : '[scheduler] WhatsApp Cloud API delivery is OFF (no WHATSAPP_CLOUD_* credentials). Click-to-WhatsApp still works.'
+  );
+
   // Catch up on anything missed while the server was down, without blocking boot.
   setTimeout(() => {
     void expireStaleTokens();
@@ -75,11 +101,13 @@ export function startScheduler(): SchedulerHandle {
     stop() {
       overdueJob.stop();
       cleanupJob.stop();
+      whatsappJob?.stop();
       console.log('[scheduler] Background jobs stopped.');
     },
     async runAllNow() {
       await expireStaleTokens();
       await runOverdueEvaluation();
+      await dispatchWhatsApp();
     },
   };
 }

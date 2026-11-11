@@ -5,6 +5,8 @@ import { repo } from '../db/repositories/index.js';
 import { DevicePolicy, Dealer } from '../types/index.js';
 import { AuditService } from '../services/AuditService.js';
 import { LicenseService } from '../services/LicenseService.js';
+import { WhatsAppDispatchService } from '../services/whatsapp/WhatsAppDispatchService.js';
+import { WHATSAPP_LANGUAGES } from '../services/whatsapp/templates.js';
 import { toPublicUser } from '../services/AuthService.js';
 import { DEFAULT_POLICY } from '../services/InstallmentMath.js';
 import {
@@ -56,7 +58,14 @@ settingsRouter.get(
     repo.users.findMany({ where: { dealerId: dealer.id }, orderBy: { createdAt: 'desc' } }),
   ]);
 
-  res.json({ dealer, policy, licences, staffUsers: staff.map(toPublicUser) });
+  res.json({
+    dealer,
+    policy,
+    licences,
+    staffUsers: staff.map(toPublicUser),
+    /** Whether the platform can send through the WhatsApp Business Cloud API at all. */
+    whatsappCloudEnabled: WhatsAppDispatchService.isEnabled(),
+  });
   })
 );
 
@@ -104,6 +113,10 @@ const policySchema = z
       .transform((ids) => [...new Set(ids)])
       .optional(),
     customerReminderEnabled: z.boolean().optional(),
+    /** Language of the messages the shop opens in its own WhatsApp. */
+    whatsappLanguage: z.enum(WHATSAPP_LANGUAGES).optional(),
+    /** Where automatic reminders are queued. */
+    reminderChannel: z.enum(['SMS', 'WHATSAPP']).optional(),
     emergencyCallsAllowed: z.boolean().optional(),
     paymentMethodsOnLock: z.array(z.string().trim().max(30)).max(10).optional(),
 
@@ -141,6 +154,13 @@ settingsRouter.put('/policy', (req, res, next) => {
 
   if (Object.keys(updates).length === 0) {
     throw AppError.badRequest('No changes were supplied.');
+  }
+
+  if (updates.reminderChannel === 'WHATSAPP' && !WhatsAppDispatchService.isEnabled()) {
+    throw AppError.badRequest(
+      'Automatic WhatsApp reminders are not available: the WhatsApp Business API is not connected on this server. ' +
+        'Reminders stay on SMS. The WhatsApp button on each customer still works.'
+    );
   }
 
   const updated = await repo.devicePolicies.update(existing.id, {

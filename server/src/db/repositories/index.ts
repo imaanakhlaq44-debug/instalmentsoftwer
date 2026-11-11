@@ -792,18 +792,26 @@ export const notifications = {
    * The ids are chosen first so the lease can be applied to exactly that set —
    * `updateMany` cannot express "the oldest twenty" on its own.
    */
-  async claimForRelay(
-    dealerId: string,
-    limit: number,
-    leaseUntil: Date,
+  claimForRelay(dealerId: string, limit: number, leaseUntil: Date, tx?: Tx): Promise<Notification[]> {
+    return this.claimQueued({ channel: 'SMS', dealerId, limit, leaseUntil }, tx);
+  },
+
+  /**
+   * The same compare-and-set claim for any channel. With no `dealerId` it
+   * claims across every dealership, which is what a platform-wide sender (the
+   * WhatsApp Cloud API) needs and a shop's own paired phone must never get.
+   */
+  async claimQueued(
+    args: { channel: Notification['channel']; dealerId?: string; limit: number; leaseUntil: Date },
     tx?: Tx
   ): Promise<Notification[]> {
+    const { channel, dealerId, limit, leaseUntil } = args;
     const now = new Date();
 
     const candidates = (await delegate('notification', tx).findMany({
       where: {
-        dealerId,
-        channel: 'SMS',
+        ...(dealerId ? { dealerId } : {}),
+        channel,
         status: 'QUEUED',
         // Free, or held by a relay that stopped answering.
         OR: [{ leaseUntil: null }, { leaseUntil: { lt: now } }],

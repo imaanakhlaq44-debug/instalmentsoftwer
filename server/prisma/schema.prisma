@@ -178,6 +178,8 @@ enum NotificationChannel {
   SMS
   EMAIL
   PUSH
+  /// Sent through the WhatsApp Business Cloud API, when it is configured.
+  WHATSAPP
 }
 
 enum NotificationStatus {
@@ -715,6 +717,16 @@ model DevicePolicy {
    */
   locationOnRecoveryEnabled Boolean          @default(false) @map("location_on_recovery_enabled")
   customerReminderEnabled  Boolean           @default(true) @map("customer_reminder_enabled")
+  /**
+   * Language of the messages the shop opens in its own WhatsApp:
+   * UR (Urdu script), ROMAN_UR or EN.
+   */
+  whatsappLanguage         String            @default("ROMAN_UR") @map("whatsapp_language") @db.VarChar(12)
+  /**
+   * Where automatic reminders are queued. WHATSAPP is only accepted while the
+   * platform has WhatsApp Business Cloud API credentials.
+   */
+  reminderChannel          NotificationChannel @default(SMS) @map("reminder_channel")
   emergencyCallsAllowed    Boolean           @default(true) @map("emergency_calls_allowed")
   paymentMethodsOnLock     String[]          @map("payment_methods_on_lock")
   lateFeeEnabled           Boolean           @default(false) @map("late_fee_enabled")
