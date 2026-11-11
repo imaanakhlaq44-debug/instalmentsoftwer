@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext.js';
 import { ApiService } from '../services/api.js';
 import { Card, CardHeader, EmptyState, Skeleton } from '../components/ui/Card.js';
 import { money, shortDate } from '../utils/format.js';
+import { LockOrderQueue } from '../components/platform/LockOrderQueue.js';
 
 /**
  * The platform owner's pages: Home, Lock orders and Shops.
@@ -57,6 +58,8 @@ export interface PlatformOverview {
   totals: {
     shops: number;
     shopsAwaitingPayment: number;
+    /** Orders where the shop has reported a payment and nobody has decided yet. */
+    ordersToCheck?: number;
     locksSold: number;
     locksSoldThisMonth: number;
     revenue: number;
@@ -178,7 +181,7 @@ const OrdersList: React.FC<{ data: PlatformOverview | null; reload: () => Promis
       <EmptyState
         icon={<CheckCircle2 className="h-6 w-6" aria-hidden="true" />}
         title="No orders waiting"
-        body="When a shop signs up and picks a pack, its order appears here."
+        body="A new shop that has not sent its payment yet appears here."
       />
     );
   }
@@ -265,7 +268,7 @@ export const PlatformDashboardPage: React.FC = () => {
         <h2 id="todo-heading" className="text-title font-extrabold text-ink-900">To do today</h2>
         <div className="grid gap-4 sm:grid-cols-3">
           <TodoTile
-            count={data?.awaitingPayment.length}
+            count={data ? data.awaitingPayment.length + (data.totals.ordersToCheck ?? 0) : undefined}
             title="Lock orders waiting for payment"
             done="No orders waiting"
             action="Open lock orders"
@@ -383,14 +386,15 @@ export const PlatformOrdersPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader eyebrow="Platform" title="Lock orders">
-        A shop orders a pack of locks when it signs up. Once its payment reaches you, give it the locks here.
+        A shop orders locks from its own dashboard and sends you the transaction ID. Check that the money arrived, then
+        give it the locks here.
       </PageHeader>
 
       <ol className="grid gap-3 sm:grid-cols-3">
         {[
-          ['1', 'The shop orders', 'It signs up and picks a pack of locks.'],
-          ['2', 'The shop pays you', 'By JazzCash, Easypaisa or bank. Check that the money arrived.'],
-          ['3', 'You give the locks', 'Press "Paid: give locks". The shop can sell at once.'],
+          ['1', 'The shop orders', 'It picks a pack of locks on its Buy locks page.'],
+          ['2', 'The shop pays you', 'By JazzCash, Easypaisa or bank, and sends the transaction ID.'],
+          ['3', 'You give the locks', 'Find the transfer in your account, then press "Payment received". The shop can sell at once.'],
         ].map(([n, title, body]) => (
           <li key={n} className="surface flex gap-3 p-4">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-ink-900 bg-sun-400 font-black text-ink-900">
@@ -404,8 +408,10 @@ export const PlatformOrdersPage: React.FC = () => {
         ))}
       </ol>
 
+      <LockOrderQueue onChanged={load} />
+
       <Card>
-        <CardHeader title="Waiting for payment" hint="Newest sign-ups and the pack each one ordered" />
+        <CardHeader title="Signed up, not paid yet" hint="New shops that picked a pack but have not sent a payment" />
         <div className="mt-4">
           <OrdersList data={data} reload={load} />
         </div>

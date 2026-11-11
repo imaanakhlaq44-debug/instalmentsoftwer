@@ -35,6 +35,15 @@ describe('toRomanUrdu', () => {
     expect(toRomanUrdu('How to get Google Account ID')).toBe('Google Account ID kahan se lein');
   });
 
+  it('covers the lock order screens', () => {
+    expect(toRomanUrdu('Buy locks')).toBe('Locks khareedein');
+    expect(toRomanUrdu('Payments to check')).toBe('Check karne wali payments');
+    expect(toRomanUrdu('Payment received: give 30 locks')).toBe('Payment mil gayi: 30 locks dein');
+    expect(toRomanUrdu(' · Rs 800 per phone · ')).toBe(' · Rs 800 fi phone · ');
+    expect(toRomanUrdu('Rs 24,000 total')).toBe('kul Rs 24,000');
+    expect(toRomanUrdu('Choose between 1 and 500 locks.')).toBe('1 se 500 ke darmiyan locks chunein.');
+  });
+
   it('leaves unknown text, names and figures alone', () => {
     expect(toRomanUrdu('Shoaib Akhtar')).toBe('Shoaib Akhtar');
     expect(toRomanUrdu('Rs. 11,250')).toBe('Rs. 11,250');

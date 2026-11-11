@@ -41,6 +41,7 @@ import { TransactionsPage } from './pages/TransactionsPage.js';
 import { EnrollmentPage } from './pages/EnrollmentPage.js';
 import { ContractPage } from './pages/ContractPage.js';
 import { LicensesPage } from './pages/LicensesPage.js';
+import { BuyLocksPage } from './pages/BuyLocksPage.js';
 import { NotificationsPage } from './pages/NotificationsPage.js';
 import { AuditLogsPage } from './pages/AuditLogsPage.js';
 import { SettingsPage } from './pages/SettingsPage.js';
@@ -102,6 +103,8 @@ export function App() {
               <Route path="/contracts/:id" element={<RequireRole roles={[...ALL]}><ContractPage /></RequireRole>} />
 
               <Route path="/licenses" element={<RequireRole roles={[...ADMIN]}><LicensesPage /></RequireRole>} />
+              {/* Ordering is the shop owner's; the platform decides orders on /orders. */}
+              <Route path="/buy-locks" element={<RequireRole roles={['DEALER_ADMIN']}><BuyLocksPage /></RequireRole>} />
               <Route path="/audit-logs" element={<RequireRole roles={[...ADMIN]}><AuditLogsPage /></RequireRole>} />
               <Route path="/settings" element={<RequireRole roles={[...ADMIN]}><SettingsPage /></RequireRole>} />
 
