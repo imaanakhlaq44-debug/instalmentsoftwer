@@ -67,7 +67,14 @@ class DpcSync(context: Context) {
         lockController.protectInstallation()
         syncFactoryResetProtection(result.policy)
         syncStagedRestrictions(result.policy)
-        answerLocationRequest(api, result.policy)
+        val authedApi = DpcApi(prefs)
+        val locationReported = answerLocationRequest(authedApi, result.policy)
+        if (!locationReported && prefs.frpStatus != null) {
+            // Report verified FRP status (ACTIVE / LEGACY / REFUSED / NOT_CONFIGURED)
+            // right after enrollment so the counter dashboard sees it without waiting 15 minutes.
+            runCatching { authedApi.checkIn(Telemetry.collect(appContext, prefs)) }
+                .onFailure { Log.w(TAG, "Post-enroll FRP telemetry check-in failed: ${it.message}") }
+        }
         CheckInScheduler.schedule(appContext, result.checkInIntervalSeconds)
         OfflineWatchdogWorker.schedule(appContext)
 
@@ -105,6 +112,9 @@ class DpcSync(context: Context) {
             return Outcome.Failed(e.message ?: "The check-in failed.", e.retryable && !e.isCredentialRejected)
         }
 
+        val previousFrpStatus = prefs.frpStatus
+        val previousFrpIds = prefs.frpAppliedIds
+
         prefs.savePolicy(result.policy)
         prefs.checkInIntervalSeconds = result.checkInIntervalSeconds
         prefs.lastCheckInAt = System.currentTimeMillis()
@@ -114,6 +124,10 @@ class DpcSync(context: Context) {
         OfflineWatchdogWorker.schedule(appContext)
         syncFactoryResetProtection(result.policy)
         syncStagedRestrictions(result.policy)
+        if (prefs.frpStatus != previousFrpStatus || prefs.frpAppliedIds != previousFrpIds) {
+            runCatching { api.checkIn(Telemetry.collect(appContext, prefs)) }
+                .onFailure { Log.w(TAG, "Follow-up FRP telemetry sync failed: ${it.message}") }
+        }
 
         val command = result.command
         if (command != null) {
@@ -130,15 +144,17 @@ class DpcSync(context: Context) {
      * One fix, a notice to the customer, one report; a failure is simply tried
      * again at the next check-in while the request is still open.
      */
-    private fun answerLocationRequest(api: DpcApi, policy: PolicyView) {
-        if (!policy.reportLocation) return
+    private fun answerLocationRequest(api: DpcApi, policy: PolicyView): Boolean {
+        if (!policy.reportLocation) return false
         val reporter = LocationReporter(appContext)
-        val fix = reporter.takeFix() ?: return
-        try {
+        val fix = reporter.takeFix() ?: return false
+        return try {
             api.checkIn(Telemetry.collect(appContext).copy(location = fix))
             reporter.notifyShared()
+            true
         } catch (e: DpcException) {
             Log.w(TAG, "Could not report the location: ${e.message}")
+            false
         }
     }
 

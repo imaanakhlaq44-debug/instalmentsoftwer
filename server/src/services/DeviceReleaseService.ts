@@ -82,6 +82,9 @@ export class DeviceReleaseService {
         attestedModel: undefined,
         attestedBootLocked: undefined,
         attestedBootState: undefined,
+        frpStatus: undefined,
+        frpError: undefined,
+        frpVerifiedAt: undefined,
         updatedAt: new Date().toISOString(),
       },
       tx

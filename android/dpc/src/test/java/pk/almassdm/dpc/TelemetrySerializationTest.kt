@@ -5,6 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import pk.almassdm.dpc.admin.DeviceIntegrity
+import pk.almassdm.dpc.admin.FactoryResetProtection
 import pk.almassdm.dpc.net.Telemetry
 
 class TelemetrySerializationTest {
@@ -30,6 +31,11 @@ class TelemetrySerializationTest {
                 verifiedBootState = "green",
                 flashLocked = "1",
             ),
+            frp = FactoryResetProtection.FrpReport(
+                status = FactoryResetProtection.VerificationStatus.ACTIVE,
+                detail = null,
+                verifiedAccountsCount = 2,
+            ),
         )
 
         val json = telemetry.toJson()
@@ -42,6 +48,10 @@ class TelemetrySerializationTest {
         assertFalse(report.getBoolean("rooted"))
         assertFalse(report.getBoolean("bootloaderUnlocked"))
         assertEquals("green", report.getString("verifiedBootState"))
+        val frpJson = json.getJSONObject("frp")
+        assertEquals("ACTIVE", frpJson.getString("status"))
+        assertEquals(2, frpJson.getInt("verifiedAccountsCount"))
+        assertFalse(frpJson.has("detail"))
     }
 
     @Test
@@ -59,6 +69,7 @@ class TelemetrySerializationTest {
         assertFalse(json.has("serialNumber"))
         assertFalse(json.has("isDeviceOwner"))
         assertFalse(json.has("integrity"))
+        assertFalse(json.has("frp"))
     }
 }
 

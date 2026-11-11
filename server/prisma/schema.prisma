@@ -461,6 +461,11 @@ model Device {
   attestedBootLocked       Boolean?  @map("attested_boot_locked")
   attestedBootState        String?   @map("attested_boot_state") @db.VarChar(16)
 
+  // --- Factory Reset Protection verification ---------------------------------
+  frpStatus     String?   @map("frp_status") @db.VarChar(24)
+  frpError      String?   @map("frp_error") @db.VarChar(300)
+  frpVerifiedAt DateTime? @map("frp_verified_at") @db.Timestamptz(3)
+
   createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime        @default(now()) @map("updated_at") @db.Timestamptz(3)
 
@@ -475,6 +480,7 @@ model Device {
   @@index([dealerId])
   @@index([dealerId, status])
   @@index([dealerId, tamperDetectedAt])
+  @@index([dealerId, frpStatus])
   @@index([customerId])
   @@index([dealerId, brand])
   // Every DPC request looks the device up by this hash before anything else.

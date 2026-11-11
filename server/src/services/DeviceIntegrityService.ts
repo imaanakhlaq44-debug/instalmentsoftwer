@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '../db/prisma.js';
 import { repo } from '../db/repositories/index.js';
 import { toDomainList } from '../db/mappers.js';
-import { Device } from '../types/index.js';
+import { Device, FrpStatus } from '../types/index.js';
 import { AuditService } from './AuditService.js';
 import { ContractService } from './ContractService.js';
 import { deviceManagementService } from './DeviceManagementService.js';
@@ -40,6 +40,14 @@ export interface IntegrityReportPayload {
   flashLocked?: string;
 }
 
+export type FrpVerificationStatus = FrpStatus;
+
+export interface FrpTelemetryPayload {
+  status: FrpVerificationStatus;
+  detail?: string;
+  verifiedAccountsCount?: number;
+}
+
 export interface TelemetryPayload {
   imeis?: string[];
   serialNumber?: string;
@@ -47,6 +55,8 @@ export interface TelemetryPayload {
   integrity?: IntegrityReportPayload;
   /** TEE/StrongBox key attestation chain (DPC 1.5+). */
   attestation?: AttestationPayload;
+  /** Factory Reset Protection verification telemetry (DPC 1.5.1+). */
+  frp?: FrpTelemetryPayload;
 }
 
 export interface IntegrityEvaluation {
@@ -157,6 +167,7 @@ export class DeviceIntegrityService {
       serial !== undefined ||
       payload?.isDeviceOwner !== undefined ||
       payload?.integrity !== undefined ||
+      payload?.frp !== undefined ||
       attestation !== undefined;
     const verified = attestation?.status === 'VERIFIED' ? attestation : undefined;
     const effectiveSerial = verified?.serial ?? serial;
@@ -243,6 +254,19 @@ export class DeviceIntegrityService {
   }
 
   /**
+   * Columns recording whether OS-level Factory Reset Protection actually stuck on the handset.
+   * Clears any previous OEM error once ACTIVE or NOT_CONFIGURED cleanly succeeds.
+   */
+  static frpUpdates(frp: FrpTelemetryPayload | undefined, nowIso: string): Partial<Device> {
+    if (!frp) return {};
+    return {
+      frpStatus: frp.status,
+      frpError: frp.status === 'REFUSED' || frp.status === 'LEGACY' ? frp.detail?.slice(0, 300) : undefined,
+      frpVerifiedAt: nowIso,
+    };
+  }
+
+  /**
    * The challenge to hand the handset on this check-in, if a fresh attestation
    * is due. Re-sends an outstanding one rather than minting a new one each
    * time, so a handset that missed a response still answers the right one.
@@ -297,6 +321,7 @@ export class DeviceIntegrityService {
       ...(payload?.isDeviceOwner !== undefined ? { isDeviceOwner: payload.isDeviceOwner } : {}),
       ...(evaluation.imeiMatched === true ? { imeiVerifiedAt: nowIso } : {}),
       ...this.attestationUpdates(attestation, nowIso),
+      ...this.frpUpdates(payload?.frp, nowIso),
     };
 
     if (evaluation.tamperFlags.some((f) => ENROLL_BLOCKING_FLAGS.has(f))) {
@@ -392,6 +417,41 @@ export class DeviceIntegrityService {
       baseUpdates.enrolledSerial = evaluation.effectiveSerial;
     }
 
+    if (payload?.frp?.status === 'REFUSED' && device.frpStatus !== 'REFUSED') {
+      const detailSuffix = payload.frp.detail ? `: ${payload.frp.detail}` : '.';
+      await deviceManagementService.recordAction({
+        deviceId: device.id,
+        dealerId: device.dealerId,
+        userId: 'system',
+        userName: 'Enrollment Client',
+        action: 'STATUS_CHANGE',
+        reason: `Handset OS refused Factory Reset Protection at enrollment${detailSuffix}`,
+        deviceAck: true,
+        ipAddress,
+      });
+
+      await AuditService.log({
+        dealerId: device.dealerId,
+        userId: 'system',
+        actorName: 'Enrollment Client',
+        actorRole: 'DEALER_STAFF',
+        action: 'SECURITY_ALERT',
+        targetType: 'DEVICE',
+        targetId: device.id,
+        details: `${device.brand} ${device.model} refused Factory Reset Protection at enrollment${detailSuffix}`,
+        ipAddress,
+      });
+
+      await this.createSecurityAlert({
+        dealerId: device.dealerId,
+        customerId: device.customerId,
+        deviceId: device.id,
+        title: 'Reset Protection Refused',
+        message: `${device.brand} ${device.model} failed to verify OS Factory Reset Protection at enrollment.${payload.frp.detail ? ` ${payload.frp.detail}` : ''}`,
+        nowIso,
+      });
+    }
+
     return { updates: baseUpdates };
   }
 
@@ -423,6 +483,7 @@ export class DeviceIntegrityService {
       ...(payload?.isDeviceOwner !== undefined ? { isDeviceOwner: payload.isDeviceOwner } : {}),
       ...(evaluation.imeiMatched === true ? { imeiVerifiedAt: nowIso } : {}),
       ...this.attestationUpdates(attestation, nowIso),
+      ...this.frpUpdates(payload?.frp, nowIso),
       // The first serial seen after enrollment (a DPC upgraded from 1.3, or a
       // phone enrolled before serials were reported) becomes the pin.
       ...(!device.enrolledSerial && evaluation.effectiveSerial ? { enrolledSerial: evaluation.effectiveSerial } : {}),
@@ -501,6 +562,42 @@ export class DeviceIntegrityService {
         deviceId: device.id,
         title: tamperLocked ? 'Security Tamper Alert — Auto-Lock Queued' : 'Device Security Integrity Alert',
         message: `${device.brand} ${device.model} triggered ${mergedFlags.join(', ')}. ${evaluation.tamperReason ?? ''}`.trim(),
+        nowIso,
+      });
+    }
+
+    const frpNewlyRefused = payload?.frp?.status === 'REFUSED' && device.frpStatus !== 'REFUSED';
+    if (frpNewlyRefused) {
+      const detailSuffix = payload?.frp?.detail ? `: ${payload.frp.detail}` : '.';
+      await deviceManagementService.recordAction({
+        deviceId: device.id,
+        dealerId: device.dealerId,
+        userId: 'system',
+        userName: 'Device Integrity Monitor',
+        action: 'STATUS_CHANGE',
+        reason: `Handset OS refused Factory Reset Protection${detailSuffix}`,
+        deviceAck: true,
+        ipAddress,
+      });
+
+      await AuditService.log({
+        dealerId: device.dealerId,
+        userId: 'system',
+        actorName: 'Device Integrity Monitor',
+        actorRole: 'SUPER_ADMIN',
+        action: 'SECURITY_ALERT',
+        targetType: 'DEVICE',
+        targetId: device.id,
+        details: `${device.brand} ${device.model} refused Factory Reset Protection on check-in${detailSuffix}`,
+        ipAddress,
+      });
+
+      await this.createSecurityAlert({
+        dealerId: device.dealerId,
+        customerId: device.customerId,
+        deviceId: device.id,
+        title: 'Reset Protection Refused',
+        message: `${device.brand} ${device.model} failed to verify OS Factory Reset Protection.${payload?.frp?.detail ? ` ${payload.frp.detail}` : ''}`,
         nowIso,
       });
     }

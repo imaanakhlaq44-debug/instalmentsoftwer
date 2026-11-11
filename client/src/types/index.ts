@@ -135,6 +135,10 @@ export interface Device {
   tamperDetectedAt?: string;
   tamperReason?: string;
   integrityCheckedAt?: string;
+  /** Whether OS-level Factory Reset Protection actually stuck on this handset. */
+  frpStatus?: 'ACTIVE' | 'LEGACY' | 'REFUSED' | 'NOT_CONFIGURED';
+  frpError?: string;
+  frpVerifiedAt?: string;
   /** Serial pinned after enrollment (privileged roles only). */
   enrolledSerial?: string;
   /** Secure-chip (TEE/StrongBox) attestation, verified against Google's root. */

@@ -1,5 +1,7 @@
 package pk.almassdm.dpc.admin
 
+import org.json.JSONObject
+
 /**
  * The decision half of Factory Reset Protection, kept free of Android types so
  * it can be tested on the JVM.
@@ -29,6 +31,23 @@ object FactoryResetProtection {
 
     /** How the policy reaches the platform. Part of the fingerprint, so an OS upgrade re-applies it. */
     enum class Route { MODERN, LEGACY }
+
+    /** Live verification status reported back to the dealership dashboard. */
+    enum class VerificationStatus { ACTIVE, LEGACY, REFUSED, NOT_CONFIGURED }
+
+    data class FrpReport(
+        val status: VerificationStatus,
+        val detail: String? = null,
+        val verifiedAccountsCount: Int = 0,
+    ) {
+        fun toJson(): JSONObject {
+            val json = JSONObject()
+                .put("status", status.name)
+                .put("verifiedAccountsCount", verifiedAccountsCount)
+            detail?.takeIf { it.isNotBlank() }?.let { json.put("detail", it.take(300)) }
+            return json
+        }
+    }
 
     sealed interface Step {
         /** The handset already holds what the server asked for. */
@@ -80,6 +99,33 @@ object FactoryResetProtection {
 
         val route = routeFor(sdkInt)
         return if (fingerprint(ids, route) == previous) Step.None else Step.Apply(ids, route)
+    }
+
+    /**
+     * Compares the OS's live Factory Reset Protection policy against [desired].
+     * Prevents trusting a stale local cache if OEM firmware cleared or refused FRP.
+     */
+    fun isLivePolicyInSync(
+        desired: Iterable<String>,
+        activeEnabled: Boolean,
+        activeAccounts: Iterable<String>,
+    ): Boolean {
+        val expected = normalize(desired)
+        if (expected.isEmpty()) return !activeEnabled
+        return activeEnabled && normalize(activeAccounts) == expected
+    }
+
+    /**
+     * Compares Play services' managed-configuration restriction array on Android 8–10.
+     */
+    fun isLegacyRestrictionInSync(
+        desired: Iterable<String>,
+        activeRestrictionValues: Array<String>?,
+    ): Boolean {
+        val expected = normalize(desired)
+        if (expected.isEmpty()) return activeRestrictionValues == null || activeRestrictionValues.isEmpty()
+        if (activeRestrictionValues == null) return false
+        return normalize(activeRestrictionValues.asIterable()) == expected
     }
 
     private const val MAX_ID_LENGTH = 30

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 
+import { config } from '../config.js';
 import { repo, indexBy, dealerScope } from '../db/repositories/index.js';
 import { Device, Customer } from '../types/index.js';
 import { EnrollmentService } from '../services/EnrollmentService.js';
@@ -18,6 +19,31 @@ export const enrollmentRouter = Router();
 
 // Enrollment is a counter operation; customers have no business here.
 enrollmentRouter.use(requireDealerStaff);
+
+const readinessQuerySchema = z.object({
+  dealerId: z.string().trim().max(64).optional(),
+});
+
+/**
+ * Lightweight pre-enrollment check available to counter staff as well as
+ * dealer admins, without exposing raw Google Account IDs or shop policy rules.
+ */
+enrollmentRouter.get(
+  '/readiness',
+  validateQuery(readinessQuerySchema),
+  asyncHandler(async (req, res) => {
+    const scope = resolveDealerScope(req);
+    const dealerPolicy = scope ? await repo.devicePolicies.findByDealer(scope) : undefined;
+    const frpAccountsCount = dealerPolicy?.frpAccountIds?.length ?? 0;
+    const dpc = config.dpc;
+
+    res.json({
+      frpConfigured: scope ? frpAccountsCount > 0 : null,
+      frpAccountsCount,
+      provisioningReady: Boolean(dpc.apkUrl && dpc.apkSignatureChecksum && dpc.serverUrl),
+    });
+  })
+);
 
 const listQuerySchema = paginationSchema.extend({
   status: z.string().trim().max(20).optional(),

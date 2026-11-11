@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ApiService } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.js';
+import { GoogleIdGuideModal } from '../components/modals/GoogleIdGuideModal.js';
 import {
   Settings,
   Building2,
@@ -12,6 +13,7 @@ import {
   Unlock,
   CheckCircle2,
   Key,
+  HelpCircle,
 } from 'lucide-react';
 
 /** Splits the FRP textarea into distinct account ids (whitespace or comma separated). */
@@ -24,6 +26,7 @@ export const SettingsPage: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showGoogleIdGuide, setShowGoogleIdGuide] = useState(false);
 
   // Profile Form
   const [dealerProfile, setDealerProfile] = useState({
@@ -282,28 +285,46 @@ export const SettingsPage: React.FC = () => {
           </div>
 
           {/* Factory Reset Protection — what survives a recovery-mode wipe */}
-          <div className="p-4 bg-slate-50 border rounded-2xl space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="font-bold text-slate-800 text-xs">Factory Reset Protection</span>
+          <div className="p-4 bg-slate-50 border rounded-2xl space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-800 text-xs">Factory Reset Protection</span>
+                <button
+                  type="button"
+                  onClick={() => setShowGoogleIdGuide(true)}
+                  className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700 hover:bg-blue-100 transition-colors"
+                >
+                  <HelpCircle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                  <span>How to get Google Account ID</span>
+                </button>
+              </div>
               <span className="font-extrabold text-amber-600 text-sm">
                 {parseFrpAccountIds(frpAccountsText).length === 0 ? 'Off' : 'On'}
               </span>
             </div>
             <p className="text-xs text-slate-500">
-              Settings-menu resets are already blocked, but a reset from the phone's recovery menu (power +
+              Settings-menu resets are already blocked, but a reset from the phone&apos;s recovery menu (power +
               volume buttons) wipes the app. With this on, a phone wiped that way cannot be set up again until
               one of these Google accounts signs in — so bring it to the shop and re-enrol it. Applied only
               while money is owed; it is removed automatically once the plan is paid off. Enter the numeric
               Google account ID (not the email), one per line, up to 5.
             </p>
             {parseFrpAccountIds(frpAccountsText).length === 0 && (
-              <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs space-y-1">
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs space-y-2">
                 <p className="font-bold">Factory Reset Protection is currently OFF</p>
                 <p>
                   Without at least one Google Account ID here, someone who wipes a financed phone from the recovery
                   menu (power + volume buttons) can set it up again as a fresh phone without returning to the shop.
-                  Add your shop's numeric Google Account ID below and save policy settings.
+                  Add your shop&apos;s numeric Google Account ID below and save policy settings.
                 </p>
+                <button
+                  type="button"
+                  onClick={() => setShowGoogleIdGuide(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400 bg-white px-3 py-1.5 text-xs font-extrabold text-amber-950 hover:bg-amber-100 transition-colors"
+                >
+                  <Key className="w-3.5 h-3.5 text-amber-700" aria-hidden="true" />
+                  <span>Open Step-by-Step Guide (English + Roman Urdu)</span>
+                </button>
               </div>
             )}
             <textarea
@@ -440,6 +461,11 @@ export const SettingsPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      <GoogleIdGuideModal
+        isOpen={showGoogleIdGuide}
+        onClose={() => setShowGoogleIdGuide(false)}
+      />
     </div>
   );
 };

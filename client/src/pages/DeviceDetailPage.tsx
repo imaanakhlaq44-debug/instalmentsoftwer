@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ApiService } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.js';
 import { EditDeviceModal } from '../components/modals/EditDeviceModal.js';
+import { GoogleIdGuideModal } from '../components/modals/GoogleIdGuideModal.js';
 import { FindPhoneCard } from '../components/devices/FindPhoneCard.js';
 import { relativeTime } from '../utils/format.js';
 import {
@@ -28,6 +29,7 @@ import {
   RotateCw,
   Pencil,
   FileText,
+  HelpCircle,
 } from 'lucide-react';
 
 const TAMPER_FLAG_LABELS: Record<string, string> = {
@@ -77,6 +79,7 @@ export const DeviceDetailPage: React.FC = () => {
   const [releaseReason, setReleaseReason] = useState('');
   const [showClearTamperModal, setShowClearTamperModal] = useState(false);
   const [clearTamperReason, setClearTamperReason] = useState('Handset inspected in shop; confirmed authentic');
+  const [showGoogleIdGuide, setShowGoogleIdGuide] = useState(false);
   /** The signed consent this device's lock rests on, if it has one. */
   const [contract, setContract] = useState<any>(null);
 
@@ -506,6 +509,53 @@ export const DeviceDetailPage: React.FC = () => {
         </div>
       )}
 
+      {!device.noLock && !isPending && !isReleased && device.status !== 'REMOVED' && device.frpStatus === 'REFUSED' && (
+        <div className="p-4 bg-rose-50 border-2 border-rose-300 rounded-2xl space-y-1.5">
+          <div className="flex items-start gap-2.5 text-xs text-rose-950">
+            <ShieldAlert className="w-5 h-5 text-rose-700 shrink-0 mt-0.5" aria-hidden="true" />
+            <div className="space-y-1">
+              <p className="text-sm font-extrabold text-rose-950">Reset Protection Refused by Phone OS</p>
+              <p className="leading-relaxed">
+                {`This handset did not hold OS-level Factory Reset Protection${
+                  device.frpError ? ` (${device.frpError})` : ''
+                }. A recovery-mode wipe may not ask for your shop Google account. Check Play Services / Android version in person; Android 15+ gives strongest recovery reset protection.`}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isStaff && !device.noLock && !isPending && !isReleased && device.status !== 'REMOVED' && device.frpStatus === 'NOT_CONFIGURED' && (
+        <div className="p-4 bg-amber-50 border border-amber-300 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-2.5 text-xs text-amber-950">
+            <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" aria-hidden="true" />
+            <p>
+              <strong>Factory Reset Protection was off</strong> when this handset last checked in. Add your shop&apos;s
+              numeric Google Account ID in Settings so financed phones require it after a recovery reset.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowGoogleIdGuide(true)}
+              className="inline-flex items-center gap-1 rounded-lg border border-amber-400 bg-white px-2.5 py-1.5 text-xs font-bold text-amber-950 hover:bg-amber-100"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-blue-600" aria-hidden="true" />
+              <span>How to get Google Account ID</span>
+            </button>
+            {isDealerAdmin && (
+              <button
+                type="button"
+                onClick={() => navigate('/settings')}
+                className="rounded-lg bg-amber-900 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-800"
+              >
+                Open Settings
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {!device.noLock && !isPending && !isReleased && device.status !== 'REMOVED' && (device.isDeviceOwner === false || isSilentOver72h) && (
         <div className="p-4 bg-amber-50 border border-amber-300 rounded-2xl space-y-1.5">
           {device.isDeviceOwner === false && (
@@ -617,6 +667,26 @@ export const DeviceDetailPage: React.FC = () => {
             >
               {attestationLabel}
               {device.attestationStatus === 'VERIFIED' && device.attestedModel ? ` · ${device.attestedModel}` : ''}
+            </span>
+          )}
+          {!device.noLock && device.frpStatus && (
+            <span
+              className={`mt-1 block text-micro font-bold ${
+                device.frpStatus === 'ACTIVE'
+                  ? 'text-emerald-700'
+                  : device.frpStatus === 'REFUSED'
+                  ? 'text-rose-700'
+                  : 'text-amber-700'
+              }`}
+              title={device.frpError || undefined}
+            >
+              {device.frpStatus === 'ACTIVE'
+                ? 'FRP Protected'
+                : device.frpStatus === 'LEGACY'
+                ? 'FRP Legacy (Android 8–10)'
+                : device.frpStatus === 'REFUSED'
+                ? 'FRP Refused'
+                : 'FRP Off'}
             </span>
           )}
         </div>
@@ -1124,6 +1194,12 @@ export const DeviceDetailPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      <GoogleIdGuideModal
+        isOpen={showGoogleIdGuide}
+        onClose={() => setShowGoogleIdGuide(false)}
+        onGoToSettings={isDealerAdmin ? () => navigate('/settings') : undefined}
+      />
     </div>
   );
 };

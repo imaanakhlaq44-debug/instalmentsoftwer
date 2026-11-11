@@ -6,6 +6,7 @@ import {
   Clock,
   Copy,
   Hand,
+  HelpCircle,
   Loader2,
   Maximize2,
   QrCode,
@@ -20,6 +21,7 @@ import { useAuth } from '../context/AuthContext.js';
 import { Pagination } from '../components/ui/Pagination.js';
 import { usePagination } from '../hooks/usePagination.js';
 import { Card, CardHeader, EmptyState, Skeleton } from '../components/ui/Card.js';
+import { GoogleIdGuideModal } from '../components/modals/GoogleIdGuideModal.js';
 
 /**
  * Connect a phone.
@@ -109,6 +111,7 @@ export const EnrollmentPage: React.FC = () => {
   const [loadingTokens, setLoadingTokens] = useState(true);
   const [now, setNow] = useState(() => Date.now());
   const [frpConfigured, setFrpConfigured] = useState<boolean | null>(null);
+  const [showGoogleIdGuide, setShowGoogleIdGuide] = useState(false);
   // An older phone cannot read a small QR off a laptop screen; full screen
   // gives its setup scanner several pixels per square.
   const [fullScreen, setFullScreen] = useState(false);
@@ -154,15 +157,14 @@ export const EnrollmentPage: React.FC = () => {
 
   useEffect(() => {
     let cancelled = false;
-    if (!isDealerAdmin || (user?.role === 'SUPER_ADMIN' && !selectedDealerId)) {
+    if (user?.role === 'SUPER_ADMIN' && !selectedDealerId) {
       setFrpConfigured(null);
       return;
     }
-    ApiService.getSettings(selectedDealerId)
+    ApiService.getEnrollmentReadiness(selectedDealerId)
       .then((data) => {
         if (cancelled) return;
-        const ids = data?.policy?.frpAccountIds;
-        setFrpConfigured(Array.isArray(ids) && ids.length > 0);
+        setFrpConfigured(data?.frpConfigured ?? null);
       })
       .catch(() => {
         if (!cancelled) setFrpConfigured(null);
@@ -170,7 +172,7 @@ export const EnrollmentPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [isDealerAdmin, user?.role, selectedDealerId]);
+  }, [user?.role, selectedDealerId]);
 
   const generate = useCallback(
     async (deviceId: string) => {
@@ -244,18 +246,31 @@ export const EnrollmentPage: React.FC = () => {
             <div className="space-y-0.5 text-xs text-amber-900">
               <p className="text-sm font-extrabold">Factory Reset Protection is off for this shop</p>
               <p>
-                Add at least one Google Account ID in Settings before scanning QR codes so recovery-mode resets lock the
-                phone back to your shop.
+                {isDealerAdmin
+                  ? 'Add at least one Google Account ID in Settings before scanning QR codes so recovery-mode resets lock the phone back to your shop.'
+                  : 'Ask the shop owner to add at least one Google Account ID in Settings before scanning QR codes so recovery-mode resets lock the phone back to your shop.'}
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate('/settings')}
-            className="btn-secondary shrink-0 self-start sm:self-auto"
-          >
-            Open Settings
-          </button>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowGoogleIdGuide(true)}
+              className="btn-secondary shrink-0"
+            >
+              <HelpCircle className="h-4 w-4 text-blue-600" aria-hidden="true" />
+              <span>How to get Google Account ID</span>
+            </button>
+            {isDealerAdmin && (
+              <button
+                type="button"
+                onClick={() => navigate('/settings')}
+                className="btn-secondary shrink-0"
+              >
+                Open Settings
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -519,6 +534,12 @@ export const EnrollmentPage: React.FC = () => {
           </button>
         </div>
       )}
+
+      <GoogleIdGuideModal
+        isOpen={showGoogleIdGuide}
+        onClose={() => setShowGoogleIdGuide(false)}
+        onGoToSettings={isDealerAdmin ? () => navigate('/settings') : undefined}
+      />
     </div>
   );
 };

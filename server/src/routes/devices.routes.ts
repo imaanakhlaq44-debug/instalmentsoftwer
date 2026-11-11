@@ -34,6 +34,8 @@ const listQuerySchema = paginationSchema.extend({
   lockable: z.enum(['true', 'false']).optional(),
   /** 'true' only phones with active tamper/integrity alerts. */
   tamper: z.enum(['true', 'false']).optional(),
+  /** 'refused' shows managed phones whose OS/OEM refused Factory Reset Protection. */
+  frp: z.enum(['refused']).optional(),
 });
 
 /**
@@ -63,6 +65,7 @@ devicesRouter.get(
       brand: q.brand,
       lockable: q.lockable === undefined ? undefined : q.lockable === 'true',
       tamper: q.tamper === undefined ? undefined : q.tamper === 'true',
+      frp: q.frp,
       search: q.search,
       page: q.page,
       limit: q.limit,
@@ -450,6 +453,9 @@ devicesRouter.post(
       tamperDetectedAt: undefined,
       tamperReason: undefined,
       integrityCheckedAt: undefined,
+      frpStatus: undefined,
+      frpError: undefined,
+      frpVerifiedAt: undefined,
       enrolledSerial: undefined,
       attestationChallenge: undefined,
       attestationChallengeAt: undefined,

@@ -142,6 +142,14 @@ const attestationSchema = z
   })
   .optional();
 
+const frpSchema = z
+  .object({
+    status: z.enum(['ACTIVE', 'LEGACY', 'REFUSED', 'NOT_CONFIGURED']),
+    detail: z.string().trim().max(300).optional(),
+    verifiedAccountsCount: z.number().int().min(0).max(10).optional(),
+  })
+  .optional();
+
 const enrollSchema = z.object({
   token: z.string().trim().min(8, 'Enrollment code is required.').max(120),
   /** Only needed for a token issued without a device attached. */
@@ -152,6 +160,7 @@ const enrollSchema = z.object({
   isDeviceOwner: z.boolean().optional(),
   integrity: integritySchema,
   attestation: attestationSchema,
+  frp: frpSchema,
 });
 
 dpcRouter.post(
@@ -170,6 +179,7 @@ dpcRouter.post(
         isDeviceOwner: body.isDeviceOwner,
         integrity: body.integrity,
         attestation: body.attestation,
+        frp: body.frp,
       },
       ipAddress: clientIp(req),
     });
@@ -201,6 +211,7 @@ const checkInSchema = z.object({
   isDeviceOwner: z.boolean().optional(),
   integrity: integritySchema,
   attestation: attestationSchema,
+  frp: frpSchema,
   /**
    * The handset reporting that it restricted itself under the offline rule
    * while it could not reach anybody. It is a report of something already done,
@@ -259,6 +270,7 @@ dpcRouter.post(
         isDeviceOwner: body.isDeviceOwner,
         integrity: body.integrity,
         attestation: body.attestation,
+        frp: body.frp,
       },
       nowIso,
       ip

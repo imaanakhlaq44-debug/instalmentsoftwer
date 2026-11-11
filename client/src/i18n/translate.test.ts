@@ -21,7 +21,18 @@ describe('toRomanUrdu', () => {
     expect(toRomanUrdu('2 managed phone(s) have been silent for over 72 hours')).toBe(
       '2 phone(s) 72 ghante se ziada waqt se khamosh hain'
     );
+    expect(toRomanUrdu('4 phone(s) refused Factory Reset Protection — recovery reset may bypass shop lock')).toBe(
+      '4 phone(s) par FRP nakaam raha — recovery format se dukaan ka lock toot sakta hai'
+    );
+    expect(
+      toRomanUrdu(
+        'This handset did not hold OS-level Factory Reset Protection (OEM dropped policy). A recovery-mode wipe may not ask for your shop Google account. Check Play Services / Android version in person; Android 15+ gives strongest recovery reset protection.'
+      )
+    ).toBe(
+      'Is phone ke system ne Factory Reset Protection nahin lagayi (OEM dropped policy). Recovery mode se format karne par shayad dukaan ka Google account na mange. Phone par Play Services aur Android version check karein; Android 15+ par hifazat sab se mazboot hoti hai.'
+    );
     expect(toRomanUrdu('Tamper Alert')).toBe('Chher-chhar Alert');
+    expect(toRomanUrdu('How to get Google Account ID')).toBe('Google Account ID kahan se lein');
   });
 
   it('leaves unknown text, names and figures alone', () => {

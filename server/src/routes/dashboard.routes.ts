@@ -90,7 +90,7 @@ dashboardRouter.get(
     ]);
     const noLockDevices = await prisma.device.count({ where: { ...where, noLock: true, status: { not: 'REMOVED' } } });
     const silentCutoff = new Date(now.getTime() - 72 * 3_600_000);
-    const [tamperAlertDevices, silentDevices] = await Promise.all([
+    const [tamperAlertDevices, silentDevices, frpRefusedDevices, dealerPolicy] = await Promise.all([
       prisma.device.count({ where: { ...where, tamperDetectedAt: { not: null }, status: { not: 'REMOVED' } } }),
       prisma.device.count({
         where: {
@@ -103,6 +103,15 @@ dashboardRouter.get(
           ],
         },
       }),
+      prisma.device.count({
+        where: {
+          ...where,
+          noLock: false,
+          frpStatus: 'REFUSED',
+          status: { notIn: ['REMOVED', 'INACTIVE'] },
+        },
+      }),
+      scope && !customerScope ? repo.devicePolicies.findByDealer(scope) : Promise.resolve(undefined),
     ]);
 
     const devices = tally(deviceStatuses, 'status');
@@ -128,6 +137,8 @@ dashboardRouter.get(
       noLockDevices,
       tamperAlertDevices,
       silentDevices,
+      frpRefusedDevices,
+      frpConfigured: scope && !customerScope ? (dealerPolicy?.frpAccountIds?.length ?? 0) > 0 : null,
 
       totalCustomers: distinctPlanCustomers.length,
       activePlans: totalPlans - countOf(plans, 'COMPLETED', 'CANCELLED'),

@@ -42,6 +42,8 @@ export type PaymentStatus =
 
 export type QRType = 'STANDARD' | 'PRO' | 'LEGACY' | 'QC';
 
+export type FrpStatus = 'ACTIVE' | 'LEGACY' | 'REFUSED' | 'NOT_CONFIGURED';
+
 export type EnrollmentTokenStatus = 
   | 'WAITING'
   | 'SCANNED'
@@ -210,6 +212,12 @@ export interface Device {
   attestedModel?: string;
   attestedBootLocked?: boolean;
   attestedBootState?: string;
+
+  // --- Factory Reset Protection verification ---------------------------------
+  /** ACTIVE | LEGACY | REFUSED | NOT_CONFIGURED */
+  frpStatus?: FrpStatus;
+  frpError?: string;
+  frpVerifiedAt?: string;
 
   createdAt: string;
   updatedAt: string;

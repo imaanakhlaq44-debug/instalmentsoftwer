@@ -298,6 +298,7 @@ export const devices = {
       brand?: string;
       lockable?: boolean;
       tamper?: boolean;
+      frp?: 'refused';
       search?: string;
     } & PageArgs,
     tx?: Tx
@@ -310,6 +311,13 @@ export const devices = {
     if (args.lockable !== undefined) where.noLock = !args.lockable;
     if (args.tamper !== undefined) {
       where.tamperDetectedAt = args.tamper ? { not: null } : null;
+    }
+    if (args.frp === 'refused') {
+      where.noLock = false;
+      where.frpStatus = 'REFUSED';
+      if (!args.status || args.status === 'ALL') {
+        where.status = { notIn: ['REMOVED', 'INACTIVE'] };
+      }
     }
 
     if (args.search) {

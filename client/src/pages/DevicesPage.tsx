@@ -33,6 +33,7 @@ export const DevicesPage: React.FC = () => {
   const initialStatus = searchParams.get('status') || 'ALL';
   const initialSearch = searchParams.get('search') || '';
   const initialTamper = searchParams.get('tamper') === 'true';
+  const initialFrpRefused = searchParams.get('frp') === 'refused';
 
   const { selectedDealerId, showToast, isStaff, isDealerAdmin } = useAuth();
   const navigate = useNavigate();
@@ -43,10 +44,11 @@ export const DevicesPage: React.FC = () => {
   const [activeStatusTab, setActiveStatusTab] = useState<string>(initialStatus);
   const [selectedBrand, setSelectedBrand] = useState<string>('ALL');
   const [tamperOnly, setTamperOnly] = useState<boolean>(initialTamper);
+  const [frpRefusedOnly, setFrpRefusedOnly] = useState<boolean>(initialFrpRefused);
   const [showAddWizard, setShowAddWizard] = useState(false);
 
   // Declared after the filters it watches, so changing any of them resets to page 1.
-  const paged = usePagination([searchQuery, activeStatusTab, selectedBrand, tamperOnly, selectedDealerId]);
+  const paged = usePagination([searchQuery, activeStatusTab, selectedBrand, tamperOnly, frpRefusedOnly, selectedDealerId]);
 
   // Lock Confirmation Modal State
   const [lockModalDevice, setLockModalDevice] = useState<any | null>(null);
@@ -73,6 +75,7 @@ export const DevicesPage: React.FC = () => {
     status: activeStatusTab === 'ALL' ? undefined : activeStatusTab,
     brand: selectedBrand === 'ALL' ? undefined : selectedBrand,
     tamper: tamperOnly ? 'true' : undefined,
+    frp: frpRefusedOnly ? 'refused' : undefined,
     dealerId: selectedDealerId,
     ...extra,
   });
@@ -108,12 +111,13 @@ export const DevicesPage: React.FC = () => {
 
   useEffect(() => {
     setTamperOnly(searchParams.get('tamper') === 'true');
+    setFrpRefusedOnly(searchParams.get('frp') === 'refused');
   }, [searchParams]);
 
   useEffect(() => {
     loadDevices();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDealerId, activeStatusTab, selectedBrand, tamperOnly, paged.page, paged.limit]);
+  }, [selectedDealerId, activeStatusTab, selectedBrand, tamperOnly, frpRefusedOnly, paged.page, paged.limit]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -241,6 +245,25 @@ export const DevicesPage: React.FC = () => {
           >
             <ShieldAlert className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Tamper Alerts</span>
+          </button>
+          <button
+            onClick={() => {
+              const next = !frpRefusedOnly;
+              setFrpRefusedOnly(next);
+              const nextParams = new URLSearchParams(searchParams);
+              if (next) nextParams.set('frp', 'refused');
+              else nextParams.delete('frp');
+              setSearchParams(nextParams, { replace: true });
+            }}
+            aria-pressed={frpRefusedOnly}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              frpRefusedOnly
+                ? 'bg-amber-700 text-white shadow-sm'
+                : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200'
+            }`}
+          >
+            <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
+            <span>FRP Risk</span>
           </button>
         </div>
 
@@ -399,6 +422,24 @@ export const DevicesPage: React.FC = () => {
                             <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-micro font-bold text-amber-800">
                               <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden="true" />
                               <span>{'Silent (>72h)'}</span>
+                            </span>
+                          )}
+                          {!d.noLock && d.frpStatus === 'REFUSED' && (
+                            <span
+                              title={d.frpError || undefined}
+                              className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-micro font-bold text-rose-800"
+                            >
+                              <ShieldAlert className="w-3 h-3 shrink-0" aria-hidden="true" />
+                              <span>FRP Refused</span>
+                            </span>
+                          )}
+                          {!d.noLock && d.frpStatus === 'LEGACY' && (
+                            <span
+                              title={d.frpError || undefined}
+                              className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-micro font-bold text-amber-800"
+                            >
+                              <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden="true" />
+                              <span>FRP Legacy</span>
                             </span>
                           )}
                         </div>

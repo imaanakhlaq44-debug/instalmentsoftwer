@@ -2,6 +2,7 @@ package pk.almassdm.dpc.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import pk.almassdm.dpc.admin.FactoryResetProtection
 
 /**
  * The handset's own state.
@@ -132,6 +133,30 @@ class Prefs(context: Context) {
         get() = prefs.getString(KEY_FRP_APPLIED, null)
         set(value) = prefs.edit().putString(KEY_FRP_APPLIED, value).apply()
 
+    /** Latest live FRP verification status read back from Android OS. */
+    var frpStatus: String?
+        get() = prefs.getString(KEY_FRP_STATUS, null)
+        private set(value) = prefs.edit().putString(KEY_FRP_STATUS, value).apply()
+
+    fun saveFrpReport(report: FactoryResetProtection.FrpReport) {
+        prefs.edit()
+            .putString(KEY_FRP_STATUS, report.status.name)
+            .putString(KEY_FRP_DETAIL, report.detail)
+            .putInt(KEY_FRP_VERIFIED_COUNT, report.verifiedAccountsCount)
+            .apply()
+    }
+
+    fun cachedFrpReport(): FactoryResetProtection.FrpReport? {
+        val raw = prefs.getString(KEY_FRP_STATUS, null) ?: return null
+        val status = runCatching { FactoryResetProtection.VerificationStatus.valueOf(raw) }.getOrNull()
+            ?: return null
+        return FactoryResetProtection.FrpReport(
+            status = status,
+            detail = prefs.getString(KEY_FRP_DETAIL, null),
+            verifiedAccountsCount = prefs.getInt(KEY_FRP_VERIFIED_COUNT, 0),
+        )
+    }
+
     /** Whether this app has turned off outgoing calls and SMS (staged level 1+). */
     var stageRestrictionsOn: Boolean
         get() = prefs.getBoolean(KEY_STAGE_ON, false)
@@ -184,6 +209,9 @@ class Prefs(context: Context) {
         private const val KEY_P_GRACE_DAYS = "policy_grace_days"
         private const val KEY_P_FRP_IDS = "policy_frp_account_ids"
         private const val KEY_FRP_APPLIED = "frp_applied_ids"
+        private const val KEY_FRP_STATUS = "frp_status"
+        private const val KEY_FRP_DETAIL = "frp_detail"
+        private const val KEY_FRP_VERIFIED_COUNT = "frp_verified_count"
         private const val KEY_P_STAGE = "policy_restriction_level"
         private const val KEY_P_STAGE_APPS = "policy_restricted_apps"
         private const val KEY_STAGE_ON = "stage_restrictions_on"

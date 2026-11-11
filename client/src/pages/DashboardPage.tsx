@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, QrCode, RefreshCw, ArrowRight, BadgeCheck, Wallet, ShieldAlert, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Plus, QrCode, RefreshCw, ArrowRight, BadgeCheck, Wallet, ShieldAlert, TrendingUp, AlertTriangle, HelpCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { ApiService } from '../services/api.js';
 import { AddCustomerWizardModal } from '../components/modals/AddCustomerWizardModal.js';
+import { GoogleIdGuideModal } from '../components/modals/GoogleIdGuideModal.js';
 import { Card, CardHeader, Skeleton } from '../components/ui/Card.js';
 import { CollectionTrend, CollectionTrendLegend } from '../components/charts/CollectionTrend.js';
 import { FleetBar, type FleetSegment } from '../components/dashboard/FleetBar.js';
@@ -46,6 +47,8 @@ interface Stats {
   collectionRatePercentage: number;
   tamperAlertDevices?: number;
   silentDevices?: number;
+  frpRefusedDevices?: number;
+  frpConfigured?: boolean | null;
 }
 
 export const DashboardPage: React.FC = () => {
@@ -58,6 +61,7 @@ export const DashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [evaluating, setEvaluating] = useState(false);
   const [showAddWizard, setShowAddWizard] = useState(false);
+  const [showGoogleIdGuide, setShowGoogleIdGuide] = useState(false);
 
   const loadData = async () => {
     try {
@@ -293,6 +297,54 @@ export const DashboardPage: React.FC = () => {
         </button>
       )}
 
+      {isStaff && stats?.frpConfigured === false && (
+        <div className="flex flex-col gap-3 rounded-lg border-2 border-amber-300 bg-amber-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" aria-hidden="true" />
+            <div className="text-body text-amber-950">
+              <p className="font-bold">Factory Reset Protection is off for this shop</p>
+              <p className="text-xs text-amber-900">
+                Add at least one numeric Google Account ID before selling new phones so recovery-mode resets lock the
+                handset back to your shop.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowGoogleIdGuide(true)}
+              className="btn-secondary shrink-0 text-xs"
+            >
+              <HelpCircle className="h-3.5 w-3.5 text-blue-600" aria-hidden="true" />
+              <span>How to get Google Account ID</span>
+            </button>
+            {isDealerAdmin && (
+              <button
+                type="button"
+                onClick={() => navigate('/settings')}
+                className="btn-secondary shrink-0 text-xs"
+              >
+                Open Settings
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {isStaff && (stats?.frpRefusedDevices ?? 0) > 0 && (
+        <button
+          type="button"
+          onClick={() => navigate('/devices?frp=refused')}
+          className="flex w-full items-center gap-3 rounded-lg border-2 border-rose-300 bg-rose-50 px-4 py-3 text-left transition-colors hover:bg-rose-100"
+        >
+          <ShieldAlert className="h-5 w-5 shrink-0 text-rose-700" aria-hidden="true" />
+          <span className="flex-1 text-body font-medium text-rose-950">
+            {`${stats?.frpRefusedDevices} phone(s) refused Factory Reset Protection — recovery reset may bypass shop lock`}
+          </span>
+          <ArrowRight className="h-4 w-4 shrink-0 text-rose-700" aria-hidden="true" />
+        </button>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-3">
         {/* min-w-0: a grid item defaults to min-width:auto, so the widest row inside
             — a customer name, a pill and two buttons — was setting the column's
@@ -398,6 +450,12 @@ export const DashboardPage: React.FC = () => {
           }}
         />
       )}
+
+      <GoogleIdGuideModal
+        isOpen={showGoogleIdGuide}
+        onClose={() => setShowGoogleIdGuide(false)}
+        onGoToSettings={isDealerAdmin ? () => navigate('/settings') : undefined}
+      />
     </div>
   );
 };

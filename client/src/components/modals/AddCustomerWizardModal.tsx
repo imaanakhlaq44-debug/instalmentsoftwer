@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ApiError, ApiService } from '../../services/api.js';
 import {
   SaleErrors,
@@ -8,6 +8,7 @@ import {
   validateSaleStep,
 } from '../../utils/saleValidation.js';
 import { useAuth } from '../../context/AuthContext.js';
+import { GoogleIdGuideModal } from './GoogleIdGuideModal.js';
 import {
   X,
   User,
@@ -24,6 +25,7 @@ import {
   Hand,
   RotateCcw,
   AlertTriangle,
+  HelpCircle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PHONE_BRANDS } from '../../utils/brands.js';
@@ -35,7 +37,7 @@ interface Props {
 }
 
 export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) => {
-  const { selectedDealerId, showToast } = useAuth();
+  const { selectedDealerId, showToast, isDealerAdmin, user } = useAuth();
   const navigate = useNavigate();
 
   const [step, setStep] = useState(1);
@@ -43,6 +45,26 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
   const [createdResult, setCreatedResult] = useState<any>(null);
   // An older phone cannot read a small QR off a laptop screen.
   const [qrFull, setQrFull] = useState(false);
+  const [frpConfigured, setFrpConfigured] = useState<boolean | null>(null);
+  const [showGoogleIdGuide, setShowGoogleIdGuide] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (user?.role === 'SUPER_ADMIN' && !selectedDealerId) {
+      setFrpConfigured(null);
+      return;
+    }
+    ApiService.getEnrollmentReadiness(selectedDealerId)
+      .then((res) => {
+        if (!cancelled) setFrpConfigured(res?.frpConfigured ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setFrpConfigured(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedDealerId, user?.role]);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -486,6 +508,43 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                     </p>
                   )}
                 </div>
+
+                {!noLock && frpConfigured === false && (
+                  <div className="p-3 rounded-xl border-2 border-amber-300 bg-amber-50 text-amber-950 text-xs space-y-2">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 shrink-0 text-amber-700 mt-0.5" aria-hidden="true" />
+                      <div>
+                        <p className="font-extrabold">Factory Reset Protection is off for this shop</p>
+                        <p className="text-amber-900 mt-0.5">
+                          Without a shop Google Account ID saved in Settings, a recovery-mode reset can erase the lock app
+                          without asking for your shop account.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 pl-6">
+                      <button
+                        type="button"
+                        onClick={() => setShowGoogleIdGuide(true)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-amber-400 bg-white px-2.5 py-1 text-[11px] font-bold text-amber-950 hover:bg-amber-100"
+                      >
+                        <HelpCircle className="w-3.5 h-3.5 text-blue-600" aria-hidden="true" />
+                        <span>How to get Google Account ID</span>
+                      </button>
+                      {isDealerAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onClose();
+                            navigate('/settings');
+                          }}
+                          className="inline-flex items-center gap-1 rounded-lg bg-amber-900 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-amber-800"
+                        >
+                          Open Settings
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -714,6 +773,26 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                 </div>
               )}
 
+              {frpConfigured === false && (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl border border-amber-300 bg-amber-50 text-xs text-amber-950">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-700" aria-hidden="true" />
+                    <span>
+                      <strong>Factory Reset Protection is off:</strong> add your shop&apos;s Google Account ID in Settings
+                      before handing over this phone.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowGoogleIdGuide(true)}
+                    className="inline-flex items-center gap-1 rounded-lg border border-amber-400 bg-white px-2.5 py-1 text-[11px] font-bold text-amber-950 hover:bg-amber-100 shrink-0 self-start sm:self-auto"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5 text-blue-600" aria-hidden="true" />
+                    <span>How to get Google Account ID</span>
+                  </button>
+                </div>
+              )}
+
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5">
                 {createdResult.qrImageDataUrl && (
                   <button
@@ -818,6 +897,19 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
           </div>
         )}
       </div>
+
+      <GoogleIdGuideModal
+        isOpen={showGoogleIdGuide}
+        onClose={() => setShowGoogleIdGuide(false)}
+        onGoToSettings={
+          isDealerAdmin
+            ? () => {
+                onClose();
+                navigate('/settings');
+              }
+            : undefined
+        }
+      />
     </div>
   );
 };

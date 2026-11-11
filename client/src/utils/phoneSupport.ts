@@ -55,7 +55,7 @@ export function checkPhoneSupport({ brand, android, playStore }: PhoneCheckInput
       level: 'partial',
       title: 'Lock works, reset protection does not',
       detail:
-        'Locking, staged restrictions and payment tracking all work. Asking for the shop account after a recovery-mode reset needs Android 11, so this phone does not get it.',
+        'Locking, staged restrictions and payment tracking all work. However, Android 8–10 only uses legacy protection that can be bypassed by repeated recovery resets, so take a higher advance or guarantor.',
     };
   }
   if (b === 'itel') {
@@ -69,8 +69,12 @@ export function checkPhoneSupport({ brand, android, playStore }: PhoneCheckInput
     return {
       level: 'full',
       title: 'Fully supported',
-      detail: 'This brand closes background apps to save battery, so the dashboard may update a little later than for other phones.',
+      detail: 'This brand closes background apps to save battery, so the dashboard may update a little later than for other phones. Reset protection is strongest on Android 15+.',
     };
   }
-  return { level: 'full', title: 'Fully supported', detail: 'Lock, staged restrictions and reset protection all work.' };
+  return {
+    level: 'full',
+    title: 'Fully supported',
+    detail: 'Lock, staged restrictions and reset protection all work (strongest on Android 15+; earlier Android versions can still face recovery-reset bypass risks).',
+  };
 }

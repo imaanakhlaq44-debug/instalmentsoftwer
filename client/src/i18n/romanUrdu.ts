@@ -867,6 +867,33 @@ export const ROMAN_URDU: Record<string, string> = {
     'App abhi Device Owner nahin hai — phone ko format karke dobara QR se jorne tak lock aur anti-reset qawaid nahin chalenge.',
   'This handset has not checked in for over 72 hours — verify whether it is offline, powered off, or tampered with.':
     'Yeh phone 72 ghante se ziada waqt se server se nahin jura — check karein ke band hai, offline hai ya koi chher-chhar hui hai.',
+  'How to get Google Account ID': 'Google Account ID kahan se lein',
+  'Open Step-by-Step Guide (English + Roman Urdu)': 'Asaan Tareeqa Khol kar Dekhein (English + Roman Urdu)',
+  'Ask the shop owner to add at least one Google Account ID in Settings before scanning QR codes so recovery-mode resets lock the phone back to your shop.':
+    'QR scan karne se pehle dukaan ke maalik se kahein ke Settings mein kam az kam ek Google Account ID daalein taake recovery se format hone par bhi phone aap ki dukaan ke baghair na khule.',
+  'Add at least one numeric Google Account ID before selling new phones so recovery-mode resets lock the handset back to your shop.':
+    'Naya phone bechne se pehle kam az kam ek number wala Google Account ID daalein taake recovery se format hone par bhi phone aap ki dukaan ke baghair na khule.',
+  'Without a shop Google Account ID saved in Settings, a recovery-mode reset can erase the lock app without asking for your shop account.':
+    'Settings mein dukaan ka Google Account ID mehfooz na ho to recovery se format karne par lock app mit sakti hai aur dukaan ka Google account nahin manga jayega.',
+  'Factory Reset Protection is off:': 'Format se hifazat (FRP) off hai:',
+  "add your shop's Google Account ID in Settings before handing over this phone.":
+    'customer ko phone dene se pehle Settings mein dukaan ka Google Account ID daalein.',
+  'FRP Risk': 'FRP Khatra',
+  'FRP Refused': 'FRP Inkaar',
+  'FRP Legacy': 'FRP Purana',
+  'FRP Protected': 'FRP Mehfooz',
+  'FRP Legacy (Android 8–10)': 'FRP Purana (Android 8–10)',
+  'FRP Off': 'FRP Band',
+  'Reset Protection Refused by Phone OS': 'Phone ke system ne FRP se inkaar kar diya',
+  'Factory Reset Protection was off': 'Format se hifazat (FRP) off thi',
+  "when this handset last checked in. Add your shop's numeric Google Account ID in Settings so financed phones require it after a recovery reset.":
+    'jab is phone ne aakhri dafa raabta kiya. Settings mein dukaan ka number wala Google Account ID daalein taake format ke baad bhi dukaan ka account mange.',
+  'Locking, staged restrictions and payment tracking all work. However, Android 8–10 only uses legacy protection that can be bypassed by repeated recovery resets, so take a higher advance or guarantor.':
+    'Lock, darja ba darja pabandi aur qistein sab chalenge. Lekin Android 8–10 mein purani hifazat hoti hai jo baar baar recovery reset se toot sakti hai, is liye advance ziada lein ya zamin rakhein.',
+  'This brand closes background apps to save battery, so the dashboard may update a little later than for other phones. Reset protection is strongest on Android 15+.':
+    'Yeh company battery bachane ke liye background apps band karti hai, is liye dashboard thori der baad update ho sakta hai. Format se sab se mazboot hifazat Android 15+ par milti hai.',
+  'Lock, staged restrictions and reset protection all work (strongest on Android 15+; earlier Android versions can still face recovery-reset bypass risks).':
+    'Lock, darja ba darja pabandi aur format se hifazat sab chalenge (Android 15+ par sab se mazboot; purane Android par baar baar reset se bypass ka khatra reh sakta hai).',
 };
 
 /**
@@ -897,5 +924,10 @@ export const ROMAN_URDU_PATTERNS: Array<[RegExp, string]> = [
   [/^Down payment collected at the time of sale for (.+)\.$/, '$1 ka advance, sale ke waqt wusool.'],
   [/^(\d+) device\(s\) have active hardware or tamper alerts waiting for inspection$/, '$1 phone(s) par hardware ya chher-chhar ka alert hai, jaanch zaroori hai'],
   [/^(\d+) managed phone\(s\) have been silent for over 72 hours$/, '$1 phone(s) 72 ghante se ziada waqt se khamosh hain'],
+  [/^(\d+) phone\(s\) refused Factory Reset Protection — recovery reset may bypass shop lock$/, '$1 phone(s) par FRP nakaam raha — recovery format se dukaan ka lock toot sakta hai'],
+  [
+    /^This handset did not hold OS-level Factory Reset Protection(.*)\. A recovery-mode wipe may not ask for your shop Google account\. Check Play Services \/ Android version in person; Android 15\+ gives strongest recovery reset protection\.$/,
+    'Is phone ke system ne Factory Reset Protection nahin lagayi$1. Recovery mode se format karne par shayad dukaan ka Google account na mange. Phone par Play Services aur Android version check karein; Android 15+ par hifazat sab se mazboot hoti hai.',
+  ],
   [/^Detected (.+)$/, 'Pata chala: $1'],
 ];

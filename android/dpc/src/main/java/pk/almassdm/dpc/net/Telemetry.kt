@@ -10,6 +10,7 @@ import pk.almassdm.dpc.BuildConfig
 import pk.almassdm.dpc.admin.AttestationReport
 import pk.almassdm.dpc.admin.DeviceIntegrity
 import pk.almassdm.dpc.admin.DeviceIntegrityCollector
+import pk.almassdm.dpc.admin.FactoryResetProtection
 import pk.almassdm.dpc.admin.LocationFix
 import pk.almassdm.dpc.data.Prefs
 import java.time.Instant
@@ -50,6 +51,8 @@ data class Telemetry(
     val integrity: DeviceIntegrity.Report? = null,
     /** Secure-chip attestation, only in the check-in that answers a server challenge. */
     val attestation: AttestationReport? = null,
+    /** Live Factory Reset Protection verification read back from the handset. */
+    val frp: FactoryResetProtection.FrpReport? = null,
 ) {
     fun toJson(): JSONObject {
         val json = JSONObject().put("dpcVersion", dpcVersion)
@@ -77,6 +80,7 @@ data class Telemetry(
         isDeviceOwner?.let { json.put("isDeviceOwner", it) }
         integrity?.let { json.put("integrity", it.toJson()) }
         attestation?.let { json.put("attestation", it.toJson()) }
+        frp?.let { json.put("frp", it.toJson()) }
         return json
     }
 
@@ -123,6 +127,7 @@ data class Telemetry(
                 serialNumber = hardware?.serialNumber,
                 isDeviceOwner = hardware?.isDeviceOwner,
                 integrity = hardware?.integrity,
+                frp = prefs.cachedFrpReport(),
             )
         }
     }

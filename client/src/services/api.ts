@@ -355,6 +355,12 @@ export class ApiService {
     return this.request<Paged<any>>(`/enrollment/tokens${buildQuery(params)}`);
   }
 
+  static getEnrollmentReadiness(dealerId?: string) {
+    return this.request<{ frpConfigured: boolean | null; frpAccountsCount: number; provisioningReady: boolean }>(
+      `/enrollment/readiness${buildQuery({ dealerId })}`
+    );
+  }
+
   static generateEnrollmentToken(data: unknown) {
     return this.request<any>('/enrollment/generate', { method: 'POST', body: JSON.stringify(data) });
   }

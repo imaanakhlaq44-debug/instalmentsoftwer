@@ -91,32 +91,181 @@ class LockController(context: Context) {
      * route as well as the accounts, so a phone upgraded from Android 10 to 11
      * moves onto the platform API at its next check-in.
      */
-    fun applyFactoryResetProtection(accountIds: List<String>): Outcome {
+    fun applyFactoryResetProtection(accountIds: List<String>): Outcome =
+        applyFactoryResetProtectionDetailed(accountIds).first
+
+    /**
+     * Applies Factory Reset Protection and reads back live OS state so silent
+     * OEM firmware drops or unsupported ROMs are detected and auto-healed.
+     */
+    fun applyFactoryResetProtectionDetailed(accountIds: List<String>): Pair<Outcome, FactoryResetProtection.FrpReport> {
         if (!isDeviceOwner) {
-            return Outcome.Refused("Factory Reset Protection needs device-owner privileges.")
+            val reason = "Factory Reset Protection needs device-owner privileges."
+            val report = FactoryResetProtection.FrpReport(
+                status = FactoryResetProtection.VerificationStatus.REFUSED,
+                detail = reason,
+                verifiedAccountsCount = 0,
+            )
+            prefs.saveFrpReport(report)
+            return Outcome.Refused(reason) to report
         }
-        val step = FactoryResetProtection.next(Build.VERSION.SDK_INT, accountIds, prefs.frpAppliedIds)
+
+        val desiredIds = FactoryResetProtection.normalize(accountIds)
+        val hasGms = isInstalled(FactoryResetProtection.GMS_PACKAGE)
+
+        if (desiredIds.isEmpty()) {
+            return try {
+                val liveModern = if (Build.VERSION.SDK_INT >= FactoryResetProtection.MODERN_API_LEVEL) {
+                    runCatching { dpm.getFactoryResetProtectionPolicy(admin) }.getOrNull()
+                } else {
+                    null
+                }
+                val liveLegacy = if (hasGms) {
+                    runCatching {
+                        dpm.getApplicationRestrictions(admin, FactoryResetProtection.GMS_PACKAGE)
+                            .getStringArray(FactoryResetProtection.LEGACY_RESTRICTION_KEY)
+                    }.getOrNull()
+                } else {
+                    null
+                }
+                if (
+                    !prefs.frpAppliedIds.isNullOrEmpty() ||
+                    liveModern?.isFactoryResetProtectionEnabled == true ||
+                    (liveLegacy != null && liveLegacy.isNotEmpty())
+                ) {
+                    clearFactoryResetProtection()
+                }
+                prefs.frpAppliedIds = ""
+                val report = FactoryResetProtection.FrpReport(
+                    status = FactoryResetProtection.VerificationStatus.NOT_CONFIGURED,
+                    detail = null,
+                    verifiedAccountsCount = 0,
+                )
+                prefs.saveFrpReport(report)
+                Outcome.Applied to report
+            } catch (e: Exception) {
+                Log.w(TAG, "Factory Reset Protection clear refused", e)
+                val reason = "Factory Reset Protection could not be cleared: ${e.message ?: e.javaClass.simpleName}"
+                val report = FactoryResetProtection.FrpReport(
+                    status = FactoryResetProtection.VerificationStatus.REFUSED,
+                    detail = reason,
+                    verifiedAccountsCount = 0,
+                )
+                prefs.saveFrpReport(report)
+                Outcome.Refused(reason) to report
+            }
+        }
 
         return try {
-            when (step) {
-                FactoryResetProtection.Step.None -> return Outcome.Applied
-                FactoryResetProtection.Step.Clear -> clearFactoryResetProtection()
-                is FactoryResetProtection.Step.Apply -> when (step.route) {
-                    FactoryResetProtection.Route.MODERN -> applyModernFrp(step.accountIds)
-                    FactoryResetProtection.Route.LEGACY -> applyLegacyFrp(step.accountIds)
+            if (Build.VERSION.SDK_INT >= FactoryResetProtection.MODERN_API_LEVEL) {
+                val beforePolicy = runCatching { dpm.getFactoryResetProtectionPolicy(admin) }.getOrNull()
+                val alreadyInSync = FactoryResetProtection.isLivePolicyInSync(
+                    desiredIds,
+                    beforePolicy?.isFactoryResetProtectionEnabled == true,
+                    beforePolicy?.factoryResetProtectionAccounts.orEmpty(),
+                )
+                if (!alreadyInSync) {
+                    applyModernFrp(desiredIds)
                 }
+
+                val verifiedRead = runCatching { dpm.getFactoryResetProtectionPolicy(admin) }
+                val verifiedPolicy = verifiedRead.getOrNull()
+                val verifiedInSync = verifiedRead.isSuccess && FactoryResetProtection.isLivePolicyInSync(
+                    desiredIds,
+                    verifiedPolicy?.isFactoryResetProtectionEnabled == true,
+                    verifiedPolicy?.factoryResetProtectionAccounts.orEmpty(),
+                )
+                if (!verifiedInSync) {
+                    prefs.frpAppliedIds = ""
+                    val readError = verifiedRead.exceptionOrNull()?.message
+                    val reason = if (!readError.isNullOrBlank()) {
+                        "OS refused Enterprise FRP verification: $readError"
+                    } else {
+                        "OS accepted FRP call but did not keep the policy active on read-back."
+                    }
+                    val report = FactoryResetProtection.FrpReport(
+                        status = FactoryResetProtection.VerificationStatus.REFUSED,
+                        detail = reason,
+                        verifiedAccountsCount = 0,
+                    )
+                    prefs.saveFrpReport(report)
+                    return Outcome.Refused(reason) to report
+                }
+
+                prefs.frpAppliedIds = FactoryResetProtection.fingerprint(desiredIds, FactoryResetProtection.Route.MODERN)
+                val report = FactoryResetProtection.FrpReport(
+                    status = FactoryResetProtection.VerificationStatus.ACTIVE,
+                    detail = null,
+                    verifiedAccountsCount = desiredIds.size,
+                )
+                prefs.saveFrpReport(report)
+                Outcome.Applied to report
+            } else {
+                if (!hasGms) {
+                    prefs.frpAppliedIds = ""
+                    val reason = "Google Play services is not installed; Factory Reset Protection cannot be enforced."
+                    val report = FactoryResetProtection.FrpReport(
+                        status = FactoryResetProtection.VerificationStatus.REFUSED,
+                        detail = reason,
+                        verifiedAccountsCount = 0,
+                    )
+                    prefs.saveFrpReport(report)
+                    return Outcome.Refused(reason) to report
+                }
+
+                val beforeLegacy = runCatching {
+                    dpm.getApplicationRestrictions(admin, FactoryResetProtection.GMS_PACKAGE)
+                        .getStringArray(FactoryResetProtection.LEGACY_RESTRICTION_KEY)
+                }.getOrNull()
+                if (!FactoryResetProtection.isLegacyRestrictionInSync(desiredIds, beforeLegacy)) {
+                    applyLegacyFrp(desiredIds)
+                }
+
+                val afterLegacy = dpm.getApplicationRestrictions(admin, FactoryResetProtection.GMS_PACKAGE)
+                    .getStringArray(FactoryResetProtection.LEGACY_RESTRICTION_KEY)
+                if (!FactoryResetProtection.isLegacyRestrictionInSync(desiredIds, afterLegacy)) {
+                    prefs.frpAppliedIds = ""
+                    val reason = "Managed Play services FRP restriction did not persist on read-back."
+                    val report = FactoryResetProtection.FrpReport(
+                        status = FactoryResetProtection.VerificationStatus.REFUSED,
+                        detail = reason,
+                        verifiedAccountsCount = 0,
+                    )
+                    prefs.saveFrpReport(report)
+                    return Outcome.Refused(reason) to report
+                }
+
+                prefs.frpAppliedIds = FactoryResetProtection.fingerprint(desiredIds, FactoryResetProtection.Route.LEGACY)
+                val report = FactoryResetProtection.FrpReport(
+                    status = FactoryResetProtection.VerificationStatus.LEGACY,
+                    detail = "Android ${Build.VERSION.RELEASE} uses legacy Play services FRP (Enterprise FRP requires Android 11+).",
+                    verifiedAccountsCount = desiredIds.size,
+                )
+                prefs.saveFrpReport(report)
+                Outcome.Applied to report
             }
-            prefs.frpAppliedIds = when (step) {
-                is FactoryResetProtection.Step.Apply -> FactoryResetProtection.fingerprint(step.accountIds, step.route)
-                else -> ""
-            }
-            Outcome.Applied
         } catch (e: UnsupportedOperationException) {
             Log.w(TAG, "This handset does not support Factory Reset Protection", e)
-            Outcome.Refused("This handset does not support Factory Reset Protection.")
+            prefs.frpAppliedIds = ""
+            val reason = "This handset does not support Factory Reset Protection."
+            val report = FactoryResetProtection.FrpReport(
+                status = FactoryResetProtection.VerificationStatus.REFUSED,
+                detail = reason,
+                verifiedAccountsCount = 0,
+            )
+            prefs.saveFrpReport(report)
+            Outcome.Refused(reason) to report
         } catch (e: Exception) {
             Log.w(TAG, "Factory Reset Protection refused", e)
-            Outcome.Refused("Factory Reset Protection could not be set: ${e.message ?: e.javaClass.simpleName}")
+            prefs.frpAppliedIds = ""
+            val reason = "Factory Reset Protection could not be set: ${e.message ?: e.javaClass.simpleName}"
+            val report = FactoryResetProtection.FrpReport(
+                status = FactoryResetProtection.VerificationStatus.REFUSED,
+                detail = reason,
+                verifiedAccountsCount = 0,
+            )
+            prefs.saveFrpReport(report)
+            Outcome.Refused(reason) to report
         }
     }
 
@@ -152,11 +301,13 @@ class LockController(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             dpm.setFactoryResetProtectionPolicy(admin, null)
         }
-        val restrictions = dpm.getApplicationRestrictions(admin, FactoryResetProtection.GMS_PACKAGE)
-        if (restrictions.containsKey(FactoryResetProtection.LEGACY_RESTRICTION_KEY)) {
-            val remaining = Bundle(restrictions).apply { remove(FactoryResetProtection.LEGACY_RESTRICTION_KEY) }
-            dpm.setApplicationRestrictions(admin, FactoryResetProtection.GMS_PACKAGE, remaining)
-            notifyPlayServicesOfFrpChange()
+        if (isInstalled(FactoryResetProtection.GMS_PACKAGE)) {
+            val restrictions = dpm.getApplicationRestrictions(admin, FactoryResetProtection.GMS_PACKAGE)
+            if (restrictions.containsKey(FactoryResetProtection.LEGACY_RESTRICTION_KEY)) {
+                val remaining = Bundle(restrictions).apply { remove(FactoryResetProtection.LEGACY_RESTRICTION_KEY) }
+                dpm.setApplicationRestrictions(admin, FactoryResetProtection.GMS_PACKAGE, remaining)
+                notifyPlayServicesOfFrpChange()
+            }
         }
     }
 
