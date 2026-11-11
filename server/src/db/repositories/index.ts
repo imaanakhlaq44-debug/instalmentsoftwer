@@ -14,7 +14,7 @@ import {
   Dealer, User, Customer, Device, EnrollmentToken, InstallmentPlan, Installment,
   Payment, Transaction, DeviceActionLog, AuditLog, DevicePolicy,
   LicensePack, DeviceLicense, DeviceLicenseStatus,
-  Notification, NotificationTemplate, SmsRelay, Contract,
+  Notification, NotificationTemplate, SmsRelay, Contract, GatewayCheckout,
 } from '../../types/index.js';
 
 export type { Page, PageArgs };
@@ -872,6 +872,15 @@ export const smsRelays = {
 
 export const notificationTemplates = makeRepository<NotificationTemplate>('notificationTemplate');
 
+/** Hosted-checkout attempts at a payment gateway — see `services/gateway`. */
+export const gatewayCheckouts = {
+  ...makeRepository<GatewayCheckout>('gatewayCheckout'),
+
+  findByReference(reference: string, tx?: Tx): Promise<GatewayCheckout | undefined> {
+    return this.findFirst({ reference }, tx);
+  },
+};
+
 // ---------------------------------------------------------------------------
 
 /** Every repository, for call sites that would otherwise import a dozen names. */
@@ -894,6 +903,7 @@ export const repo = {
   notificationTemplates,
   smsRelays,
   contracts,
+  gatewayCheckouts,
 };
 
 /**
