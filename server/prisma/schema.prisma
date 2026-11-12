@@ -188,6 +188,18 @@ enum NotificationChannel {
   PUSH
 }
 
+/**
+ * How a dealership's SMS leave the building. PHONE is the shop's own paired
+ * handset; AGGREGATOR is the platform's gateway account with a sender mask;
+ * AGGREGATOR_THEN_PHONE tries the gateway and hands a message to the phone
+ * only after the gateway has given up on it.
+ */
+enum SmsChannel {
+  PHONE
+  AGGREGATOR
+  AGGREGATOR_THEN_PHONE
+}
+
 enum NotificationStatus {
   QUEUED
   SENT
@@ -784,6 +796,8 @@ model DevicePolicy {
    */
   locationOnRecoveryEnabled Boolean          @default(false) @map("location_on_recovery_enabled")
   customerReminderEnabled  Boolean           @default(true) @map("customer_reminder_enabled")
+  /** Which way this shop's SMS go out. See `SmsChannel`. */
+  smsChannel               SmsChannel        @default(PHONE) @map("sms_channel")
   emergencyCallsAllowed    Boolean           @default(true) @map("emergency_calls_allowed")
   paymentMethodsOnLock     String[]          @map("payment_methods_on_lock")
   lateFeeEnabled           Boolean           @default(false) @map("late_fee_enabled")
@@ -845,6 +859,18 @@ model Notification {
   leaseUntil    DateTime? @map("lease_until") @db.Timestamptz(3)
   attempts      Int       @default(0)
   failureReason String?   @map("failure_reason") @db.VarChar(300)
+
+  /**
+   * SMS aggregator bookkeeping. `leaseUntil` above is shared: whoever holds it
+   * — a paired phone or the aggregator worker — owns the message, so the two
+   * can never both send it. `phoneFallbackAt` is set when the aggregator gives
+   * a message up to the phone ("aggregator, then phone" shops only).
+   */
+  sentVia            String?   @map("sent_via") @db.VarChar(20)
+  providerMessageId  String?   @map("provider_message_id") @db.VarChar(120)
+  aggregatorAttempts Int       @default(0) @map("aggregator_attempts")
+  nextAttemptAt      DateTime? @map("next_attempt_at") @db.Timestamptz(3)
+  phoneFallbackAt    DateTime? @map("phone_fallback_at") @db.Timestamptz(3)
 
   dealer   Dealer    @relation(fields: [dealerId], references: [id], onDelete: Cascade)
   customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)

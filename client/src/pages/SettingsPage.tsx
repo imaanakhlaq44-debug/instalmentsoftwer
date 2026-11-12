@@ -1,3 +1,4 @@
+import { SMS_CHANNEL_OPTIONS, SmsChannel } from '../utils/smsDelivery.js';
 import React, { useEffect, useState } from 'react';
 import { ApiService } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.js';
@@ -47,8 +48,12 @@ export const SettingsPage: React.FC = () => {
     lockWarningDays: 2,
     offlineLockAfterDays: 0,
     customerReminderEnabled: true,
+    smsChannel: 'PHONE' as SmsChannel,
     emergencyCallsAllowed: true,
   });
+
+  // Whether this server has an SMS gateway account; without one only the phone can be chosen.
+  const [smsGateway, setSmsGateway] = useState<{ configured: boolean; senderMask?: string }>({ configured: false });
 
   // Factory Reset Protection accounts, one Google account id per line.
   const [frpAccountsText, setFrpAccountsText] = useState('');
@@ -80,10 +85,12 @@ export const SettingsPage: React.FC = () => {
           lockWarningDays: data.policy.lockWarningDays,
           offlineLockAfterDays: data.policy.offlineLockAfterDays ?? 0,
           customerReminderEnabled: data.policy.customerReminderEnabled,
+          smsChannel: (data.policy.smsChannel ?? 'PHONE') as SmsChannel,
           emergencyCallsAllowed: data.policy.emergencyCallsAllowed,
         });
         setFrpAccountsText((data.policy.frpAccountIds ?? []).join('\n'));
       }
+      setSmsGateway(data.smsAggregator ?? { configured: false });
     } catch (err: any) {
       showToast(err.message, 'error');
     } finally {
@@ -337,6 +344,46 @@ export const SettingsPage: React.FC = () => {
             {frpInvalid.length > 0 && (
               <p className="text-xs font-bold text-rose-600">
                 Not a Google account ID: {frpInvalid.join(', ')}. Use the long number, not an email address.
+              </p>
+            )}
+          </div>
+
+          {/* How SMS are sent — the shop's paired phone, the gateway, or both in turn */}
+          <div className="p-4 bg-slate-50 border rounded-2xl space-y-2">
+            <label htmlFor="sms-channel" className="font-bold text-slate-800 text-xs block">
+              How SMS are sent
+            </label>
+            <p className="text-xs text-slate-500">
+              Paired phone: reminders go from your own SIM, from a mobile number. SMS gateway: they go from the
+              company SMS account under your brand name, and can handle many messages. Gateway, then phone: the
+              gateway is tried first, and your paired phone sends only what the gateway could not.
+            </p>
+            <select
+              id="sms-channel"
+              value={policy.smsChannel}
+              onChange={(e) => setPolicy({ ...policy, smsChannel: e.target.value as SmsChannel })}
+              className="w-full px-3 py-2 text-xs bg-white border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+            >
+              {SMS_CHANNEL_OPTIONS.map((option) => (
+                <option
+                  key={option.value}
+                  value={option.value}
+                  disabled={option.needsGateway && !smsGateway.configured && policy.smsChannel !== option.value}
+                >
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            {smsGateway.configured ? (
+              smsGateway.senderMask && (
+                <p className="text-xs text-slate-600">
+                  <span>Customers see the sender as:</span>{' '}
+                  <span className="font-bold" data-i18n-skip>{smsGateway.senderMask}</span>
+                </p>
+              )
+            ) : (
+              <p className="text-xs font-bold text-amber-700">
+                No SMS gateway account is set up on this server yet, so only the paired phone can be used.
               </p>
             )}
           </div>

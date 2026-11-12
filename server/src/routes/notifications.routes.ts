@@ -6,6 +6,8 @@ import { repo, indexBy } from '../db/repositories/index.js';
 import { Customer, Device } from '../types/index.js';
 import { AuditService } from '../services/AuditService.js';
 import { SmsRelayService } from '../services/SmsRelayService.js';
+import { SmsAggregatorService } from '../services/SmsAggregatorService.js';
+import { smsSegments } from '../utils/smsSegments.js';
 import {
   requireDealerStaff, getAuthUser, resolveDealerScope, resolveWritableDealerId,
   assertDealerAccess, clientIp, routeParam,
@@ -64,6 +66,8 @@ notificationsRouter.get(
         customerName: customer?.name ?? 'All Customers',
         customerPhone: customer?.phone ?? 'N/A',
         deviceModel: device ? `${device.brand} ${device.model}` : 'N/A',
+        // What the message costs: one Urdu letter makes it 70 characters an SMS.
+        ...(n.channel === 'SMS' ? { sms: smsSegments(n.message) } : {}),
       };
     });
 
@@ -75,12 +79,24 @@ notificationsRouter.get(
      */
     const delivery = await SmsRelayService.deliveryState(scope);
 
+    // The aggregator counts as "delivery is working" only for a shop that has
+    // chosen it, on a server where an account is actually configured.
+    const aggregator = SmsAggregatorService.describe();
+    const smsChannel = scope === null ? 'PHONE' : await SmsAggregatorService.effectiveChannelFor(scope);
+    const viaAggregator = smsChannel !== 'PHONE';
+
     res.json({
       ...pageEnvelope(enriched, page, q.limit),
       counts,
-      deliveryEnabled: delivery.enabled,
+      deliveryEnabled: viaAggregator || delivery.enabled,
       relays: delivery.relays,
-      deliveryNote: delivery.enabled
+      smsChannel,
+      aggregator,
+      deliveryNote: viaAggregator
+        ? smsChannel === 'AGGREGATOR_THEN_PHONE'
+          ? 'The SMS gateway is sending these messages. One the gateway cannot send is passed to your paired phone. "SENT" means the gateway or the SIM accepted the message, not that it was delivered.'
+          : 'The SMS gateway is sending these messages. "SENT" means the gateway accepted the message, not that it was delivered.'
+        : delivery.enabled
         ? 'A paired phone is sending these messages from its own SIM. "SENT" means the SIM accepted the message, not that it was delivered.'
         : delivery.relays.length > 0
           ? 'A phone is paired but has not checked in recently. Messages stay queued until it does.'

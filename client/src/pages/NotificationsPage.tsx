@@ -3,8 +3,9 @@ import { ApiService } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.js';
 import { Pagination } from '../components/ui/Pagination.js';
 import { usePagination } from '../hooks/usePagination.js';
+import { describeDelivery, smsCostLabel, SmsChannel } from '../utils/smsDelivery.js';
 
-import { Bell, MessageSquare, Send, RefreshCw, Smartphone, CheckCircle2, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { MessageSquare, RefreshCw, Smartphone, CheckCircle2, AlertTriangle, ShieldAlert, RadioTower } from 'lucide-react';
 
 export const NotificationsPage: React.FC = () => {
   const { selectedDealerId, showToast } = useAuth();
@@ -16,6 +17,9 @@ export const NotificationsPage: React.FC = () => {
   /** Phones paired to send this dealership's SMS from their own SIM. */
   const [relays, setRelays] = useState<any[]>([]);
   const [deliveryEnabled, setDeliveryEnabled] = useState(false);
+  /** How this shop's SMS leave: its paired phone, the SMS gateway, or both in turn. */
+  const [smsChannel, setSmsChannel] = useState<SmsChannel>('PHONE');
+  const [aggregator, setAggregator] = useState<{ configured: boolean; senderMask?: string }>({ configured: false });
   const [pairing, setPairing] = useState(false);
   const [relayName, setRelayName] = useState('');
   /**
@@ -38,6 +42,8 @@ export const NotificationsPage: React.FC = () => {
       setDeliveryNote(notifs.deliveryEnabled ? null : notifs.deliveryNote);
       setDeliveryEnabled(!!notifs.deliveryEnabled);
       setRelays(notifs.relays ?? []);
+      setSmsChannel(notifs.smsChannel ?? 'PHONE');
+      setAggregator(notifs.aggregator ?? { configured: false });
       setTemplates(tmpls);
     } catch (err: any) {
       showToast(err.message, 'error');
@@ -96,7 +102,7 @@ export const NotificationsPage: React.FC = () => {
         </div>
       )}
 
-      {deliveryEnabled && (
+      {deliveryEnabled && smsChannel === 'PHONE' && (
         <div className="flex items-start gap-3 p-4 rounded-2xl bg-emerald-50 border border-emerald-200">
           <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" aria-hidden="true" />
           <div>
@@ -105,6 +111,28 @@ export const NotificationsPage: React.FC = () => {
               They go out from that handset&apos;s own SIM and are charged to its package. &ldquo;Sent&rdquo; means
               the SIM accepted the message — a handset relay has no delivery receipt to offer.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* The gateway banner appears only for a shop that chose the gateway, on a
+          server where an account is really configured. */}
+      {smsChannel !== 'PHONE' && (
+        <div className="flex items-start gap-3 p-4 rounded-2xl bg-emerald-50 border border-emerald-200">
+          <RadioTower className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" aria-hidden="true" />
+          <div>
+            <p className="text-sm font-bold text-emerald-900">The SMS gateway is sending these messages</p>
+            {aggregator.senderMask && (
+              <p className="text-xs font-bold text-emerald-900 mt-0.5">
+                <span>Customers see the sender as:</span> <span data-i18n-skip>{aggregator.senderMask}</span>
+              </p>
+            )}
+            <p className="text-xs text-emerald-800 mt-0.5">
+              {smsChannel === 'AGGREGATOR_THEN_PHONE'
+                ? 'A message the gateway cannot send is passed to your paired phone. “Sent” means the gateway or the SIM accepted the message, not that it reached the customer.'
+                : '“Sent” means the gateway accepted the message, not that it reached the customer. A refused message is tried again, then shown as failed with the reason.'}
+            </p>
+            <p className="text-xs text-emerald-800 mt-0.5">You can change this in Settings, under “How SMS are sent”.</p>
           </div>
         </div>
       )}
@@ -118,9 +146,11 @@ export const NotificationsPage: React.FC = () => {
               Phones sending your SMS
             </h2>
             <p className="text-xs text-slate-500 mt-1 max-w-xl leading-relaxed">
-              No SMS gateway is connected. Until one is, you can pair a phone of your own: it collects queued
-              messages and sends them from its SIM. Fine for a small volume and for testing — a shop sending at
-              scale needs an operator account with a registered sender mask.
+              {smsChannel === 'AGGREGATOR'
+                ? 'Your SMS go through the SMS gateway, so a paired phone is not given any messages right now.'
+                : smsChannel === 'AGGREGATOR_THEN_PHONE'
+                  ? 'Your SMS go through the SMS gateway first. A paired phone only sends what the gateway could not.'
+                  : 'No SMS gateway is connected. Until one is, you can pair a phone of your own: it collects queued messages and sends them from its SIM. Fine for a small volume and for testing — a shop sending at scale needs an operator account with a registered sender mask.'}
             </p>
           </div>
         </div>
@@ -219,6 +249,8 @@ export const NotificationsPage: React.FC = () => {
               <div className="divide-y divide-slate-100">
                 {notifications.map((n) => {
                   const isSecurityAlert = n.type === 'SECURITY_ALERT';
+                  const delivery = describeDelivery(n);
+                  const cost = smsCostLabel(n.sms);
                   return (
                     <div
                       key={n.id}
@@ -251,10 +283,33 @@ export const NotificationsPage: React.FC = () => {
                           Customer: {n.customerName}
                           {n.deviceModel && n.deviceModel !== 'N/A' ? ` · ${n.deviceModel}` : ''} ({n.channel})
                         </span>
-                        <span className={`${isSecurityAlert ? 'text-rose-700' : 'text-emerald-600'} font-semibold`}>
-                          {n.status} ✓
+                        {/* The status as it is: only a sent message gets the green. */}
+                        <span className="flex items-center gap-1.5 shrink-0">
+                          <span
+                            className={`uppercase font-bold px-2 py-0.5 rounded-full ${
+                              delivery.tone === 'sent'
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : delivery.tone === 'failed'
+                                  ? 'bg-rose-100 text-rose-700'
+                                  : 'bg-amber-100 text-amber-800'
+                            }`}
+                          >
+                            {delivery.label}
+                          </span>
+                          {delivery.via && <span className="font-semibold text-slate-600">{delivery.via}</span>}
                         </span>
                       </div>
+                      {(cost || delivery.reason) && (
+                        <div className="text-micro text-slate-500 space-y-0.5">
+                          {cost && <p>{cost}</p>}
+                          {delivery.reason && (
+                            <p className={delivery.tone === 'failed' ? 'text-rose-700' : 'text-amber-800'}>
+                              <span className="font-semibold">Reason:</span>{' '}
+                              <span data-i18n-skip>{delivery.reason}</span>
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
