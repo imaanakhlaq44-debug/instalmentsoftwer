@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ApiService } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.js';
-import { SignaturePad } from '../components/contract/SignaturePad.js';
+import { ContractSignForm } from '../components/contract/ContractSignForm.js';
 import { AlertTriangle, ArrowLeft, Download, FileText, Printer, ShieldCheck } from 'lucide-react';
 
 const money = (value: number) => 'Rs. ' + Math.round(value).toLocaleString('en-PK');
@@ -24,11 +24,7 @@ export const ContractPage: React.FC = () => {
 
   const [document, setDocument] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
-  const [signing, setSigning] = useState(false);
   const [showSignModal, setShowSignModal] = useState(false);
-  const [signerName, setSignerName] = useState('');
-  const [signature, setSignature] = useState<string | null>(null);
-  const [declarationAccepted, setDeclarationAccepted] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
   const load = async () => {
@@ -37,7 +33,6 @@ export const ContractPage: React.FC = () => {
       setLoading(true);
       const res = await ApiService.getContract(id);
       setDocument(res);
-      setSignerName(res.snapshot?.customer?.name ?? '');
     } catch (err: any) {
       showToast(err.message, 'error');
     } finally {
@@ -49,27 +44,6 @@ export const ContractPage: React.FC = () => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
-
-  const sign = async () => {
-    if (!id || !signature || !declarationAccepted) return;
-    try {
-      setSigning(true);
-      await ApiService.signContract(id, {
-        signerName: signerName.trim(),
-        signatureImage: signature,
-        declarationAccepted: true,
-      });
-      showToast('Agreement signed. This device may now be managed under its terms.', 'success');
-      setShowSignModal(false);
-      setSignature(null);
-      setDeclarationAccepted(false);
-      load();
-    } catch (err: any) {
-      showToast(err.message, 'error');
-    } finally {
-      setSigning(false);
-    }
-  };
 
   const downloadPdf = async () => {
     if (!id) return;
@@ -375,52 +349,16 @@ export const ContractPage: React.FC = () => {
               </p>
             </div>
 
-            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-              <p className="text-xs text-slate-800 leading-relaxed">{declaration.en}</p>
-              <p className="text-xs text-slate-800 leading-relaxed" dir="rtl">
-                {declaration.ur}
-              </p>
-            </div>
-
-            <div>
-              <label className="text-micro uppercase font-bold text-slate-500 tracking-wider block mb-1">
-                Name of the person signing
-              </label>
-              <input
-                value={signerName}
-                onChange={(e) => setSignerName(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <SignaturePad onChange={setSignature} disabled={signing} />
-
-            <label className="flex items-start gap-2 text-xs text-slate-700">
-              <input
-                type="checkbox"
-                checked={declarationAccepted}
-                onChange={(e) => setDeclarationAccepted(e.target.checked)}
-                className="mt-0.5"
-              />
-              <span>The customer has read the declaration above and accepts it.</span>
-            </label>
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                onClick={() => setShowSignModal(false)}
-                disabled={signing}
-                className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={sign}
-                disabled={signing || !signature || !declarationAccepted || signerName.trim().length < 3}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white rounded-xl text-xs font-bold"
-              >
-                {signing ? 'Recording…' : 'Record the signature'}
-              </button>
-            </div>
+            <ContractSignForm
+              contractId={contract.id}
+              declaration={declaration}
+              defaultSignerName={snapshot.customer?.name ?? ''}
+              onCancel={() => setShowSignModal(false)}
+              onSigned={() => {
+                setShowSignModal(false);
+                load();
+              }}
+            />
           </div>
         </div>
       )}
