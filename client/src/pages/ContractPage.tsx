@@ -80,7 +80,7 @@ export const ContractPage: React.FC = () => {
     // The agreement is one fixed bilingual document: its English runs left to
     // right and its Urdu clauses carry their own dir="rtl", whichever language
     // the dashboard is in. So it reads and prints the same in all three.
-    <div className="max-w-4xl mx-auto space-y-6" data-i18n-skip dir="ltr">
+    <div className="max-w-4xl mx-auto space-y-6" data-i18n-skip dir="ltr" lang="en">
       {/*
         The A4 page rules live here rather than in index.css, which sizes the
         page for 80mm thermal receipt rolls. Two documents, two page sizes, and

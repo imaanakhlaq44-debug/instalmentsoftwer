@@ -180,7 +180,7 @@ export const DashboardPage: React.FC = () => {
       {/* they are three views of the same portfolio, not three tiles.      */}
       {/* ---------------------------------------------------------------- */}
       <Card flush>
-        <div className="grid divide-y divide-paper-300 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <div className="grid divide-y divide-paper-300 sm:grid-cols-3 sm:divide-x rtl:divide-x-reverse sm:divide-y-0">
           <div className="p-5.5 hover:bg-paper-100/50 transition-colors">
             <div className="flex items-center justify-between">
               <p className="eyebrow">Outstanding</p>

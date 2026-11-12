@@ -69,7 +69,8 @@ export function toUrdu(text: string): string {
     const out = lookup(key, URDU_ALL, URDU_PATTERNS, true);
     if (out !== undefined && out !== key) return withSpacing(text, out);
   }
-  if (!/[A-Za-z0-9]/.test(key)) return text;
+  // A lone sign belongs to the figure beside it: "#" then "3", "95" then "%".
+  if (!/[A-Za-z0-9]/.test(key) && !/^[#%+\-−×]+$/.test(key)) return text;
   return withSpacing(text, LRM + text.trim() + LRM);
 }
 

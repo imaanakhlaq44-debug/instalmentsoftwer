@@ -146,7 +146,7 @@ export const LicensesPage: React.FC = () => {
         <Skeleton className="h-28 w-full" />
       ) : (
         <Card flush>
-          <div className="grid divide-y divide-paper-300 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <div className="grid divide-y divide-paper-300 sm:grid-cols-3 sm:divide-x rtl:divide-x-reverse sm:divide-y-0">
             <div className="p-5">
               <p className="eyebrow">Locks left</p>
               <p className="figure mt-1.5">{totals.available}</p>

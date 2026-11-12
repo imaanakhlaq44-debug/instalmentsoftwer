@@ -166,37 +166,39 @@
 
 /* ---------------------------------------------------------------------------
    Urdu
-   The document is lang="ur" dir="rtl". Layout follows from the logical
+   The document is lang="ur" dir="rtl". The rules key on :lang(ur) so a part
+   that declares itself English (the signed agreement) is left exactly as it
+   is in English. Layout follows from the logical
    utilities the pages use (ms-, pe-, text-start…); what is here is only what
    the script itself needs.
    --------------------------------------------------------------------------- */
 
 /* Naskh, as on the home page: Nastaliq is beautiful and unreadable at 13px.
    Archivo stays first so figures, IMEIs and English names keep their face. */
-html[lang='ur'] body {
+body:lang(ur) {
   font-family: 'Archivo', 'Noto Naskh Arabic', 'Noto Nastaliq Urdu', system-ui, sans-serif;
 }
 
 /* Letter-spacing pulls joined Urdu letters apart, and there are no capitals. */
-html[lang='ur'] *,
-html[lang='ur'] *::before,
-html[lang='ur'] *::after {
+*:lang(ur),
+*:lang(ur)::before,
+*:lang(ur)::after {
   letter-spacing: 0 !important;
 }
 
 /* Naskh is taller than Archivo at the same size and sets its dots below the
    line, so the tightest line-heights in the app clip it. */
-html[lang='ur'] .text-micro {
+.text-micro:lang(ur) {
   font-size: 0.75rem;
   line-height: 1.25rem;
 }
-html[lang='ur'] .text-caption,
-html[lang='ur'] .text-xs {
+.text-caption:lang(ur),
+.text-xs:lang(ur) {
   line-height: 1.375rem;
 }
-html[lang='ur'] .leading-tight,
-html[lang='ur'] .leading-none,
-html[lang='ur'] .leading-snug {
+.leading-tight:lang(ur),
+.leading-none:lang(ur),
+.leading-snug:lang(ur) {
   line-height: 1.5;
 }
 
@@ -216,6 +218,13 @@ html[dir='rtl'] input:is([type='tel'], [type='number'], [type='email'], [type='p
 html[dir='rtl'] input::placeholder,
 html[dir='rtl'] textarea::placeholder {
   direction: rtl;
+  text-align: right;
+}
+
+/* A clipped English name or model keeps its beginning: "Kashif Meh…", not
+   "…ehmood". Zero specificity, so a text-center on the element still wins. */
+:where(html[dir='rtl']) :where(.truncate) {
+  unicode-bidi: plaintext;
   text-align: right;
 }
 
