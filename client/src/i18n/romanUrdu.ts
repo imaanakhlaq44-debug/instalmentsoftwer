@@ -894,6 +894,97 @@ export const ROMAN_URDU: Record<string, string> = {
     'Yeh company battery bachane ke liye background apps band karti hai, is liye dashboard thori der baad update ho sakta hai. Format se sab se mazboot hifazat Android 15+ par milti hai.',
   'Lock, staged restrictions and reset protection all work (strongest on Android 15+; earlier Android versions can still face recovery-reset bypass risks).':
     'Lock, darja ba darja pabandi aur format se hifazat sab chalenge (Android 15+ par sab se mazboot; purane Android par baar baar reset se bypass ka khatra reh sakta hai).',
+
+  // ------------------------------------------------- feedback for the website
+  Feedback: 'Raaye',
+  'Give feedback': 'Raaye dein',
+  'Shop feedback': 'Dukanon ki raaye',
+  'Your opinion': 'Aap ki raaye',
+  'Tell us how Almas SDM is working for your shop. If you allow it, we may show your words on our website.':
+    'Batayein Almas SDM aap ki dukaan mein kaisa chal raha hai. Aap ijazat dein to hum aap ke alfaaz apni website par dikha sakte hain.',
+  'Could not load your feedback.': 'Aap ki raaye load nahin hui.',
+  'What you sent': 'Aap ne jo bheja',
+  'Waiting for review': 'Jaanch ka intezar',
+  'We will read it soon. It is not on the website yet.': 'Hum jald parhenge. Abhi yeh website par nahin hai.',
+  'Approved for the website': 'Website ke liye manzoor',
+  'It appears on the website the next time the site is updated, exactly as you wrote it.':
+    'Website agli baar update hone par yeh wahan nazar aayegi, bilkul waise jaise aap ne likhi.',
+  'Not accepted': 'Manzoor nahin hui',
+  'It is not on the website. You can change it and send it again.':
+    'Yeh website par nahin hai. Aap ise badal kar dobara bhej sakte hain.',
+  'Taken off the website': 'Website se hata di gayi',
+  'It was removed from the website. You can change it and send it again.':
+    'Yeh website se hata di gayi hai. Aap ise badal kar dobara bhej sakte hain.',
+  'Withdrawn by you': 'Aap ne wapas le li',
+  'You took it back, so it is not shown anywhere. You can send feedback again whenever you like.':
+    'Aap ne ise wapas le liya, is liye yeh kahin nahin dikhti. Jab chahein dobara raaye bhej sakte hain.',
+  'Note from Almas SDM': 'Almas SDM ka note',
+  'Permission to publish given by': 'Chhapne ki ijazat di:',
+  'Send feedback again': 'Dobara raaye bhejein',
+  'Change my feedback': 'Meri raaye badlein',
+  'Withdraw my feedback': 'Meri raaye wapas lein',
+  'Withdraw your feedback?': 'Apni raaye wapas lein?',
+  'We will stop showing it. It leaves the website the next time the site is updated, at most a day.':
+    'Hum ise dikhana band kar denge. Website agli baar update hone par yeh hat jayegi, ziada se ziada ek din mein.',
+  'Yes, withdraw it': 'Haan, wapas lein',
+  'Keep it': 'Rehne dein',
+  'Change your feedback': 'Apni raaye badlein',
+  'Write your feedback': 'Apni raaye likhein',
+  'Urdu, Roman Urdu or English: write the way you speak.':
+    'Urdu, Roman Urdu ya English: jaise bolte hain waise likhein.',
+  'If you change it, it goes back for review and comes off the website until it is approved again.':
+    'Badalne par yeh dobara jaanch mein jayegi aur dobara manzoor hone tak website se hat jayegi.',
+  'Your feedback': 'Aap ki raaye',
+  'Your rating': 'Aap ki rating',
+  'Name to show': 'Jo naam dikhana hai',
+  'Your name, or your shop\'s name. Your choice.': 'Apna naam ya dukaan ka naam. Aap ki marzi.',
+  'City to show': 'Jo shehar dikhana hai',
+  'I allow Almas SDM to publish this feedback on its website with the name and city written above. I can withdraw it at any time.':
+    'Almas SDM ko meri ijazat hai ke yeh raaye oopar likhe naam aur shehar ke saath apni website par chhaape. Yeh raaye kisi bhi waqt wapas li ja sakti hai.',
+  'We never show your phone number, email or shop ID, and we do not change your words.':
+    'Hum aap ka phone number, email ya shop ID kabhi nahin dikhate, aur aap ke alfaaz nahin badalte.',
+  'Send for review': 'Jaanch ke liye bhejein',
+  'Choose 1 to 5 stars.': '1 se 5 stars chunein.',
+  'Enter the name to show.': 'Dikhane wala naam likhein.',
+  'Enter the city to show.': 'Dikhane wala shehar likhein.',
+  'Tick the box to allow publication, or do not submit.':
+    'Chhapne ki ijazat ke liye box par tick karein, warna na bhejein.',
+  'Thank you. Your feedback was sent for review.': 'Shukriya. Aap ki raaye jaanch ke liye bhej di gayi.',
+  'Could not send your feedback.': 'Aap ki raaye nahin bheji ja saki.',
+  'Your feedback was withdrawn.': 'Aap ki raaye wapas le li gayi.',
+  'Could not withdraw your feedback.': 'Aap ki raaye wapas nahin li ja saki.',
+  'Feedback cannot contain links or HTML.': 'Raaye mein link ya HTML nahin ho sakta.',
+  'Name cannot contain links or HTML.': 'Naam mein link ya HTML nahin ho sakta.',
+  'City cannot contain links or HTML.': 'Shehar mein link ya HTML nahin ho sakta.',
+  'Feedback shops have allowed us to publish. Approve it to show it on the website, or reject it with a note.':
+    'Woh raaye jo dukanon ne chhapne ki ijazat di hai. Website par dikhane ke liye manzoor karein, ya note ke saath radd karein.',
+  'You cannot change a shop\'s words. If something needs fixing, reject it with a note and the shop will correct it and send it again.':
+    'Aap dukaan ke alfaaz nahin badal sakte. Kuch theek karna ho to note ke saath radd karein, dukaan khud theek kar ke dobara bhejegi.',
+  'Could not load shop feedback.': 'Dukanon ki raaye load nahin hui.',
+  'No feedback yet': 'Abhi koi raaye nahin',
+  'When a shop owner sends feedback from their dashboard, it appears here for you to review.':
+    'Jab koi dukaan ka maalik apne dashboard se raaye bhejega, woh yahan jaanch ke liye aayegi.',
+  'Nothing waiting for review': 'Jaanch ke liye kuch nahin',
+  Rejected: 'Radd',
+  Unpublished: 'Website se hatayi gayi',
+  'Withdrawn by the shop': 'Dukaan ne wapas le li',
+  'Shown as': 'Is naam se dikhegi:',
+  'Your note:': 'Aap ka note:',
+  'This shop is suspended, so its feedback is not shown on the website.':
+    'Yeh dukaan band ki gayi hai, is liye is ki raaye website par nahin dikhti.',
+  'Why is it rejected? The shop will read this.': 'Radd kyun? Dukaan yeh parhegi.',
+  'Why is it unpublished? The shop will read this.': 'Website se kyun hatayi? Dukaan yeh parhegi.',
+  Approve: 'Manzoor karein',
+  Reject: 'Radd karein',
+  Unpublish: 'Website se hatayein',
+  'Approved. It will appear on the website.': 'Manzoor. Yeh website par nazar aayegi.',
+  'Rejected. The shop can see your note.': 'Radd. Dukaan aap ka note dekh sakti hai.',
+  'Unpublished. It will leave the website.': 'Hata di gayi. Yeh website se hat jayegi.',
+  'That did not work.': 'Yeh nahin ho saka.',
+  'The shop changed this feedback after you opened it. Read it again before approving.':
+    'Aap ke kholne ke baad dukaan ne yeh raaye badal di. Manzoor karne se pehle dobara parhein.',
+  'This feedback changed while you were deciding. Reload and read it again.':
+    'Faisla karte waqt yeh raaye badal gayi. Dobara load kar ke parhein.',
 };
 
 /**
@@ -930,4 +1021,8 @@ export const ROMAN_URDU_PATTERNS: Array<[RegExp, string]> = [
     'Is phone ke system ne Factory Reset Protection nahin lagayi$1. Recovery mode se format karne par shayad dukaan ka Google account na mange. Phone par Play Services aur Android version check karein; Android 15+ par hifazat sab se mazboot hoti hai.',
   ],
   [/^Detected (.+)$/, 'Pata chala: $1'],
+  [/^(\d+) waiting for review$/, '$1 jaanch ke intezar mein'],
+  [/^(\d) out of 5$/, '5 mein se $1'],
+  [/^Please write at least (\d+) characters\.$/, 'Kam se kam $1 huroof likhein.'],
+  [/^Please keep it under (\d+) characters\.$/, '$1 huroof se kam rakhein.'],
 ];

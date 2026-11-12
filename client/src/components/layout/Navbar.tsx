@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Search, Bell, ChevronDown, LogOut, Building2, KeyRound, ShieldCheck, Check,
+  Search, Bell, ChevronDown, LogOut, Building2, KeyRound, ShieldCheck, Check, MessageSquareQuote,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.js';
 import { ApiService } from '../../services/api.js';
@@ -227,6 +227,22 @@ export const Navbar: React.FC = () => {
                     {dealer && <span className="truncate text-ink-400">· {dealer.name}</span>}
                   </p>
                 </div>
+
+                {/* On a phone the bottom bar has five slots and this page is not
+                    one of them, so the way in is here too. */}
+                {(role === 'DEALER_ADMIN' || role === 'SUPER_ADMIN') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowProfile(false);
+                      navigate(role === 'SUPER_ADMIN' ? '/shop-feedback' : '/feedback');
+                    }}
+                    className={menuItem}
+                  >
+                    <MessageSquareQuote className="h-3.5 w-3.5 text-ink-400" aria-hidden="true" />
+                    {role === 'SUPER_ADMIN' ? 'Shop feedback' : 'Give feedback'}
+                  </button>
+                )}
 
                 <button
                   type="button"

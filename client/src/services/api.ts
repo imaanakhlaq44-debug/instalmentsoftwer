@@ -81,6 +81,34 @@ function buildQuery(params: Record<string, unknown> = {}): string {
   return s ? `?${s}` : '';
 }
 
+export type TestimonialStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'UNPUBLISHED' | 'WITHDRAWN';
+
+export interface Testimonial {
+  id: string;
+  dealerId: string;
+  quote: string;
+  rating: number;
+  displayName: string;
+  city: string;
+  language: 'en' | 'ur';
+  status: TestimonialStatus;
+  consentText: string;
+  consentAt: string;
+  consentByName: string;
+  reviewedAt: string | null;
+  reviewedByName: string | null;
+  reviewNote: string | null;
+  withdrawnAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReviewTestimonial extends Testimonial {
+  dealerName: string;
+  dealerCity: string;
+  dealerActive: boolean;
+}
+
 export class ApiService {
   private static async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const headers: Record<string, string> = {
@@ -380,6 +408,45 @@ export class ApiService {
   /** The super admin's platform dashboard: shops, sales and the fleet. */
   static getPlatformOverview() {
     return this.request<any>('/platform/overview');
+  }
+
+  // -------------------------------------------------------------------------
+  // Testimonials: a shop's feedback for the website
+  // -------------------------------------------------------------------------
+
+  /** The signed-in shop's own feedback, and the consent sentence to show. */
+  static getMyTestimonial() {
+    return this.request<{ testimonial: Testimonial | null; consentText: string }>('/testimonials/mine');
+  }
+
+  /** Submit or edit. `consent` must be true; the server refuses anything else. */
+  static submitMyTestimonial(body: { quote: string; rating: number; displayName: string; city: string; consent: boolean }) {
+    return this.request<{ testimonial: Testimonial }>('/testimonials/mine', { method: 'PUT', body: JSON.stringify(body) });
+  }
+
+  static withdrawMyTestimonial() {
+    return this.request<{ testimonial: Testimonial }>('/testimonials/mine/withdraw', { method: 'POST' });
+  }
+
+  /** Super admin: every shop's feedback, for review. */
+  static getTestimonials() {
+    return this.request<{ testimonials: ReviewTestimonial[] }>('/testimonials');
+  }
+
+  /** Approves exactly the version the reviewer read (`seenUpdatedAt`). */
+  static approveTestimonial(id: string, seenUpdatedAt: string) {
+    return this.request<{ testimonial: Testimonial }>(`/testimonials/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ seenUpdatedAt }),
+    });
+  }
+
+  static rejectTestimonial(id: string, note: string) {
+    return this.request<{ testimonial: Testimonial }>(`/testimonials/${id}/reject`, { method: 'POST', body: JSON.stringify({ note }) });
+  }
+
+  static unpublishTestimonial(id: string, note: string) {
+    return this.request<{ testimonial: Testimonial }>(`/testimonials/${id}/unpublish`, { method: 'POST', body: JSON.stringify({ note }) });
   }
 
   static getLicenses(dealerId?: string) {

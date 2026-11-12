@@ -44,6 +44,8 @@ import { LicensesPage } from './pages/LicensesPage.js';
 import { NotificationsPage } from './pages/NotificationsPage.js';
 import { AuditLogsPage } from './pages/AuditLogsPage.js';
 import { SettingsPage } from './pages/SettingsPage.js';
+import { FeedbackPage } from './pages/FeedbackPage.js';
+import { ShopFeedbackPage } from './pages/ShopFeedbackPage.js';
 
 /** Everyone signed in. */
 const ALL = ['SUPER_ADMIN', 'DEALER_ADMIN', 'DEALER_STAFF', 'CUSTOMER'] as const;
@@ -96,6 +98,9 @@ export function App() {
 
               <Route path="/orders" element={<RequireRole roles={["SUPER_ADMIN"]}><PlatformOrdersPage /></RequireRole>} />
               <Route path="/shops" element={<RequireRole roles={["SUPER_ADMIN"]}><PlatformShopsPage /></RequireRole>} />
+              <Route path="/shop-feedback" element={<RequireRole roles={["SUPER_ADMIN"]}><ShopFeedbackPage /></RequireRole>} />
+              {/* The owner's alone: it puts the shop's name on the public website. */}
+              <Route path="/feedback" element={<RequireRole roles={["DEALER_ADMIN"]}><FeedbackPage /></RequireRole>} />
               <Route path="/enrollment" element={<RequireRole roles={[...STAFF]}><EnrollmentPage /></RequireRole>} />
 
               {/* A customer may read the agreement they signed; only staff may take a signature. */}

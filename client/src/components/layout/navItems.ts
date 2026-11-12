@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Smartphone, Users, CalendarDays, CreditCard, QrCode,
-  KeyRound, Bell, FileSpreadsheet, Settings, Activity, ClipboardList, Store,
+  KeyRound, Bell, FileSpreadsheet, Settings, Activity, ClipboardList, Store, MessageSquareQuote,
 } from 'lucide-react';
 import { UserRole } from '../../types/index.js';
 
@@ -45,6 +45,8 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/notifications', label: 'Notifications', icon: Bell, roles: ALL, group: 'Operations' },
   { to: '/audit-logs', label: 'Audit Logs', icon: Activity, roles: ADMIN, group: 'Administration' },
   { to: '/settings', label: 'Settings', icon: Settings, roles: ADMIN, group: 'Administration' },
+  // The owner's alone: it puts the shop's name on the public website.
+  { to: '/feedback', label: 'Feedback', icon: MessageSquareQuote, roles: ['DEALER_ADMIN'], group: 'Administration' },
 ];
 
 /**
@@ -60,6 +62,7 @@ export const PLATFORM_NAV_ITEMS: NavItem[] = [
   { to: '/orders', label: 'Lock orders', icon: ClipboardList, roles: ['SUPER_ADMIN'], group: 'Platform' },
   { to: '/shops', label: 'Shops', icon: Store, roles: ['SUPER_ADMIN'], group: 'Platform' },
   { to: '/licenses', label: 'Locks sold', icon: KeyRound, roles: ['SUPER_ADMIN'], group: 'Platform' },
+  { to: '/shop-feedback', label: 'Shop feedback', icon: MessageSquareQuote, roles: ['SUPER_ADMIN'], group: 'Platform' },
   { to: '/audit-logs', label: 'Activity log', icon: Activity, roles: ['SUPER_ADMIN'], group: 'Tools' },
 ];
 
