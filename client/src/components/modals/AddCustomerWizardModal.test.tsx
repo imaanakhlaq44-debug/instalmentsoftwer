@@ -415,3 +415,58 @@ describe('the sale form — sending it', () => {
     expect(await screen.findByText(refusal)).toBeInTheDocument();
   });
 });
+
+describe('scanning the IMEI barcode off the box', () => {
+  const stopTrack = vi.fn();
+  const stubCamera = (codes: string[][]) => {
+    let call = 0;
+    class FakeDetector {
+      async detect() {
+        const values = codes[Math.min(call++, codes.length - 1)];
+        return values.map((rawValue) => ({ rawValue }));
+      }
+    }
+    vi.stubGlobal('BarcodeDetector', FakeDetector);
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop: stopTrack }] }) },
+    });
+  };
+
+  beforeEach(() => {
+    stopTrack.mockClear();
+    vi.unstubAllGlobals();
+    Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: undefined });
+  });
+
+  it('fills the IMEI box from the first valid barcode and turns the camera off', async () => {
+    stubCamera([['8806094123456'], ['123456789012345', VALID_IMEI]]);
+    open();
+    await screen.findByText('Sell a phone on installments');
+    fireEvent.click(screen.getByRole('button', { name: 'Scan the IMEI barcode on the box' }));
+    await waitFor(() => expect(screen.getByPlaceholderText('15-digit IMEI')).toHaveValue(VALID_IMEI));
+    expect(stopTrack).toHaveBeenCalled();
+    expect(screen.queryByText(/Point the camera/)).not.toBeInTheDocument();
+  });
+
+  it('ignores barcodes that are not a valid IMEI', async () => {
+    stubCamera([['123456789012345', '8806094123456']]);
+    open();
+    await screen.findByText('Sell a phone on installments');
+    fireEvent.click(screen.getByRole('button', { name: 'Scan the IMEI barcode on the box' }));
+    expect(await screen.findByText(/Point the camera at the IMEI barcode/)).toBeInTheDocument();
+    await new Promise((r) => setTimeout(r, 600));
+    expect(screen.getByPlaceholderText('15-digit IMEI')).toHaveValue('');
+    fireEvent.click(screen.getByRole('button', { name: 'Close camera' }));
+    expect(stopTrack).toHaveBeenCalled();
+  });
+
+  it('says so when the camera scan is not available, and typing still works', async () => {
+    open();
+    await screen.findByText('Sell a phone on installments');
+    fireEvent.click(screen.getByRole('button', { name: 'Scan the IMEI barcode on the box' }));
+    expect(await screen.findByText(/Camera scan does not work on this device/)).toBeInTheDocument();
+    fill(screen.getByPlaceholderText('15-digit IMEI'), VALID_IMEI);
+    expect(screen.getByPlaceholderText('15-digit IMEI')).toHaveValue(VALID_IMEI);
+  });
+});
