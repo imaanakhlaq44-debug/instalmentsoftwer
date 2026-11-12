@@ -8,7 +8,8 @@ tells the server the truth either way.
 Kotlin, minSdk 26, no Compose, no HTTP library. It talks to four endpoints and
 draws a handful of screens (status, lock, enrolment, released); anything larger
 would be weight carried on someone else's phone for no reason. Current version:
-**1.5.1** (`versionCode` 8).
+**1.5.2** in the source (`versionCode` 9), not yet tagged; the latest published
+release is 1.5.1.
 
 ---
 
@@ -203,12 +204,14 @@ your signed agreement allows. It was taken once, and only the shop owner can see
 it. Pay the overdue amount or contact the shop."* The Urdu build carries the
 same text in Urdu (`values-ur/strings.xml`).
 
-**Not wired up on the heartbeat.** In 1.3.0 through 1.5.1, `DpcSync` calls
-`answerLocationRequest` from `enroll()` only. `syncOnce()` — the fifteen-minute
-check-in — saves the policy and never looks at `reportLocation`. A recovery
-request is only ever made for a phone that is already enrolled, so in practice
-the phone does not answer it. Until `syncOnce()` calls it too, treat location
-for recovery as not working on real handsets.
+**1.5.2: answered on the heartbeat.** In 1.3.0 through 1.5.1, `DpcSync`
+called `answerLocationRequest` from `enroll()` only, and a recovery request is
+only ever made for a phone that is already enrolled — so phones on those builds
+never answer it. From 1.5.2 `syncOnce()` answers it too, after applying any
+lock command, so waiting for a fix (up to 30 s per provider) never delays a
+restriction. The report also carries the current FRP status, so it replaces
+the separate FRP follow-up check-in when both are due. This has not been tried
+on a real phone.
 
 ---
 

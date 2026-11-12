@@ -30,7 +30,7 @@ What is left before this is a real product is **proving the signed DPC on real h
 
 Also true, and easy to miss:
 
-- **Location for recovery is not finished on the handset.** The server rules, the contract clause, the dashboard card and the handset's `LocationReporter` all exist and the server side is tested — but in DPC 1.3.0–1.5.1 the code that takes the fix is called only from the enrolment path, never from the periodic check-in. A request made from the dashboard for a phone already in the field therefore stays "waiting for the phone". See [Location for recovery](#location-for-recovery).
+- **Location for recovery does not work on phones running DPC 1.3.0–1.5.1.** Those builds answer a location request only while enrolling, never on the periodic check-in, so a request for a phone in the field stays "waiting for the phone". The source is fixed for **1.5.2** (not yet tagged or released), and phones only get it once that release is published and they update. See [Location for recovery](#location-for-recovery).
 - **The newer handset features are unit-tested, not field-tested.** Key attestation, the integrity signals and FRP read-back all depend on what each OEM's firmware actually does.
 - No SMS aggregator, no WhatsApp, no payment gateway — unchanged, see the table above.
 
@@ -397,12 +397,14 @@ notification each time. Coordinates are left out of every ordinary device
 response and come only from an owner-only endpoint whose every read is logged;
 a fix the server did not ask for is dropped; releasing the phone deletes it.
 
-**What does not work yet.** In the handset app, `DpcSync.enroll()` answers a
-location request and `DpcSync.syncOnce()` — the fifteen-minute heartbeat — does
-not. A request is only ever made for a phone already enrolled, so as the code
-stands in 1.5.1 the dashboard's "Find this phone" waits for an answer the
-phone does not send. The server half is tested (`tests/api/location.test.ts`);
-the round trip from a real phone is not, and this gap is why.
+**Released builds do not answer it.** In DPC 1.3.0–1.5.1, `DpcSync.enroll()`
+answered a location request and `DpcSync.syncOnce()` — the fifteen-minute
+heartbeat — did not. A request is only ever made for a phone already enrolled,
+so on those builds the dashboard's "Find this phone" waits for an answer the
+phone never sends. From **1.5.2** the heartbeat answers it too, after any lock
+command, so a slow fix never delays a restriction. 1.5.2 is in the source but
+not yet tagged, so no phone has it. The server half is tested
+(`tests/api/location.test.ts`); the round trip from a real phone is not.
 
 ---
 
@@ -841,7 +843,7 @@ Two operations deliberately run *after* their transaction commits, because they 
 ## 🗺️ Roadmap
 
 1. **Run the DPC on real handsets.** The app is written, signed and published ([`android/dpc/`](android/dpc/README.md)); the current release is `dpc-v1.5.1` (`almas-sdm-dpc-v1.5.1.apk`), and its release notes carry the two lines of server configuration — `DPC_APK_URL` and `DPC_APK_SIGNATURE_CHECKSUM`. See [android/RELEASE.md](android/RELEASE.md). What is missing is a recorded pass across the Android versions and OEM skins a Pakistani shop actually sells: provisioning by QR from a factory-reset handset, the kiosk lock under each vendor's skin, boot restore, and now also FRP after a recovery wipe, staged restrictions, release on payoff and whether each phone's secure chip attests its IMEI. The signing key can only be created once and cannot be rotated — an APK signed with a different key will not update an installed one, and those handsets are device owner, so the customer cannot factory-reset out of a bad build.
-2. **Finish location for recovery on the handset.** The periodic check-in has to answer `reportLocation`; today only the enrolment path does ([above](#location-for-recovery)). Until then the feature should be treated as not working, whatever the Settings switch says.
+2. **Release DPC 1.5.2 and prove location for recovery on a phone.** The heartbeat now answers `reportLocation` in the source ([above](#location-for-recovery)); tag `dpc-v1.5.2`, point the server at the new APK, and try it on a locked phone before telling a shop the feature works.
 3. **An SMS aggregator account** (Jazz / Telenor / Zong corporate, or Twilio) with a PTA-approved sender mask. A paired phone gets reminders moving today, but a consumer SIM is not a delivery channel for a shop at volume — and a reminder that arrives from a random mobile number is a reminder customers ignore.
 4. **A payment gateway.** JazzCash's hosted checkout is the simplest of the real ones — an HMAC-signed form POST, no OAuth, no SDK — and the blocker is not code but a merchant account, which needs business registration and a bank account. Customers can already report transfers ([above](#-customer-reported-payments)); a gateway removes the manual confirmation, not the capability.
 5. **Deeper client coverage** — guards, auth, the API client, CSV export and pagination are tested; the page components and modals are not.

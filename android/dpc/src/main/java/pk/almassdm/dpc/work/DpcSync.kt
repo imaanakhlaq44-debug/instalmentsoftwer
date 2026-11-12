@@ -124,19 +124,27 @@ class DpcSync(context: Context) {
         OfflineWatchdogWorker.schedule(appContext)
         syncFactoryResetProtection(result.policy)
         syncStagedRestrictions(result.policy)
-        if (prefs.frpStatus != previousFrpStatus || prefs.frpAppliedIds != previousFrpIds) {
+        val frpChanged = prefs.frpStatus != previousFrpStatus || prefs.frpAppliedIds != previousFrpIds
+
+        val command = result.command
+        val commandApplied = if (command != null) {
+            if (applyAndAcknowledge(command.type, result.policy)) command.type else null
+        } else {
+            reconcile(result.policy)
+            null
+        }
+
+        // A recovery request is only ever made for a phone that is already
+        // enrolled, so the heartbeat is where it is answered. After the lock,
+        // so waiting for a fix never delays a restriction. The report carries
+        // the current FRP status too, so it doubles as the FRP follow-up.
+        val locationReported = answerLocationRequest(api, result.policy)
+        if (!locationReported && frpChanged) {
             runCatching { api.checkIn(Telemetry.collect(appContext, prefs)) }
                 .onFailure { Log.w(TAG, "Follow-up FRP telemetry sync failed: ${it.message}") }
         }
 
-        val command = result.command
-        if (command != null) {
-            val applied = applyAndAcknowledge(command.type, result.policy)
-            return Outcome.Synced(result.policy, if (applied) command.type else null)
-        }
-
-        reconcile(result.policy)
-        return Outcome.Synced(result.policy, null)
+        return Outcome.Synced(result.policy, commandApplied)
     }
 
     /**

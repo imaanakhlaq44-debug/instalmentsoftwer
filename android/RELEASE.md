@@ -202,7 +202,7 @@ one.
 | Wipe from the recovery menu | Setup stops at the dealer's Google account; **Re-enroll** and a fresh QR bring it back on the same lock |
 | Let installments fall overdue with staged restrictions on | Outgoing calls/SMS stop at one, the listed apps at two, the lock at three; incoming and emergency calls keep working |
 | Check the device page after enrolment | IMEI matches, no tamper flag, and what the attestation managed (IDs attested or not) |
-| Ask for location on a locked phone | Expected to stay "waiting for the phone" in 1.5.1 — the heartbeat does not answer it yet. Record what happens |
+| Ask for location on a locked phone (1.5.2+) | Within a check-in or two the phone shows the "location shared" notice and the dashboard shows the fix. On 1.5.1 and older it stays "waiting for the phone" |
 | Pay off the plan | The phone shows "This phone is yours" and the app can be uninstalled |
 
 **Cover the range a Pakistani shop actually sells** — an Infinix or Tecno, a
