@@ -18,7 +18,7 @@ This codebase is **not yet a production system**, and the README should not pret
 | Device locking — server | ✅ The DPC API (enroll, check-in, command, acknowledge) is built and tested. See [Device Policy Controller API](#-device-policy-controller-api) |
 | Device locking — handset | ⚠️ **The Android DPC is written, signed and published** (`android/dpc/`) — enrolment, heartbeat, device-owner kiosk lock, honest acknowledgement, boot restore. It builds, its unit tests run in CI, and `dpc-v1.0.0` is a signed release APK on GitHub. **It has not yet been run on a fleet of real phones.** The release key exists and cannot be rotated, so every later build has to be signed with it. What remains is proving the app across the Android versions and OEM skins a Pakistani shop actually sells. Runbook: [android/RELEASE.md](android/RELEASE.md) |
 | Customer consent | ✅ **A device cannot be locked without a signed agreement.** Every financed sale drafts a bilingual contract; the customer signs it on screen; the lock refuses on anything unsigned, voided, or whose figures no longer match the plan. See [Consent](#-consent-the-contract-a-lock-rests-on) |
-| SMS delivery | ⚠️ **No aggregator, but messages can move.** A shop can pair a phone of its own and it sends the queue from its SIM ([`android/sms-relay/`](android/README.md)). Nothing is marked `SENT` until that handset reports the SIM accepted it. This is right for a small shop and for testing; volume needs an operator account with a registered sender mask |
+| SMS delivery | ⚠️ **No aggregator, but messages can move.** A shop can pair a phone of its own and it sends the queue from its SIM ([`android/sms-relay/`](android/README.md)). Nothing is marked `SENT` until that handset reports the SIM accepted it. This is right for a small shop and for testing. For volume, an aggregator channel is built ([SMS through an aggregator](#sms-through-an-aggregator)) and switches on once an operator account with a registered sender mask is put in `server/.env`; it has only been tested against a mocked gateway |
 | WhatsApp delivery | ❌ Not connected |
 | Payments | ⚠️ **No gateway, but a customer can report a transfer.** Counter payments work fully; a customer who has sent money by JazzCash/Easypaisa/Raast can submit the transaction ID from home, and the shop confirms it against their own account. Nothing is applied until a person confirms. See [Customer-reported payments](#-customer-reported-payments) |
 | Payment gateways (JazzCash / Easypaisa / Raast) | ❌ Not integrated — that needs a merchant account. The seam where one attaches is in place |
@@ -563,6 +563,42 @@ learn to ignore. This is the right tool for testing, and for a small shop
 messaging its own customers; it is a stopgap, and the roadmap says so.
 
 See [`android/README.md`](android/README.md) for the app itself.
+
+### SMS through an aggregator
+
+For volume and a sender mask customers recognise, the server can also send
+through an SMS gateway account. It is off until `SMS_PROVIDER` is set in
+`server/.env` — every value, including the gateway's own parameter names, is
+documented in [`server/.env.example`](server/.env.example). Two providers ship:
+a generic HTTP one that fits the usual Pakistani corporate/branded gateway (one
+URL, credentials and mask as parameters), and Twilio.
+
+Each shop then chooses, under **Settings → How SMS are sent**:
+
+| Setting | What happens |
+|---|---|
+| Paired phone | As above. The default; nothing changes for a shop that does not choose otherwise. |
+| SMS gateway | The server sends the queue through the gateway. A paired phone is handed nothing. |
+| SMS gateway, then paired phone | The gateway is tried first; a message it gives up on is handed to the phone. |
+
+The same honesty rule applies: **a message is `SENT` only when the gateway
+answers that it accepted it.** A refusal, a timeout or an unreachable gateway
+leaves it unsent with the reason recorded; it is retried after 1 min, 5 min,
+30 min and 2 h (`SMS_MAX_ATTEMPTS`, default 4), then marked `FAILED` — or handed
+to the phone. Many gateways answer HTTP 200 to a refusal, so a reply that reads
+like an error is treated as one; set `SMS_HTTP_SUCCESS_PATTERN` from the
+gateway's documentation to make that exact.
+
+The worker and paired phones share one lock, the message's lease. Whoever holds
+it owns the message, so the two can never both send the same reminder, and a
+late report from a phone cannot put a sent message back on the queue.
+
+Urdu script switches an SMS from 160 characters to 70 (67 per part when split).
+The notifications page shows each message's real SMS count, and the gateway is
+told when a message is Unicode (`SMS_HTTP_UNICODE_PARAMS`).
+
+No real gateway account has been used yet: the providers are tested against a
+mocked HTTP layer. The first live message should be sent to your own number.
 
 ---
 

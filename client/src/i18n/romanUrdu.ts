@@ -714,6 +714,42 @@ export const ROMAN_URDU: Record<string, string> = {
     'Koi SMS gateway ya phone nahin jura. Messages system mein jama ho rahe hain lekin abhi customers tak nahin ja rahe.',
   'No SMS gateway is connected. Until one is, you can pair a phone of your own: it collects queued messages and sends them from its SIM. Fine for a small volume and for testing — a shop sending at scale needs an operator account with a registered sender mask.':
     'Koi SMS gateway nahin jura. Tab tak apna ek phone jor sakte hain: woh jama messages utha kar apni SIM se bhejta hai. Thore messages aur test ke liye theek hai — ziada messages ke liye company ka SMS account chahiye.',
+  // SMS gateway (aggregator) — channel, status and cost
+  'The SMS gateway is sending these messages': 'SMS gateway yeh messages bhej raha hai',
+  'Customers see the sender as:': 'Customer ko bhejne wale ka naam yeh dikhta hai:',
+  '“Sent” means the gateway accepted the message, not that it reached the customer. A refused message is tried again, then shown as failed with the reason.':
+    '“Bheja gaya” ka matlab hai gateway ne message le liya, yeh nahin ke customer tak pohanch gaya. Jo message gateway na le, woh dobara bheja jata hai, phir wajah ke saath “nahin gaya” dikhta hai.',
+  'A message the gateway cannot send is passed to your paired phone. “Sent” means the gateway or the SIM accepted the message, not that it reached the customer.':
+    'Jo message gateway na bhej sake woh aap ke jure hue phone ko de diya jata hai. “Bheja gaya” ka matlab hai gateway ya SIM ne message le liya, yeh nahin ke customer tak pohanch gaya.',
+  'You can change this in Settings, under “How SMS are sent”.':
+    'Yeh aap Settings mein “SMS kaise bheje jayein” se badal sakte hain.',
+  'Your SMS go through the SMS gateway, so a paired phone is not given any messages right now.':
+    'Aap ke SMS gateway se ja rahe hain, is liye jure hue phone ko abhi koi message nahin diya jata.',
+  'Your SMS go through the SMS gateway first. A paired phone only sends what the gateway could not.':
+    'Aap ke SMS pehle gateway se jate hain. Jura hua phone sirf woh bhejta hai jo gateway na bhej saka.',
+  'The SMS gateway is sending these messages. "SENT" means the gateway accepted the message, not that it was delivered.':
+    'SMS gateway yeh messages bhej raha hai. "SENT" ka matlab hai gateway ne message le liya, yeh nahin ke customer tak pohanch gaya.',
+  'The SMS gateway is sending these messages. One the gateway cannot send is passed to your paired phone. "SENT" means the gateway or the SIM accepted the message, not that it was delivered.':
+    'SMS gateway yeh messages bhej raha hai. Jo gateway na bhej sake woh jure hue phone ko de diya jata hai. "SENT" ka matlab hai gateway ya SIM ne message le liya, yeh nahin ke customer tak pohanch gaya.',
+  Sent: 'Bheja gaya',
+  Delivered: 'Pohanch gaya',
+  Failed: 'Nahin gaya',
+  Queued: 'Line mein hai',
+  'Will retry': 'Dobara bheja jayega',
+  'Waiting for paired phone': 'Jure hue phone ka intezar',
+  'via SMS gateway': 'SMS gateway se',
+  'via paired phone': 'jure hue phone se',
+  'Reason:': 'Wajah:',
+  'How SMS are sent': 'SMS kaise bheje jayein',
+  'Paired phone: reminders go from your own SIM, from a mobile number. SMS gateway: they go from the company SMS account under your brand name, and can handle many messages. Gateway, then phone: the gateway is tried first, and your paired phone sends only what the gateway could not.':
+    'Jura hua phone: reminder aap ki apni SIM se, mobile number se jate hain. SMS gateway: company ke SMS account se, aap ki dukaan ke naam se jate hain, aur bohat ziada messages bhej sakta hai. Pehle gateway, phir phone: pehle gateway koshish karta hai, aur jura hua phone sirf woh bhejta hai jo gateway na bhej saka.',
+  'Paired phone (shop SIM)': 'Jura hua phone (dukaan ki SIM)',
+  'SMS gateway (brand name)': 'SMS gateway (dukaan ke naam se)',
+  'SMS gateway, then paired phone': 'Pehle SMS gateway, phir jura hua phone',
+  'No SMS gateway account is set up on this server yet, so only the paired phone can be used.':
+    'Is server par abhi SMS gateway ka account nahin laga, is liye sirf jura hua phone istemal ho sakta hai.',
+  'No SMS gateway account is set up on this server yet. Messages can only go through a paired phone for now.':
+    'Is server par abhi SMS gateway ka account nahin laga. Abhi messages sirf jure hue phone se ja sakte hain.',
   'Initial Down Payment at counter': 'Counter par advance',
   Across: 'Kul',
   pack: 'pack',
@@ -901,6 +937,8 @@ export const ROMAN_URDU: Record<string, string> = {
  */
 export const ROMAN_URDU_PATTERNS: Array<[RegExp, string]> = [
   [/^(\d+) of (\d+) Months Paid$/, '$2 mein se $1 mahine ada'],
+  [/^(\d+) SMS · (\d+) characters · Urdu script$/, '$1 SMS · $2 huroof · Urdu likhai'],
+  [/^(\d+) SMS · (\d+) characters$/, '$1 SMS · $2 huroof'],
   [/^(\d+) Days Prior$/, '$1 din pehle'],
   [/^(\d+) Days$/, '$1 din'],
   [/^(\d+) days?$/, '$1 din'],

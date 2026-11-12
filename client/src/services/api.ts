@@ -406,6 +406,9 @@ export class ApiService {
         /** True only when a paired phone has actually been heard from recently. */
         deliveryEnabled: boolean;
         deliveryNote: string;
+        /** The channel this shop's SMS actually take right now. */
+        smsChannel?: 'PHONE' | 'AGGREGATOR' | 'AGGREGATOR_THEN_PHONE';
+        aggregator?: { configured: boolean; provider?: string; senderMask?: string };
         relays: {
           id: string;
           name: string;
