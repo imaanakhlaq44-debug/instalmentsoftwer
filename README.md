@@ -400,9 +400,25 @@ restriction plainly, and states its limits just as plainly:
 > messages, calls, photographs or contacts, does not track the handset's
 > location, and cannot erase any data on it.
 
-Those sentences are load-bearing. They are what the DPC actually does and does
-not do — the app requests no location permission, no `READ_SMS`, and implements
-no wipe command — so the document and the software describe the same product.
+Those sentences are load-bearing: the document and the software have to describe
+the same product. The app requests no `READ_SMS`, reads no contacts or photos,
+and implements no wipe command. That quotation is terms v1.0; what the app does
+has grown since, and each addition went into the terms before the server would
+act on it:
+
+| The app also… | Disclosed from | Refused for older agreements by |
+|---|---|---|
+| restricts itself after days offline | v1.1 | `OfflineLockPolicy.ts` |
+| restricts calls/SMS, then apps, in stages | v1.2 | `StagedRestrictions.ts` |
+| reports one location to recover a locked or overdue phone | v1.3 | `LocationService.ts` |
+| reports IMEI/serial and root/bootloader state, and can be locked for tampering with nothing overdue | v1.4 | `DisclosurePolicy.ts` |
+| is tied to the shop's Google account after a wipe (FRP) | v1.4 | `DisclosurePolicy.ts` |
+
+So the app *does* now hold the location permission — granted by the device
+owner for a single fix and revoked straight after — and v1.4 qualifies the
+"does not track the handset's location" sentence accordingly. The same audit is
+written up for a lawyer in [docs/legal-review-brief.md](docs/legal-review-brief.md),
+including the gaps that remain.
 
 ### Why the terms are versioned
 
@@ -452,12 +468,15 @@ through it too. It refuses on:
 
 ### The printed copy
 
-The dashboard prints the agreement to A4 through the browser, which is also what
-makes the Urdu render correctly — every Node PDF library available here lacks
-proper Arabic text shaping, and half-shaped Urdu on a document somebody is
-signing is worse than no Urdu at all. A server-rendered PDF would need headless
-Chrome; that is a dependency worth adding when contracts need to be emailed, not
-before.
+The dashboard prints the agreement to A4 through the browser, and
+`GET /api/contracts/:id/pdf` returns the same document rendered on the server —
+same access rules as reading it. Both go through a browser engine, because every
+Node PDF library available here lacks proper Arabic text shaping, and half-shaped
+Urdu on a document somebody is signing is worse than no Urdu at all. The server
+side is headless Chromium driven by `puppeteer-core`
+([`ContractPdfService.ts`](server/src/services/ContractPdfService.ts)), with Noto
+Nastaliq Urdu embedded in the page; the image change that needs is described in
+[deploy/DEPLOY.md](deploy/DEPLOY.md#the-contract-pdf-needs-chromium-in-the-server-image).
 
 ---
 
@@ -606,6 +625,8 @@ committed, then typechecks, tests and builds both halves of the app.
 | `tests/api/contracts.test.ts` | Drafting with the sale, the frozen snapshot, signing, refusing to lock an unsigned or voided agreement, refusing after a genuine restructure through the reschedule endpoint, and *not* refusing when a customer has simply been paying |
 | `tests/api/customer-payments.test.ts` | A reported transfer stays unverified and moves no money, applies on confirmation, cannot name another customer's plan, and the queue's scoping and limits |
 | `tests/api/offline-rule.test.ts` | Who is permitted to restrict themselves and who is refused — no limit, manual locking, an unsigned, voided or pre-v1.1 agreement — the limit never shortening below the signed figure, a self-lock recorded without becoming `LOCKED`, and the clause printed in both languages |
+| `tests/api/disclosure-gating.test.ts` | Terms v1.4: hardware checks, the tamper lock and reset protection printed in both languages; a customer on v1.3 is neither tamper-locked, attested, nor sent the shop's account, and their signals are not stored; v1.3 still renders as signed; emergency calls cannot be switched off |
+| `tests/api/contract-pdf.test.ts` | The PDF endpoint's access rules (no session, own shop, own customer, another customer, another dealership) checked before anything renders; what the document carries; escaping; and a real Chromium render where one is installed |
 | `tests/api/licenses.test.ts` | A lock is spent once at enrolment and stamped with the IMEI, re-enrolment spends nothing, a paid-off device never returns its lock, running out stops the counter but leaves the QR valid, and only the platform can mint stock |
 
 **Client** (`client/src/**/*.test.ts(x)`)
@@ -698,5 +719,5 @@ Two operations deliberately run *after* their transaction commits, because they 
 3. **An SMS aggregator account** (Jazz / Telenor / Zong corporate, or Twilio) with a PTA-approved sender mask. A paired phone gets reminders moving today, but a consumer SIM is not a delivery channel for a shop at volume — and a reminder that arrives from a random mobile number is a reminder customers ignore.
 4. **A payment gateway.** JazzCash's hosted checkout is the simplest of the real ones — an HMAC-signed form POST, no OAuth, no SDK — and the blocker is not code but a merchant account, which needs business registration and a bank account. Customers can already report transfers ([above](#-customer-reported-payments)); a gateway removes the manual confirmation, not the capability.
 5. **Deeper client coverage** — guards, auth, the API client, CSV export and pagination are tested; the page components and modals are not.
-6. **Legal review of the contract terms** — the agreement is written, bilingual, signed and enforced ([Consent](#-consent-the-contract-a-lock-rests-on)), but it was drafted by engineers. A Pakistani lawyer should read it before a shop relies on it — clause 4 of terms v1.1, which permits a handset to restrict itself when it cannot reach the shop, is the paragraph to put in front of them first. A server-rendered PDF is the other open piece, and needs headless Chrome for the Urdu to shape correctly.
+6. **Legal review of the contract terms** — the agreement is written, bilingual, signed and enforced ([Consent](#-consent-the-contract-a-lock-rests-on)), but it was drafted by engineers. A Pakistani lawyer should read it before a shop relies on it — clause 4, and within it the paragraph (from terms v1.1) that permits a handset to restrict itself when it cannot reach the shop, is what to put in front of them first. The brief to hand over is [docs/legal-review-brief.md](docs/legal-review-brief.md).
 7. Urdu localisation and RTL for the dashboard itself, PWA offline mode.

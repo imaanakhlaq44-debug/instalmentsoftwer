@@ -98,7 +98,9 @@ async function buildPolicyView(device: Device): Promise<DevicePolicyView> {
   return {
     locked,
     lockMessage: device.status === 'LOCKED' ? device.lockMessage ?? device.lockReason ?? null : null,
-    emergencyCallsAllowed: policy.emergencyCallsAllowed !== false,
+    // Not a setting. Every version of the agreement promises that a restricted
+    // handset still makes emergency calls, so no stored policy can say otherwise.
+    emergencyCallsAllowed: true,
     paymentMethods: policy.paymentMethodsOnLock ?? ['CASH'],
     amountDue: overdue.reduce((sum, i) => sum + amountOutstanding(i), 0),
     nextDueDate: unpaid[0]?.dueDate ?? null,

@@ -231,3 +231,18 @@ describe('factory-reset protection', () => {
     expect((await checkIn(credential)).policy.frpAccountIds).toEqual([]);
   });
 });
+
+describe('emergency calls', () => {
+  it('cannot be switched off by a shop, because every agreement promises them', async () => {
+    const saved = await as(ACCOUNTS.dealerAdmin).put('/api/settings/policy').send({ emergencyCallsAllowed: false });
+    expect(saved.status).toBe(200);
+    expect(saved.body.policy.emergencyCallsAllowed).toBe(true);
+
+    // Even a policy row written some other way does not reach the handset.
+    const policy = (await repo.devicePolicies.findByDealer('dealer-1'))!;
+    await repo.devicePolicies.update(policy.id, { emergencyCallsAllowed: false });
+
+    const { credential } = await enrolledHandset();
+    expect((await checkIn(credential)).policy.emergencyCallsAllowed).toBe(true);
+  });
+});

@@ -104,7 +104,9 @@ const policySchema = z
       .transform((ids) => [...new Set(ids)])
       .optional(),
     customerReminderEnabled: z.boolean().optional(),
-    emergencyCallsAllowed: z.boolean().optional(),
+    // Accepted so an older dashboard can still save, and always stored as
+    // true: clause 4 of every terms version promises emergency calls.
+    emergencyCallsAllowed: z.boolean().transform(() => true).optional(),
     paymentMethodsOnLock: z.array(z.string().trim().max(30)).max(10).optional(),
 
     lateFeeEnabled: z.boolean().optional(),
