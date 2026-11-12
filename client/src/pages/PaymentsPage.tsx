@@ -4,8 +4,10 @@ import { useAuth } from '../context/AuthContext.js';
 import { Pagination } from '../components/ui/Pagination.js';
 import { ExportButton } from '../components/ui/ExportButton.js';
 import { ReceiptModal } from '../components/modals/ReceiptModal.js';
+import { WhatsAppButton } from '../components/whatsapp/WhatsAppButton.js';
 import { usePagination } from '../hooks/usePagination.js';
 import { SubmitPaymentCard } from '../components/payments/SubmitPaymentCard.js';
+import { PayNowCard } from '../components/payments/PayNowCard.js';
 import { PendingSubmissions } from '../components/payments/PendingSubmissions.js';
 import { csvMoney, csvDateTime, CsvColumn } from '../utils/csv.js';
 import {
@@ -174,6 +176,7 @@ export const PaymentsPage: React.FC = () => {
       </div>
 
       {/* A customer reports what they have sent; staff work through what has been reported. */}
+      {isCustomer && <PayNowCard onPaid={loadData} />}
       {isCustomer && <SubmitPaymentCard onSubmitted={loadData} />}
       {isStaff && <PendingSubmissions onVerified={loadData} />}
 
@@ -190,7 +193,7 @@ export const PaymentsPage: React.FC = () => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-start border-collapse">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-bold text-slate-600 uppercase tracking-wider">
                   <th className="py-3 px-4">Receipt Ref #</th>
@@ -200,11 +203,15 @@ export const PaymentsPage: React.FC = () => {
                   <th className="py-3 px-4">Timestamp</th>
                   <th className="py-3 px-4">Verification Status</th>
                   <th className="py-3 px-4">Notes</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-3 px-4 text-end">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
-                {payments.map((p) => (
+                {payments.map((p) => {
+                  // A reversal leaves the payment as REFUNDED, not VERIFIED. It is
+                  // finished business: never "pending", never verifiable again.
+                  const isReversed = Boolean(p.reversedAt) || p.status === 'REFUNDED';
+                  return (
                   <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
                       {p.referenceNumber}
@@ -227,19 +234,19 @@ export const PaymentsPage: React.FC = () => {
                     <td className="py-3.5 px-4">
                       <span
                         className={`status-pill text-micro ${
-                          p.status === 'VERIFIED' ? 'status-active' : 'status-pending'
+                          isReversed ? 'status-overdue' : p.status === 'VERIFIED' ? 'status-active' : 'status-pending'
                         }`}
                       >
-                        {p.status === 'VERIFIED' ? 'Verified ✓' : 'Pending Verification'}
+                        {isReversed ? 'Reversed' : p.status === 'VERIFIED' ? 'Verified ✓' : 'Pending Verification'}
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-slate-500 text-xs max-w-xs truncate">
                       {p.notes || 'Monthly installment'}
                     </td>
-                    <td className="py-3.5 px-4 text-right">
+                    <td className="py-3.5 px-4 text-end">
                       {/* Verification releases money against the plan and can
                           trigger an auto-unlock, so it stays with the owner. */}
-                      {p.status !== 'VERIFIED' ? (
+                      {p.status !== 'VERIFIED' && !isReversed ? (
                         isDealerAdmin ? (
                           <button
                             onClick={() => handleVerify(p.id)}
@@ -259,8 +266,16 @@ export const PaymentsPage: React.FC = () => {
                           >
                             Receipt
                           </button>
+                          {isStaff && !p.reversedAt && p.customerId && (
+                            <WhatsAppButton
+                              customerId={p.customerId}
+                              customerName={p.customerName ?? 'customer'}
+                              paymentId={p.id}
+                              kind="PAYMENT_RECEIVED"
+                            />
+                          )}
                           {/* Reversal moves real money back — owner only. */}
-                          {isDealerAdmin && !p.reversedAt && (
+                          {isDealerAdmin && !isReversed && (
                             <button
                               onClick={() => {
                                 setReverseTarget(p);
@@ -272,14 +287,15 @@ export const PaymentsPage: React.FC = () => {
                               Reverse
                             </button>
                           )}
-                          {p.reversedAt && (
+                          {isReversed && (
                             <span className="text-xs text-rose-600 font-semibold">Reversed</span>
                           )}
                         </div>
                       )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
             <Pagination

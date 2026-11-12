@@ -229,6 +229,31 @@ Migrations run automatically as the server container starts. Take a backup first
 — `./deploy/backup.sh` — because a migration is the one kind of change that
 cannot simply be rolled back by starting the old image.
 
+### The contract PDF needs Chromium in the server image
+
+"Download PDF" on an agreement is rendered by headless Chromium inside the
+`server` container, because nothing else available shapes Urdu correctly. The
+image change is one line in `server/Dockerfile` — `apk add chromium
+ttf-liberation` in the runtime stage — and the next `up -d --build` above picks
+it up. Nothing else changes: no new container, no new port, no new variable
+(`PDF_CHROMIUM_PATH` exists only for a Chromium installed somewhere unusual).
+
+What it costs: about 500 MB more image, a longer first build, and a few hundred
+megabytes of memory for the second or two a PDF takes. Renders are queued one
+at a time, so a 4 GB VPS is not at risk. The Urdu font is not a system package;
+it ships inside `node_modules` and is embedded in each document.
+
+If Chromium is absent or will not start, the endpoint answers 503 with a message
+saying so and the dashboard's **Print / Save as PDF** button — which uses the
+browser on the person's own device — still works. To check after a deploy:
+
+```bash
+docker compose -f deploy/docker-compose.yml --env-file deploy/.env exec server chromium-browser --version
+```
+
+> This image change has been built by CI only. It has not been run on a real
+> VPS yet — download one agreement and open it before telling a shop it works.
+
 ## Watching it
 
 ```bash

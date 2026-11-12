@@ -1,7 +1,9 @@
 import cron from 'node-cron';
 import { OverdueEngine } from './OverdueEngine.js';
+import { SmsAggregatorService } from './SmsAggregatorService.js';
 import { repo } from '../db/repositories/index.js';
 import { config } from '../config.js';
+import { WhatsAppDispatchService } from './whatsapp/WhatsAppDispatchService.js';
 
 export interface SchedulerHandle {
   stop(): void;
@@ -22,7 +24,23 @@ const OVERDUE_CRON = '30 0 * * *';
 /** Hourly cleanup of expired enrollment QR tokens. */
 const TOKEN_CLEANUP_CRON = '5 * * * *';
 
+/** Every two minutes, and only when WhatsApp Cloud API credentials are configured. */
+const WHATSAPP_CRON = '*/2 * * * *';
+
 const TIMEZONE = 'Asia/Karachi';
+
+async function dispatchWhatsApp(): Promise<void> {
+  try {
+    const result = await WhatsAppDispatchService.dispatchQueued();
+    if (result.claimed > 0) {
+      console.log(
+        `[scheduler] WhatsApp: ${result.sent} accepted, ${result.requeued} back on the queue, ${result.failed} failed.`
+      );
+    }
+  } catch (err) {
+    console.error('[scheduler] WhatsApp dispatch failed:', err);
+  }
+}
 
 async function runOverdueEvaluation(): Promise<void> {
   const startedAt = Date.now();
@@ -54,6 +72,24 @@ async function expireStaleTokens(): Promise<void> {
   }
 }
 
+/**
+ * Sends waiting SMS through the aggregator. A no-op on a server with no
+ * aggregator account, so it costs nothing where only paired phones are used.
+ */
+async function drainSmsQueue(): Promise<void> {
+  try {
+    const r = await SmsAggregatorService.drainOnce();
+    if (r.claimed > 0) {
+      console.log(
+        `[scheduler] SMS aggregator: sent ${r.sent}, retrying ${r.retried}, failed ${r.failed}, ` +
+          `handed to paired phone ${r.handedToPhone}.`
+      );
+    }
+  } catch (err) {
+    console.error('[scheduler] SMS aggregator pass failed:', err);
+  }
+}
+
 export function startScheduler(): SchedulerHandle {
   if (config.isTest) {
     return { stop: () => {}, runAllNow: async () => {} };
@@ -65,6 +101,27 @@ export function startScheduler(): SchedulerHandle {
   console.log(`[scheduler] Overdue evaluation scheduled at "${OVERDUE_CRON}" (${TIMEZONE}).`);
   console.log(`[scheduler] Enrollment token cleanup scheduled at "${TOKEN_CLEANUP_CRON}" (${TIMEZONE}).`);
 
+  const aggregator = SmsAggregatorService.describe();
+  const smsTimer = aggregator.configured
+    ? setInterval(() => void drainSmsQueue(), config.sms.pollSeconds * 1000)
+    : undefined;
+  smsTimer?.unref();
+  console.log(
+    aggregator.configured
+      ? `[scheduler] SMS aggregator "${aggregator.provider}" draining the queue every ${config.sms.pollSeconds}s` +
+          (aggregator.senderMask ? ` as "${aggregator.senderMask}".` : '.')
+      : '[scheduler] No SMS aggregator configured — reminders go through paired phones only.'
+  );
+
+  const whatsappJob = WhatsAppDispatchService.isEnabled()
+    ? cron.schedule(WHATSAPP_CRON, () => void dispatchWhatsApp(), { timezone: TIMEZONE })
+    : undefined;
+  console.log(
+    whatsappJob
+      ? `[scheduler] WhatsApp Cloud API delivery is ON — queue checked at "${WHATSAPP_CRON}".`
+      : '[scheduler] WhatsApp Cloud API delivery is OFF (no WHATSAPP_CLOUD_* credentials). Click-to-WhatsApp still works.'
+  );
+
   // Catch up on anything missed while the server was down, without blocking boot.
   setTimeout(() => {
     void expireStaleTokens();
@@ -75,11 +132,15 @@ export function startScheduler(): SchedulerHandle {
     stop() {
       overdueJob.stop();
       cleanupJob.stop();
+      if (smsTimer) clearInterval(smsTimer);
+      whatsappJob?.stop();
       console.log('[scheduler] Background jobs stopped.');
     },
     async runAllNow() {
       await expireStaleTokens();
       await runOverdueEvaluation();
+      await drainSmsQueue();
+      await dispatchWhatsApp();
     },
   };
 }

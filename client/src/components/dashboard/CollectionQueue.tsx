@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Phone, ChevronRight, PartyPopper, Lock } from 'lucide-react';
 import { money, overdueLabel } from '../../utils/format.js';
 import { EmptyState, Rows } from '../ui/Card.js';
+import { WhatsAppButton } from '../whatsapp/WhatsAppButton.js';
 
 /**
  * Who to call today.
@@ -133,7 +134,7 @@ export const CollectionQueue: React.FC<{ rows: OverdueRow[]; limit?: number }> =
             </p>
           </div>
 
-          <div className="shrink-0 text-right">
+          <div className="shrink-0 text-end">
             <p className="text-body font-medium text-ink-900 tabular">{money(c.total)}</p>
             <p className="text-micro normal-case tracking-normal text-ink-400">outstanding</p>
           </div>
@@ -147,6 +148,12 @@ export const CollectionQueue: React.FC<{ rows: OverdueRow[]; limit?: number }> =
             >
               <Phone className="h-4 w-4" aria-hidden="true" />
             </a>
+            <WhatsAppButton
+              variant="icon"
+              customerId={c.customerId}
+              customerName={c.customerName}
+              kind="OVERDUE"
+            />
             <button
               type="button"
               onClick={() => navigate(`/devices/${c.deviceId}`)}
@@ -154,7 +161,7 @@ export const CollectionQueue: React.FC<{ rows: OverdueRow[]; limit?: number }> =
               title="Open device"
               aria-label={`Open ${c.deviceName}`}
             >
-              <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              <ChevronRight className="rtl:rotate-180 h-4 w-4" aria-hidden="true" />
             </button>
           </div>
         </li>

@@ -7,14 +7,14 @@
  * filtered with a JavaScript predicate; doing that against a database would be
  * strictly worse, so no method here fetches a table to narrow it afterwards.
  */
-import { Tx } from '../prisma.js';
+import { prisma, Tx } from '../prisma.js';
 import { makeRepository, delegate, toSkipTake, Page, PageArgs } from './base.js';
 import { toDomainList } from '../mappers.js';
 import {
   Dealer, User, Customer, Device, EnrollmentToken, InstallmentPlan, Installment,
   Payment, Transaction, DeviceActionLog, AuditLog, DevicePolicy,
-  LicensePack, DeviceLicense, DeviceLicenseStatus,
-  Notification, NotificationTemplate, SmsRelay, Contract,
+  LicensePack, DeviceLicense, DeviceLicenseStatus, LockOrder, PlatformSetting,
+  Notification, NotificationTemplate, SmsRelay, Contract, HandsetTest, GatewayCheckout,
 } from '../../types/index.js';
 
 export type { Page, PageArgs };
@@ -135,6 +135,11 @@ export const devicePolicies = {
     if (dealerIds.length === 0) return Promise.resolve([]);
     return this.findMany({ where: { dealerId: { in: dealerIds } } }, tx);
   },
+
+  /** The shops that have chosen to send through the aggregator, with or without a phone behind it. */
+  findUsingAggregator(tx?: Tx): Promise<DevicePolicy[]> {
+    return this.findMany({ where: { smsChannel: { in: ['AGGREGATOR', 'AGGREGATOR_THEN_PHONE'] } } }, tx);
+  },
 };
 
 export const licensePacks = {
@@ -144,6 +149,23 @@ export const licensePacks = {
     return this.findMany({ where: { dealerId }, orderBy: { createdAt: 'desc' } }, tx);
   },
 };
+
+export const lockOrders = {
+  ...makeRepository<LockOrder>('lockOrder'),
+
+  /**
+   * Compare-and-set: moves an order out of PENDING only if it is still there.
+   *
+   * Returns false when somebody else decided it first. Two approvals racing for
+   * the same order therefore cannot both go on to mint a pack — the second one
+   * blocks on the row, then finds it no longer PENDING.
+   */
+  async decide(id: string, updates: Partial<LockOrder>, tx?: Tx): Promise<boolean> {
+    return (await this.updateMany({ id, status: 'PENDING' }, updates, tx)) === 1;
+  },
+};
+
+export const platformSettings = makeRepository<PlatformSetting>('platformSetting');
 
 export const deviceLicenses = {
   ...makeRepository<DeviceLicense>('deviceLicense'),
@@ -792,19 +814,50 @@ export const notifications = {
    * The ids are chosen first so the lease can be applied to exactly that set —
    * `updateMany` cannot express "the oldest twenty" on its own.
    */
-  async claimForRelay(
+  claimForRelay(
     dealerId: string,
     limit: number,
     leaseUntil: Date,
+    tx?: Tx,
+    /**
+     * For a shop on "aggregator, then phone": the phone may only collect what
+     * the aggregator has explicitly handed over. Everything else on the queue
+     * is the aggregator's to send, and handing it out here as well would text
+     * the customer twice.
+     */
+    options: { handedOverOnly?: boolean } = {}
+  ): Promise<Notification[]> {
+    return this.claimQueued(
+      { channel: 'SMS', dealerId, limit, leaseUntil, handedOverOnly: options.handedOverOnly },
+      tx
+    );
+  },
+
+  /**
+   * The same compare-and-set claim for any channel. With no `dealerId` it
+   * claims across every dealership, which is what a platform-wide sender (the
+   * WhatsApp Cloud API) needs and a shop's own paired phone must never get.
+   */
+  async claimQueued(
+    args: {
+      channel: Notification['channel'];
+      dealerId?: string;
+      limit: number;
+      leaseUntil: Date;
+      handedOverOnly?: boolean;
+    },
     tx?: Tx
   ): Promise<Notification[]> {
+    const { channel, dealerId, limit, leaseUntil } = args;
     const now = new Date();
+    const handedOver = args.handedOverOnly ? { phoneFallbackAt: { not: null } } : {};
 
     const candidates = (await delegate('notification', tx).findMany({
       where: {
-        dealerId,
-        channel: 'SMS',
+        ...(dealerId ? { dealerId } : {}),
+        channel,
         status: 'QUEUED',
+        ...handedOver,
         // Free, or held by a relay that stopped answering.
         OR: [{ leaseUntil: null }, { leaseUntil: { lt: now } }],
       },
@@ -819,6 +872,7 @@ export const notifications = {
       where: {
         id: { in: ids },
         status: 'QUEUED',
+        ...handedOver,
         OR: [{ leaseUntil: null }, { leaseUntil: { lt: now } }],
       },
       data: { leaseUntil, attempts: { increment: 1 } },
@@ -832,6 +886,64 @@ export const notifications = {
     })) as Record<string, unknown>[];
 
     return toDomainList<Notification>(claimed);
+  },
+
+  /**
+   * Claims queued SMS for the aggregator worker, across the given dealerships.
+   *
+   * It takes the same lease a paired phone takes, on the same column, so the
+   * two senders exclude each other: a row a phone is holding is not free, and
+   * a row claimed here is not free to a phone. It never touches a message that
+   * has been handed over to the phone, nor one still waiting out its backoff.
+   *
+   * One statement, so the rows returned are exactly the rows won: the inner
+   * SELECT locks its candidates and skips any a concurrent claim already
+   * holds, which is what keeps two server processes from both sending a text.
+   */
+  async claimForAggregator(
+    dealerIds: string[],
+    limit: number,
+    leaseUntil: Date,
+    maxAttempts: number
+  ): Promise<Notification[]> {
+    if (dealerIds.length === 0) return [];
+
+    const won = await prisma.$queryRaw<{ id: string }[]>`
+      UPDATE "notifications"
+         SET "lease_until" = ${leaseUntil},
+             "aggregator_attempts" = "aggregator_attempts" + 1
+       WHERE "id" IN (
+               SELECT "id"
+                 FROM "notifications"
+                WHERE "dealer_id" = ANY(${dealerIds}::text[])
+                  AND "channel" = 'SMS'
+                  AND "status" = 'QUEUED'
+                  AND "phone_fallback_at" IS NULL
+                  AND "aggregator_attempts" < ${maxAttempts}
+                  AND ("lease_until" IS NULL OR "lease_until" < NOW())
+                  AND ("next_attempt_at" IS NULL OR "next_attempt_at" <= NOW())
+                ORDER BY "created_at" ASC
+                LIMIT ${limit}
+                  FOR UPDATE SKIP LOCKED
+             )
+      RETURNING "id"`;
+
+    if (won.length === 0) return [];
+    return this.findMany({ where: { id: { in: won.map((r) => r.id) } }, orderBy: { createdAt: 'asc' } });
+  },
+
+  /**
+   * Gives a shop's waiting SMS a clean start on a newly chosen channel.
+   *
+   * Without this a message the aggregator had handed to the phone would be
+   * stranded when the shop switches to "aggregator only" — queued for ever,
+   * with nobody allowed to collect it.
+   */
+  resetRoutingForDealer(dealerId: string, tx?: Tx): Promise<{ count: number }> {
+    return delegate('notification', tx).updateMany({
+      where: { dealerId, channel: 'SMS', status: 'QUEUED' },
+      data: { aggregatorAttempts: 0, nextAttemptAt: null, phoneFallbackAt: null },
+    });
   },
 };
 
@@ -870,7 +982,63 @@ export const smsRelays = {
   },
 };
 
+export interface HandsetTestFilters {
+  dealerId: string | null;
+  brand?: string;
+  androidVersion?: string;
+  published?: boolean;
+}
+
+/** Handset compatibility tests: the lock app proven, or not, on a real phone. */
+export const handsetTests = {
+  ...makeRepository<HandsetTest>('handsetTest'),
+
+  list(args: HandsetTestFilters & PageArgs, tx?: Tx) {
+    const where: Record<string, unknown> = { ...dealerScope(args.dealerId) };
+    if (args.brand) where.brand = { equals: args.brand, mode: 'insensitive' };
+    if (args.androidVersion) where.androidVersion = args.androidVersion;
+    if (args.published !== undefined) where.published = args.published;
+
+    return this.paginate({ where, orderBy: [{ testedAt: 'desc' }, { id: 'asc' }], ...args }, tx);
+  },
+
+  /** The values the filter dropdowns offer — only ones this caller can see. */
+  async facets(dealerId: string | null, tx?: Tx): Promise<{ brands: string[]; androidVersions: string[] }> {
+    const where = dealerScope(dealerId);
+    const d = delegate('handsetTest', tx);
+    const [brands, versions] = await Promise.all([
+      d.findMany({ where, distinct: ['brand'], select: { brand: true }, orderBy: { brand: 'asc' } }),
+      d.findMany({ where, distinct: ['androidVersion'], select: { androidVersion: true } }),
+    ]);
+    return {
+      brands: brands.map((r) => String(r.brand)),
+      androidVersions: versions
+        .map((r) => String(r.androidVersion))
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true })),
+    };
+  },
+
+  /** What the public site may show. Selects four columns, so nothing else can leak. */
+  async findPublished(tx?: Tx): Promise<Pick<HandsetTest, 'brand' | 'model' | 'androidVersion' | 'overallResult'>[]> {
+    const rows = await delegate('handsetTest', tx).findMany({
+      where: { published: true },
+      select: { brand: true, model: true, androidVersion: true, overallResult: true },
+      orderBy: [{ brand: 'asc' }, { model: 'asc' }, { androidVersion: 'asc' }],
+    });
+    return rows as unknown as Pick<HandsetTest, 'brand' | 'model' | 'androidVersion' | 'overallResult'>[];
+  },
+};
+
 export const notificationTemplates = makeRepository<NotificationTemplate>('notificationTemplate');
+
+/** Hosted-checkout attempts at a payment gateway — see `services/gateway`. */
+export const gatewayCheckouts = {
+  ...makeRepository<GatewayCheckout>('gatewayCheckout'),
+
+  findByReference(reference: string, tx?: Tx): Promise<GatewayCheckout | undefined> {
+    return this.findFirst({ reference }, tx);
+  },
+};
 
 // ---------------------------------------------------------------------------
 
@@ -889,11 +1057,15 @@ export const repo = {
   auditLogs,
   licensePacks,
   deviceLicenses,
+  lockOrders,
+  platformSettings,
   devicePolicies,
   notifications,
   notificationTemplates,
   smsRelays,
   contracts,
+  handsetTests,
+  gatewayCheckouts,
 };
 
 /**

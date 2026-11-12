@@ -87,6 +87,14 @@ real address.
 Every run logs the value it built with, so a deploy that published the wrong
 button is visible in the log rather than only in the page.
 
+The same variable switches on the **Tested phones** section of the handset-app
+page. That list is not written into the site: it is read in the visitor's
+browser from the dashboard's public endpoint (`/api/public/tested-phones`), so
+a phone appears the moment a super admin ticks **Show on website** on a phone
+test, with no rebuild. While `SITE_APP_URL` is unset the section is left out of
+the build, and once it is set the section still stays hidden until at least one
+phone test has been published.
+
 To see either build locally:
 
 ```bash
@@ -133,6 +141,42 @@ of the server — **Dashboard → Cache → Clear cache** empties that one. The 
 own log lists every file it sent, so start there before suspecting either.
 
 ---
+
+## Testimonials
+
+The home page's testimonials section is published only when there are real
+ones. The samples in `src/pages/index.html` are never published; while the
+data file is empty the build leaves the whole section out.
+
+A real one comes into being like this:
+
+1. A shop owner opens **Feedback** in the dashboard, writes a quote, picks a
+   rating, the name and city to show, and ticks the consent box.
+2. The super admin opens **Shop feedback** and approves it. The platform cannot
+   edit the words — only approve, reject with a note, or unpublish.
+3. The API then lists it at `GET /api/public/testimonials` (quote, name, city,
+   rating, language — nothing else).
+4. The site build prints whatever is in `src/data/testimonials.json`.
+
+Step 4 is build-time on purpose, not a fetch from the visitor's browser: the
+page stays plain HTML that loads with the API down and without JavaScript.
+
+**Automatic (once the API is hosted):** set the repository variable
+`SITE_API_URL` to the API's address. Every deploy then pulls the approved list
+first, and a nightly run does the same, so an approval, an unpublish or a
+shop's withdrawal reaches the site within a day — or at once if you run the
+*Deploy site* workflow by hand. If the API cannot be reached the deploy stops
+and the site stays as it was.
+
+**By hand (before that):**
+
+```bash
+TESTIMONIALS_API_URL=https://<api-address> npm --prefix site run testimonials:pull
+git add site/src/data/testimonials.json && git commit -m "site: update testimonials" && git push
+```
+
+Do not type testimonials into the data file yourself. It should only ever hold
+what the endpoint returned.
 
 ## Uploading by hand, if you ever have to
 

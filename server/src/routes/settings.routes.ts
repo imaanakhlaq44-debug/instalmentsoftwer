@@ -5,6 +5,9 @@ import { repo } from '../db/repositories/index.js';
 import { DevicePolicy, Dealer } from '../types/index.js';
 import { AuditService } from '../services/AuditService.js';
 import { LicenseService } from '../services/LicenseService.js';
+import { SmsAggregatorService } from '../services/SmsAggregatorService.js';
+import { WhatsAppDispatchService } from '../services/whatsapp/WhatsAppDispatchService.js';
+import { WHATSAPP_LANGUAGES } from '../services/whatsapp/templates.js';
 import { toPublicUser } from '../services/AuthService.js';
 import { DEFAULT_POLICY } from '../services/InstallmentMath.js';
 import {
@@ -56,7 +59,16 @@ settingsRouter.get(
     repo.users.findMany({ where: { dealerId: dealer.id }, orderBy: { createdAt: 'desc' } }),
   ]);
 
-  res.json({ dealer, policy, licences, staffUsers: staff.map(toPublicUser) });
+  res.json({
+    dealer,
+    policy,
+    licences,
+    staffUsers: staff.map(toPublicUser),
+    // Whether the aggregator choices under "SMS channel" can be picked at all.
+    smsAggregator: SmsAggregatorService.describe(),
+    /** Whether the platform can send through the WhatsApp Business Cloud API at all. */
+    whatsappCloudEnabled: WhatsAppDispatchService.isEnabled(),
+  });
   })
 );
 
@@ -104,7 +116,18 @@ const policySchema = z
       .transform((ids) => [...new Set(ids)])
       .optional(),
     customerReminderEnabled: z.boolean().optional(),
-    emergencyCallsAllowed: z.boolean().optional(),
+    /**
+     * Which way this shop's SMS go out: its paired phone, the aggregator, or
+     * the aggregator with the phone behind it.
+     */
+    smsChannel: z.enum(['PHONE', 'AGGREGATOR', 'AGGREGATOR_THEN_PHONE']).optional(),
+    // Accepted so an older dashboard can still save, and always stored as
+    // true: clause 4 of every terms version promises emergency calls.
+    emergencyCallsAllowed: z.boolean().transform(() => true).optional(),
+    /** Language of the messages the shop opens in its own WhatsApp. */
+    whatsappLanguage: z.enum(WHATSAPP_LANGUAGES).optional(),
+    /** Where automatic reminders are queued. */
+    reminderChannel: z.enum(['SMS', 'WHATSAPP']).optional(),
     paymentMethodsOnLock: z.array(z.string().trim().max(30)).max(10).optional(),
 
     lateFeeEnabled: z.boolean().optional(),
@@ -143,11 +166,33 @@ settingsRouter.put('/policy', (req, res, next) => {
     throw AppError.badRequest('No changes were supplied.');
   }
 
+  const smsChannelChanged =
+    updates.smsChannel !== undefined && updates.smsChannel !== (existing.smsChannel ?? 'PHONE');
+
+  // Choosing the aggregator on a server that has none would look like a
+  // working setup while every reminder quietly went nowhere new.
+  if (smsChannelChanged && updates.smsChannel !== 'PHONE' && !SmsAggregatorService.isConfigured()) {
+    throw AppError.badRequest(
+      'No SMS gateway account is set up on this server yet. Messages can only go through a paired phone for now.'
+    );
+  }
+
+  if (updates.reminderChannel === 'WHATSAPP' && !WhatsAppDispatchService.isEnabled()) {
+    throw AppError.badRequest(
+      'Automatic WhatsApp reminders are not available: the WhatsApp Business API is not connected on this server. ' +
+        'Reminders stay on SMS. The WhatsApp button on each customer still works.'
+    );
+  }
+
   const updated = await repo.devicePolicies.update(existing.id, {
     ...updates,
     updatedAt: new Date().toISOString(),
   });
   if (!updated) throw AppError.notFound('Policy');
+
+  // Waiting messages start afresh on the new channel, so none is left queued
+  // for a sender that is no longer allowed to collect it.
+  if (smsChannelChanged) await repo.notifications.resetRoutingForDealer(dealerId);
 
   // The two settings that actually restrict someone's phone get their own
   // explicit lines in the audit trail rather than a list of changed keys.
@@ -186,7 +231,15 @@ settingsRouter.put('/policy', (req, res, next) => {
         ? `${user.name} turned the offline lock rule OFF.`
         : `${user.name} set handsets to restrict themselves after ${updates.offlineLockAfterDays} day(s) ` +
           'without reaching the server.'
-      : `${user.name} updated the enforcement policy: ${Object.keys(updates).join(', ')}.`;
+      : smsChannelChanged
+        ? `${user.name} set SMS to go out through ${
+            updates.smsChannel === 'PHONE'
+              ? 'the paired phone'
+              : updates.smsChannel === 'AGGREGATOR'
+                ? 'the SMS gateway'
+                : 'the SMS gateway, with the paired phone as a fallback'
+          }.`
+        : `${user.name} updated the enforcement policy: ${Object.keys(updates).join(', ')}.`;
 
   await AuditService.log({
     dealerId,

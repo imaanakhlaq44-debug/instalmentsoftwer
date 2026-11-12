@@ -6,7 +6,7 @@ const paths = (items: { to: string }[]) => items.map((i) => i.to);
 describe('the menu for each role', () => {
   it('gives the platform admin a platform menu, not a shop menu', () => {
     const menu = paths(navItemsForRole('SUPER_ADMIN'));
-    expect(menu).toEqual(['/', '/orders', '/shops', '/licenses', '/audit-logs']);
+    expect(menu).toEqual(['/', '/orders', '/shops', '/licenses', '/shop-feedback', '/handset-tests', '/audit-logs']);
     for (const shopOnly of ['/customers', '/installments', '/enrollment', '/payments', '/devices', '/settings']) {
       expect(menu).not.toContain(shopOnly);
     }
@@ -18,6 +18,16 @@ describe('the menu for each role', () => {
     expect(menu).toContain('/enrollment');
     expect(menu).not.toContain('/orders');
     expect(menu).not.toContain('/simulator');
+    // Even inside a shop, the platform cannot speak for it.
+    expect(menu).not.toContain('/feedback');
+  });
+
+  it('offers feedback for the website to the shop owner only', () => {
+    expect(paths(navItemsForRole('DEALER_ADMIN'))).toContain('/feedback');
+    expect(paths(navItemsForRole('DEALER_ADMIN'))).not.toContain('/shop-feedback');
+    for (const role of ['DEALER_STAFF', 'CUSTOMER'] as const) {
+      expect(paths(navItemsForRole(role))).not.toContain('/feedback');
+    }
   });
 
   it('keeps a shop owner on the shop menu, without platform pages', () => {

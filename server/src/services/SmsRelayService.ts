@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { repo } from '../db/repositories/index.js';
 import { AuditService } from './AuditService.js';
+import { SmsAggregatorService } from './SmsAggregatorService.js';
 import { AppError } from '../utils/AppError.js';
 import { issueDeviceToken } from '../utils/deviceToken.js';
 import { Notification, SmsRelay, UserRole } from '../types/index.js';
@@ -122,7 +123,16 @@ export class SmsRelayService {
     // as offline.
     await repo.smsRelays.update(relay.id, { lastSeenAt: new Date().toISOString() });
 
-    const claimed = await repo.notifications.claimForRelay(relay.dealerId, limit, leaseUntil);
+    // Where this shop's SMS go is the shop's choice. On "aggregator only" the
+    // phone is handed nothing; on "aggregator, then phone" it is handed only
+    // what the aggregator has given up on. Either way it never receives a
+    // message the aggregator may still send.
+    const channel = await SmsAggregatorService.effectiveChannelFor(relay.dealerId);
+    if (channel === 'AGGREGATOR') return [];
+
+    const claimed = await repo.notifications.claimForRelay(relay.dealerId, limit, leaseUntil, undefined, {
+      handedOverOnly: channel === 'AGGREGATOR_THEN_PHONE',
+    });
     if (claimed.length === 0) return [];
 
     const customerIds = [...new Set(claimed.map((n) => n.customerId).filter(Boolean))] as string[];
@@ -176,10 +186,19 @@ export class SmsRelayService {
 
     const nowIso = new Date().toISOString();
 
+    // Already sent — by this phone on an earlier report, or by the aggregator
+    // after this phone's lease ran out. A late "it failed" must not put a sent
+    // message back on the queue to go out a second time.
+    if (notification.status === 'SENT' || notification.status === 'DELIVERED') {
+      await repo.smsRelays.update(params.relay.id, { lastSeenAt: nowIso });
+      return notification;
+    }
+
     const updated = params.sent
       ? await repo.notifications.update(params.notificationId, {
           status: 'SENT',
           sentAt: nowIso,
+          sentVia: 'PHONE',
           leaseUntil: undefined,
           failureReason: undefined,
         })

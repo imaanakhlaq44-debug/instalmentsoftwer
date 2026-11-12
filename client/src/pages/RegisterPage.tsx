@@ -141,18 +141,30 @@ export const RegisterPage: React.FC = () => {
             </p>
           </div>
 
+          {/* The next step is on the dashboard: the account to pay into, and
+              the form for the transaction ID. */}
+          <button
+            type="button"
+            className="btn-primary mt-5 w-full py-2.5"
+            onClick={async () => {
+              await login(form.email.trim(), form.password);
+              navigate('/buy-locks', { replace: true });
+            }}
+          >
+            Pay and get my locks
+          </button>
           <a
-            className="btn mt-5 w-full border-2 border-ink-900 bg-[#25D366] py-2.5 text-ink-900 shadow-[3px_3px_0_#0F1419]"
+            className="btn mt-3 w-full border-2 border-ink-900 bg-[#25D366] py-2.5 text-ink-900 shadow-[3px_3px_0_#0F1419]"
             href={`https://wa.me/${WHATSAPP_NUMBER}?text=${text}`}
             target="_blank"
             rel="noopener"
           >
             <MessageCircle className="h-4 w-4" aria-hidden="true" />
-            Get payment details on WhatsApp
+            Ask us on WhatsApp
           </a>
           <button
             type="button"
-            className="btn-secondary mt-3 w-full py-2.5"
+            className="btn-ghost mt-3 w-full py-2"
             onClick={async () => {
               await login(form.email.trim(), form.password);
               navigate('/', { replace: true });
@@ -212,7 +224,7 @@ export const RegisterPage: React.FC = () => {
                 <input
                   id="r-password"
                   type={showPassword ? 'text' : 'password'}
-                  className="input pr-11"
+                  className="input pe-11"
                   value={form.password}
                   onChange={set('password')}
                   disabled={submitting}
@@ -221,7 +233,7 @@ export const RegisterPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-ink-400 hover:text-ink-700"
+                  className="absolute end-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-ink-400 hover:text-ink-700"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}

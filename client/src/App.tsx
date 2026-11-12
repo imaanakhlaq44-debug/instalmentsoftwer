@@ -41,9 +41,19 @@ import { TransactionsPage } from './pages/TransactionsPage.js';
 import { EnrollmentPage } from './pages/EnrollmentPage.js';
 import { ContractPage } from './pages/ContractPage.js';
 import { LicensesPage } from './pages/LicensesPage.js';
+import { BuyLocksPage } from './pages/BuyLocksPage.js';
+import { HandsetTestsPage } from './pages/HandsetTestsPage.js';
 import { NotificationsPage } from './pages/NotificationsPage.js';
 import { AuditLogsPage } from './pages/AuditLogsPage.js';
 import { SettingsPage } from './pages/SettingsPage.js';
+import { FeedbackPage } from './pages/FeedbackPage.js';
+import { ShopFeedbackPage } from './pages/ShopFeedbackPage.js';
+
+/** The language follows whoever is signed in. */
+const Languages: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  return <LanguageProvider userId={user?.id}>{children}</LanguageProvider>;
+};
 
 /** Everyone signed in. */
 const ALL = ['SUPER_ADMIN', 'DEALER_ADMIN', 'DEALER_STAFF', 'CUSTOMER'] as const;
@@ -57,7 +67,7 @@ export function App() {
     <ErrorBoundary>
       <BrowserRouter>
         <AuthProvider>
-        <LanguageProvider>
+        <Languages>
           <Routes>
             {/* Public */}
             <Route path="/login" element={<LoginPage />} />
@@ -96,19 +106,25 @@ export function App() {
 
               <Route path="/orders" element={<RequireRole roles={["SUPER_ADMIN"]}><PlatformOrdersPage /></RequireRole>} />
               <Route path="/shops" element={<RequireRole roles={["SUPER_ADMIN"]}><PlatformShopsPage /></RequireRole>} />
+              <Route path="/shop-feedback" element={<RequireRole roles={["SUPER_ADMIN"]}><ShopFeedbackPage /></RequireRole>} />
+              {/* The owner's alone: it puts the shop's name on the public website. */}
+              <Route path="/feedback" element={<RequireRole roles={["DEALER_ADMIN"]}><FeedbackPage /></RequireRole>} />
+              <Route path="/handset-tests" element={<RequireRole roles={[...STAFF]}><HandsetTestsPage /></RequireRole>} />
               <Route path="/enrollment" element={<RequireRole roles={[...STAFF]}><EnrollmentPage /></RequireRole>} />
 
               {/* A customer may read the agreement they signed; only staff may take a signature. */}
               <Route path="/contracts/:id" element={<RequireRole roles={[...ALL]}><ContractPage /></RequireRole>} />
 
               <Route path="/licenses" element={<RequireRole roles={[...ADMIN]}><LicensesPage /></RequireRole>} />
+              {/* Ordering is the shop owner's; the platform decides orders on /orders. */}
+              <Route path="/buy-locks" element={<RequireRole roles={['DEALER_ADMIN']}><BuyLocksPage /></RequireRole>} />
               <Route path="/audit-logs" element={<RequireRole roles={[...ADMIN]}><AuditLogsPage /></RequireRole>} />
               <Route path="/settings" element={<RequireRole roles={[...ADMIN]}><SettingsPage /></RequireRole>} />
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>
-        </LanguageProvider>
+        </Languages>
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>

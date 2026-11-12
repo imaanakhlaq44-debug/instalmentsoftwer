@@ -41,7 +41,14 @@ FROM node:22-alpine AS runtime
 # tini reaps zombies and passes signals through, so the graceful shutdown the
 # server implements — closing the scheduler and the database pool — actually
 # runs when the container is stopped.
-RUN apk add --no-cache tini
+#
+# Chromium prints the signed agreement to PDF (ContractPdfService): it is the
+# only thing available here that shapes Urdu correctly. The Urdu font itself is
+# embedded from node_modules, so only a Latin face is installed alongside. This
+# adds roughly 500 MB to the image and a few hundred MB of memory for the
+# second or two a PDF takes; remove both packages and the endpoint answers 503
+# while browser printing keeps working.
+RUN apk add --no-cache tini chromium ttf-liberation
 
 WORKDIR /app
 ENV NODE_ENV=production

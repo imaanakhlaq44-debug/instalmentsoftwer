@@ -95,7 +95,9 @@ export default {
         sans: ['Archivo', 'Noto Naskh Arabic', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
         display: ['Archivo', 'system-ui', 'sans-serif'],
         serif: ['Archivo', 'Noto Naskh Arabic', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+        /* Naskh after the Latin faces: a receipt is set in mono, and its Urdu
+           labels must not fall through to whatever the system happens to have. */
+        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Noto Naskh Arabic', 'monospace'],
       },
       fontSize: {
         /* A real scale, so a heading is a heading everywhere. */

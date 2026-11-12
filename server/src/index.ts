@@ -20,6 +20,7 @@ import { paymentsRouter } from './routes/payments.routes.js';
 import { transactionsRouter } from './routes/transactions.routes.js';
 import { enrollmentRouter } from './routes/enrollment.routes.js';
 import { licensesRouter } from './routes/licenses.routes.js';
+import { lockOrdersRouter } from './routes/lockOrders.routes.js';
 import { platformRouter } from './routes/platform.routes.js';
 import { notificationsRouter } from './routes/notifications.routes.js';
 import { auditRouter } from './routes/audit.routes.js';
@@ -29,6 +30,9 @@ import { usersRouter } from './routes/users.routes.js';
 import { dpcRouter } from './routes/dpc.routes.js';
 import { smsRelayRouter } from './routes/smsRelay.routes.js';
 import { contractsRouter } from './routes/contracts.routes.js';
+import { testimonialsRouter, publicTestimonialsRouter } from './routes/testimonials.routes.js';
+import { handsetTestsRouter, publicTestedPhonesRouter } from './routes/handsetTests.routes.js';
+import { gatewayCallbackRouter, paymentGatewayRouter } from './routes/gateway.routes.js';
 
 const app = express();
 
@@ -40,6 +44,15 @@ app.disable('x-powered-by');
 // ---------------------------------------------------------------------------
 // Security middleware
 // ---------------------------------------------------------------------------
+/** An unauthenticated route gets a budget of its own, well under the dashboard's. */
+const publicLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please slow down and try again shortly.', code: 'RATE_LIMITED' },
+});
+
 app.use(
   helmet({
     // The API serves JSON only; a restrictive CSP costs nothing here.
@@ -48,6 +61,24 @@ app.use(
     referrerPolicy: { policy: 'no-referrer' },
   })
 );
+
+/**
+ * The public "tested phones" list. Mounted before the CORS allow-list on
+ * purpose: the marketing site is on another origin and reads this from the
+ * visitor's browser. It is GET-only, carries no credentials and returns only
+ * what the platform published — see the router for what that is.
+ */
+app.use('/api/public/tested-phones', publicLimiter, publicTestedPhonesRouter);
+
+/**
+ * Payment-gateway callbacks.
+ *
+ * Ahead of CORS and the JSON parser deliberately: the gateway's hosted page
+ * posts the result from the customer's browser, carrying the gateway's Origin,
+ * which the dashboard allow-list below would reject. The router brings its own
+ * body parsers and rate limit, and trusts nothing without a valid signature.
+ */
+app.use('/api/gateway', gatewayCallbackRouter);
 
 app.use(
   cors({
@@ -187,6 +218,15 @@ app.use('/api/dpc', dpcLimiter, dpcRouter);
  */
 app.use('/api/sms-relay', dpcLimiter, smsRelayRouter);
 
+/**
+ * What shops have said about the product, for the website.
+ *
+ * Public and read-only on purpose: it returns only testimonials a shop
+ * consented to publish and the platform approved, and only the five fields the
+ * site prints. Everything that writes one is under `requireAuth` below.
+ */
+app.use('/api/public/testimonials', publicTestimonialsRouter);
+
 // ---------------------------------------------------------------------------
 // Protected routes — every single one requires a valid JWT
 // ---------------------------------------------------------------------------
@@ -195,11 +235,15 @@ app.use('/api/devices', requireAuth, devicesRouter);
 app.use('/api/customers', requireAuth, customersRouter);
 app.use('/api/installments', requireAuth, installmentsRouter);
 app.use('/api/payments', requireAuth, paymentsRouter);
+app.use('/api/payment-gateway', requireAuth, paymentGatewayRouter);
 app.use('/api/transactions', requireAuth, transactionsRouter);
 app.use('/api/enrollment', requireAuth, enrollmentRouter);
 app.use('/api/contracts', requireAuth, contractsRouter);
 app.use('/api/licenses', requireAuth, licensesRouter);
+app.use('/api/lock-orders', requireAuth, lockOrdersRouter);
+app.use('/api/handset-tests', requireAuth, handsetTestsRouter);
 app.use('/api/platform', requireAuth, platformRouter);
+app.use('/api/testimonials', requireAuth, testimonialsRouter);
 app.use('/api/notifications', requireAuth, notificationsRouter);
 app.use('/api/audit-logs', requireAuth, auditRouter);
 app.use('/api/settings', requireAuth, settingsRouter);

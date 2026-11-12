@@ -432,7 +432,6 @@ export const ROMAN_URDU: Record<string, string> = {
 
   // ------------------------------------------------------------- receipts & payments
   'Payment Receipt': 'Payment ki raseed',
-  'Payment receipt': 'Payment ki raseed',
   'Loading receipt…': 'Raseed load ho rahi hai…',
   'Reversed — not valid': 'Wapas li gayi — qabil-e-qabool nahin',
   'Amount paid': 'Ada shuda raqam',
@@ -452,6 +451,16 @@ export const ROMAN_URDU: Record<string, string> = {
     'Tasdeeq se pehle har transaction ID apne account se milayein. Tasdeeq karte hi raqam qist mein lagti hai aur phone unlock hota hai.',
   Screenshot: 'Screenshot',
   'Already paid? Tell the shop': 'Payment kar di? Dukaan ko batayein',
+  'Pay your installment online': 'Apni qist online ada karein',
+  "You will pay on the payment company's own secure page. Your installment is marked paid as soon as they confirm it.":
+    'Aap payment company ke apne mehfooz page par ada karenge. Jaise hi woh tasdeeq karein, aap ki qist ada shuda ho jayegi.',
+  'Amount to pay': 'Ada karne ki raqam',
+  'Opening…': 'Khul raha hai…',
+  'Payment received. Thank you.': 'Payment mil gayi. Shukriya.',
+  'The payment was not completed. No money was added to your account.':
+    'Payment mukammal nahi hui. Aap ke account mein koi raqam shamil nahi hui.',
+  'Your payment reached the gateway but could not be added to your account automatically. The shop has been told and will sort it out. Please do not pay again.':
+    'Aap ki payment gateway tak pohanch gayi lekin khud ba khud account mein shamil nahi ho saki. Dukaan ko bata diya gaya hai, woh isay theek kar denge. Meharbani kar ke dobara payment na karein.',
   'If you have transferred your installment, enter the transaction ID here. The shop will check it against their account. Your phone unlocks once they confirm it — this form does not unlock it by itself.':
     'Agar aap ne qist bhej di hai to transaction ID yahan likhein. Dukaan apne account se check karegi. Unke tasdeeq karne par phone unlock hoga — yeh form khud unlock nahin karta.',
   'Which phone': 'Kaun sa phone',
@@ -714,6 +723,42 @@ export const ROMAN_URDU: Record<string, string> = {
     'Koi SMS gateway ya phone nahin jura. Messages system mein jama ho rahe hain lekin abhi customers tak nahin ja rahe.',
   'No SMS gateway is connected. Until one is, you can pair a phone of your own: it collects queued messages and sends them from its SIM. Fine for a small volume and for testing — a shop sending at scale needs an operator account with a registered sender mask.':
     'Koi SMS gateway nahin jura. Tab tak apna ek phone jor sakte hain: woh jama messages utha kar apni SIM se bhejta hai. Thore messages aur test ke liye theek hai — ziada messages ke liye company ka SMS account chahiye.',
+  // SMS gateway (aggregator) — channel, status and cost
+  'The SMS gateway is sending these messages': 'SMS gateway yeh messages bhej raha hai',
+  'Customers see the sender as:': 'Customer ko bhejne wale ka naam yeh dikhta hai:',
+  '“Sent” means the gateway accepted the message, not that it reached the customer. A refused message is tried again, then shown as failed with the reason.':
+    '“Bheja gaya” ka matlab hai gateway ne message le liya, yeh nahin ke customer tak pohanch gaya. Jo message gateway na le, woh dobara bheja jata hai, phir wajah ke saath “nahin gaya” dikhta hai.',
+  'A message the gateway cannot send is passed to your paired phone. “Sent” means the gateway or the SIM accepted the message, not that it reached the customer.':
+    'Jo message gateway na bhej sake woh aap ke jure hue phone ko de diya jata hai. “Bheja gaya” ka matlab hai gateway ya SIM ne message le liya, yeh nahin ke customer tak pohanch gaya.',
+  'You can change this in Settings, under “How SMS are sent”.':
+    'Yeh aap Settings mein “SMS kaise bheje jayein” se badal sakte hain.',
+  'Your SMS go through the SMS gateway, so a paired phone is not given any messages right now.':
+    'Aap ke SMS gateway se ja rahe hain, is liye jure hue phone ko abhi koi message nahin diya jata.',
+  'Your SMS go through the SMS gateway first. A paired phone only sends what the gateway could not.':
+    'Aap ke SMS pehle gateway se jate hain. Jura hua phone sirf woh bhejta hai jo gateway na bhej saka.',
+  'The SMS gateway is sending these messages. "SENT" means the gateway accepted the message, not that it was delivered.':
+    'SMS gateway yeh messages bhej raha hai. "SENT" ka matlab hai gateway ne message le liya, yeh nahin ke customer tak pohanch gaya.',
+  'The SMS gateway is sending these messages. One the gateway cannot send is passed to your paired phone. "SENT" means the gateway or the SIM accepted the message, not that it was delivered.':
+    'SMS gateway yeh messages bhej raha hai. Jo gateway na bhej sake woh jure hue phone ko de diya jata hai. "SENT" ka matlab hai gateway ya SIM ne message le liya, yeh nahin ke customer tak pohanch gaya.',
+  Sent: 'Bheja gaya',
+  Delivered: 'Pohanch gaya',
+  Failed: 'Nahin gaya',
+  Queued: 'Line mein hai',
+  'Will retry': 'Dobara bheja jayega',
+  'Waiting for paired phone': 'Jure hue phone ka intezar',
+  'via SMS gateway': 'SMS gateway se',
+  'via paired phone': 'jure hue phone se',
+  'Reason:': 'Wajah:',
+  'How SMS are sent': 'SMS kaise bheje jayein',
+  'Paired phone: reminders go from your own SIM, from a mobile number. SMS gateway: they go from the company SMS account under your brand name, and can handle many messages. Gateway, then phone: the gateway is tried first, and your paired phone sends only what the gateway could not.':
+    'Jura hua phone: reminder aap ki apni SIM se, mobile number se jate hain. SMS gateway: company ke SMS account se, aap ki dukaan ke naam se jate hain, aur bohat ziada messages bhej sakta hai. Pehle gateway, phir phone: pehle gateway koshish karta hai, aur jura hua phone sirf woh bhejta hai jo gateway na bhej saka.',
+  'Paired phone (shop SIM)': 'Jura hua phone (dukaan ki SIM)',
+  'SMS gateway (brand name)': 'SMS gateway (dukaan ke naam se)',
+  'SMS gateway, then paired phone': 'Pehle SMS gateway, phir jura hua phone',
+  'No SMS gateway account is set up on this server yet, so only the paired phone can be used.':
+    'Is server par abhi SMS gateway ka account nahin laga, is liye sirf jura hua phone istemal ho sakta hai.',
+  'No SMS gateway account is set up on this server yet. Messages can only go through a paired phone for now.':
+    'Is server par abhi SMS gateway ka account nahin laga. Abhi messages sirf jure hue phone se ja sakte hain.',
   'Initial Down Payment at counter': 'Counter par advance',
   Across: 'Kul',
   pack: 'pack',
@@ -787,6 +832,116 @@ export const ROMAN_URDU: Record<string, string> = {
   'Shops appear here as soon as they register.': 'Dukanein register hote hi yahan nazar aayengi.',
   Call: 'Call',
   'Giving locks…': 'Locks de rahe hain…',
+
+  // ------------------------------------------------------------- buying locks: orders
+  'Buy locks': 'Locks khareedein',
+  'One lock holds one phone. Choose how many you need, pay, and send us the transaction ID. Your locks are added as soon as we confirm the payment.':
+    'Ek lock ek phone ke liye hota hai. Jitne chahiye chunein, payment karein aur humein transaction ID bhej dein. Payment confirm hote hi aap ke locks add ho jayenge.',
+  'How many locks?': 'Kitne locks chahiye?',
+  'Number of locks': 'Locks ki tadaad',
+  '1–29: Rs 1,000 · 30–49: Rs 800 · 50–99: Rs 700 · 100+: Rs 600 per phone':
+    '1–29: Rs 1,000 · 30–49: Rs 800 · 50–99: Rs 700 · 100+: Rs 600 fi phone',
+  'Choose between 1 and 500 locks.': '1 se 500 ke darmiyan locks chunein.',
+  'Send the payment': 'Payment bhejein',
+  'Amount to send:': 'Bhejni wali raqam:',
+  'Pay to': 'Is account mein bhejein',
+  'Ask us on WhatsApp for the account to pay into.': 'Payment ka account WhatsApp par hum se pooch lein.',
+  'Ask on WhatsApp': 'WhatsApp par poochein',
+  'Tell us you have paid': 'Humein batayein ke payment kar di',
+  'Your earlier orders are still being checked. Please wait for those before sending another.':
+    'Aap ke pehle orders abhi check ho rahe hain. Naya order bhejne se pehle un ka intezar karein.',
+  'Paid by': 'Payment ka tareeqa',
+  'Amount sent (Rs)': 'Bheji gayi raqam (Rs)',
+  'Note (optional)': 'Note (zaroori nahin)',
+  'The amount you sent is different from the price of this pack. Please check before sending.':
+    'Aap ki bheji hui raqam is pack ki qeemat se mukhtalif hai. Bhejne se pehle check kar lein.',
+  'Preparing…': 'Tayyar ho raha hai…',
+  'Screenshot attached': 'Screenshot lag gaya',
+  'Attach screenshot (optional)': 'Screenshot lagayein (zaroori nahin)',
+  'Sending…': 'Bhej rahe hain…',
+  'Send order': 'Order bhejein',
+  'Sending this does not add locks by itself. We check the payment first, usually the same day.':
+    'Yeh bhejne se locks khud add nahin hote. Pehle hum payment check karte hain, aam tor par usi din.',
+  'Your orders': 'Aap ke orders',
+  'Newest first': 'Naye sab se upar',
+  'No orders yet': 'Abhi koi order nahin',
+  'When you send an order it appears here, with its status.':
+    'Jab aap order bhejenge to woh apne status ke saath yahan nazar aayega.',
+  'Being checked': 'Check ho raha hai',
+  'Locks added': 'Locks add ho gaye',
+  'Rejected': 'Rad kar diya',
+  'Cancelled': 'Cancel ho gaya',
+  'Cancel order': 'Order cancel karein',
+  'Cancelling…': 'Cancel ho raha hai…',
+  'Payment screenshot': 'Payment ka screenshot',
+  'Could not load your orders': 'Aap ke orders load nahin hue',
+  'Could not send the order. Please try again.': 'Order nahin bheja ja saka. Dobara koshish karein.',
+  'Could not cancel the order': 'Order cancel nahin hua',
+  'Could not open the screenshot': 'Screenshot nahin khula',
+  'Order received.': 'Order mil gaya.',
+  'Order received. Your locks are added as soon as the payment is confirmed.':
+    'Order mil gaya. Payment confirm hote hi aap ke locks add ho jayenge.',
+  'Order cancelled.': 'Order cancel ho gaya.',
+  'Order rejected.': 'Order rad kar diya gaya.',
+  'Choose how you paid.': 'Batayein ke payment kis tareeqe se ki.',
+  'Enter the transaction ID from your transfer.': 'Apni transfer ka transaction ID likhein.',
+  'A transaction ID is letters and numbers only.': 'Transaction ID mein sirf huroof aur number hote hain.',
+  'Enter the amount you sent, in whole rupees.': 'Jitni raqam bheji woh poore rupon mein likhein.',
+  'This transaction ID has already been used for a lock order.':
+    'Yeh transaction ID pehle hi ek lock order mein istemal ho chuka hai.',
+  'One lock per phone. Bigger packs cost less per phone.':
+    'Ek phone ke liye ek lock. Bara pack lene par fi phone qeemat kam hoti hai.',
+  'Pay and get my locks': 'Payment karein aur locks lein',
+  'Ask us on WhatsApp': 'WhatsApp par hum se poochein',
+  'Open my dashboard': 'Mera dashboard kholein',
+  'A shop orders locks from its own dashboard and sends you the transaction ID. Check that the money arrived, then give it the locks here.':
+    'Dukaan apne dashboard se locks order karti hai aur aap ko transaction ID bhejti hai. Check karein ke raqam aa gayi, phir yahan se locks de dein.',
+  'It picks a pack of locks on its Buy locks page.':
+    '"Locks khareedein" page par locks ka pack chunti hai.',
+  'By JazzCash, Easypaisa or bank, and sends the transaction ID.':
+    'JazzCash, Easypaisa ya bank se, aur transaction ID bhejti hai.',
+  'Find the transfer in your account, then press "Payment received". The shop can sell at once.':
+    'Apne account mein transfer dhoondein, phir "Payment mil gayi" dabayein. Dukaan foran sale kar sakti hai.',
+  'Payments to check': 'Check karne wali payments',
+  'Shops that say they have paid. Find the transfer in your account, then decide.':
+    'Dukanein jo kehti hain ke payment kar di. Apne account mein transfer dhoondein, phir faisla karein.',
+  'No payments to check': 'Check karne ko koi payment nahin',
+  'When a shop sends its transaction ID, the order appears here.':
+    'Jab koi dukaan transaction ID bhejegi to order yahan aayega.',
+  'Ordered:': 'Order:',
+  'Shop says it paid:': 'Dukaan ke mutabiq ada kiye:',
+  'The amount sent does not match the price.': 'Bheji gayi raqam qeemat ke barabar nahin.',
+  'Reject': 'Rad karein',
+  'Working…': 'Kaam ho raha hai…',
+  'Why is it rejected? (the shop will see this)': 'Rad kyun kiya? (dukaan ko yeh nazar aayega)',
+  'e.g. No payment with this transaction ID reached our account.':
+    'maslan: Is transaction ID ki koi payment hamare account mein nahin aayi.',
+  'Reject order': 'Order rad karein',
+  'Write the reason, so the shop knows what to fix.':
+    'Wajah likhein, taake dukaan ko pata chale kya theek karna hai.',
+  'Where shops pay': 'Dukanein payment kahan karein',
+  'Shown to every shop on its Buy locks page':
+    'Har dukaan ko us ke "Locks khareedein" page par nazar aata hai',
+  'Your account details': 'Aap ke account ki detail',
+  'Shops see exactly what is written here.': 'Dukanon ko bilkul wohi nazar aata hai jo yahan likha hai.',
+  'Nothing is saved yet. Shops are told to ask on WhatsApp.':
+    'Abhi kuch save nahin. Dukanon ko WhatsApp par poochne ka kaha jata hai.',
+  'Saving…': 'Save ho raha hai…',
+  'Save': 'Save karein',
+  'Payment instructions saved.': 'Payment ki detail save ho gayi.',
+  'Decided orders': 'Faisla shuda orders',
+  'The last 20 approved, rejected or cancelled': 'Aakhri 20: manzoor, rad ya cancel',
+  'Signed up, not paid yet': 'Signup ho gaya, payment abhi nahin',
+  'New shops that picked a pack but have not sent a payment':
+    'Nayi dukanein jinhon ne pack chuna magar payment nahin bheji',
+  'A new shop that has not sent its payment yet appears here.':
+    'Jis nayi dukaan ne abhi payment nahin bheji woh yahan nazar aayegi.',
+  'Could not load the lock orders': 'Lock orders load nahin hue',
+  'Could not approve the order': 'Order manzoor nahin hua',
+  'Could not reject the order': 'Order rad nahin hua',
+  'Could not save the payment instructions': 'Payment ki detail save nahin hui',
+  'This order has already been decided. Locks are issued once per order and will not be issued again.':
+    'Is order ka faisla pehle ho chuka hai. Har order par locks sirf ek dafa milte hain, dobara nahin milenge.',
 
   // ------------------------------------------------------------- location for recovery
   'Location for Phone Recovery': 'Phone wapas lene ke liye location',
@@ -894,13 +1049,189 @@ export const ROMAN_URDU: Record<string, string> = {
     'Yeh company battery bachane ke liye background apps band karti hai, is liye dashboard thori der baad update ho sakta hai. Format se sab se mazboot hifazat Android 15+ par milti hai.',
   'Lock, staged restrictions and reset protection all work (strongest on Android 15+; earlier Android versions can still face recovery-reset bypass risks).':
     'Lock, darja ba darja pabandi aur format se hifazat sab chalenge (Android 15+ par sab se mazboot; purane Android par baar baar reset se bypass ka khatra reh sakta hai).',
+
+  // ------------------------------------------------- feedback for the website
+  Feedback: 'Raaye',
+  'Give feedback': 'Raaye dein',
+  'Shop feedback': 'Dukanon ki raaye',
+  'Your opinion': 'Aap ki raaye',
+  'Tell us how Almas SDM is working for your shop. If you allow it, we may show your words on our website.':
+    'Batayein Almas SDM aap ki dukaan mein kaisa chal raha hai. Aap ijazat dein to hum aap ke alfaaz apni website par dikha sakte hain.',
+  'Could not load your feedback.': 'Aap ki raaye load nahin hui.',
+  'What you sent': 'Aap ne jo bheja',
+  'Waiting for review': 'Jaanch ka intezar',
+  'We will read it soon. It is not on the website yet.': 'Hum jald parhenge. Abhi yeh website par nahin hai.',
+  'Approved for the website': 'Website ke liye manzoor',
+  'It appears on the website the next time the site is updated, exactly as you wrote it.':
+    'Website agli baar update hone par yeh wahan nazar aayegi, bilkul waise jaise aap ne likhi.',
+  'Not accepted': 'Manzoor nahin hui',
+  'It is not on the website. You can change it and send it again.':
+    'Yeh website par nahin hai. Aap ise badal kar dobara bhej sakte hain.',
+  'Taken off the website': 'Website se hata di gayi',
+  'It was removed from the website. You can change it and send it again.':
+    'Yeh website se hata di gayi hai. Aap ise badal kar dobara bhej sakte hain.',
+  'Withdrawn by you': 'Aap ne wapas le li',
+  'You took it back, so it is not shown anywhere. You can send feedback again whenever you like.':
+    'Aap ne ise wapas le liya, is liye yeh kahin nahin dikhti. Jab chahein dobara raaye bhej sakte hain.',
+  'Note from Almas SDM': 'Almas SDM ka note',
+  'Permission to publish given by': 'Chhapne ki ijazat di:',
+  'Send feedback again': 'Dobara raaye bhejein',
+  'Change my feedback': 'Meri raaye badlein',
+  'Withdraw my feedback': 'Meri raaye wapas lein',
+  'Withdraw your feedback?': 'Apni raaye wapas lein?',
+  'We will stop showing it. It leaves the website the next time the site is updated, at most a day.':
+    'Hum ise dikhana band kar denge. Website agli baar update hone par yeh hat jayegi, ziada se ziada ek din mein.',
+  'Yes, withdraw it': 'Haan, wapas lein',
+  'Keep it': 'Rehne dein',
+  'Change your feedback': 'Apni raaye badlein',
+  'Write your feedback': 'Apni raaye likhein',
+  'Urdu, Roman Urdu or English: write the way you speak.':
+    'Urdu, Roman Urdu ya English: jaise bolte hain waise likhein.',
+  'If you change it, it goes back for review and comes off the website until it is approved again.':
+    'Badalne par yeh dobara jaanch mein jayegi aur dobara manzoor hone tak website se hat jayegi.',
+  'Your feedback': 'Aap ki raaye',
+  'Your rating': 'Aap ki rating',
+  'Name to show': 'Jo naam dikhana hai',
+  'Your name, or your shop\'s name. Your choice.': 'Apna naam ya dukaan ka naam. Aap ki marzi.',
+  'City to show': 'Jo shehar dikhana hai',
+  'I allow Almas SDM to publish this feedback on its website with the name and city written above. I can withdraw it at any time.':
+    'Almas SDM ko meri ijazat hai ke yeh raaye oopar likhe naam aur shehar ke saath apni website par chhaape. Yeh raaye kisi bhi waqt wapas li ja sakti hai.',
+  'We never show your phone number, email or shop ID, and we do not change your words.':
+    'Hum aap ka phone number, email ya shop ID kabhi nahin dikhate, aur aap ke alfaaz nahin badalte.',
+  'Send for review': 'Jaanch ke liye bhejein',
+  'Choose 1 to 5 stars.': '1 se 5 stars chunein.',
+  'Enter the name to show.': 'Dikhane wala naam likhein.',
+  'Enter the city to show.': 'Dikhane wala shehar likhein.',
+  'Tick the box to allow publication, or do not submit.':
+    'Chhapne ki ijazat ke liye box par tick karein, warna na bhejein.',
+  'Thank you. Your feedback was sent for review.': 'Shukriya. Aap ki raaye jaanch ke liye bhej di gayi.',
+  'Could not send your feedback.': 'Aap ki raaye nahin bheji ja saki.',
+  'Your feedback was withdrawn.': 'Aap ki raaye wapas le li gayi.',
+  'Could not withdraw your feedback.': 'Aap ki raaye wapas nahin li ja saki.',
+  'Feedback cannot contain links or HTML.': 'Raaye mein link ya HTML nahin ho sakta.',
+  'Name cannot contain links or HTML.': 'Naam mein link ya HTML nahin ho sakta.',
+  'City cannot contain links or HTML.': 'Shehar mein link ya HTML nahin ho sakta.',
+  'Feedback shops have allowed us to publish. Approve it to show it on the website, or reject it with a note.':
+    'Woh raaye jo dukanon ne chhapne ki ijazat di hai. Website par dikhane ke liye manzoor karein, ya note ke saath radd karein.',
+  'You cannot change a shop\'s words. If something needs fixing, reject it with a note and the shop will correct it and send it again.':
+    'Aap dukaan ke alfaaz nahin badal sakte. Kuch theek karna ho to note ke saath radd karein, dukaan khud theek kar ke dobara bhejegi.',
+  'Could not load shop feedback.': 'Dukanon ki raaye load nahin hui.',
+  'No feedback yet': 'Abhi koi raaye nahin',
+  'When a shop owner sends feedback from their dashboard, it appears here for you to review.':
+    'Jab koi dukaan ka maalik apne dashboard se raaye bhejega, woh yahan jaanch ke liye aayegi.',
+  'Nothing waiting for review': 'Jaanch ke liye kuch nahin',
+  Unpublished: 'Website se hatayi gayi',
+  'Withdrawn by the shop': 'Dukaan ne wapas le li',
+  'Shown as': 'Is naam se dikhegi:',
+  'Your note:': 'Aap ka note:',
+  'This shop is suspended, so its feedback is not shown on the website.':
+    'Yeh dukaan band ki gayi hai, is liye is ki raaye website par nahin dikhti.',
+  'Why is it rejected? The shop will read this.': 'Radd kyun? Dukaan yeh parhegi.',
+  'Why is it unpublished? The shop will read this.': 'Website se kyun hatayi? Dukaan yeh parhegi.',
+  Approve: 'Manzoor karein',
+  Unpublish: 'Website se hatayein',
+  'Approved. It will appear on the website.': 'Manzoor. Yeh website par nazar aayegi.',
+  'Rejected. The shop can see your note.': 'Radd. Dukaan aap ka note dekh sakti hai.',
+  'Unpublished. It will leave the website.': 'Hata di gayi. Yeh website se hat jayegi.',
+  'That did not work.': 'Yeh nahin ho saka.',
+  'The shop changed this feedback after you opened it. Read it again before approving.':
+    'Aap ke kholne ke baad dukaan ne yeh raaye badal di. Manzoor karne se pehle dobara parhein.',
+  'This feedback changed while you were deciding. Reload and read it again.':
+    'Faisla karte waqt yeh raaye badal gayi. Dobara load kar ke parhein.',
+  // ---------------------------------------------------------------- phone tests
+  'Phone tests': 'Phone tests',
+  'Lock app': 'Lock app',
+  'Test the lock app on a real phone, step by step, and save what happened. This is how we know which phones the lock works on.': 'Lock app ko asli phone par qadam ba qadam test karein aur jo hua woh mehfooz karein. Isi se pata chalta hai ke lock kin phones par chalta hai.',
+  'Test a phone': 'Phone test karein',
+  'New phone test': 'Naya phone test',
+  'Edit phone test': 'Phone test theek karein',
+  'Write down exactly what you saw. A step you did not try stays on "Not tested".': 'Wohi likhein jo aap ne khud dekha. Jo qadam nahin aazmaya usay "Test nahin hua" par rehne dein.',
+  'Phone software (optional)': 'Phone ka software (zaroori nahin)',
+  'Lock app version': 'Lock app ka version',
+  'A number such as 13 or 8.1': 'Number likhein, jaise 13 ya 8.1',
+  'Shown inside the lock app, for example 1.5.1': 'Lock app ke andar likha hota hai, jaise 1.5.1',
+  'Pass': 'Pass',
+  'Fail': 'Fail',
+  'Not tested': 'Test nahin hua',
+  'Partly tested': 'Adhoora test',
+  'What went wrong?': 'Kya masla aaya?',
+  'Anything else (optional)': 'Kuch aur (zaroori nahin)',
+  'Save phone test': 'Phone test mehfooz karein',
+  'All brands': 'Saare brands',
+  'All versions': 'Saare versions',
+  'Loading phone tests...': 'Phone tests aa rahe hain...',
+  'No phone tests match this filter.': 'Is filter mein koi phone test nahin.',
+  'No phone has been tested yet.': 'Abhi tak koi phone test nahin hua.',
+  'Android': 'Android',
+  'Result': 'Nateeja',
+  'Tested by': 'Kis ne test kiya',
+  'Website': 'Website',
+  'On website': 'Website par hai',
+  'Show on website': 'Website par dikhayein',
+  'Not shown': 'Website par nahin',
+  'Delete': 'Mitayein',
+  'phone tests': 'phone tests',
+  'Phone test saved.': 'Phone test mehfooz ho gaya.',
+  'Phone test updated.': 'Phone test theek ho gaya.',
+  'Phone test deleted.': 'Phone test mita diya.',
+  'Removed from the website.': 'Website se hata diya.',
+  'Now showing on the website.': 'Ab website par nazar aa raha hai.',
+  'QR setup from factory reset': 'Factory reset ke baad QR se setup',
+  'Factory reset the phone, tap the welcome screen six times and scan the QR from QR Enrollment. Pass if the app installs by itself and setup finishes.': 'Phone factory reset karein, welcome screen par 6 dafa tap karein aur "QR se phone jorein" wala QR scan karein. Pass tab hai jab app khud install ho aur setup poora ho jaye.',
+  'Enrol': 'Phone jorna',
+  'Pass if the phone shows as enrolled on the Devices page within a minute.': 'Pass tab hai jab phone ek minute ke andar Phones wale page par jura hua nazar aaye.',
+  'Lock': 'Lock',
+  'Press Lock on the dashboard. Pass if the lock screen appears and the phone cannot be used.': 'Dashboard se Lock dabayein. Pass tab hai jab lock screen aa jaye aur phone istemal na ho sake.',
+  'Unlock': 'Unlock',
+  'Press Unlock on the dashboard. Pass if the phone opens again and works normally.': 'Dashboard se Unlock dabayein. Pass tab hai jab phone dobara khul jaye aur theek chale.',
+  'Lock stays after restart': 'Restart ke baad bhi lock rahe',
+  'Lock the phone, then switch it off and on. Pass if it is still locked when it starts.': 'Phone lock karein, phir band kar ke dobara chalayein. Pass tab hai jab chalne par bhi lock ho.',
+  'Make an installment late so the warning stage starts. Pass if the phone shows each stage before the full lock.': 'Ek qist late karein taake warning ka darja shuru ho. Pass tab hai jab phone poore lock se pehle har darja dikhaye.',
+  'Offline self-lock': 'Internet band ho to khud lock',
+  'With an installment overdue, keep the phone off Wi-Fi and mobile data past the offline limit. Pass if it locks itself.': 'Qist late ho aur phone ko Wi-Fi aur mobile data se offline had se ziada der door rakhein. Pass tab hai jab phone khud lock ho jaye.',
+  'Factory-reset protection': 'Factory reset se hifazat',
+  'Try to reset from Settings, then from recovery mode. Pass if reset is blocked, or the phone asks for the shop Google account afterwards.': 'Pehle Settings se, phir recovery mode se reset karne ki koshish karein. Pass tab hai jab reset na ho sake, ya reset ke baad phone dukaan ka Google account mange.',
+  'Re-enrol': 'Dobara jorna',
+  'Use Re-enrol on the device page and scan the new QR. Pass if the same phone comes back under management without using a new lock.': 'Phone ke page par "Re-enrol" dabayein aur naya QR scan karein. Pass tab hai jab wohi phone naya lock kharch kiye baghair dobara jur jaye.',
+  // ------------------------------------------------------------ WhatsApp
+  'WhatsApp message': 'WhatsApp message',
+  'Message type': 'Message ki qisam',
+  'Due reminder': 'Qist ki yaad dehani',
+  'Overdue notice': 'Late qist ka notice',
+  'Payment receipt': 'Payment ki raseed',
+  'Lock warning': 'Lock ki warning',
+  'Preparing message…': 'Message tayyar ho raha hai…',
+  'Open WhatsApp': 'WhatsApp kholein',
+  'This opens your own WhatsApp with the message typed in. You press send there. We record that it was opened and by whom — not that it was sent or delivered, because that cannot be known.':
+    'Is se aap ka apna WhatsApp khulta hai aur message likha hua hota hai. Send aap khud dabate hain. Hum sirf yeh record karte hain ke kis ne khola — yeh nahin ke message gaya ya pohancha, kyun ke yeh maloom nahin ho sakta.',
+  'This message could not be prepared.': 'Yeh message tayyar nahin ho saka.',
+  'WhatsApp opened, but it could not be added to the customer record.':
+    'WhatsApp khul gaya, lekin customer ke record mein likha nahin ja saka.',
+  'WhatsApp opened': 'WhatsApp khola gaya',
+  'Each time someone at the shop opened WhatsApp to this customer. Opened is all we know — not whether it was sent or read.':
+    'Jab jab dukaan se kisi ne is customer ke liye WhatsApp khola. Hamein sirf itna maloom hai ke khola gaya — yeh nahin ke message gaya ya parha gaya.',
+  'Use the WhatsApp button beside any customer to open your own WhatsApp with the reminder already written. You press send yourself.':
+    'Kisi bhi customer ke saath WhatsApp ka button dabayein: aap ka apna WhatsApp khulega aur yaad dehani pehle se likhi hogi. Send aap khud dabayein.',
+  'Automatic WhatsApp is connected. A message shows SENT once WhatsApp accepts it — that is not proof it was delivered.':
+    'Automatic WhatsApp jura hua hai. Jab WhatsApp message qabool kar le to SENT dikhta hai — yeh is baat ka saboot nahin ke message pohanch gaya.',
+  'Automatic WhatsApp is not connected. That needs a WhatsApp Business API account from Meta.':
+    'Automatic WhatsApp jura hua nahin. Is ke liye Meta se WhatsApp Business API ka account chahiye.',
+  'WhatsApp message language': 'WhatsApp message ki zaban',
+  'The language of the reminder that opens in your WhatsApp when you press the WhatsApp button.':
+    'WhatsApp ka button dabane par jo yaad dehani aap ke WhatsApp mein khulti hai, us ki zaban.',
+  'Send automatic reminders by': 'Automatic yaad dehani kis se bhejein',
+  'SMS goes out from your paired phone. WhatsApp goes out through the WhatsApp Business API.':
+    'SMS aap ke jore hue phone se jata hai. WhatsApp, WhatsApp Business API se jata hai.',
+  'Automatic WhatsApp is not connected, so automatic reminders stay on SMS. The WhatsApp button still works.':
+    'Automatic WhatsApp jura hua nahin, is liye automatic yaad dehani SMS par hi rahegi. WhatsApp ka button phir bhi kaam karta hai.',
 };
 
-/**
- * Lines whose numbers change. Tried after an exact lookup misses.
- */
 export const ROMAN_URDU_PATTERNS: Array<[RegExp, string]> = [
+  [/^WhatsApp message for (.+)$/, '$1 ke liye WhatsApp message'],
+  [/^WhatsApp (?!message)(.+)$/, '$1 ko WhatsApp karein'],
   [/^(\d+) of (\d+) Months Paid$/, '$2 mein se $1 mahine ada'],
+  [/^(\d+) SMS · (\d+) characters · Urdu script$/, '$1 SMS · $2 huroof · Urdu likhai'],
+  [/^(\d+) SMS · (\d+) characters$/, '$1 SMS · $2 huroof'],
   [/^(\d+) Days Prior$/, '$1 din pehle'],
   [/^(\d+) Days$/, '$1 din'],
   [/^(\d+) days?$/, '$1 din'],
@@ -908,6 +1239,7 @@ export const ROMAN_URDU_PATTERNS: Array<[RegExp, string]> = [
   [/^Showing (\d+)[–-](\d+) of (\d+)$/, '$3 mein se $1–$2'],
   [/^(\d+) (?:installment|instalment)s? overdue$/, '$1 qist late'],
   [/^Salam, (.+)$/, 'Salam, $1'],
+  [/^Pay now · (.+)$/, 'Abhi ada karein · $1'],
   [/^(\d+) active plans · (\d+) customers$/, '$1 chalu plans · $2 customers'],
   [/^(\d+) days? late$/, '$1 din late'],
   [/^· (\d+) instalments?$/, '· $1 qistein'],
@@ -929,5 +1261,17 @@ export const ROMAN_URDU_PATTERNS: Array<[RegExp, string]> = [
     /^This handset did not hold OS-level Factory Reset Protection(.*)\. A recovery-mode wipe may not ask for your shop Google account\. Check Play Services \/ Android version in person; Android 15\+ gives strongest recovery reset protection\.$/,
     'Is phone ke system ne Factory Reset Protection nahin lagayi$1. Recovery mode se format karne par shayad dukaan ka Google account na mange. Phone par Play Services aur Android version check karein; Android 15+ par hifazat sab se mazboot hoti hai.',
   ],
+  [/^· (Rs [\d,]+) per phone ·$/, '· $1 fi phone ·'],
+  [/^(Rs [\d,]+) total$/, 'kul $1'],
+  [/^Payment received: give (\d+) locks$/, 'Payment mil gayi: $1 locks dein'],
+  [/^(\d+) device locks issued\.$/, '$1 locks de diye gaye.'],
+  [/^You already have (\d+) orders waiting to be checked\. Please wait for those before sending another\.$/, 'Aap ke $1 orders pehle se check ho rahe hain. Naya bhejne se pehle un ka intezar karein.'],
   [/^Detected (.+)$/, 'Pata chala: $1'],
+  [/^(\d+) waiting for review$/, '$1 jaanch ke intezar mein'],
+  [/^(\d) out of 5$/, '5 mein se $1'],
+  [/^Please write at least (\d+) characters\.$/, 'Kam se kam $1 huroof likhein.'],
+  [/^Please keep it under (\d+) characters\.$/, '$1 huroof se kam rakhein.'],
+  [/^Delete the test for (.+)\?$/, '$1 ka test mita dein?'],
+  [/^Android (\d[\d.]*)$/, 'Android $1'],
+  [/^Note for (.+)$/, '$1 ka note'],
 ];

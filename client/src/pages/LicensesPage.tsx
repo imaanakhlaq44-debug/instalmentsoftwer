@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { KeyRound, Lock, AlertTriangle, Check } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { KeyRound, Lock, AlertTriangle, Check, ShoppingCart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { ApiService } from '../services/api.js';
 import { Card, CardHeader, Rows, EmptyState, Skeleton } from '../components/ui/Card.js';
@@ -51,7 +52,7 @@ interface PackOption {
 }
 
 export const LicensesPage: React.FC = () => {
-  const { selectedDealerId, showToast, isSuperAdmin } = useAuth();
+  const { selectedDealerId, showToast, isSuperAdmin, role } = useAuth();
 
   const [dealers, setDealers] = useState<DealerSummary[] | null>(null);
   const [packs, setPacks] = useState<PackRow[]>([]);
@@ -146,7 +147,7 @@ export const LicensesPage: React.FC = () => {
         <Skeleton className="h-28 w-full" />
       ) : (
         <Card flush>
-          <div className="grid divide-y divide-paper-300 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <div className="grid divide-y divide-paper-300 sm:grid-cols-3 sm:divide-x rtl:divide-x-reverse sm:divide-y-0">
             <div className="p-5">
               <p className="eyebrow">Locks left</p>
               <p className="figure mt-1.5">{totals.available}</p>
@@ -196,7 +197,14 @@ export const LicensesPage: React.FC = () => {
           hint={
             isSuperAdmin
               ? 'Pick the shop, then the pack. Issue after payment has cleared.'
-              : 'Contact the platform to buy'
+              : 'One lock per phone. Bigger packs cost less per phone.'
+          }
+          action={
+            role === 'DEALER_ADMIN' ? (
+              <Link to="/buy-locks" className="btn-primary py-1.5 text-caption">
+                <ShoppingCart className="h-4 w-4" aria-hidden="true" /> Buy locks
+              </Link>
+            ) : undefined
           }
         />
         {isSuperAdmin && (
@@ -355,7 +363,7 @@ export const LicensesPage: React.FC = () => {
                       {p.reference && ` · ref ${p.reference}`}
                     </p>
                   </div>
-                  <div className="shrink-0 text-right">
+                  <div className="shrink-0 text-end">
                     <p className="text-body font-medium text-ink-900 tabular">
                       {money(p.totalPrice)}
                     </p>

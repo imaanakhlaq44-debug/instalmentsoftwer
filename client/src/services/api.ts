@@ -81,6 +81,34 @@ function buildQuery(params: Record<string, unknown> = {}): string {
   return s ? `?${s}` : '';
 }
 
+export type TestimonialStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'UNPUBLISHED' | 'WITHDRAWN';
+
+export interface Testimonial {
+  id: string;
+  dealerId: string;
+  quote: string;
+  rating: number;
+  displayName: string;
+  city: string;
+  language: 'en' | 'ur';
+  status: TestimonialStatus;
+  consentText: string;
+  consentAt: string;
+  consentByName: string;
+  reviewedAt: string | null;
+  reviewedByName: string | null;
+  reviewNote: string | null;
+  withdrawnAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReviewTestimonial extends Testimonial {
+  dealerName: string;
+  dealerCity: string;
+  dealerActive: boolean;
+}
+
 export class ApiService {
   private static async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const headers: Record<string, string> = {
@@ -339,6 +367,27 @@ export class ApiService {
     return this.request<any>(`/payments/${paymentId}/receipt`);
   }
 
+  /** Whether this shop takes online payments, and through which gateway. Normally `enabled: false`. */
+  static getGatewayOptions() {
+    return this.request<{ enabled: boolean; providers: { id: string; label: string }[] }>('/payment-gateway/options');
+  }
+
+  /** Starts a hosted checkout. The reply says where to send the browser; nothing is paid yet. */
+  static createGatewayCheckout(data: { planId: string; amount: number; provider?: string }) {
+    return this.request<{
+      reference: string;
+      amount: number;
+      redirect: { url: string; method: 'POST'; fields: Record<string, string> };
+    }>('/payment-gateway/checkout', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  /** How a checkout ended, as the server recorded it — not as a URL claims it did. */
+  static getGatewayCheckout(reference: string) {
+    return this.request<{ reference: string; amount: number; status: string; paymentId?: string; receiptNumber?: string }>(
+      `/payment-gateway/checkouts/${encodeURIComponent(reference)}`
+    );
+  }
+
   // -------------------------------------------------------------------------
   // Transactions
   // -------------------------------------------------------------------------
@@ -382,6 +431,45 @@ export class ApiService {
     return this.request<any>('/platform/overview');
   }
 
+  // -------------------------------------------------------------------------
+  // Testimonials: a shop's feedback for the website
+  // -------------------------------------------------------------------------
+
+  /** The signed-in shop's own feedback, and the consent sentence to show. */
+  static getMyTestimonial() {
+    return this.request<{ testimonial: Testimonial | null; consentText: string }>('/testimonials/mine');
+  }
+
+  /** Submit or edit. `consent` must be true; the server refuses anything else. */
+  static submitMyTestimonial(body: { quote: string; rating: number; displayName: string; city: string; consent: boolean }) {
+    return this.request<{ testimonial: Testimonial }>('/testimonials/mine', { method: 'PUT', body: JSON.stringify(body) });
+  }
+
+  static withdrawMyTestimonial() {
+    return this.request<{ testimonial: Testimonial }>('/testimonials/mine/withdraw', { method: 'POST' });
+  }
+
+  /** Super admin: every shop's feedback, for review. */
+  static getTestimonials() {
+    return this.request<{ testimonials: ReviewTestimonial[] }>('/testimonials');
+  }
+
+  /** Approves exactly the version the reviewer read (`seenUpdatedAt`). */
+  static approveTestimonial(id: string, seenUpdatedAt: string) {
+    return this.request<{ testimonial: Testimonial }>(`/testimonials/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ seenUpdatedAt }),
+    });
+  }
+
+  static rejectTestimonial(id: string, note: string) {
+    return this.request<{ testimonial: Testimonial }>(`/testimonials/${id}/reject`, { method: 'POST', body: JSON.stringify({ note }) });
+  }
+
+  static unpublishTestimonial(id: string, note: string) {
+    return this.request<{ testimonial: Testimonial }>(`/testimonials/${id}/unpublish`, { method: 'POST', body: JSON.stringify({ note }) });
+  }
+
   static getLicenses(dealerId?: string) {
     return this.request<{
       dealers: any[];
@@ -399,6 +487,57 @@ export class ApiService {
     return this.request<any>('/licenses/packs', { method: 'POST', body: JSON.stringify(body) });
   }
 
+  // -------------------------------------------------------------------------
+  // Lock orders
+  // -------------------------------------------------------------------------
+
+  /** A shop owner's own orders; for a super admin, every shop's (or one status). */
+  static getLockOrders(params: { status?: string; dealerId?: string } = {}) {
+    return this.request<{
+      orders: any[];
+      paymentInstructions: string;
+      maxPendingOrders: number;
+    }>(`/lock-orders${buildQuery(params)}`);
+  }
+
+  /** Shop owner only — reports a transfer and asks for a pack. Issues nothing. */
+  static submitLockOrder(body: {
+    size: number;
+    paymentMethod: string;
+    transactionId: string;
+    amountPaid: number;
+    proofImage?: string;
+    note?: string;
+  }) {
+    return this.request<any>('/lock-orders', { method: 'POST', body: JSON.stringify(body) });
+  }
+
+  static cancelLockOrder(orderId: string) {
+    return this.request<any>(`/lock-orders/${orderId}/cancel`, { method: 'POST' });
+  }
+
+  static getLockOrderProof(orderId: string) {
+    return this.request<{ proofImage: string }>(`/lock-orders/${orderId}/proof`);
+  }
+
+  /** Super admin only — confirms the payment and issues the pack, once. */
+  static approveLockOrder(orderId: string) {
+    return this.request<any>(`/lock-orders/${orderId}/approve`, { method: 'POST' });
+  }
+
+  /** Super admin only. */
+  static rejectLockOrder(orderId: string, reason: string) {
+    return this.request<any>(`/lock-orders/${orderId}/reject`, { method: 'POST', body: JSON.stringify({ reason }) });
+  }
+
+  /** Super admin only — where shops are told to send the money. */
+  static saveLockPaymentInstructions(paymentInstructions: string) {
+    return this.request<any>('/lock-orders/payment-instructions', {
+      method: 'PUT',
+      body: JSON.stringify({ paymentInstructions }),
+    });
+  }
+
   static getNotifications(params: Record<string, unknown> = {}) {
     return this.request<
       Paged<any> & {
@@ -406,6 +545,11 @@ export class ApiService {
         /** True only when a paired phone has actually been heard from recently. */
         deliveryEnabled: boolean;
         deliveryNote: string;
+        /** The channel this shop's SMS actually take right now. */
+        smsChannel?: 'PHONE' | 'AGGREGATOR' | 'AGGREGATOR_THEN_PHONE';
+        aggregator?: { configured: boolean; provider?: string; senderMask?: string };
+        /** True only when WhatsApp Business Cloud API credentials are configured on the server. */
+        whatsappCloudEnabled?: boolean;
         relays: {
           id: string;
           name: string;
@@ -421,6 +565,37 @@ export class ApiService {
   /** The financing agreement, rendered — clauses, snapshot, signature. */
   static getContract(id: string) {
     return this.request<any>(`/contracts/${id}`);
+  }
+
+  /**
+   * The agreement as a PDF rendered by the server, with the Urdu shaped
+   * properly. A plain link would not carry the bearer token, so the bytes are
+   * fetched here and handed back for the page to save.
+   */
+  static async downloadContractPdf(id: string): Promise<{ blob: Blob; filename: string }> {
+    const headers: Record<string, string> = {};
+    const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE}/contracts/${id}/pdf`, { headers });
+    } catch {
+      throw new ApiError('Cannot reach the server. Please check your connection and try again.', 0, 'NETWORK_ERROR');
+    }
+
+    if (!res.ok) {
+      const payload = await res.json().catch(() => null);
+      if (res.status === 401) onUnauthorized?.();
+      throw new ApiError(
+        payload?.error || payload?.message || `The PDF could not be downloaded (${res.status}).`,
+        res.status,
+        payload?.code
+      );
+    }
+
+    const named = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') ?? '');
+    return { blob: await res.blob(), filename: named?.[1] ?? `agreement-${id}.pdf` };
   }
 
   static getContractForDevice(deviceId: string) {
@@ -454,8 +629,49 @@ export class ApiService {
     return this.request<any>(`/notifications/relays/${id}/revoke`, { method: 'POST', body: '{}' });
   }
 
+  /**
+   * The WhatsApp message for one customer, written by the server from the
+   * plan's figures, with its wa.me link. Fetching it records nothing.
+   */
+  static getWhatsAppMessage(params: Record<string, unknown>) {
+    return this.request<{ message: string; url: string; phone: string; waNumber: string; language: string }>(
+      `/notifications/whatsapp/message${buildQuery(params)}`
+    );
+  }
+
+  /** Records that a staff member opened WhatsApp with that message. Opened — not sent. */
+  static recordWhatsAppOpened(data: Record<string, unknown>) {
+    return this.request<any>('/notifications/whatsapp/opened', { method: 'POST', body: JSON.stringify(data) });
+  }
+
   static sendNotification(data: unknown) {
     return this.request<any>('/notifications/send', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  // -------------------------------------------------------------------------
+  // Handset compatibility tests
+  // -------------------------------------------------------------------------
+
+  static getHandsetTests(params: Record<string, unknown> = {}) {
+    return this.request<Paged<any> & { facets: { brands: string[]; androidVersions: string[] } }>(
+      `/handset-tests${buildQuery(params)}`
+    );
+  }
+
+  static createHandsetTest(data: Record<string, unknown>) {
+    return this.request<any>('/handset-tests', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  static updateHandsetTest(id: string, data: Record<string, unknown>) {
+    return this.request<any>(`/handset-tests/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+  }
+
+  static publishHandsetTest(id: string, published: boolean) {
+    return this.request<any>(`/handset-tests/${id}/publish`, { method: 'PATCH', body: JSON.stringify({ published }) });
+  }
+
+  static deleteHandsetTest(id: string) {
+    return this.request<any>(`/handset-tests/${id}`, { method: 'DELETE' });
   }
 
   static getAuditLogs(params: Record<string, unknown> = {}) {

@@ -23,7 +23,7 @@
  * `termsDiscloseOfflineLock` refuses that version and contracts signed under it
  * keep rendering — and keep meaning — exactly what they said.
  */
-export const CURRENT_TERMS_VERSION = '1.3';
+export const CURRENT_TERMS_VERSION = '1.4';
 
 /**
  * Whether the version somebody signed under actually tells them about the
@@ -55,6 +55,35 @@ export function termsDiscloseStagedRestrictions(termsVersion: string): boolean {
 export function termsDiscloseLocation(termsVersion: string): boolean {
   const [major = 0, minor = 0] = termsVersion.split('.').map((part) => Number(part) || 0);
   return major > 1 || (major === 1 && minor >= 3);
+}
+
+/**
+ * v1.4 adds two things the handset app does that no earlier version told the
+ * customer about:
+ *
+ *  - **Hardware checks.** On every contact the app reports the handset's IMEI
+ *    and serial numbers and whether its system software has been modified, and
+ *    a handset found tampered with may be restricted even though nothing is
+ *    overdue. Earlier versions permit a restriction for non-payment only.
+ *  - **Reset protection.** The phone cannot be factory-reset from Settings,
+ *    and after a wipe by other means it will not set up again without the
+ *    shop's account.
+ *
+ * It also stops clause 4 saying both "does not track the handset's location"
+ * and, two paragraphs later, that the shop may ask for it (v1.3 printed both).
+ *
+ * Contracts signed under v1.3 or earlier never said any of this, so the server
+ * neither keeps those signals, acts on them, nor hands out the shop's accounts
+ * for such a handset. See `DisclosurePolicy.ts`.
+ */
+export function termsDiscloseIntegrityChecks(termsVersion: string): boolean {
+  const [major = 0, minor = 0] = termsVersion.split('.').map((part) => Number(part) || 0);
+  return major > 1 || (major === 1 && minor >= 4);
+}
+
+/** Factory-reset protection is disclosed by the same version, v1.4. */
+export function termsDiscloseResetProtection(termsVersion: string): boolean {
+  return termsDiscloseIntegrityChecks(termsVersion);
 }
 
 /** The facts the document is rendered from, frozen at signing. */
@@ -121,7 +150,68 @@ export function renderClauses(
   if (termsDiscloseOfflineLock(termsVersion)) clauses = withOfflineRule(clauses, snapshot);
   if (termsDiscloseStagedRestrictions(termsVersion)) clauses = withStagedRestrictions(clauses, snapshot);
   if (termsDiscloseLocation(termsVersion)) clauses = withLocationOnRecovery(clauses, snapshot);
+  if (termsDiscloseIntegrityChecks(termsVersion)) clauses = withIntegrityAndResetProtection(clauses, snapshot);
   return clauses;
+}
+
+/** The v1.0 sentence that v1.3's location paragraph contradicts. */
+const NO_LOCATION_EN = "does not track the handset's location";
+const NO_LOCATION_UR = 'موبائل کی لوکیشن ٹریک نہیں کرتا';
+
+/**
+ * Clause 4, extended for terms v1.4: what the app reads about the handset
+ * itself, the one restriction that does not depend on a missed payment, and
+ * what stops the phone being reset out of the agreement.
+ *
+ * Unlike the offline rule, stages and location, none of this is a setting a
+ * shop switches on per sale — the app does it on every managed handset — so
+ * the paragraphs are printed on every v1.4 contract.
+ */
+function withIntegrityAndResetProtection(clauses: ContractClause[], snapshot: ContractSnapshot): ContractClause[] {
+  const dealer = snapshot.dealer.name;
+  const locationOn = snapshot.locationOnRecovery?.enabled === true;
+
+  return clauses.map((clause) => {
+    if (!clause.heading.startsWith('4.')) return clause;
+
+    // Where location for recovery is part of this agreement, the flat denial
+    // inherited from v1.0 is qualified rather than left to contradict it.
+    const body = locationOn
+      ? clause.body.replace(NO_LOCATION_EN, `${NO_LOCATION_EN} except as stated below in this clause`)
+      : clause.body;
+    const bodyUr = locationOn
+      ? clause.bodyUr.replace(NO_LOCATION_UR, `${NO_LOCATION_UR} سوائے اس صورت کے جو اسی شق میں نیچے بیان ہے`)
+      : clause.bodyUr;
+
+    return {
+      ...clause,
+      body:
+        `${body}\n\n` +
+        `So that the handset securing this agreement cannot be swapped or altered, the software reads the ` +
+        `handset's IMEI and serial numbers and checks whether its system software has been modified (for ` +
+        `example rooted, or its bootloader unlocked). It reports this to ${dealer}'s system each time it makes ` +
+        `contact, together with the battery level, Android version and mobile network name. If the handset is ` +
+        `found to have been tampered with, or its IMEI or serial number no longer matches this agreement, it ` +
+        `may be restricted even when the installments are up to date, until ${dealer} has inspected it.\n\n` +
+        `While any amount is owed, the handset cannot be factory-reset from its settings, the management ` +
+        `software cannot be removed, and USB debugging and installing apps from outside the app store are ` +
+        `switched off. If the handset is erased by any other means, it may refuse to be set up again until ` +
+        `${dealer} signs in to it with the shop's own account. These protections are removed once the final ` +
+        `installment is paid.`,
+      bodyUr:
+        `${bodyUr}\n\n` +
+        `اس لیے کہ اس معاہدے کی ضمانت والا موبائل بدلا یا تبدیل نہ کیا جا سکے، یہ سافٹ ویئر موبائل کا آئی ایم ای آئی اور ` +
+        `سیریل نمبر پڑھتا ہے اور یہ جانچتا ہے کہ اس کے سسٹم سافٹ ویئر میں کوئی چھیڑ چھاڑ تو نہیں ہوئی (مثلاً روٹ کرنا یا ` +
+        `بوٹ لوڈر کھولنا)۔ ہر رابطے پر یہ معلومات، بیٹری کی سطح، اینڈرائیڈ ورژن اور موبائل نیٹ ورک کے نام کے ساتھ، ` +
+        `${dealer} کے سسٹم کو بھیجی جاتی ہیں۔ اگر موبائل میں چھیڑ چھاڑ پائی جائے، یا اس کا آئی ایم ای آئی یا سیریل نمبر ` +
+        `اس معاہدے سے نہ ملے، تو اقساط وقت پر ادا ہونے کے باوجود موبائل محدود کیا جا سکتا ہے، جب تک ${dealer} اس کا ` +
+        `معائنہ نہ کر لے۔\n\n` +
+        `جب تک کوئی رقم واجب الادا ہے، موبائل کو سیٹنگز سے فیکٹری ری سیٹ نہیں کیا جا سکتا، مینجمنٹ سافٹ ویئر ہٹایا نہیں ` +
+        `جا سکتا، اور یو ایس بی ڈی بگنگ اور ایپ اسٹور کے باہر سے ایپس انسٹال کرنا بند رہتا ہے۔ اگر موبائل کسی اور طریقے ` +
+        `سے مٹا دیا جائے تو ممکن ہے وہ دوبارہ سیٹ اپ نہ ہو جب تک ${dealer} دکان کے اپنے اکاؤنٹ سے اس میں سائن اِن نہ ` +
+        `کرے۔ آخری قسط کی ادائیگی کے بعد یہ تمام حفاظتی پابندیاں ختم کر دی جاتی ہیں۔`,
+    };
+  });
 }
 
 /**
@@ -342,7 +432,11 @@ function clausesV1_0(snapshot: ContractSnapshot): ContractClause[] {
   ];
 }
 
-/** Shown immediately above the signature, in both languages. */
+/**
+ * Shown immediately above the signature, in both languages. This is the
+ * wording every contract up to terms v1.3 carries; like the clauses, it is
+ * never edited. Use `declarationFor` to get the one a contract was signed with.
+ */
 export const DECLARATION = {
   en:
     'I have read and understood the terms above, including clause 4, which permits this handset to be ' +
@@ -351,3 +445,23 @@ export const DECLARATION = {
     'میں نے اوپر دی گئی تمام شرائط پڑھ اور سمجھ لی ہیں، بشمول شق نمبر ۴، جس کے تحت اقساط بقایا ہونے کی صورت میں ' +
     'یہ موبائل بند کیا جا سکتا ہے۔ مجھے یہ شرائط منظور ہیں۔',
 };
+
+/**
+ * From v1.4 a handset may also be restricted for tampering, so a declaration
+ * that names only overdue installments would understate what is being accepted.
+ */
+const DECLARATION_V1_4 = {
+  en:
+    'I have read and understood the terms above, including clause 4, which permits this handset to be ' +
+    'restricted if my installments fall overdue or if the handset is tampered with, and which describes ' +
+    'what the software reads from the handset. I accept them.',
+  ur:
+    'میں نے اوپر دی گئی تمام شرائط پڑھ اور سمجھ لی ہیں، بشمول شق نمبر ۴، جس کے تحت اقساط بقایا ہونے یا موبائل میں ' +
+    'چھیڑ چھاڑ کی صورت میں یہ موبائل بند کیا جا سکتا ہے، اور جس میں بتایا گیا ہے کہ سافٹ ویئر موبائل سے کیا معلومات ' +
+    'پڑھتا ہے۔ مجھے یہ شرائط منظور ہیں۔',
+};
+
+/** The declaration as it stood under the version a contract was signed with. */
+export function declarationFor(termsVersion: string = CURRENT_TERMS_VERSION): typeof DECLARATION {
+  return termsDiscloseIntegrityChecks(termsVersion) ? DECLARATION_V1_4 : DECLARATION;
+}

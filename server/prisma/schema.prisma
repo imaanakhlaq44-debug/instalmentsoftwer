@@ -153,6 +153,14 @@ enum DeviceLicenseStatus {
   VOID
 }
 
+/// A shop's order for a pack of locks, from payment claim to decision.
+enum LockOrderStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
 enum LateFeeType {
   FIXED
   PERCENTAGE
@@ -178,6 +186,20 @@ enum NotificationChannel {
   SMS
   EMAIL
   PUSH
+  /// Sent through the WhatsApp Business Cloud API, when it is configured.
+  WHATSAPP
+}
+
+/**
+ * How a dealership's SMS leave the building. PHONE is the shop's own paired
+ * handset; AGGREGATOR is the platform's gateway account with a sender mask;
+ * AGGREGATOR_THEN_PHONE tries the gateway and hands a message to the phone
+ * only after the gateway has given up on it.
+ */
+enum SmsChannel {
+  PHONE
+  AGGREGATOR
+  AGGREGATOR_THEN_PHONE
 }
 
 enum NotificationStatus {
@@ -237,10 +259,13 @@ model Dealer {
   auditLogs        AuditLog[]
   licensePacks     LicensePack[]
   deviceLicenses   DeviceLicense[]
+  lockOrders       LockOrder[]
   devicePolicy     DevicePolicy?
   notifications    Notification[]
   smsRelays        SmsRelay[]
   contracts        Contract[]
+  testimonial      Testimonial?
+  handsetTests     HandsetTest[]
 
   @@index([active])
   @@map("dealers")
@@ -267,6 +292,7 @@ model LicensePack {
 
   dealer   Dealer          @relation(fields: [dealerId], references: [id], onDelete: Cascade)
   licenses DeviceLicense[]
+  order    LockOrder?
 
   @@index([dealerId])
   @@map("license_packs")
@@ -304,6 +330,65 @@ model DeviceLicense {
   @@index([dealerId, status])
   @@index([packId])
   @@map("device_licenses")
+}
+
+/**
+ * A shop's order for a pack of locks.
+ *
+ * The shop picks a size, pays the platform outside the system (JazzCash,
+ * Easypaisa, bank) and reports the transfer here. Nothing is minted by the
+ * order itself: a super admin checks the money arrived and approves, and only
+ * that approval issues the pack. The price is fixed on the order at the moment
+ * it is placed, so a later change to the price list cannot alter what the shop
+ * was told to pay.
+ *
+ * `packId` is unique: one order can produce at most one pack, whatever the
+ * application does.
+ */
+model LockOrder {
+  id              String          @id
+  dealerId        String          @map("dealer_id")
+  size            Int
+  unitPrice       Int             @map("unit_price")
+  totalPrice      Int             @map("total_price")
+  status          LockOrderStatus @default(PENDING)
+  paymentMethod   PaymentMethod   @map("payment_method")
+  /** The transfer's own reference, as the shop typed it. */
+  transactionId   String          @map("transaction_id") @db.VarChar(60)
+  /** What the shop says it sent. Compared with totalPrice by the reviewer. */
+  amountPaid      Int             @map("amount_paid")
+  /** Optional screenshot of the transfer, as a downscaled data URL. */
+  proofImage      String?         @map("proof_image") @db.Text
+  note            String?         @db.VarChar(500)
+  submittedById   String          @map("submitted_by_id") @db.VarChar(64)
+  submittedByName String          @map("submitted_by_name") @db.VarChar(120)
+  reviewedById    String?         @map("reviewed_by_id") @db.VarChar(64)
+  reviewedByName  String?         @map("reviewed_by_name") @db.VarChar(120)
+  reviewedAt      DateTime?       @map("reviewed_at") @db.Timestamptz(3)
+  rejectionReason String?         @map("rejection_reason") @db.VarChar(500)
+  packId          String?         @unique @map("pack_id")
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  dealer Dealer       @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  pack   LicensePack? @relation(fields: [packId], references: [id], onDelete: SetNull)
+
+  @@index([dealerId, createdAt(sort: Desc)])
+  @@index([status, createdAt])
+  @@map("lock_orders")
+}
+
+/**
+ * Platform-wide settings the super admin edits from the dashboard, one row per
+ * setting. Today: the payment instructions shown to a shop buying locks.
+ */
+model PlatformSetting {
+  id            String   @id @db.VarChar(60)
+  value         String   @db.Text
+  updatedById   String?  @map("updated_by_id") @db.VarChar(64)
+  updatedByName String?  @map("updated_by_name") @db.VarChar(120)
+  updatedAt     DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+
+  @@map("platform_settings")
 }
 
 model User {
@@ -715,6 +800,18 @@ model DevicePolicy {
    */
   locationOnRecoveryEnabled Boolean          @default(false) @map("location_on_recovery_enabled")
   customerReminderEnabled  Boolean           @default(true) @map("customer_reminder_enabled")
+  /** Which way this shop's SMS go out. See `SmsChannel`. */
+  smsChannel               SmsChannel        @default(PHONE) @map("sms_channel")
+  /**
+   * Language of the messages the shop opens in its own WhatsApp:
+   * UR (Urdu script), ROMAN_UR or EN.
+   */
+  whatsappLanguage         String            @default("ROMAN_UR") @map("whatsapp_language") @db.VarChar(12)
+  /**
+   * Where automatic reminders are queued. WHATSAPP is only accepted while the
+   * platform has WhatsApp Business Cloud API credentials.
+   */
+  reminderChannel          NotificationChannel @default(SMS) @map("reminder_channel")
   emergencyCallsAllowed    Boolean           @default(true) @map("emergency_calls_allowed")
   paymentMethodsOnLock     String[]          @map("payment_methods_on_lock")
   lateFeeEnabled           Boolean           @default(false) @map("late_fee_enabled")
@@ -728,6 +825,39 @@ model DevicePolicy {
   dealer Dealer @relation(fields: [dealerId], references: [id], onDelete: Cascade)
 
   @@map("device_policies")
+}
+
+/**
+ * One hosted-checkout attempt at a payment gateway.
+ *
+ * A callback from the gateway is only believed when it matches a row here:
+ * same reference, same merchant, same amount. `status` reaches PAID exactly
+ * once, inside the transaction that records the payment, which is what makes a
+ * replayed callback harmless. Deliberately relation-free: it is a ledger of
+ * attempts, and `merchantId` is the public identifier, never a secret.
+ */
+model GatewayCheckout {
+  id              String    @id
+  dealerId        String    @map("dealer_id")
+  customerId      String    @map("customer_id")
+  planId          String    @map("plan_id")
+  provider        String    @db.VarChar(20)
+  reference       String    @unique @db.VarChar(40)
+  merchantId      String    @map("merchant_id") @db.VarChar(60)
+  amount          Int
+  /// CREATED | FAILED | PAID | REVIEW
+  status          String    @default("CREATED") @db.VarChar(12)
+  paymentId       String?   @map("payment_id")
+  providerTxnId   String?   @map("provider_txn_id") @db.VarChar(80)
+  responseCode    String?   @map("response_code") @db.VarChar(20)
+  responseMessage String?   @map("response_message") @db.VarChar(300)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt       DateTime  @map("expires_at") @db.Timestamptz(3)
+  completedAt     DateTime? @map("completed_at") @db.Timestamptz(3)
+
+  @@index([customerId, createdAt(sort: Desc)])
+  @@index([dealerId, status])
+  @@map("gateway_checkouts")
 }
 
 model AuditLog {
@@ -776,6 +906,18 @@ model Notification {
   leaseUntil    DateTime? @map("lease_until") @db.Timestamptz(3)
   attempts      Int       @default(0)
   failureReason String?   @map("failure_reason") @db.VarChar(300)
+
+  /**
+   * SMS aggregator bookkeeping. `leaseUntil` above is shared: whoever holds it
+   * — a paired phone or the aggregator worker — owns the message, so the two
+   * can never both send it. `phoneFallbackAt` is set when the aggregator gives
+   * a message up to the phone ("aggregator, then phone" shops only).
+   */
+  sentVia            String?   @map("sent_via") @db.VarChar(20)
+  providerMessageId  String?   @map("provider_message_id") @db.VarChar(120)
+  aggregatorAttempts Int       @default(0) @map("aggregator_attempts")
+  nextAttemptAt      DateTime? @map("next_attempt_at") @db.Timestamptz(3)
+  phoneFallbackAt    DateTime? @map("phone_fallback_at") @db.Timestamptz(3)
 
   dealer   Dealer    @relation(fields: [dealerId], references: [id], onDelete: Cascade)
   customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
@@ -878,4 +1020,102 @@ model NotificationTemplate {
   bodyTemplate    String @map("body_template") @db.VarChar(1000)
 
   @@map("notification_templates")
+}
+
+enum TestimonialStatus {
+  /// Submitted by the shop, waiting for the platform to read it.
+  PENDING
+  /// Read and accepted. The only state the public endpoint returns.
+  APPROVED
+  /// Declined in review, with a note the shop can read.
+  REJECTED
+  /// Was approved, then taken down by the platform.
+  UNPUBLISHED
+  /// Taken back by the shop. Their decision, and final until they submit again.
+  WITHDRAWN
+}
+
+/// What a shop said about the product, in its own words, with its permission
+/// to print it.
+///
+/// One per dealership. Nobody but the shop can change the quote, name or city:
+/// the platform may only approve, reject or unpublish what was written, so the
+/// words under a shop's name on the website are always the words it typed and
+/// consented to. Editing sends the row back to PENDING with a fresh consent.
+model Testimonial {
+  id       String @id
+  dealerId String @unique @map("dealer_id")
+
+  quote       String @db.VarChar(600)
+  rating      Int    @db.SmallInt
+  displayName String @map("display_name") @db.VarChar(80)
+  city        String @db.VarChar(60)
+  /// 'ur' when the quote is written in Urdu script, otherwise 'en' (which
+  /// covers Roman Urdu). Decides direction and typeface on the site.
+  language    String @db.VarChar(2)
+
+  status TestimonialStatus @default(PENDING)
+
+  /// The consent, as given: the exact sentence the owner ticked, who ticked it
+  /// and when. Replaced whenever the text is edited.
+  consentText     String   @map("consent_text") @db.VarChar(500)
+  consentAt       DateTime @map("consent_at") @db.Timestamptz(3)
+  consentByUserId String   @map("consent_by_user_id") @db.VarChar(64)
+  consentByName   String   @map("consent_by_name") @db.VarChar(120)
+
+  reviewedAt     DateTime? @map("reviewed_at") @db.Timestamptz(3)
+  reviewedByName String?   @map("reviewed_by_name") @db.VarChar(120)
+  /// Why it was rejected or unpublished. Shown to the shop.
+  reviewNote     String?   @map("review_note") @db.VarChar(300)
+  withdrawnAt    DateTime? @map("withdrawn_at") @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  dealer Dealer @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+
+  @@index([status, reviewedAt(sort: Desc)])
+  @@map("testimonials")
+}
+
+enum HandsetTestOverall {
+  PASS
+  FAIL
+  PARTIAL
+  NOT_TESTED
+}
+
+/**
+ * One real phone put through the lock app's checklist.
+ *
+ * `steps` is `{ [stepKey]: { result, notes? } }` — the route's Zod schema is
+ * what fixes the nine keys, so adding a step is not a migration. `overallResult`
+ * is derived from it on every write and stored, so the public list is a plain
+ * read. `dealerId` is null for the platform's own tests.
+ */
+model HandsetTest {
+  id             String   @id
+  dealerId       String?  @map("dealer_id")
+  brand          String   @db.VarChar(60)
+  model          String   @db.VarChar(80)
+  androidVersion String   @map("android_version") @db.VarChar(20)
+  oemBuild       String?  @map("oem_build") @db.VarChar(120)
+  dpcVersion     String   @map("dpc_version") @db.VarChar(20)
+  steps          Json
+  overallResult  HandsetTestOverall @map("overall_result")
+  notes          String?  @db.VarChar(1000)
+  testedById     String?  @map("tested_by_id") @db.VarChar(64)
+  testedByName   String   @map("tested_by_name") @db.VarChar(120)
+  testedAt       DateTime @map("tested_at") @db.Timestamptz(3)
+  published      Boolean  @default(false)
+  publishedAt    DateTime? @map("published_at") @db.Timestamptz(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+
+  dealer Dealer? @relation(fields: [dealerId], references: [id], onDelete: SetNull)
+
+  @@index([dealerId, testedAt(sort: Desc)])
+  @@index([brand])
+  @@index([published])
+  @@map("handset_tests")
 }

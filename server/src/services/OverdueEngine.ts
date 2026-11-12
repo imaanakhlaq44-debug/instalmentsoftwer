@@ -9,6 +9,7 @@ import { DeviceIntegrityService } from './DeviceIntegrityService.js';
 import { AuditService } from './AuditService.js';
 import { calculateLateFee, daysBetween, DEFAULT_POLICY, toDateOnly } from './InstallmentMath.js';
 import { stagedFullLockDue } from './StagedRestrictions.js';
+import { WhatsAppDispatchService } from './whatsapp/WhatsAppDispatchService.js';
 
 export interface OverdueEvaluationResult {
   evaluatedCount: number;
@@ -143,6 +144,7 @@ export class OverdueEngine {
             customerId: inst.customerId,
             deviceId: device.id,
             type: 'PAYMENT_OVERDUE',
+            channel: this.reminderChannel(policy),
             title: 'Overdue Installment',
             message:
               `Your installment of Rs. ${inst.amountDue.toLocaleString()} for ${device.brand} ${device.model} ` +
@@ -209,6 +211,7 @@ export class OverdueEngine {
             customerId: inst.customerId,
             deviceId: device?.id,
             type: 'PAYMENT_DUE',
+            channel: this.reminderChannel(policy),
             title: 'Installment Due Soon',
             message:
               `Reminder: your installment of Rs. ${inst.amountDue.toLocaleString()} is due on ${inst.dueDate} ` +
@@ -249,6 +252,15 @@ export class OverdueEngine {
   }
 
   /**
+   * A shop that chose WhatsApp gets it only while the platform can actually
+   * send it. If the credentials are gone, reminders fall back to the SMS queue
+   * rather than piling up on a channel nothing is reading.
+   */
+  private static reminderChannel(policy: DevicePolicy): Notification['channel'] {
+    return policy.reminderChannel === 'WHATSAPP' && WhatsAppDispatchService.isEnabled() ? 'WHATSAPP' : 'SMS';
+  }
+
+  /**
    * Queues a notification unless an identical one already went out today.
    * Without this, a nightly job plus manual runs would text the customer
    * repeatedly about the same installment.
@@ -258,6 +270,7 @@ export class OverdueEngine {
     customerId: string;
     deviceId?: string;
     type: Notification['type'];
+    channel?: Notification['channel'];
     title: string;
     message: string;
   }): Promise<boolean> {
@@ -280,7 +293,7 @@ export class OverdueEngine {
       customerId: params.customerId,
       deviceId: params.deviceId,
       type: params.type,
-      channel: 'SMS',
+      channel: params.channel ?? 'SMS',
       title: params.title,
       message: params.message,
       // QUEUED, not SENT — nothing has actually reached a phone until an SMS

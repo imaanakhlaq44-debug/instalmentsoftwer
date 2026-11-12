@@ -89,6 +89,8 @@ async function seedContracts(data: ReturnType<typeof generateSeedData>, tx: Tx):
  * keeps the intent explicit and the statement reviewable.
  */
 const ALL_TABLES = [
+  'testimonials',
+  'gateway_checkouts',
   'installments',
   'installment_plans',
   'payments',
@@ -100,9 +102,12 @@ const ALL_TABLES = [
   'notification_templates',
   'contracts',
   'audit_logs',
+  'handset_tests',
   'customers',
   'users',
   'device_policies',
+  'lock_orders',
+  'platform_settings',
   'device_licenses',
   'license_packs',
   'dealers',

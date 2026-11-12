@@ -386,6 +386,43 @@ export interface LicensePack {
   createdAt: string;
 }
 
+export type LockOrderStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+
+/** How a shop may pay the platform for locks. Cash is not on the list. */
+export type LockOrderPaymentMethod = 'JAZZCASH' | 'EASYPAISA' | 'BANK_TRANSFER' | 'RAAST';
+
+/** A shop's order for a pack of locks — see the model comment in schema.prisma. */
+export interface LockOrder {
+  id: string;
+  dealerId: string;
+  size: number;
+  unitPrice: number;
+  totalPrice: number;
+  status: LockOrderStatus;
+  paymentMethod: LockOrderPaymentMethod;
+  transactionId: string;
+  amountPaid: number;
+  proofImage?: string | null;
+  note?: string | null;
+  submittedById: string;
+  submittedByName: string;
+  reviewedById?: string | null;
+  reviewedByName?: string | null;
+  reviewedAt?: string | null;
+  rejectionReason?: string | null;
+  packId?: string | null;
+  createdAt: string;
+}
+
+/** One platform-wide setting, edited by the super admin. */
+export interface PlatformSetting {
+  id: string;
+  value: string;
+  updatedById?: string | null;
+  updatedByName?: string | null;
+  updatedAt: string;
+}
+
 /**
  * One lock for one handset. Spent at enrolment onto a single IMEI, and never
  * returned — see the model comment in schema.prisma.
@@ -425,6 +462,12 @@ export interface DevicePolicy {
    */
   frpAccountIds?: string[];
   customerReminderEnabled: boolean;
+  /** Which way this shop's SMS go out. Absent means the paired phone. */
+  smsChannel?: SmsChannel;
+  /** Language of the click-to-WhatsApp messages this shop sends. */
+  whatsappLanguage?: 'UR' | 'ROMAN_UR' | 'EN';
+  /** Where automatic reminders are queued. */
+  reminderChannel?: 'SMS' | 'WHATSAPP';
   emergencyCallsAllowed: boolean;
   paymentMethodsOnLock: string[];
 
@@ -442,13 +485,19 @@ export interface DevicePolicy {
   updatedAt: string;
 }
 
+/**
+ * How a dealership's SMS leave: its own paired phone, the platform's
+ * aggregator account, or the aggregator with the phone as a fallback.
+ */
+export type SmsChannel = 'PHONE' | 'AGGREGATOR' | 'AGGREGATOR_THEN_PHONE';
+
 export interface Notification {
   id: string;
   dealerId: string;
   customerId?: string;
   deviceId?: string;
   type: 'PAYMENT_DUE' | 'PAYMENT_OVERDUE' | 'DEVICE_LOCKED' | 'DEVICE_UNLOCKED' | 'DEVICE_OFFLINE' | 'ENROLLMENT_SUCCESS' | 'SECURITY_ALERT';
-  channel: 'IN_APP' | 'SMS' | 'EMAIL' | 'PUSH';
+  channel: 'IN_APP' | 'SMS' | 'EMAIL' | 'PUSH' | 'WHATSAPP';
   title: string;
   message: string;
   status: 'QUEUED' | 'SENT' | 'DELIVERED' | 'FAILED';
@@ -458,6 +507,16 @@ export interface Notification {
   leaseUntil?: string;
   attempts?: number;
   failureReason?: string;
+  /** What actually sent it: the paired phone or the aggregator. Set only on SENT. */
+  sentVia?: 'PHONE' | 'AGGREGATOR';
+  /** The gateway's own reference for an accepted message, when it gives one. */
+  providerMessageId?: string;
+  /** Tries made through the aggregator; `attempts` counts the phone's. */
+  aggregatorAttempts?: number;
+  /** Backoff: the aggregator leaves the message alone until this time. */
+  nextAttemptAt?: string;
+  /** Set when the aggregator gave the message up to the paired phone. */
+  phoneFallbackAt?: string;
 }
 
 /**
@@ -510,4 +569,87 @@ export interface NotificationTemplate {
   channel: string;
   subjectTemplate: string;
   bodyTemplate: string;
+}
+
+// ---------------------------------------------------------------------------
+// Handset compatibility tests
+// ---------------------------------------------------------------------------
+
+/** The checklist, in the order a tester walks it at the counter. */
+export const HANDSET_TEST_STEPS = [
+  'QR_PROVISIONING',
+  'ENROL',
+  'LOCK',
+  'UNLOCK',
+  'LOCK_AFTER_REBOOT',
+  'STAGED_RESTRICTIONS',
+  'OFFLINE_SELF_LOCK',
+  'FACTORY_RESET_PROTECTION',
+  'RE_ENROL',
+] as const;
+
+export type HandsetTestStepKey = (typeof HANDSET_TEST_STEPS)[number];
+export type HandsetTestStepResult = 'PASS' | 'FAIL' | 'NOT_TESTED';
+export type HandsetTestOverall = 'PASS' | 'FAIL' | 'PARTIAL' | 'NOT_TESTED';
+
+export interface HandsetTestStep {
+  result: HandsetTestStepResult;
+  notes?: string;
+}
+
+export type HandsetTestSteps = Record<HandsetTestStepKey, HandsetTestStep>;
+
+/** One real phone put through the lock app's checklist. */
+export interface HandsetTest {
+  id: string;
+  /** Absent for a test the platform ran itself. */
+  dealerId?: string;
+  brand: string;
+  model: string;
+  androidVersion: string;
+  oemBuild?: string;
+  dpcVersion: string;
+  steps: HandsetTestSteps;
+  overallResult: HandsetTestOverall;
+  notes?: string;
+  testedById?: string;
+  testedByName: string;
+  testedAt: string;
+  published: boolean;
+  publishedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Where a hosted-checkout attempt stands.
+ *
+ * Only PAID is final. FAILED means the gateway said "not paid" the last time it
+ * spoke; REVIEW means the gateway confirmed money but it could not be applied
+ * safely, and a person has to look.
+ */
+export type GatewayCheckoutStatus = 'CREATED' | 'FAILED' | 'PAID' | 'REVIEW';
+
+/** One "Pay now" attempt at a payment gateway. Holds no secrets. */
+export interface GatewayCheckout {
+  id: string;
+  dealerId: string;
+  customerId: string;
+  planId: string;
+  /** The gateway, e.g. `JAZZCASH`. */
+  provider: string;
+  /** Our reference, sent to the gateway and echoed back in its callback. */
+  reference: string;
+  /** The public merchant identifier the checkout was signed for. */
+  merchantId: string;
+  /** Whole rupees. */
+  amount: number;
+  status: GatewayCheckoutStatus;
+  paymentId?: string;
+  providerTxnId?: string;
+  responseCode?: string;
+  responseMessage?: string;
+  createdAt: string;
+  expiresAt: string;
+  completedAt?: string;
 }

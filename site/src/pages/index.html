@@ -281,6 +281,11 @@ layout: none
   .meta { display: flex; justify-content: flex-end; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; font-weight: 700; color: var(--ink-2); direction: ltr; }
   .tq.big .meta { color: #9FB0C8; }
   .meta .tick { color: #34B7F1; letter-spacing: -3px; font-weight: 900; }
+  /* A real testimonial is printed in the language its shop wrote it in, whichever language the page is showing. */
+  .meta .stars { font-size: 15px; letter-spacing: 2px; color: var(--ink); }
+  .tq.big .meta .stars { color: var(--sun); }
+  .bubble q[lang="ur"] { font-family: 'Noto Naskh Arabic', serif; line-height: 1.9; }
+  .lang-ur .bubble q[lang="en"] { font-family: Archivo, system-ui, sans-serif; }
   .who { display: flex; align-items: center; gap: 12px; padding-inline-start: 6px; margin-top: 4px; }
   .who .av { width: 44px; height: 44px; border-radius: 50%; border: var(--b); display: grid; place-items: center; font-weight: 900; font-size: 15px; background: var(--mint); flex: none; }
   .tq:nth-child(3n+2) .av { background: var(--sun); } .tq:nth-child(3n) .av { background: #fff; }
@@ -660,9 +665,10 @@ layout: none
 
   <!-- voices -->
   <!-- SAMPLE testimonials: written to show the design, not said by real shops.
-       Replace each quote and attribution with genuine feedback (with the shop's
-       permission), then delete its data-sample-testimonial attribute. The build
-       warns while any remain. -->
+       They are never published: the build drops this whole section while any
+       remain. Real ones are not typed in here. A shop submits feedback in the
+       dashboard with consent, the platform approves it, and the build prints
+       src/data/testimonials.json in place of these (see site/PUBLISH.md). -->
   <section id="voices" class="voices">
     <div class="wrap">
       <div class="sec-head">

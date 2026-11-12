@@ -41,7 +41,7 @@ export const ShopModeBanner: React.FC = () => {
             <span className="font-extrabold uppercase tracking-[0.08em]">Edit mode on</span>
             <span className="mx-2 opacity-60">·</span>
             <span>Changes here are real and recorded under your name.</span>
-            {shopName && <span className="ml-1 font-extrabold">({shopName})</span>}
+            {shopName && <span className="ms-1 font-extrabold">({shopName})</span>}
           </p>
           <button
             type="button"

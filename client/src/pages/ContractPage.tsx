@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ApiService } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.js';
 import { SignaturePad } from '../components/contract/SignaturePad.js';
-import { AlertTriangle, ArrowLeft, FileText, Printer, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Download, FileText, Printer, ShieldCheck } from 'lucide-react';
 
 const money = (value: number) => 'Rs. ' + Math.round(value).toLocaleString('en-PK');
 
@@ -12,10 +12,10 @@ const money = (value: number) => 'Rs. ' + Math.round(value).toLocaleString('en-P
  *
  * The printed page is the deliverable — a customer restricting their own phone
  * on someone's say-so deserves a copy of what they agreed to. It prints to A4
- * through the browser, which is also what makes the Urdu render correctly:
- * a server-side PDF library would need Arabic text shaping that none of the
- * Node ones do properly, and half-shaped Urdu on a legal document is worse than
- * no Urdu at all.
+ * through the browser, and "Download PDF" fetches the same document rendered
+ * by the server's headless Chromium. Both go through a browser engine because
+ * that is what shapes the Urdu correctly; half-shaped Urdu on a legal document
+ * is worse than no Urdu at all.
  */
 export const ContractPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -29,6 +29,7 @@ export const ContractPage: React.FC = () => {
   const [signerName, setSignerName] = useState('');
   const [signature, setSignature] = useState<string | null>(null);
   const [declarationAccepted, setDeclarationAccepted] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const load = async () => {
     if (!id) return;
@@ -70,6 +71,26 @@ export const ContractPage: React.FC = () => {
     }
   };
 
+  const downloadPdf = async () => {
+    if (!id) return;
+    try {
+      setDownloading(true);
+      const { blob, filename } = await ApiService.downloadContractPdf(id);
+      const url = URL.createObjectURL(blob);
+      const link = window.document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      window.document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   if (loading) return <div className="p-8 text-sm text-slate-500">Loading agreement…</div>;
   if (!document) return <div className="p-8 text-sm text-slate-500">This agreement could not be loaded.</div>;
 
@@ -77,7 +98,10 @@ export const ContractPage: React.FC = () => {
   const canSign = contract.status === 'DRAFT' && user?.role !== 'CUSTOMER';
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6" data-i18n-skip>
+    // The agreement is one fixed bilingual document: its English runs left to
+    // right and its Urdu clauses carry their own dir="rtl", whichever language
+    // the dashboard is in. So it reads and prints the same in all three.
+    <div className="max-w-4xl mx-auto space-y-6" data-i18n-skip dir="ltr" lang="en">
       {/*
         The A4 page rules live here rather than in index.css, which sizes the
         page for 80mm thermal receipt rolls. Two documents, two page sizes, and
@@ -115,6 +139,13 @@ export const ContractPage: React.FC = () => {
               <FileText className="w-4 h-4" /> Sign with the customer
             </button>
           )}
+          <button
+            onClick={downloadPdf}
+            disabled={downloading}
+            className="px-4 py-2 bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-900 border border-slate-300 rounded-xl text-xs font-bold flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" /> {downloading ? 'Preparing PDF…' : 'Download PDF'}
+          </button>
           <button
             onClick={() => window.print()}
             className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center gap-2"
@@ -275,10 +306,10 @@ export const ContractPage: React.FC = () => {
           </h3>
           <table className="w-full text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-300 text-left">
+              <tr className="border-b border-slate-300 text-start">
                 <th className="py-1 font-bold">#</th>
                 <th className="py-1 font-bold">Due date</th>
-                <th className="py-1 font-bold text-right">Amount</th>
+                <th className="py-1 font-bold text-end">Amount</th>
               </tr>
             </thead>
             <tbody>
@@ -286,7 +317,7 @@ export const ContractPage: React.FC = () => {
                 <tr key={row.installmentNumber} className="border-b border-slate-100">
                   <td className="py-1">{row.installmentNumber}</td>
                   <td className="py-1">{row.dueDate}</td>
-                  <td className="py-1 text-right">{money(row.amountDue)}</td>
+                  <td className="py-1 text-end">{money(row.amountDue)}</td>
                 </tr>
               ))}
             </tbody>

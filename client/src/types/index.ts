@@ -297,6 +297,8 @@ export interface DevicePolicy {
   /** Google account ids (numeric) allowed to set a phone up after a recovery-mode reset. */
   frpAccountIds?: string[];
   customerReminderEnabled: boolean;
+  /** How SMS leave: the paired phone, the SMS gateway, or the gateway with the phone behind it. */
+  smsChannel?: 'PHONE' | 'AGGREGATOR' | 'AGGREGATOR_THEN_PHONE';
   emergencyCallsAllowed: boolean;
   paymentMethodsOnLock: string[];
   createdAt: string;
@@ -314,6 +316,15 @@ export interface Notification {
   message: string;
   status: string;
   sentAt?: string;
+  /** What actually sent it. Present only on a message that was sent. */
+  sentVia?: 'PHONE' | 'AGGREGATOR';
+  failureReason?: string;
+  attempts?: number;
+  aggregatorAttempts?: number;
+  nextAttemptAt?: string;
+  phoneFallbackAt?: string;
+  /** What the message costs to send; Urdu script is 70 characters an SMS. */
+  sms?: { encoding: 'GSM-7' | 'UCS-2'; unicode: boolean; length: number; segments: number };
   customerName?: string;
   customerPhone?: string;
   deviceModel?: string;
