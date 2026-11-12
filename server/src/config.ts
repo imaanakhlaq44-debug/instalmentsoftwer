@@ -92,6 +92,81 @@ function requireDatabaseUrl(): string {
   return url;
 }
 
+/**
+ * The SMS aggregator account, if there is one.
+ *
+ * Everything here comes from the environment — credentials never live in the
+ * repository or the database. A half-filled configuration is reported and
+ * treated as "no aggregator" rather than stopping the server: reminders then
+ * simply keep going through paired phones, as they did before.
+ */
+function resolveSms() {
+  const env = (name: string) => (process.env[name] || '').trim();
+  const requested = env('SMS_PROVIDER').toLowerCase();
+  const phoneFormat = env('SMS_HTTP_PHONE_FORMAT').toLowerCase();
+
+  const http = {
+    url: env('SMS_HTTP_URL'),
+    method: env('SMS_HTTP_METHOD').toUpperCase() === 'POST' ? ('POST' as const) : ('GET' as const),
+    bodyFormat: env('SMS_HTTP_BODY_FORMAT').toLowerCase() === 'json' ? ('json' as const) : ('form' as const),
+    username: env('SMS_HTTP_USERNAME'),
+    password: env('SMS_HTTP_PASSWORD'),
+    apiKey: env('SMS_HTTP_API_KEY'),
+    senderMask: env('SMS_SENDER_MASK'),
+    paramUsername: process.env.SMS_HTTP_PARAM_USERNAME?.trim() ?? 'username',
+    paramPassword: process.env.SMS_HTTP_PARAM_PASSWORD?.trim() ?? 'password',
+    paramApiKey: process.env.SMS_HTTP_PARAM_API_KEY?.trim() ?? 'api_key',
+    paramSender: process.env.SMS_HTTP_PARAM_SENDER?.trim() ?? 'sender',
+    paramTo: process.env.SMS_HTTP_PARAM_TO?.trim() || 'to',
+    paramMessage: process.env.SMS_HTTP_PARAM_MESSAGE?.trim() || 'message',
+    extraParams: env('SMS_HTTP_EXTRA_PARAMS'),
+    unicodeParams: env('SMS_HTTP_UNICODE_PARAMS'),
+    authHeader: env('SMS_HTTP_AUTH_HEADER'),
+    phoneFormat:
+      phoneFormat === 'plus' ? ('plus' as const) : phoneFormat === 'local' ? ('local' as const) : ('international' as const),
+    successPattern: env('SMS_HTTP_SUCCESS_PATTERN'),
+    failurePattern: env('SMS_HTTP_FAILURE_PATTERN'),
+    messageIdPattern: env('SMS_HTTP_MESSAGE_ID_PATTERN'),
+  };
+
+  const twilio = {
+    accountSid: env('TWILIO_ACCOUNT_SID'),
+    authToken: env('TWILIO_AUTH_TOKEN'),
+    from: env('TWILIO_FROM') || env('SMS_SENDER_MASK'),
+    messagingServiceSid: env('TWILIO_MESSAGING_SERVICE_SID'),
+  };
+
+  let provider: 'none' | 'http' | 'twilio' = 'none';
+  let problem = '';
+
+  if (requested === 'http') {
+    if (!/^https?:\/\//i.test(http.url)) problem = 'SMS_PROVIDER=http needs SMS_HTTP_URL (the gateway\'s send URL).';
+    else provider = 'http';
+  } else if (requested === 'twilio') {
+    if (!twilio.accountSid || !twilio.authToken) problem = 'SMS_PROVIDER=twilio needs TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN.';
+    else if (!twilio.from && !twilio.messagingServiceSid) problem = 'SMS_PROVIDER=twilio needs TWILIO_FROM or TWILIO_MESSAGING_SERVICE_SID.';
+    else provider = 'twilio';
+  } else if (requested && requested !== 'none') {
+    problem = `SMS_PROVIDER="${requested}" is not recognised. Use http, twilio or none.`;
+  }
+
+  if (problem) {
+    console.warn(`[config] ${problem} The SMS aggregator stays OFF; paired phones keep working.`);
+  }
+
+  return {
+    provider,
+    http,
+    twilio,
+    /** How long one gateway call may take before it counts as a failure. */
+    timeoutMs: num(process.env.SMS_TIMEOUT_MS, 10_000),
+    /** Tries through the aggregator before a message is failed or handed to the phone. */
+    maxAttempts: Math.min(num(process.env.SMS_MAX_ATTEMPTS, 4), 10),
+    /** How often the worker looks at the queue. */
+    pollSeconds: Math.max(num(process.env.SMS_POLL_SECONDS, 30), 5),
+  };
+}
+
 const autoSeed = bool(process.env.AUTO_SEED, !isProduction);
 if (isProduction && autoSeed) {
   fail('AUTO_SEED must be false in production. Demo data must never be written to a live database.');
@@ -135,6 +210,9 @@ export const config = {
 
   autoSeed,
   seedDefaultPassword: process.env.SEED_DEFAULT_PASSWORD || 'ChangeMe#2026',
+
+  /** The SMS aggregator account. `provider` is 'none' when there is not one. */
+  sms: resolveSms(),
 
   /** Max JSON request body size — blocks trivial memory-exhaustion payloads. */
   bodyLimit: '256kb',

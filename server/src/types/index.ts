@@ -425,6 +425,8 @@ export interface DevicePolicy {
    */
   frpAccountIds?: string[];
   customerReminderEnabled: boolean;
+  /** Which way this shop's SMS go out. Absent means the paired phone. */
+  smsChannel?: SmsChannel;
   emergencyCallsAllowed: boolean;
   paymentMethodsOnLock: string[];
 
@@ -442,6 +444,12 @@ export interface DevicePolicy {
   updatedAt: string;
 }
 
+/**
+ * How a dealership's SMS leave: its own paired phone, the platform's
+ * aggregator account, or the aggregator with the phone as a fallback.
+ */
+export type SmsChannel = 'PHONE' | 'AGGREGATOR' | 'AGGREGATOR_THEN_PHONE';
+
 export interface Notification {
   id: string;
   dealerId: string;
@@ -458,6 +466,16 @@ export interface Notification {
   leaseUntil?: string;
   attempts?: number;
   failureReason?: string;
+  /** What actually sent it: the paired phone or the aggregator. Set only on SENT. */
+  sentVia?: 'PHONE' | 'AGGREGATOR';
+  /** The gateway's own reference for an accepted message, when it gives one. */
+  providerMessageId?: string;
+  /** Tries made through the aggregator; `attempts` counts the phone's. */
+  aggregatorAttempts?: number;
+  /** Backoff: the aggregator leaves the message alone until this time. */
+  nextAttemptAt?: string;
+  /** Set when the aggregator gave the message up to the paired phone. */
+  phoneFallbackAt?: string;
 }
 
 /**

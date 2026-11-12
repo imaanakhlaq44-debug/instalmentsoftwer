@@ -7,7 +7,7 @@
  * filtered with a JavaScript predicate; doing that against a database would be
  * strictly worse, so no method here fetches a table to narrow it afterwards.
  */
-import { Tx } from '../prisma.js';
+import { prisma, Tx } from '../prisma.js';
 import { makeRepository, delegate, toSkipTake, Page, PageArgs } from './base.js';
 import { toDomainList } from '../mappers.js';
 import {
@@ -134,6 +134,11 @@ export const devicePolicies = {
   findByDealers(dealerIds: string[], tx?: Tx): Promise<DevicePolicy[]> {
     if (dealerIds.length === 0) return Promise.resolve([]);
     return this.findMany({ where: { dealerId: { in: dealerIds } } }, tx);
+  },
+
+  /** The shops that have chosen to send through the aggregator, with or without a phone behind it. */
+  findUsingAggregator(tx?: Tx): Promise<DevicePolicy[]> {
+    return this.findMany({ where: { smsChannel: { in: ['AGGREGATOR', 'AGGREGATOR_THEN_PHONE'] } } }, tx);
   },
 };
 
@@ -796,15 +801,24 @@ export const notifications = {
     dealerId: string,
     limit: number,
     leaseUntil: Date,
-    tx?: Tx
+    tx?: Tx,
+    /**
+     * For a shop on "aggregator, then phone": the phone may only collect what
+     * the aggregator has explicitly handed over. Everything else on the queue
+     * is the aggregator's to send, and handing it out here as well would text
+     * the customer twice.
+     */
+    options: { handedOverOnly?: boolean } = {}
   ): Promise<Notification[]> {
     const now = new Date();
+    const handedOver = options.handedOverOnly ? { phoneFallbackAt: { not: null } } : {};
 
     const candidates = (await delegate('notification', tx).findMany({
       where: {
         dealerId,
         channel: 'SMS',
         status: 'QUEUED',
+        ...handedOver,
         // Free, or held by a relay that stopped answering.
         OR: [{ leaseUntil: null }, { leaseUntil: { lt: now } }],
       },
@@ -819,6 +833,7 @@ export const notifications = {
       where: {
         id: { in: ids },
         status: 'QUEUED',
+        ...handedOver,
         OR: [{ leaseUntil: null }, { leaseUntil: { lt: now } }],
       },
       data: { leaseUntil, attempts: { increment: 1 } },
@@ -832,6 +847,64 @@ export const notifications = {
     })) as Record<string, unknown>[];
 
     return toDomainList<Notification>(claimed);
+  },
+
+  /**
+   * Claims queued SMS for the aggregator worker, across the given dealerships.
+   *
+   * It takes the same lease a paired phone takes, on the same column, so the
+   * two senders exclude each other: a row a phone is holding is not free, and
+   * a row claimed here is not free to a phone. It never touches a message that
+   * has been handed over to the phone, nor one still waiting out its backoff.
+   *
+   * One statement, so the rows returned are exactly the rows won: the inner
+   * SELECT locks its candidates and skips any a concurrent claim already
+   * holds, which is what keeps two server processes from both sending a text.
+   */
+  async claimForAggregator(
+    dealerIds: string[],
+    limit: number,
+    leaseUntil: Date,
+    maxAttempts: number
+  ): Promise<Notification[]> {
+    if (dealerIds.length === 0) return [];
+
+    const won = await prisma.$queryRaw<{ id: string }[]>`
+      UPDATE "notifications"
+         SET "lease_until" = ${leaseUntil},
+             "aggregator_attempts" = "aggregator_attempts" + 1
+       WHERE "id" IN (
+               SELECT "id"
+                 FROM "notifications"
+                WHERE "dealer_id" = ANY(${dealerIds}::text[])
+                  AND "channel" = 'SMS'
+                  AND "status" = 'QUEUED'
+                  AND "phone_fallback_at" IS NULL
+                  AND "aggregator_attempts" < ${maxAttempts}
+                  AND ("lease_until" IS NULL OR "lease_until" < NOW())
+                  AND ("next_attempt_at" IS NULL OR "next_attempt_at" <= NOW())
+                ORDER BY "created_at" ASC
+                LIMIT ${limit}
+                  FOR UPDATE SKIP LOCKED
+             )
+      RETURNING "id"`;
+
+    if (won.length === 0) return [];
+    return this.findMany({ where: { id: { in: won.map((r) => r.id) } }, orderBy: { createdAt: 'asc' } });
+  },
+
+  /**
+   * Gives a shop's waiting SMS a clean start on a newly chosen channel.
+   *
+   * Without this a message the aggregator had handed to the phone would be
+   * stranded when the shop switches to "aggregator only" — queued for ever,
+   * with nobody allowed to collect it.
+   */
+  resetRoutingForDealer(dealerId: string, tx?: Tx): Promise<{ count: number }> {
+    return delegate('notification', tx).updateMany({
+      where: { dealerId, channel: 'SMS', status: 'QUEUED' },
+      data: { aggregatorAttempts: 0, nextAttemptAt: null, phoneFallbackAt: null },
+    });
   },
 };
 
