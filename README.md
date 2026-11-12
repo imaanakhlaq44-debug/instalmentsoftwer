@@ -8,7 +8,7 @@ A full-stack platform for Pakistani mobile retailers who sell phones on installm
 
 ## ⚠️ Current status — read this first
 
-This codebase is **not yet a production system**, and the README should not pretend otherwise.
+The server is **hosted and running**, the handset app is at **v1.5.1** — and the product is still **not proven on a fleet of real phones**. The README should not pretend otherwise.
 
 | Area | State |
 |---|---|
@@ -16,17 +16,23 @@ This codebase is **not yet a production system**, and the README should not pret
 | Installment / payment / late-fee engine | ✅ Implemented |
 | Data store | ✅ **PostgreSQL.** Schema, migrations, repository layer, services and routes are all on it. The JSON store is gone. |
 | Device locking — server | ✅ The DPC API (enroll, check-in, command, acknowledge) is built and tested. See [Device Policy Controller API](#-device-policy-controller-api) |
-| Device locking — handset | ⚠️ **The Android DPC is written, signed and published** (`android/dpc/`) — enrolment, heartbeat, device-owner kiosk lock, honest acknowledgement, boot restore. It builds, its unit tests run in CI, and `dpc-v1.0.0` is a signed release APK on GitHub. **It has not yet been run on a fleet of real phones.** The release key exists and cannot be rotated, so every later build has to be signed with it. What remains is proving the app across the Android versions and OEM skins a Pakistani shop actually sells. Runbook: [android/RELEASE.md](android/RELEASE.md) |
+| Device locking — handset | ⚠️ **The Android DPC is written, signed and published** (`android/dpc/`), now at **v1.5.1** (`versionCode` 8; tags `dpc-v1.0.0` … `dpc-v1.5.1`, each a signed release APK on GitHub). On top of enrolment, heartbeat, device-owner kiosk lock, honest acknowledgement and boot restore it now has staged restrictions, Factory Reset Protection that is read back and reported, release on payoff, hardware integrity checks and key attestation — see [What the handset app gained since v1.0.0](#what-the-handset-app-gained-since-v100). It builds and its unit tests run in CI. **Nothing in this repository records a pass across a fleet of real phones**, and that is still what stands between this and a product: the Android versions and OEM skins a Pakistani shop actually sells. The release key exists and cannot be rotated, so every later build has to be signed with it. Runbook: [android/RELEASE.md](android/RELEASE.md) |
 | Customer consent | ✅ **A device cannot be locked without a signed agreement.** Every financed sale drafts a bilingual contract; the customer signs it on screen; the lock refuses on anything unsigned, voided, or whose figures no longer match the plan. See [Consent](#-consent-the-contract-a-lock-rests-on) |
 | SMS delivery | ⚠️ **No aggregator, but messages can move.** A shop can pair a phone of its own and it sends the queue from its SIM ([`android/sms-relay/`](android/README.md)). Nothing is marked `SENT` until that handset reports the SIM accepted it. This is right for a small shop and for testing; volume needs an operator account with a registered sender mask |
 | WhatsApp delivery | ❌ Not connected |
 | Payments | ⚠️ **No gateway, but a customer can report a transfer.** Counter payments work fully; a customer who has sent money by JazzCash/Easypaisa/Raast can submit the transaction ID from home, and the shop confirms it against their own account. Nothing is applied until a person confirms. See [Customer-reported payments](#-customer-reported-payments) |
 | Payment gateways (JazzCash / Easypaisa / Raast) | ❌ Not integrated — that needs a merchant account. The seam where one attaches is in place |
 | Commercial model | ✅ **A lock per handset, not a subscription.** Locks are bought in packs, spent on one IMEI at enrolment, and never returned. See [Licensing](#-licensing-one-lock-one-handset) |
-| Deployment | ⚠️ **Written, not yet run in anger.** `deploy/` holds a three-container compose file — PostgreSQL, the API, and Caddy terminating TLS — plus a backup script and a runbook for a bare Ubuntu VPS ([deploy/DEPLOY.md](deploy/DEPLOY.md)). CI builds both images on every push. Nothing is hosted yet; the first real `docker compose up` is still ahead |
-| Automated tests | ✅ **423 tests** — 302 backend against a real PostgreSQL instance, 100 on the React client, 21 on the two Android apps. All run on every push via GitHub Actions. See [Testing](#-testing) |
+| Deployment | ✅ **Hosted.** The owner runs the server on a VPS. `deploy/` holds what that takes — a three-container compose file (PostgreSQL, the API, and Caddy terminating TLS), a backup script and a runbook for a bare Ubuntu VPS ([deploy/DEPLOY.md](deploy/DEPLOY.md)). CI builds both images on every push. The address and the state of that machine are deliberately not recorded here; whether its backups have ever been restored is something only the person running it can answer |
+| Automated tests | ✅ **601 tests** — 416 backend against a real PostgreSQL instance, 135 on the React client, 50 on the two Android apps (48 DPC, 2 SMS relay). All run on every push via GitHub Actions. See [Testing](#-testing) |
 
-What is left before this is a real product is **proving the signed DPC on real handsets, and hosting the server somewhere a handset can reach**. The protocol is complete on both sides and the app refuses to claim a lock it did not apply, so a phone that cannot be held says so on the dashboard rather than silently pretending.
+What is left before this is a real product is **proving the signed DPC on real handsets**. The server is hosted, so a handset has somewhere to reach; what nobody has written down yet is how the app behaves across the phones a shop actually sells. The protocol is complete on both sides and the app refuses to claim a lock it did not apply, so a phone that cannot be held says so on the dashboard rather than silently pretending.
+
+Also true, and easy to miss:
+
+- **Location for recovery is not finished on the handset.** The server rules, the contract clause, the dashboard card and the handset's `LocationReporter` all exist and the server side is tested — but in DPC 1.3.0–1.5.1 the code that takes the fix is called only from the enrolment path, never from the periodic check-in. A request made from the dashboard for a phone already in the field therefore stays "waiting for the phone". See [Location for recovery](#location-for-recovery).
+- **The newer handset features are unit-tested, not field-tested.** Key attestation, the integrity signals and FRP read-back all depend on what each OEM's firmware actually does.
+- No SMS aggregator, no WhatsApp, no payment gateway — unchanged, see the table above.
 
 ---
 
@@ -42,7 +48,8 @@ What is left before this is a real product is **proving the signed DPC on real h
   - `CUSTOMER` — self-service view of their own devices and schedule only
 - **Tenant isolation** — `dealerId` is always taken from the verified JWT, never from a query parameter. Cross-tenant probes are logged.
 - **PII masking by role** — IMEI, CNIC, address and phone are redacted for roles that don't need them, and the raw values are *removed* from the response rather than merely accompanied by a masked copy.
-- helmet, CORS allow-list, rate limiting (strict on sign-in), request size limits, and an error handler that never leaks internals.
+- helmet, CORS allow-list, rate limiting (strict on sign-in, and 5 shop sign-ups per address per hour), request size limits, and an error handler that never leaks internals.
+- **A super admin opens a shop read-only.** Writes are refused in the browser until "edit mode" is turned on and confirmed. This guards against slips; the server's permissions are unchanged.
 
 ### Installment engine
 - Schedules whose rows **sum exactly** to the financed amount — the remainder lands on the final installment.
@@ -71,6 +78,18 @@ What is left before this is a real product is **proving the signed DPC on real h
 - **Offline command queue** — a lock issued to an offline phone becomes `LOCK_PENDING` and is applied when the device next checks in. The dashboard never claims a lock took effect when it hasn't.
 - **The offline rule** — a handset kept off the network restricts itself once it has been out of contact past the dealer's limit *and* an installment is genuinely past its grace period. Off by default, and refused for any customer whose signed agreement does not disclose it. See [The offline rule](#-the-offline-rule-a-phone-that-cannot-be-reached).
 - Single-use, device-bound, cryptographically random enrollment tokens.
+- **Staged restrictions** — outgoing calls and SMS first, then chosen apps, then the full lock at the third missed installment (or the final one). Only for customers whose signed terms (v1.2+) describe the stages.
+- **Re-enrol after a wipe** — `POST /api/devices/:id/re-enroll` puts a factory-reset phone back to `PENDING` for a fresh QR, on the lock it already holds.
+- **Release on payoff** — the last payment marks the phone `INACTIVE` inside the payment transaction; the app then undoes every restriction and gives up device owner, so the customer can uninstall it. A shop owner can also release by hand.
+- **Tamper alerts** — the handset reports its IMEI(s), serial, device-owner state and integrity signals on every check-in; the server compares them with the sale record and raises flags on the dashboard. See [Hardware integrity](#hardware-integrity-and-tamper-alerts).
+- **Sales without a lock** — a phone that cannot run the app (iPhone, no Google Play, Android 7 and older) can still be sold on installments: plan, contract and ledger as usual, no QR, no lock spent, and every lock path refuses it.
+- **Returning customers** — a second phone for a CNIC already on file is added to that customer's record. Still refused: the same CNIC under a different name, and a phone number already used by a different CNIC.
+
+### Dashboard
+- **A shop registers itself** at `/register`, linked from the login page. No locks are issued until the platform confirms payment.
+- **English / Roman Urdu switch** for the whole dashboard, remembered per browser. Text with no entry stays English; the signed agreement keeps its own Urdu. This is Roman Urdu, not Urdu script — there is no RTL dashboard.
+- **A platform menu for the super admin** — Home, Lock orders, Shops, Locks sold — separate from a shop's own menu.
+- **A Google ID guide**, in English and Urdu, for finding the numeric account ID that Factory Reset Protection needs.
 
 ### Automation
 - Nightly overdue evaluation (00:30 PKT) and hourly enrollment-token cleanup via `node-cron`, plus a catch-up run at boot. Previously the overdue engine only ran when somebody clicked a button.
@@ -153,12 +172,14 @@ All seeded accounts share the password from `SEED_DEFAULT_PASSWORD` in `server/.
 ## 📋 API overview
 
 All routes require `Authorization: Bearer <token>` except `/api/health`, `/api/auth/login`, `/api/auth/register-dealer` and `/api/dpc/enroll`.
+This table is an overview, not the full list — `server/src/routes/` is.
 List endpoints return `{ data, pagination }`. The `/api/dpc/*` routes use a
 different scheme entirely — see [Device Policy Controller API](#-device-policy-controller-api).
 
 | Endpoint | Method | Role | Description |
 |---|---|---|---|
 | `/api/auth/login` | POST | public | Sign in |
+| `/api/auth/register-dealer` | POST | public | Shop sign-up (the dashboard's `/register` page); rate-limited, issues no locks |
 | `/api/auth/me` | GET | any | Restore session |
 | `/api/auth/change-password` | POST | any | Change own password |
 | `/api/auth/impersonate` | POST | super admin | Session as another user, without altering their record |
@@ -167,6 +188,12 @@ different scheme entirely — see [Device Policy Controller API](#-device-policy
 | `/api/devices` | GET | any | Device directory (scoped, masked, paginated) |
 | `/api/devices/:id/lock` | POST | dealer admin | Apply or queue a restriction |
 | `/api/devices/:id/unlock` | POST | dealer admin | Restore access |
+| `/api/devices/:id/re-enroll` | POST | dealer admin | Reset a wiped phone's record for a fresh QR, with a reason |
+| `/api/devices/:id/release` | POST | dealer admin | Give the phone back for good, with a reason |
+| `/api/devices/:id/location-request` | POST | dealer admin | Ask a locked or overdue phone for one location fix, with a reason |
+| `/api/devices/:id/location` | GET | dealer admin | Read the stored fix; every read is logged |
+| `/api/devices/:id/clear-tamper` | POST | dealer admin | Clear a tamper alert after checking the phone |
+| `/api/platform/overview` | GET | super admin | Earnings, orders awaiting payment, every shop, the fleet by status |
 | `/api/customers` | GET/POST | staff | Directory / registration wizard |
 | `/api/customers/:id` | GET/PATCH/DELETE | staff | Detail, edit, deactivate |
 | `/api/installments/plans/:id/reschedule` | POST | dealer admin | Restructure the remaining balance |
@@ -193,9 +220,15 @@ spent for good.
 
 | Pack | Price | Per handset |
 |---|---|---|
+| 1–29 locks | Rs 1,000 each | Rs 1,000 |
 | 30 locks | Rs 24,000 | Rs 800 |
 | 50 locks | Rs 35,000 | Rs 700 |
 | 100 locks | Rs 60,000 | Rs 600 |
+
+Any number from 1 to 500 can be bought at once; the price per lock is set by
+how many are bought together (`PRICE_TIERS` in
+[`LicenseService.ts`](server/src/services/LicenseService.ts)): 1–29 at Rs 1,000,
+30–49 at Rs 800, 50–99 at Rs 700, 100 and over at Rs 600.
 
 **A lock is claimed at enrolment, not at the counter.** The moment a handset
 completes provisioning, one lock is stamped with that phone's IMEI and moves to
@@ -209,7 +242,8 @@ oversight: the shop bought the right to hold one particular phone, once.
 
 **Re-enrolment is free.** `device_licenses.device_id` carries a unique index, so
 a factory reset, a reinstalled DPC or a re-scanned QR reattaches the lock the
-handset already holds instead of quietly spending a second one.
+handset already holds instead of quietly spending a second one. A phone wiped
+from recovery is put back in the QR queue with **Re-enroll** on its device page.
 
 **Running out stops the counter, not the customer.** Registering a financed sale
 is refused when no locks remain — better at the counter than after the phone has
@@ -218,7 +252,9 @@ pack and the same code completes.
 
 Locks are minted only by `POST /api/licenses/packs`, which is super-admin only.
 There is no payment gateway, so that endpoint *is* the platform confirming money
-arrived; a dealer who could call it could mint themselves free stock.
+arrived; a dealer who could call it could mint themselves free stock. Sign-up
+records the pack a shop asked for and mints nothing; the super admin's **Lock
+orders** page lists who is waiting and issues the locks once paid.
 
 ---
 
@@ -292,9 +328,81 @@ customer's phone never received.
 
 ### Trying it without a phone
 
-The **Simulator** page drives all of this against real records — it stands in
-for the handset, so `TOGGLE_ONLINE` performs the check-in and the acknowledgement
-in one step rather than the two round trips a real DPC makes.
+The dashboard no longer has a Simulator page. It drew a fake handset but acted
+on real records, and on a live server that is a way to lock a customer's phone
+by mistake, so the page, its menu entry and its buttons were removed.
+
+`/api/simulator` still exists on the server, mounted **only outside
+production**, because the test suite uses it to stand in for a handset. The
+other way to try the protocol without a phone is an emulator running the debug
+build — see [`android/dpc/README.md`](android/dpc/README.md).
+
+### What the handset app gained since v1.0.0
+
+Every row is a git tag and a signed release APK. "Tested" here means unit and
+API tests; none of it has a recorded field pass.
+
+| Version | What changed |
+|---|---|
+| 1.0.0 | Enrolment, heartbeat, kiosk lock, honest acknowledgement, boot restore, the offline rule |
+| 1.1.0 | Staged restrictions: calls/SMS, then apps, then the lock. Factory Reset Protection with the dealer's Google account IDs |
+| 1.2.0 | Release on payoff: the app gives up device owner and offers **Remove this app** |
+| 1.3.0 | Location for recovery — the handset half, see the caveat below |
+| 1.4.0 | Hardware integrity report (IMEIs, serial, root, bootloader, test-keys), USB debugging and unknown-source installs closed from enrolment, tamper alerts |
+| 1.5.0 | Key attestation by the phone's secure chip, serial pinning; the hardware snapshot now travels on every check-in (1.4.0 sent it only at enrolment) |
+| 1.5.1 | FRP is read back from the OS and reported (`ACTIVE`, `LEGACY`, `REFUSED`, `NOT_CONFIGURED`); bilingual Google ID guide on the dashboard |
+
+### Hardware integrity and tamper alerts
+
+A financed phone whose IMEI has been rewritten, or whose bootloader has been
+unlocked, is a phone about to stop being managed. From 1.4.0 the handset reports
+what it can see, and [`DeviceIntegrityService`](server/src/services/DeviceIntegrityService.ts)
+compares it with the sale record.
+
+| Flag | Raised when |
+|---|---|
+| `IMEI_MISMATCH` | No IMEI the handset reports matches the registered one |
+| `SERIAL_MISMATCH` | The serial differs from the one pinned after enrolment |
+| `DEVICE_OWNER_LOST` | The app says it no longer holds device owner |
+| `ROOTED`, `BOOTLOADER_UNLOCKED`, `CUSTOM_ROM_TEST_KEYS` | The OS-level signals say so |
+| `ATTESTED_IMEI_MISMATCH` | The secure chip's factory IMEI is not the registered IMEI |
+| `ATTESTATION_INVALID`, `ATTESTATION_REVOKED` | The attestation chain is forged, malformed, or uses a certificate Google has revoked |
+
+**Key attestation (1.5.0)** is the part that does not depend on trusting the
+app. The phone's secure chip signs a certificate carrying the factory IMEI(s),
+serial and bootloader state, over a challenge the server chose — derived from
+the single-use enrolment code the first time, random and issued about once a
+day afterwards. The server verifies the chain against Google's roots and
+revocation list (`server/src/services/attestation/`).
+
+What it cannot do, said plainly: the root, bootloader and test-keys signals are
+read by the app from the OS, and a rooted phone can lie about them. Attestation
+falls back step by step — no IMEI, then no IDs at all — on handsets whose maker
+did not provision them, which is common on budget phones, and it then proves
+less. None of this has been measured on real handsets. An owner clears an alert
+by hand after checking the phone, which re-pins the serial.
+
+### Location for recovery
+
+The rule, enforced on the server ([`LocationService`](server/src/services/LocationService.ts)):
+a phone is asked for its location only when **all** of these hold —
+
+- the shop turned on **Location for Phone Recovery** in Settings;
+- the customer signed terms v1.3 or newer while it was on, so clause 4 says so in English and Urdu;
+- the phone is locked, lock-pending or has an installment overdue — a customer who is up to date is never located;
+- a shop owner asked, with a written reason. The request stays open 24 hours.
+
+It is one fix per request, never continuous. The handset shows the customer a
+notification each time. Coordinates are left out of every ordinary device
+response and come only from an owner-only endpoint whose every read is logged;
+a fix the server did not ask for is dropped; releasing the phone deletes it.
+
+**What does not work yet.** In the handset app, `DpcSync.enroll()` answers a
+location request and `DpcSync.syncOnce()` — the fifteen-minute heartbeat — does
+not. A request is only ever made for a phone already enrolled, so as the code
+stands in 1.5.1 the dashboard's "Find this phone" waits for an answer the
+phone does not send. The server half is tested (`tests/api/location.test.ts`);
+the round trip from a real phone is not, and this gap is why.
 
 ---
 
@@ -370,9 +478,10 @@ contact: three weeks ago" is visible on the dashboard the entire time.
 
 ### Trying it
 
-The Simulator's **Self-Lock Offline** button stands in for the handset. It
-refuses on any device the real rule would never have touched, so it cannot be
-used to test something the product does not do.
+Outside production, the self-lock action of `/api/simulator/update-state`
+stands in for the handset, and the tests use it. It refuses on any device the real rule would
+never have touched, so it cannot be used to test something the product does not
+do. There is no button for it in the dashboard any more.
 
 ---
 
@@ -400,9 +509,21 @@ restriction plainly, and states its limits just as plainly:
 > messages, calls, photographs or contacts, does not track the handset's
 > location, and cannot erase any data on it.
 
-Those sentences are load-bearing. They are what the DPC actually does and does
-not do — the app requests no location permission, no `READ_SMS`, and implements
-no wipe command — so the document and the software describe the same product.
+Those sentences are load-bearing: the app has no `READ_SMS`, no contacts or
+call-log permission, and implements no wipe command.
+
+Location is no longer a flat "no". Since terms v1.3 the app declares the
+location permission, and where the shop has turned on location for recovery the
+same clause goes on to say exactly when one fix may be asked for — see
+[Location for recovery](#location-for-recovery). That leaves a v1.3 contract
+saying "does not track the handset's location" and, two paragraphs later, that
+the shop may ask for its location once per request. The two are meant as
+"never continuously" and "once, when overdue", but it is one more sentence for
+the lawyer in the roadmap to read.
+
+The terms are now at **v1.3**: v1.1 added the offline rule, v1.2 staged
+restrictions, v1.3 location for recovery. A contract only ever grants what the
+version it was signed under describes.
 
 ### Why the terms are versioned
 
@@ -607,6 +728,18 @@ committed, then typechecks, tests and builds both halves of the app.
 | `tests/api/customer-payments.test.ts` | A reported transfer stays unverified and moves no money, applies on confirmation, cannot name another customer's plan, and the queue's scoping and limits |
 | `tests/api/offline-rule.test.ts` | Who is permitted to restrict themselves and who is refused — no limit, manual locking, an unsigned, voided or pre-v1.1 agreement — the limit never shortening below the signed figure, a self-lock recorded without becoming `LOCKED`, and the clause printed in both languages |
 | `tests/api/licenses.test.ts` | A lock is spent once at enrolment and stamped with the IMEI, re-enrolment spends nothing, a paid-off device never returns its lock, running out stops the counter but leaves the QR valid, and only the platform can mint stock |
+| `tests/unit/pack-pricing.test.ts` | The price per lock at each tier, for any number from 1 to 500 |
+| `tests/api/staged-restrictions.test.ts`, `tests/unit/staged-restrictions.test.ts` | Which level a phone is at, that it is 0 without the policy, a valid contract and v1.2 terms all agreeing, and the engine locking only at the third or final missed installment |
+| `tests/api/re-enroll.test.ts` | A wiped phone gets a new QR on the lock it already holds, its old credential stops working, and only that dealer's admin can do it |
+| `tests/api/release.test.ts` | The last payment releases the phone, a manual release needs a reason, and a released phone is answered "no longer under management" |
+| `tests/api/no-lock-sales.test.ts` | A sale without a lock spends nothing, gets no QR and cannot be locked |
+| `tests/api/location.test.ts` | Who may be located and who is refused, the 24-hour request, an unrequested fix being dropped, coordinates absent from ordinary responses, and deletion on release — the server half only |
+| `tests/api/security-hardening.test.ts` | IMEI and device-owner checks at enrolment and check-in, the tamper flags, and clearing an alert |
+| `tests/api/hardware-attestation.test.ts` | Attestation chains verified against a test root: a matching chip IMEI, a mismatch, an unlocked bootloader, a forged and a revoked chain, the challenge, and serial pinning |
+| `tests/api/frp.test.ts` | The FRP status a handset reports reaching the dashboard, and the Google ID rules |
+| `tests/api/platform.test.ts` | The super admin's overview: access, shops awaiting payment, revenue and fleet counts |
+| `tests/api/admin-guards.test.ts`, `tests/api/super-admin-bootstrap.test.ts` | Admin-only actions refusing everyone else; creating the first super admin from the server shell |
+| `tests/db/connection.test.ts` | The database is UTF-8, so an Urdu name can be stored at all |
 
 **Client** (`client/src/**/*.test.ts(x)`)
 
@@ -619,6 +752,11 @@ committed, then typechecks, tests and builds both halves of the app.
 | `services/api.test.ts` | Auth header, query building, error mapping, why a failed sign-in is not an expired session |
 | `utils/csv.test.ts` | Quoting, the UTF-8 BOM, spreadsheet formula injection |
 | `hooks/usePagination.test.ts` | Page reset on filter and page-size change |
+| `i18n/translate.test.ts` | The Roman Urdu switch: known lines swap, unknown ones stay English, numbers in patterns survive |
+| `components/layout/navItems.test.ts` | The platform menu against a shop's menu, and no simulator entry |
+| `pages/RegisterPage.test.ts`, `pages/PlatformDashboardPage.test.ts`, `pages/EnrollmentPage.test.ts` | Sign-up form checks and pack prices, the WhatsApp number format, the QR payload |
+| `components/modals/GoogleIdGuideModal.test.tsx` | The Google ID guide renders in both languages |
+| `utils/phoneSupport.test.ts`, `utils/saleValidation.test.ts` | Which phones can be locked, and which field of a sale is wrong |
 
 **Android DPC** (`android/dpc/src/test/`)
 
@@ -627,12 +765,21 @@ committed, then typechecks, tests and builds both halves of the app.
 | `PolicyViewTest.kt` | Parsing the policy a lock screen renders — a JSON null must not become the word "null" in front of a customer, an absent `emergencyCallsAllowed` means permitted, and a command the app cannot carry out is rejected rather than acknowledged |
 | `OfflineLockRuleTest.kt` | The only decision the app makes without asking anybody: locking after the limit when money is genuinely late, and *not* locking a paid-up phone however long it stays silent, before the grace period is out, on a limit of zero, on a handset that never reported, or on a clock moved backwards |
 | `DpcApiEndpointTest.kt` | Joining the base URL from the QR to an endpoint. Getting this wrong produces a phone that provisions cleanly and never checks in again |
+| `StagedRestrictionsTest.kt` | From a level to the restrictions and app suspensions to add or remove |
+| `FactoryResetProtectionTest.kt` | Which FRP call is due, the Android 10→11 route change, and whether the policy read back matches what was asked |
+| `DeviceIntegrityTest.kt`, `TelemetrySerializationTest.kt` | IMEI normalising, the bootloader and test-keys signals, and what a check-in actually serialises |
+| `AttestationChallengeTest.kt` | The enrolment challenge, against the same vector the server tests use |
 
 **Android SMS relay** (`android/sms-relay/src/test/`)
 
 | File | Covers |
 |---|---|
 | `RelayApiEndpointTest.kt` | The same join, for an address a shopkeeper types by hand on a counter phone |
+
+The Android counts come from the test sources (48 `@Test` in the DPC, 2 in the
+relay); CI runs them on every push. The platform calls themselves — the kiosk,
+FRP, attestation, location — cannot be exercised on the JVM and are covered by
+no automated test.
 
 These made the PostgreSQL cutover safe. The storage engine was replaced entirely
 and the behavioural assertions did not change — the same tests that passed against
@@ -648,8 +795,8 @@ The migration is **complete**. The application reads and writes PostgreSQL exclu
 
 | Piece | File | State |
 |---|---|---|
-| Prisma schema — 15 tables, 19 enums, 60 indexes, 30 foreign keys | `prisma/schema.prisma` | ✅ |
-| Versioned SQL migration | `prisma/migrations/20260817000000_init/` | ✅ applied |
+| Prisma schema — 18 tables, 20 enums | `prisma/schema.prisma` | ✅ |
+| Versioned SQL migrations — the initial one and 14 since | `prisma/migrations/` | ✅ applied on start |
 | Prisma client + pooling + transaction helper | `src/db/prisma.ts` | ✅ |
 | Data import from the legacy JSON store | `scripts/import-store-json.ts` | ✅ kept for one-off migration of an existing install |
 | Local PostgreSQL with nothing to install | `scripts/pg-server.ts` | ✅ |
@@ -673,7 +820,7 @@ npm run db:import   # optional: migrate a legacy server/data/store.json (idempot
 npm run db:studio   # browse the data
 ```
 
-`npm run db:dev` runs **PostgreSQL 17** from the `embedded-postgres` package, which ships the genuine server binaries. No installer, no admin rights, no Docker, no Windows service. The cluster lives in `~/.emishield/pgdata` — deliberately outside the OneDrive-synced project folder, because cloud sync rewriting files underneath a running server corrupts it. Production points `DATABASE_URL` at a managed PostgreSQL server; no application code changes.
+`npm run db:dev` runs **PostgreSQL 17** from the `embedded-postgres` package, which ships the genuine server binaries. No installer, no admin rights, no Docker, no Windows service. The cluster lives in `~/.emishield/pgdata` — deliberately outside the OneDrive-synced project folder, because cloud sync rewriting files underneath a running server corrupts it. Production points `DATABASE_URL` at any PostgreSQL server — the compose file in `deploy/` runs PostgreSQL 16 in a container beside the API; no application code changes.
 
 > **Why not PGlite.** PGlite — PostgreSQL compiled to WebAssembly — was the original choice here and was dropped. Against its socket server, the query following *any* Prisma interactive transaction, **including one that committed cleanly**, came back desynchronised by one protocol message and failed. Non-transactional errors were unaffected, and the behaviour was independent of pool size and `maxConnections` on the current 0.5.5 / 0.2.8. Putting payment allocation inside a real transaction is the point of this migration, so the development database has to support them.
 
@@ -693,10 +840,11 @@ Two operations deliberately run *after* their transaction commits, because they 
 
 ## 🗺️ Roadmap
 
-1. **Run the DPC on real handsets.** The app is written, signed and published ([`android/dpc/`](android/dpc/README.md)): the tag `dpc-v1.0.0` built and signed `almas-sdm-dpc-v1.0.0.apk`, and the release notes carry the two lines of server configuration — `DPC_APK_URL` and `DPC_APK_SIGNATURE_CHECKSUM` — that a dealership's environment needs. See [android/RELEASE.md](android/RELEASE.md). What is missing is a pass across the Android versions and OEM skins a Pakistani shop actually sells: provisioning by QR from a factory-reset handset, the kiosk lock under each vendor's skin, and boot restore. The signing key can only be created once and cannot be rotated — an APK signed with a different key will not update an installed one, and those handsets are device owner, so the customer cannot factory-reset out of a bad build.
-2. **Run it somewhere.** `deploy/` now has everything a bare Ubuntu VPS needs — see [deploy/DEPLOY.md](deploy/DEPLOY.md) — but the system has never been hosted. Until it is, on a domain with a real certificate, no customer's handset can reach it: the DPC's release build refuses plaintext HTTP. The dashboard also has no sign-up screen, so the first dealership is created with one `curl` against `/api/auth/register-dealer`; that is fine for the shop that owns the server and is not fine as a product.
+1. **Run the DPC on real handsets.** The app is written, signed and published ([`android/dpc/`](android/dpc/README.md)); the current release is `dpc-v1.5.1` (`almas-sdm-dpc-v1.5.1.apk`), and its release notes carry the two lines of server configuration — `DPC_APK_URL` and `DPC_APK_SIGNATURE_CHECKSUM`. See [android/RELEASE.md](android/RELEASE.md). What is missing is a recorded pass across the Android versions and OEM skins a Pakistani shop actually sells: provisioning by QR from a factory-reset handset, the kiosk lock under each vendor's skin, boot restore, and now also FRP after a recovery wipe, staged restrictions, release on payoff and whether each phone's secure chip attests its IMEI. The signing key can only be created once and cannot be rotated — an APK signed with a different key will not update an installed one, and those handsets are device owner, so the customer cannot factory-reset out of a bad build.
+2. **Finish location for recovery on the handset.** The periodic check-in has to answer `reportLocation`; today only the enrolment path does ([above](#location-for-recovery)). Until then the feature should be treated as not working, whatever the Settings switch says.
 3. **An SMS aggregator account** (Jazz / Telenor / Zong corporate, or Twilio) with a PTA-approved sender mask. A paired phone gets reminders moving today, but a consumer SIM is not a delivery channel for a shop at volume — and a reminder that arrives from a random mobile number is a reminder customers ignore.
 4. **A payment gateway.** JazzCash's hosted checkout is the simplest of the real ones — an HMAC-signed form POST, no OAuth, no SDK — and the blocker is not code but a merchant account, which needs business registration and a bank account. Customers can already report transfers ([above](#-customer-reported-payments)); a gateway removes the manual confirmation, not the capability.
 5. **Deeper client coverage** — guards, auth, the API client, CSV export and pagination are tested; the page components and modals are not.
 6. **Legal review of the contract terms** — the agreement is written, bilingual, signed and enforced ([Consent](#-consent-the-contract-a-lock-rests-on)), but it was drafted by engineers. A Pakistani lawyer should read it before a shop relies on it — clause 4 of terms v1.1, which permits a handset to restrict itself when it cannot reach the shop, is the paragraph to put in front of them first. A server-rendered PDF is the other open piece, and needs headless Chrome for the Urdu to shape correctly.
-7. Urdu localisation and RTL for the dashboard itself, PWA offline mode.
+7. Urdu script and RTL for the dashboard — it has an English / Roman Urdu switch, not Urdu script — and PWA offline mode.
+8. **Operating the hosted server.** It runs; what a README cannot show is whether the nightly backup has been restored somewhere once, and whether the dumps leave the machine. [deploy/DEPLOY.md](deploy/DEPLOY.md) says how.
