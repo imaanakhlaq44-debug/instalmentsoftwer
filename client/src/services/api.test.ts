@@ -241,3 +241,35 @@ describe('write guard (super admin view-only)', () => {
     expect(spy).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('contract PDF download', () => {
+  it('sends the token and returns the bytes under the server\'s filename', async () => {
+    localStorage.setItem(TOKEN_STORAGE_KEY, 'abc123');
+    const spy = stubFetch(
+      () =>
+        new Response('%PDF-1.4', {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': 'attachment; filename="agreement-ctr-1.pdf"',
+          },
+        })
+    );
+
+    const { blob, filename } = await ApiService.downloadContractPdf('ctr-1');
+
+    expect(String(spy.mock.calls[0][0])).toBe('/api/contracts/ctr-1/pdf');
+    expect((spy.mock.calls[0][1]?.headers as Record<string, string>).Authorization).toBe('Bearer abc123');
+    expect(filename).toBe('agreement-ctr-1.pdf');
+    expect(blob.size).toBeGreaterThan(0);
+  });
+
+  it('surfaces the server\'s reason when the PDF cannot be made', async () => {
+    stubFetch(() => json({ error: 'PDF download is not set up on this server.', code: 'PDF_UNAVAILABLE' }, 503));
+
+    await expect(ApiService.downloadContractPdf('ctr-1')).rejects.toMatchObject({
+      status: 503,
+      message: 'PDF download is not set up on this server.',
+    });
+  });
+});

@@ -423,6 +423,37 @@ export class ApiService {
     return this.request<any>(`/contracts/${id}`);
   }
 
+  /**
+   * The agreement as a PDF rendered by the server, with the Urdu shaped
+   * properly. A plain link would not carry the bearer token, so the bytes are
+   * fetched here and handed back for the page to save.
+   */
+  static async downloadContractPdf(id: string): Promise<{ blob: Blob; filename: string }> {
+    const headers: Record<string, string> = {};
+    const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE}/contracts/${id}/pdf`, { headers });
+    } catch {
+      throw new ApiError('Cannot reach the server. Please check your connection and try again.', 0, 'NETWORK_ERROR');
+    }
+
+    if (!res.ok) {
+      const payload = await res.json().catch(() => null);
+      if (res.status === 401) onUnauthorized?.();
+      throw new ApiError(
+        payload?.error || payload?.message || `The PDF could not be downloaded (${res.status}).`,
+        res.status,
+        payload?.code
+      );
+    }
+
+    const named = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') ?? '');
+    return { blob: await res.blob(), filename: named?.[1] ?? `agreement-${id}.pdf` };
+  }
+
   static getContractForDevice(deviceId: string) {
     return this.request<any>(`/contracts/device/${deviceId}`);
   }
