@@ -9,7 +9,9 @@ import {
   emptySteps, overallResultOf, RESULT_LABEL, RESULT_STYLE,
 } from '../utils/handsetTest.js';
 
-import { ClipboardCheck, RefreshCw, Check, X, Minus, Globe, Pencil, Trash2, Plus } from 'lucide-react';
+import { HandsetTestChecklist } from '../components/HandsetTestChecklist.js';
+
+import { ClipboardCheck, RefreshCw, Check, X, Minus, Globe, Pencil, Trash2, Plus, Printer } from 'lucide-react';
 
 interface FormState {
   brand: string;
@@ -65,6 +67,7 @@ export const HandsetTestsPage: React.FC = () => {
   const [form, setForm] = useState<FormState>(blankForm);
   const [saving, setSaving] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [printOpen, setPrintOpen] = useState(false);
 
   const paged = usePagination([brandFilter, androidFilter, selectedDealerId], 25);
 
@@ -196,12 +199,19 @@ export const HandsetTestsPage: React.FC = () => {
             Test the lock app on a real phone, step by step, and save what happened. This is how we know which phones the lock works on.
           </p>
         </div>
-        {!formOpen && (
-          <button type="button" className="btn-primary" onClick={startNew}>
-            <Plus className="w-4 h-4" /> Test a phone
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className="btn-secondary" onClick={() => setPrintOpen(true)}>
+            <Printer className="w-4 h-4" /> Print checklist
           </button>
-        )}
+          {!formOpen && (
+            <button type="button" className="btn-primary" onClick={startNew}>
+              <Plus className="w-4 h-4" /> Test a phone
+            </button>
+          )}
+        </div>
       </div>
+
+      {printOpen && <HandsetTestChecklist onClose={() => setPrintOpen(false)} />}
 
       {formOpen && (
         <form onSubmit={submit} className="surface p-5 space-y-6">
