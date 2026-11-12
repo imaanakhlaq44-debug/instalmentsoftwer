@@ -1246,6 +1246,26 @@ export const URDU: Record<string, string> = {
   "e.g. Black": "مثلاً کالا",
   "Please fix the fields marked in red.": "سرخ نشان والے خانے ٹھیک کریں۔",
   "Please enter the phone model.": "فون کا ماڈل لکھیں۔",
+  // ------------------------------------------------ signing on the sale screen
+  "Sign agreement": "معاہدے پر دستخط کروائیں",
+  "Go through the figures and the declaration with the customer, then hand them the screen.": "گاہک کے ساتھ رقم اور اقرار نامہ پڑھیں، پھر اسکرین انہیں دے دیں۔",
+  "Total price": "کل قیمت",
+  "Financed": "قسطوں پر",
+  "Read the full agreement": "پورا معاہدہ پڑھیں",
+  "Loading agreement…": "معاہدہ لوڈ ہو رہا ہے…",
+  "Name of the person signing": "دستخط کرنے والے کا نام",
+  "The customer has read the declaration above and accepts it.": "گاہک نے اوپر والا اقرار نامہ پڑھ لیا ہے اور اسے مانتا ہے۔",
+  "Recording…": "محفوظ ہو رہا ہے…",
+  "Record the signature": "دستخط محفوظ کریں",
+  "Signature captured.": "دستخط ہو گئے۔",
+  "Ask the customer to sign above.": "گاہک سے اوپر دستخط کروائیں۔",
+  "Agreement signed. This device may now be managed under its terms.": "معاہدے پر دستخط ہو گئے۔ اب یہ فون اس کی شرائط کے مطابق لاک ہو سکتا ہے۔",
+  "Sign later": "بعد میں دستخط",
+  "Sign now": "ابھی دستخط کروائیں",
+  "Signed ✓": "دستخط ہو گئے ✓",
+  "The customer has signed the agreement.": "گاہک نے معاہدے پر دستخط کر دیے ہیں۔",
+  "Agreement not signed yet": "معاہدے پر ابھی دستخط نہیں ہوئے",
+  "This phone cannot be locked until the customer signs. You can sign later from the customer's page.": "گاہک کے دستخط تک یہ فون لاک نہیں ہو سکتا۔ بعد میں گاہک کے صفحے سے دستخط کروا سکتے ہیں۔",
 };
 
 /**

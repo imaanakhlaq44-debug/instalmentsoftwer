@@ -64,7 +64,7 @@ async function registerSale(account: string = ACCOUNTS.dealerStaff) {
 
   expect(res.status).toBe(201);
   const contract = (await repo.contracts.findByDevice(res.body.device.id))!;
-  return { deviceId: res.body.device.id as string, contract };
+  return { deviceId: res.body.device.id as string, contract, contractId: res.body.contractId as string };
 }
 
 /** Puts a device in a state where locking is otherwise permitted. */
@@ -73,6 +73,19 @@ async function makeLockable(deviceId: string) {
 }
 
 describe('a sale drafts a contract', () => {
+  it('returns the drafted contract id, so the sale screen can take the signature', async () => {
+    const { contract, contractId } = await registerSale();
+
+    expect(contractId).toBe(contract.id);
+
+    // And that id is signable straight away by the shop that made the sale.
+    const signed = await as(ACCOUNTS.dealerStaff)
+      .post(`/api/contracts/${contractId}/sign`)
+      .send({ signerName: 'Test Buyer', signatureImage: SIGNATURE, declarationAccepted: true });
+    expect(signed.status).toBe(200);
+    expect((await repo.contracts.findByDevice(contract.deviceId))!.status).toBe('SIGNED');
+  });
+
   it('creates one, unsigned, with the sale', async () => {
     const { contract } = await registerSale();
 

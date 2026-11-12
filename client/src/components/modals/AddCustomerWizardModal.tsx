@@ -10,6 +10,7 @@ import {
 } from '../../utils/saleValidation.js';
 import { useAuth } from '../../context/AuthContext.js';
 import { GoogleIdGuideModal } from './GoogleIdGuideModal.js';
+import { SaleSignStep, SaleSignState } from '../contract/SaleSignStep.js';
 import { ImeiScanButton } from './ImeiScanButton.js';
 import {
   X,
@@ -71,6 +72,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
   const [createdResult, setCreatedResult] = useState<any>(null);
   // An older phone cannot read a small QR off a laptop screen.
   const [qrFull, setQrFull] = useState(false);
+  const [signState, setSignState] = useState<SaleSignState>('loading');
   const [frpConfigured, setFrpConfigured] = useState<boolean | null>(null);
   const [showGoogleIdGuide, setShowGoogleIdGuide] = useState(false);
   const [recentModels, setRecentModels] = useState<RecentModel[]>([]);
@@ -346,6 +348,13 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
   // --------------------------------------------------------------- done
 
   if (createdResult) {
+    // The QR waits for the signature (or a deliberate "Sign later"): a phone
+    // enrolled with an unsigned agreement is a phone the shop cannot lock.
+    const showQr = !createdResult.contractId || signState === 'signed' || signState === 'later';
+    const signStep = createdResult.contractId ? (
+      <SaleSignStep contractId={createdResult.contractId} onStateChange={setSignState} />
+    ) : null;
+
     return createPortal(
       <div className="fixed inset-0 z-50 overflow-y-auto bg-paper-100 animate-fade-in">
         <div className="mx-auto max-w-3xl px-4 py-8">
@@ -359,6 +368,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                 No QR is needed for this phone. Get the agreement signed from the customer's page; installments and
                 reminders run as usual.
               </p>
+              {signStep && <div className="mt-6 text-start">{signStep}</div>}
               <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                 <button
                   type="button"
@@ -391,6 +401,11 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                   {formData.brand} {formData.model} for {formData.customerName}. Valid for 1 hour, this phone only.
                 </p>
               </div>
+
+              {signStep}
+
+              {showQr && (
+              <>
 
               <div className="grid items-center gap-6 sm:grid-cols-[auto,1fr]">
                 {/* The real code: the server renders it, the dashboard never draws one */}
@@ -497,6 +512,8 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
               >
                 Code: {createdResult.enrollmentToken?.token} <Copy className="h-3.5 w-3.5" />
               </button>
+              </>
+              )}
             </div>
           )}
         </div>

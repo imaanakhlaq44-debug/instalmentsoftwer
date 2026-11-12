@@ -1293,6 +1293,26 @@ export const ROMAN_URDU: Record<string, string> = {
   "e.g. Black": "maslan Kala",
   "Please fix the fields marked in red.": "Laal nishan wale khane theek karein.",
   "Please enter the phone model.": "Phone ka model likhein.",
+  // ------------------------------------------------ signing on the sale screen
+  "Sign agreement": "Agreement sign karwayein",
+  "Go through the figures and the declaration with the customer, then hand them the screen.": "Customer ke saath raqam aur iqrar-nama parhein, phir screen un ko de dein.",
+  "Total price": "Kul qeemat",
+  "Financed": "Qiston par",
+  "Read the full agreement": "Poora agreement parhein",
+  "Loading agreement…": "Agreement load ho raha hai…",
+  "Name of the person signing": "Sign karne wale ka naam",
+  "The customer has read the declaration above and accepts it.": "Customer ne upar wala iqrar-nama parh liya hai aur manta hai.",
+  "Recording…": "Save ho raha hai…",
+  "Record the signature": "Sign save karein",
+  "Signature captured.": "Sign ho gaya.",
+  "Ask the customer to sign above.": "Customer se upar sign karwayein.",
+  "Agreement signed. This device may now be managed under its terms.": "Agreement sign ho gaya. Ab yeh phone is ki sharton ke mutabiq lock ho sakta hai.",
+  "Sign later": "Baad mein sign",
+  "Sign now": "Abhi sign karwayein",
+  "Signed ✓": "Sign ho gaya ✓",
+  "The customer has signed the agreement.": "Customer ne agreement sign kar diya hai.",
+  "Agreement not signed yet": "Agreement abhi sign nahin hua",
+  "This phone cannot be locked until the customer signs. You can sign later from the customer's page.": "Customer ke sign karne tak yeh phone lock nahin ho sakta. Baad mein customer ke page se sign karwa sakte hain.",
 };
 
 export const ROMAN_URDU_PATTERNS: Array<[RegExp, string]> = [

@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { repo, groupBy } from '../db/repositories/index.js';
 import { runInTransaction, Tx } from '../db/prisma.js';
 import {
-  Customer, Device, InstallmentPlan, Installment, Payment,
+  Contract, Customer, Device, InstallmentPlan, Installment, Payment,
 } from '../types/index.js';
 import { EnrollmentService } from '../services/EnrollmentService.js';
 import { ContractService } from '../services/ContractService.js';
@@ -409,6 +409,7 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
     let device: Device | undefined;
     let plan: InstallmentPlan | undefined;
     let installments: Installment[] = [];
+    let contract: Contract | undefined;
 
     if (body.device && body.plan) {
       const price = body.device.purchasePrice;
@@ -498,7 +499,7 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
        * means there is never a handset in the system whose consent document was
        * never created.
        */
-      await ContractService.createDraft(
+      contract = await ContractService.createDraft(
         { dealerId, customerId: customer.id, deviceId: device.id, plan, installments },
         tx
       );
@@ -536,7 +537,7 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
       ipAddress: clientIp(req),
     }, tx);
 
-    return { customer, device, plan, installments };
+    return { customer, device, plan, installments, contractId: contract?.id };
   });
 
   /**
@@ -568,6 +569,8 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
     device: result.device ? sanitizeDevice(result.device, user.role) : undefined,
     plan: result.plan,
     installments: result.installments,
+    // So the sale screen can take the signature there and then.
+    contractId: result.contractId,
     enrollmentToken,
   });
 }));
