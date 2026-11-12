@@ -133,6 +133,42 @@ own log lists every file it sent, so start there before suspecting either.
 
 ---
 
+## Testimonials
+
+The home page's testimonials section is published only when there are real
+ones. The samples in `src/pages/index.html` are never published; while the
+data file is empty the build leaves the whole section out.
+
+A real one comes into being like this:
+
+1. A shop owner opens **Feedback** in the dashboard, writes a quote, picks a
+   rating, the name and city to show, and ticks the consent box.
+2. The super admin opens **Shop feedback** and approves it. The platform cannot
+   edit the words — only approve, reject with a note, or unpublish.
+3. The API then lists it at `GET /api/public/testimonials` (quote, name, city,
+   rating, language — nothing else).
+4. The site build prints whatever is in `src/data/testimonials.json`.
+
+Step 4 is build-time on purpose, not a fetch from the visitor's browser: the
+page stays plain HTML that loads with the API down and without JavaScript.
+
+**Automatic (once the API is hosted):** set the repository variable
+`SITE_API_URL` to the API's address. Every deploy then pulls the approved list
+first, and a nightly run does the same, so an approval, an unpublish or a
+shop's withdrawal reaches the site within a day — or at once if you run the
+*Deploy site* workflow by hand. If the API cannot be reached the deploy stops
+and the site stays as it was.
+
+**By hand (before that):**
+
+```bash
+TESTIMONIALS_API_URL=https://<api-address> npm --prefix site run testimonials:pull
+git add site/src/data/testimonials.json && git commit -m "site: update testimonials" && git push
+```
+
+Do not type testimonials into the data file yourself. It should only ever hold
+what the endpoint returned.
+
 ## Uploading by hand, if you ever have to
 
 The workflow is the normal path. If GitHub is down or the FTP account is being
