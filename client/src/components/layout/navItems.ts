@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Smartphone, Users, CalendarDays, CreditCard, QrCode,
-  KeyRound, Bell, FileSpreadsheet, Settings, Activity, ClipboardList, Store, ShoppingCart, MessageSquareQuote,
+  KeyRound, Bell, FileSpreadsheet, Settings, Activity, ClipboardList, Store, ShoppingCart, MessageSquareQuote, ClipboardCheck,
 } from 'lucide-react';
 import { UserRole } from '../../types/index.js';
 
@@ -41,6 +41,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/payments', label: 'Payments', icon: CreditCard, roles: ALL, group: 'Portfolio' },
   { to: '/enrollment', label: 'QR Enrollment', icon: QrCode, roles: STAFF, group: 'Operations' },
   { to: '/transactions', label: 'Transactions', icon: FileSpreadsheet, roles: STAFF, group: 'Operations' },
+  { to: '/handset-tests', label: 'Phone tests', icon: ClipboardCheck, roles: STAFF, group: 'Operations' },
   { to: '/licenses', label: 'Device Locks', icon: KeyRound, roles: ADMIN, group: 'Administration' },
   { to: '/buy-locks', label: 'Buy locks', icon: ShoppingCart, roles: ['DEALER_ADMIN'], group: 'Administration' },
   { to: '/notifications', label: 'Notifications', icon: Bell, roles: ALL, group: 'Operations' },
@@ -64,6 +65,7 @@ export const PLATFORM_NAV_ITEMS: NavItem[] = [
   { to: '/shops', label: 'Shops', icon: Store, roles: ['SUPER_ADMIN'], group: 'Platform' },
   { to: '/licenses', label: 'Locks sold', icon: KeyRound, roles: ['SUPER_ADMIN'], group: 'Platform' },
   { to: '/shop-feedback', label: 'Shop feedback', icon: MessageSquareQuote, roles: ['SUPER_ADMIN'], group: 'Platform' },
+  { to: '/handset-tests', label: 'Phone tests', icon: ClipboardCheck, roles: ['SUPER_ADMIN'], group: 'Tools' },
   { to: '/audit-logs', label: 'Activity log', icon: Activity, roles: ['SUPER_ADMIN'], group: 'Tools' },
 ];
 

@@ -115,6 +115,27 @@ const APP_URL = (process.env.APP_URL || '').trim() || 'http://localhost:5173';
 const HAS_APP = APP_URL !== 'none';
 
 /**
+ * The "Tested phones" list.
+ *
+ * The list itself lives in the dashboard's database: a super admin ticks
+ * "Show on website" on a phone test and it should appear here, without anyone
+ * rebuilding or re-uploading the site. So the page fetches it in the visitor's
+ * browser from the API's public, read-only endpoint, which sits beside the
+ * dashboard at APP_URL.
+ *
+ * While there is no hosted dashboard (APP_URL=none) there is nothing to fetch
+ * from, and the whole block is left out of the build, exactly as the Sign in
+ * button is. When there is one, the section still starts hidden and only
+ * appears once the API has answered with at least one phone: an empty list, a
+ * slow server or a failed request all show nothing at all, never a placeholder.
+ */
+const API_URL = HAS_APP ? `${APP_URL.replace(/\/+$/, '')}/api` : '';
+const withTestedPhones = (html) =>
+  HAS_APP
+    ? html.replace(/<!--\s*\/?tested-phones\s*-->/g, '').replaceAll('{{apiUrl}}', API_URL)
+    : html.replace(/<!--\s*tested-phones\s*-->[\s\S]*?<!--\s*\/tested-phones\s*-->/g, '');
+
+/**
  * The public address, for canonical links, social previews and structured
  * data. Search engines need absolute URLs in all three.
  */
@@ -247,9 +268,9 @@ async function build() {
   await mkdir(OUT, { recursive: true });
 
   for (const file of pages) {
-    const raw = withoutSampleTestimonials(
+    const raw = withTestedPhones(withoutSampleTestimonials(
       withRealTestimonials(await readFile(path.join(SRC, 'pages', file), 'utf8'), realTestimonials)
-    );
+    ));
     const meta = readMeta(raw);
     const body = raw.replace(/<!--\s*meta[\s\S]*?-->/, '').trim();
 

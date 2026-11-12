@@ -14,7 +14,7 @@ import {
   Dealer, User, Customer, Device, EnrollmentToken, InstallmentPlan, Installment,
   Payment, Transaction, DeviceActionLog, AuditLog, DevicePolicy,
   LicensePack, DeviceLicense, DeviceLicenseStatus, LockOrder, PlatformSetting,
-  Notification, NotificationTemplate, SmsRelay, Contract,
+  Notification, NotificationTemplate, SmsRelay, Contract, HandsetTest,
 } from '../../types/index.js';
 
 export type { Page, PageArgs };
@@ -960,6 +960,53 @@ export const smsRelays = {
   },
 };
 
+export interface HandsetTestFilters {
+  dealerId: string | null;
+  brand?: string;
+  androidVersion?: string;
+  published?: boolean;
+}
+
+/** Handset compatibility tests: the lock app proven, or not, on a real phone. */
+export const handsetTests = {
+  ...makeRepository<HandsetTest>('handsetTest'),
+
+  list(args: HandsetTestFilters & PageArgs, tx?: Tx) {
+    const where: Record<string, unknown> = { ...dealerScope(args.dealerId) };
+    if (args.brand) where.brand = { equals: args.brand, mode: 'insensitive' };
+    if (args.androidVersion) where.androidVersion = args.androidVersion;
+    if (args.published !== undefined) where.published = args.published;
+
+    return this.paginate({ where, orderBy: [{ testedAt: 'desc' }, { id: 'asc' }], ...args }, tx);
+  },
+
+  /** The values the filter dropdowns offer — only ones this caller can see. */
+  async facets(dealerId: string | null, tx?: Tx): Promise<{ brands: string[]; androidVersions: string[] }> {
+    const where = dealerScope(dealerId);
+    const d = delegate('handsetTest', tx);
+    const [brands, versions] = await Promise.all([
+      d.findMany({ where, distinct: ['brand'], select: { brand: true }, orderBy: { brand: 'asc' } }),
+      d.findMany({ where, distinct: ['androidVersion'], select: { androidVersion: true } }),
+    ]);
+    return {
+      brands: brands.map((r) => String(r.brand)),
+      androidVersions: versions
+        .map((r) => String(r.androidVersion))
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true })),
+    };
+  },
+
+  /** What the public site may show. Selects four columns, so nothing else can leak. */
+  async findPublished(tx?: Tx): Promise<Pick<HandsetTest, 'brand' | 'model' | 'androidVersion' | 'overallResult'>[]> {
+    const rows = await delegate('handsetTest', tx).findMany({
+      where: { published: true },
+      select: { brand: true, model: true, androidVersion: true, overallResult: true },
+      orderBy: [{ brand: 'asc' }, { model: 'asc' }, { androidVersion: 'asc' }],
+    });
+    return rows as unknown as Pick<HandsetTest, 'brand' | 'model' | 'androidVersion' | 'overallResult'>[];
+  },
+};
+
 export const notificationTemplates = makeRepository<NotificationTemplate>('notificationTemplate');
 
 // ---------------------------------------------------------------------------
@@ -986,6 +1033,7 @@ export const repo = {
   notificationTemplates,
   smsRelays,
   contracts,
+  handsetTests,
 };
 
 /**

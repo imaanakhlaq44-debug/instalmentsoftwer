@@ -6,7 +6,7 @@ const paths = (items: { to: string }[]) => items.map((i) => i.to);
 describe('the menu for each role', () => {
   it('gives the platform admin a platform menu, not a shop menu', () => {
     const menu = paths(navItemsForRole('SUPER_ADMIN'));
-    expect(menu).toEqual(['/', '/orders', '/shops', '/licenses', '/shop-feedback', '/audit-logs']);
+    expect(menu).toEqual(['/', '/orders', '/shops', '/licenses', '/shop-feedback', '/handset-tests', '/audit-logs']);
     for (const shopOnly of ['/customers', '/installments', '/enrollment', '/payments', '/devices', '/settings']) {
       expect(menu).not.toContain(shopOnly);
     }
