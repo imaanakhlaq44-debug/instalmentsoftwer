@@ -204,7 +204,11 @@ export const PaymentsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
-                {payments.map((p) => (
+                {payments.map((p) => {
+                  // A reversal leaves the payment as REFUNDED, not VERIFIED. It is
+                  // finished business: never "pending", never verifiable again.
+                  const isReversed = Boolean(p.reversedAt) || p.status === 'REFUNDED';
+                  return (
                   <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
                       {p.referenceNumber}
@@ -227,10 +231,10 @@ export const PaymentsPage: React.FC = () => {
                     <td className="py-3.5 px-4">
                       <span
                         className={`status-pill text-micro ${
-                          p.status === 'VERIFIED' ? 'status-active' : 'status-pending'
+                          isReversed ? 'status-overdue' : p.status === 'VERIFIED' ? 'status-active' : 'status-pending'
                         }`}
                       >
-                        {p.status === 'VERIFIED' ? 'Verified ✓' : 'Pending Verification'}
+                        {isReversed ? 'Reversed' : p.status === 'VERIFIED' ? 'Verified ✓' : 'Pending Verification'}
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-slate-500 text-xs max-w-xs truncate">
@@ -239,7 +243,7 @@ export const PaymentsPage: React.FC = () => {
                     <td className="py-3.5 px-4 text-right">
                       {/* Verification releases money against the plan and can
                           trigger an auto-unlock, so it stays with the owner. */}
-                      {p.status !== 'VERIFIED' ? (
+                      {p.status !== 'VERIFIED' && !isReversed ? (
                         isDealerAdmin ? (
                           <button
                             onClick={() => handleVerify(p.id)}
@@ -260,7 +264,7 @@ export const PaymentsPage: React.FC = () => {
                             Receipt
                           </button>
                           {/* Reversal moves real money back — owner only. */}
-                          {isDealerAdmin && !p.reversedAt && (
+                          {isDealerAdmin && !isReversed && (
                             <button
                               onClick={() => {
                                 setReverseTarget(p);
@@ -272,14 +276,15 @@ export const PaymentsPage: React.FC = () => {
                               Reverse
                             </button>
                           )}
-                          {p.reversedAt && (
+                          {isReversed && (
                             <span className="text-xs text-rose-600 font-semibold">Reversed</span>
                           )}
                         </div>
                       )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
             <Pagination
