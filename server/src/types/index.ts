@@ -620,3 +620,36 @@ export interface HandsetTest {
   createdAt: string;
   updatedAt: string;
 }
+
+/**
+ * Where a hosted-checkout attempt stands.
+ *
+ * Only PAID is final. FAILED means the gateway said "not paid" the last time it
+ * spoke; REVIEW means the gateway confirmed money but it could not be applied
+ * safely, and a person has to look.
+ */
+export type GatewayCheckoutStatus = 'CREATED' | 'FAILED' | 'PAID' | 'REVIEW';
+
+/** One "Pay now" attempt at a payment gateway. Holds no secrets. */
+export interface GatewayCheckout {
+  id: string;
+  dealerId: string;
+  customerId: string;
+  planId: string;
+  /** The gateway, e.g. `JAZZCASH`. */
+  provider: string;
+  /** Our reference, sent to the gateway and echoed back in its callback. */
+  reference: string;
+  /** The public merchant identifier the checkout was signed for. */
+  merchantId: string;
+  /** Whole rupees. */
+  amount: number;
+  status: GatewayCheckoutStatus;
+  paymentId?: string;
+  providerTxnId?: string;
+  responseCode?: string;
+  responseMessage?: string;
+  createdAt: string;
+  expiresAt: string;
+  completedAt?: string;
+}

@@ -827,6 +827,39 @@ model DevicePolicy {
   @@map("device_policies")
 }
 
+/**
+ * One hosted-checkout attempt at a payment gateway.
+ *
+ * A callback from the gateway is only believed when it matches a row here:
+ * same reference, same merchant, same amount. `status` reaches PAID exactly
+ * once, inside the transaction that records the payment, which is what makes a
+ * replayed callback harmless. Deliberately relation-free: it is a ledger of
+ * attempts, and `merchantId` is the public identifier, never a secret.
+ */
+model GatewayCheckout {
+  id              String    @id
+  dealerId        String    @map("dealer_id")
+  customerId      String    @map("customer_id")
+  planId          String    @map("plan_id")
+  provider        String    @db.VarChar(20)
+  reference       String    @unique @db.VarChar(40)
+  merchantId      String    @map("merchant_id") @db.VarChar(60)
+  amount          Int
+  /// CREATED | FAILED | PAID | REVIEW
+  status          String    @default("CREATED") @db.VarChar(12)
+  paymentId       String?   @map("payment_id")
+  providerTxnId   String?   @map("provider_txn_id") @db.VarChar(80)
+  responseCode    String?   @map("response_code") @db.VarChar(20)
+  responseMessage String?   @map("response_message") @db.VarChar(300)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt       DateTime  @map("expires_at") @db.Timestamptz(3)
+  completedAt     DateTime? @map("completed_at") @db.Timestamptz(3)
+
+  @@index([customerId, createdAt(sort: Desc)])
+  @@index([dealerId, status])
+  @@map("gateway_checkouts")
+}
+
 model AuditLog {
   id         String   @id
   dealerId   String?  @map("dealer_id")

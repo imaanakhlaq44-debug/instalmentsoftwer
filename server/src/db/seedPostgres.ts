@@ -90,6 +90,7 @@ async function seedContracts(data: ReturnType<typeof generateSeedData>, tx: Tx):
  */
 const ALL_TABLES = [
   'testimonials',
+  'gateway_checkouts',
   'installments',
   'installment_plans',
   'payments',

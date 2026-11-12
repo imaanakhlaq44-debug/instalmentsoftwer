@@ -76,6 +76,15 @@ export class PaymentService {
     source?: 'COUNTER' | 'CUSTOMER' | 'GATEWAY';
     /** The customer's screenshot of the transfer, when they reported it themselves. */
     proofImage?: string;
+    /**
+     * Runs inside the payment's transaction, after the payment row exists and
+     * before any money is allocated. Throwing rolls the whole payment back.
+     *
+     * The gateway uses it to mark its checkout PAID in the same commit as the
+     * payment, so "the callback was accepted" and "the money was applied" can
+     * never disagree.
+     */
+    withinTransaction?: (tx: Tx, payment: Payment) => Promise<void>;
     actor: PaymentActor;
   }): Promise<PaymentOutcome> {
     if (params.amount <= 0) {
@@ -154,6 +163,8 @@ export class PaymentService {
         },
         tx
       );
+
+      if (params.withinTransaction) await params.withinTransaction(tx, payment);
 
       if (!autoVerify) {
         return {

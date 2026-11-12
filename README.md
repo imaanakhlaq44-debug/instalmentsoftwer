@@ -639,8 +639,19 @@ and `autoVerify: true` — the processor *is* the verification — and reuses
 `PaymentService.recordPayment` exactly as the other two paths do. Allocation,
 late-fee handling, receipt numbering and auto-unlock do not change.
 
-Nothing speculative has been built for that: no adapter interface with one
-implementation, no unused config. Just the column the distinction needs.
+That is now built, for JazzCash hosted checkout, and is **off unless a
+merchant account is configured** (see the gateway block in `server/.env.example`).
+`services/gateway/` holds a small provider interface, the JazzCash
+implementation, and `GatewayService`, which owns the rules every gateway shares:
+a callback applies money only if its signature verifies, it names a checkout
+this server created, and the merchant and amount match that checkout. The
+checkout is marked `PAID` in the same transaction that records the payment, so a
+replayed callback applies nothing. A signed "paid" that cannot be applied safely
+(wrong amount, cancelled plan) is parked as `REVIEW` with an audit entry rather
+than guessed at. The customer-reported flow above stays as the fallback.
+
+The signing recipe has **not yet been run against the JazzCash sandbox** — do
+that before switching `JAZZCASH_ENV` to `production`.
 
 ---
 

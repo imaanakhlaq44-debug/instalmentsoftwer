@@ -32,6 +32,7 @@ import { smsRelayRouter } from './routes/smsRelay.routes.js';
 import { contractsRouter } from './routes/contracts.routes.js';
 import { testimonialsRouter, publicTestimonialsRouter } from './routes/testimonials.routes.js';
 import { handsetTestsRouter, publicTestedPhonesRouter } from './routes/handsetTests.routes.js';
+import { gatewayCallbackRouter, paymentGatewayRouter } from './routes/gateway.routes.js';
 
 const app = express();
 
@@ -68,6 +69,16 @@ app.use(
  * what the platform published — see the router for what that is.
  */
 app.use('/api/public/tested-phones', publicLimiter, publicTestedPhonesRouter);
+
+/**
+ * Payment-gateway callbacks.
+ *
+ * Ahead of CORS and the JSON parser deliberately: the gateway's hosted page
+ * posts the result from the customer's browser, carrying the gateway's Origin,
+ * which the dashboard allow-list below would reject. The router brings its own
+ * body parsers and rate limit, and trusts nothing without a valid signature.
+ */
+app.use('/api/gateway', gatewayCallbackRouter);
 
 app.use(
   cors({
@@ -224,6 +235,7 @@ app.use('/api/devices', requireAuth, devicesRouter);
 app.use('/api/customers', requireAuth, customersRouter);
 app.use('/api/installments', requireAuth, installmentsRouter);
 app.use('/api/payments', requireAuth, paymentsRouter);
+app.use('/api/payment-gateway', requireAuth, paymentGatewayRouter);
 app.use('/api/transactions', requireAuth, transactionsRouter);
 app.use('/api/enrollment', requireAuth, enrollmentRouter);
 app.use('/api/contracts', requireAuth, contractsRouter);
