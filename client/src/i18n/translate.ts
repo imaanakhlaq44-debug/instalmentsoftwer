@@ -1,4 +1,44 @@
 import { ROMAN_URDU, ROMAN_URDU_PATTERNS } from './romanUrdu.js';
+import { URDU, URDU_ONLY, URDU_PATTERNS } from './urdu.js';
+
+type Patterns = Array<[RegExp, string]>;
+
+const URDU_ALL: Record<string, string> = { ...URDU_ONLY, ...URDU };
+
+/** Left-to-right mark: invisible, and makes what it brackets read left to right. */
+const LRM = '‎';
+/** First-strong isolate and its close, around a value dropped into an Urdu line. */
+const FSI = '⁨';
+const PDI = '⁩';
+/** Hebrew and Arabic blocks, including the presentation forms: text that is already right-to-left. */
+const RTL_CHARS = /[֐-ࣿיִ-﷿ﹰ-﻿]/;
+/** The invisible direction marks this file adds, removed again when text is copied. */
+export const BIDI_MARKS = /[‎⁦-⁩]/g;
+
+function lookup(
+  key: string,
+  exact: Record<string, string>,
+  patterns: Patterns,
+  isolate: boolean
+): string | undefined {
+  // Object.hasOwn-style guard: a key such as "constructor" must not find Object's own.
+  if (Object.prototype.hasOwnProperty.call(exact, key)) return exact[key];
+  for (const [re, rep] of patterns) {
+    if (!re.test(key)) continue;
+    if (!isolate) return key.replace(re, rep);
+    // A name or model dropped into a right-to-left line keeps its own order.
+    return key.replace(re, (...args) =>
+      rep.replace(/\$(\d)/g, (_m, n) => `${FSI}${args[Number(n)] ?? ''}${PDI}`)
+    );
+  }
+  return undefined;
+}
+
+function withSpacing(text: string, out: string): string {
+  const lead = text.match(/^\s*/)?.[0] ?? '';
+  const trail = text.match(/\s*$/)?.[0] ?? '';
+  return lead + out + trail;
+}
 
 /**
  * English to Roman Urdu for one piece of rendered text.
@@ -9,21 +49,28 @@ import { ROMAN_URDU, ROMAN_URDU_PATTERNS } from './romanUrdu.js';
 export function toRomanUrdu(text: string): string {
   const key = text.replace(/\s+/g, ' ').trim();
   if (!key || !/[A-Za-z]/.test(key)) return text;
-
-  let out = ROMAN_URDU[key];
-  if (out === undefined) {
-    for (const [re, rep] of ROMAN_URDU_PATTERNS) {
-      if (re.test(key)) {
-        out = key.replace(re, rep);
-        break;
-      }
-    }
-  }
+  const out = lookup(key, ROMAN_URDU, ROMAN_URDU_PATTERNS, false);
   if (out === undefined || out === key) return text;
+  return withSpacing(text, out);
+}
 
-  const lead = text.match(/^\s*/)?.[0] ?? '';
-  const trail = text.match(/\s*$/)?.[0] ?? '';
-  return lead + out + trail;
+/**
+ * English to Urdu for one piece of rendered text.
+ *
+ * A line with no Urdu entry stays in English, and anything left in Latin
+ * letters or digits (an amount, an IMEI, a CNIC, a phone number, a date, a
+ * customer's name) is bracketed with left-to-right marks, so a right-to-left
+ * page cannot reorder "+92 300 1234567" or move the bracket of "(8/128)".
+ */
+export function toUrdu(text: string): string {
+  const key = text.replace(/\s+/g, ' ').trim();
+  if (!key || RTL_CHARS.test(key)) return text;
+  if (/[A-Za-z]/.test(key)) {
+    const out = lookup(key, URDU_ALL, URDU_PATTERNS, true);
+    if (out !== undefined && out !== key) return withSpacing(text, out);
+  }
+  if (!/[A-Za-z0-9]/.test(key)) return text;
+  return withSpacing(text, LRM + text.trim() + LRM);
 }
 
 const ATTRS = ['placeholder', 'title', 'aria-label'] as const;
@@ -45,6 +92,8 @@ export class PageTranslator {
   private originalAttr = new WeakMap<Element, Map<string, string>>();
   private writtenAttr = new WeakMap<Element, Map<string, string>>();
   private root?: HTMLElement;
+
+  constructor(private readonly translate: (text: string) => string = toRomanUrdu) {}
 
   start(root: HTMLElement = document.body): void {
     this.root = root;
@@ -128,7 +177,7 @@ export class PageTranslator {
     const current = node.nodeValue ?? '';
     if (this.writtenText.get(node) === current) return; // our own write
     if (this.skipped(node)) return;
-    const translated = toRomanUrdu(current);
+    const translated = this.translate(current);
     if (translated === current) return;
     this.originalText.set(node, current);
     this.writtenText.set(node, translated);
@@ -141,7 +190,7 @@ export class PageTranslator {
     const written = this.writtenAttr.get(el) ?? new Map<string, string>();
     if (written.get(name) === current) return;
     if (this.attrSkipped(el)) return;
-    const translated = toRomanUrdu(current);
+    const translated = this.translate(current);
     if (translated === current) return;
     const original = this.originalAttr.get(el) ?? new Map<string, string>();
     original.set(name, current);

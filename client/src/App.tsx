@@ -45,6 +45,12 @@ import { NotificationsPage } from './pages/NotificationsPage.js';
 import { AuditLogsPage } from './pages/AuditLogsPage.js';
 import { SettingsPage } from './pages/SettingsPage.js';
 
+/** The language follows whoever is signed in. */
+const Languages: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  return <LanguageProvider userId={user?.id}>{children}</LanguageProvider>;
+};
+
 /** Everyone signed in. */
 const ALL = ['SUPER_ADMIN', 'DEALER_ADMIN', 'DEALER_STAFF', 'CUSTOMER'] as const;
 /** Shop-side users; excludes customers. */
@@ -57,7 +63,7 @@ export function App() {
     <ErrorBoundary>
       <BrowserRouter>
         <AuthProvider>
-        <LanguageProvider>
+        <Languages>
           <Routes>
             {/* Public */}
             <Route path="/login" element={<LoginPage />} />
@@ -108,7 +114,7 @@ export function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>
-        </LanguageProvider>
+        </Languages>
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>
