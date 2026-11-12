@@ -156,36 +156,18 @@ issues a shop its locks once payment has arrived (Licenses page).
 
 ### A dealership
 
-**There is no sign-up screen in the dashboard.** The API has the endpoint and
-the client has a method for it, but nothing in the interface calls it, so the
-first dealership is created with one request from the server itself:
+A shop registers itself from the dashboard: the login page links to
+**`/register`** (shop name, owner, mobile, email, city, address, password, and
+how many locks it wants). That calls `POST /api/auth/register-dealer`, which
+creates the dealership, its enforcement policy and the owner's `DEALER_ADMIN`
+login in one transaction. Sign-ups are limited to 5 per address per hour
+(`SIGNUP_RATE_LIMIT_MAX` / `SIGNUP_RATE_LIMIT_WINDOW_MINUTES`).
 
-```bash
-curl -s https://your-domain.pk/api/auth/register-dealer \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "name": "Al Madina Mobile Hub",
-    "ownerName": "Tariq Mehmood",
-    "email": "owner@example.pk",
-    "phone": "03008451299",
-    "city": "Islamabad",
-    "address": "Shop 42, Blue Area, Islamabad",
-    "password": "<at least 8 characters, with a letter and a number>",
-    "packSize": 30
-  }'
-```
-
-That creates the dealership, its enforcement policy and the owner's
-`DEALER_ADMIN` login in one transaction. It does **not** issue locks: `packSize`
-(30, 50 or 100) is recorded as the pack the shop wants, and the super admin
-issues it from the Licenses page once the money has arrived. Until then a
-financed sale is refused at the counter. Sign in at `https://your-domain.pk`
-with that email and password; everything else — staff accounts, customers,
-devices — is done from the dashboard.
-
-> The missing sign-up screen is worth building before a second dealership is
-> ever onboarded. Doing it by curl is fine for the shop that owns the server; it
-> is not fine as a product.
+It does **not** issue locks. The number asked for is recorded, the shop appears
+on the super admin's **Lock orders** page, and the super admin issues the locks
+once the money has arrived. Until then a financed sale is refused at the
+counter. Staff accounts, customers and devices are then done from the
+dashboard.
 
 ---
 
@@ -228,7 +210,9 @@ curl https://your-domain.pk/api/health
 ```
 
 Then the Enrollment page's QR should print without the "cannot provision"
-warning. That is the moment everything is connected: the shop can hand a phone
+warning. Use the latest release's values — `dpc-v1.5.1` at the time of
+writing — not an older tag's; a phone provisioned from an old APK has to update
+itself before it has any of the later fixes. That is the moment everything is connected: the shop can hand a phone
 to a customer.
 
 ---
