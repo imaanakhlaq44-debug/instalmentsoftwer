@@ -6,6 +6,8 @@ import { DevicePolicy, Dealer } from '../types/index.js';
 import { AuditService } from '../services/AuditService.js';
 import { LicenseService } from '../services/LicenseService.js';
 import { SmsAggregatorService } from '../services/SmsAggregatorService.js';
+import { WhatsAppDispatchService } from '../services/whatsapp/WhatsAppDispatchService.js';
+import { WHATSAPP_LANGUAGES } from '../services/whatsapp/templates.js';
 import { toPublicUser } from '../services/AuthService.js';
 import { DEFAULT_POLICY } from '../services/InstallmentMath.js';
 import {
@@ -64,6 +66,8 @@ settingsRouter.get(
     staffUsers: staff.map(toPublicUser),
     // Whether the aggregator choices under "SMS channel" can be picked at all.
     smsAggregator: SmsAggregatorService.describe(),
+    /** Whether the platform can send through the WhatsApp Business Cloud API at all. */
+    whatsappCloudEnabled: WhatsAppDispatchService.isEnabled(),
   });
   })
 );
@@ -120,6 +124,10 @@ const policySchema = z
     // Accepted so an older dashboard can still save, and always stored as
     // true: clause 4 of every terms version promises emergency calls.
     emergencyCallsAllowed: z.boolean().transform(() => true).optional(),
+    /** Language of the messages the shop opens in its own WhatsApp. */
+    whatsappLanguage: z.enum(WHATSAPP_LANGUAGES).optional(),
+    /** Where automatic reminders are queued. */
+    reminderChannel: z.enum(['SMS', 'WHATSAPP']).optional(),
     paymentMethodsOnLock: z.array(z.string().trim().max(30)).max(10).optional(),
 
     lateFeeEnabled: z.boolean().optional(),
@@ -166,6 +174,13 @@ settingsRouter.put('/policy', (req, res, next) => {
   if (smsChannelChanged && updates.smsChannel !== 'PHONE' && !SmsAggregatorService.isConfigured()) {
     throw AppError.badRequest(
       'No SMS gateway account is set up on this server yet. Messages can only go through a paired phone for now.'
+    );
+  }
+
+  if (updates.reminderChannel === 'WHATSAPP' && !WhatsAppDispatchService.isEnabled()) {
+    throw AppError.badRequest(
+      'Automatic WhatsApp reminders are not available: the WhatsApp Business API is not connected on this server. ' +
+        'Reminders stay on SMS. The WhatsApp button on each customer still works.'
     );
   }
 

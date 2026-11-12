@@ -2,6 +2,8 @@ import dotenv from 'dotenv';
 import crypto from 'crypto';
 import path from 'path';
 
+import { resolveWhatsAppCloudConfig, WhatsAppCloudConfig } from './services/whatsapp/cloudConfig.js';
+
 dotenv.config({ path: path.join(process.cwd(), '.env') });
 
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -172,6 +174,19 @@ if (isProduction && autoSeed) {
   fail('AUTO_SEED must be false in production. Demo data must never be written to a live database.');
 }
 
+/**
+ * WhatsApp Business Cloud API. Off when no WHATSAPP_CLOUD_* variable is set;
+ * a half-finished configuration stops the server rather than leaving somebody
+ * believing reminders are going out.
+ */
+function whatsappCloud(): WhatsAppCloudConfig | null {
+  try {
+    return resolveWhatsAppCloudConfig(process.env);
+  } catch (err) {
+    fail(err instanceof Error ? err.message : 'WhatsApp Cloud API configuration is invalid.');
+  }
+}
+
 export const config = {
   env: NODE_ENV,
   isProduction,
@@ -247,4 +262,6 @@ export const config = {
   pdf: {
     chromiumPath: (process.env.PDF_CHROMIUM_PATH || '').trim(),
   },
+  /** `null` means WhatsApp delivery through the Cloud API is off. */
+  whatsappCloud: whatsappCloud(),
 } as const;

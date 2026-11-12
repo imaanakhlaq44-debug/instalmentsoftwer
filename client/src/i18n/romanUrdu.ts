@@ -432,7 +432,6 @@ export const ROMAN_URDU: Record<string, string> = {
 
   // ------------------------------------------------------------- receipts & payments
   'Payment Receipt': 'Payment ki raseed',
-  'Payment receipt': 'Payment ki raseed',
   'Loading receipt…': 'Raseed load ho rahi hai…',
   'Reversed — not valid': 'Wapas li gayi — qabil-e-qabool nahin',
   'Amount paid': 'Ada shuda raqam',
@@ -1189,12 +1188,42 @@ export const ROMAN_URDU: Record<string, string> = {
   'Try to reset from Settings, then from recovery mode. Pass if reset is blocked, or the phone asks for the shop Google account afterwards.': 'Pehle Settings se, phir recovery mode se reset karne ki koshish karein. Pass tab hai jab reset na ho sake, ya reset ke baad phone dukaan ka Google account mange.',
   'Re-enrol': 'Dobara jorna',
   'Use Re-enrol on the device page and scan the new QR. Pass if the same phone comes back under management without using a new lock.': 'Phone ke page par "Re-enrol" dabayein aur naya QR scan karein. Pass tab hai jab wohi phone naya lock kharch kiye baghair dobara jur jaye.',
+  // ------------------------------------------------------------ WhatsApp
+  'WhatsApp message': 'WhatsApp message',
+  'Message type': 'Message ki qisam',
+  'Due reminder': 'Qist ki yaad dehani',
+  'Overdue notice': 'Late qist ka notice',
+  'Payment receipt': 'Payment ki raseed',
+  'Lock warning': 'Lock ki warning',
+  'Preparing message…': 'Message tayyar ho raha hai…',
+  'Open WhatsApp': 'WhatsApp kholein',
+  'This opens your own WhatsApp with the message typed in. You press send there. We record that it was opened and by whom — not that it was sent or delivered, because that cannot be known.':
+    'Is se aap ka apna WhatsApp khulta hai aur message likha hua hota hai. Send aap khud dabate hain. Hum sirf yeh record karte hain ke kis ne khola — yeh nahin ke message gaya ya pohancha, kyun ke yeh maloom nahin ho sakta.',
+  'This message could not be prepared.': 'Yeh message tayyar nahin ho saka.',
+  'WhatsApp opened, but it could not be added to the customer record.':
+    'WhatsApp khul gaya, lekin customer ke record mein likha nahin ja saka.',
+  'WhatsApp opened': 'WhatsApp khola gaya',
+  'Each time someone at the shop opened WhatsApp to this customer. Opened is all we know — not whether it was sent or read.':
+    'Jab jab dukaan se kisi ne is customer ke liye WhatsApp khola. Hamein sirf itna maloom hai ke khola gaya — yeh nahin ke message gaya ya parha gaya.',
+  'Use the WhatsApp button beside any customer to open your own WhatsApp with the reminder already written. You press send yourself.':
+    'Kisi bhi customer ke saath WhatsApp ka button dabayein: aap ka apna WhatsApp khulega aur yaad dehani pehle se likhi hogi. Send aap khud dabayein.',
+  'Automatic WhatsApp is connected. A message shows SENT once WhatsApp accepts it — that is not proof it was delivered.':
+    'Automatic WhatsApp jura hua hai. Jab WhatsApp message qabool kar le to SENT dikhta hai — yeh is baat ka saboot nahin ke message pohanch gaya.',
+  'Automatic WhatsApp is not connected. That needs a WhatsApp Business API account from Meta.':
+    'Automatic WhatsApp jura hua nahin. Is ke liye Meta se WhatsApp Business API ka account chahiye.',
+  'WhatsApp message language': 'WhatsApp message ki zaban',
+  'The language of the reminder that opens in your WhatsApp when you press the WhatsApp button.':
+    'WhatsApp ka button dabane par jo yaad dehani aap ke WhatsApp mein khulti hai, us ki zaban.',
+  'Send automatic reminders by': 'Automatic yaad dehani kis se bhejein',
+  'SMS goes out from your paired phone. WhatsApp goes out through the WhatsApp Business API.':
+    'SMS aap ke jore hue phone se jata hai. WhatsApp, WhatsApp Business API se jata hai.',
+  'Automatic WhatsApp is not connected, so automatic reminders stay on SMS. The WhatsApp button still works.':
+    'Automatic WhatsApp jura hua nahin, is liye automatic yaad dehani SMS par hi rahegi. WhatsApp ka button phir bhi kaam karta hai.',
 };
 
-/**
- * Lines whose numbers change. Tried after an exact lookup misses.
- */
 export const ROMAN_URDU_PATTERNS: Array<[RegExp, string]> = [
+  [/^WhatsApp message for (.+)$/, '$1 ke liye WhatsApp message'],
+  [/^WhatsApp (?!message)(.+)$/, '$1 ko WhatsApp karein'],
   [/^(\d+) of (\d+) Months Paid$/, '$2 mein se $1 mahine ada'],
   [/^(\d+) SMS · (\d+) characters · Urdu script$/, '$1 SMS · $2 huroof · Urdu likhai'],
   [/^(\d+) SMS · (\d+) characters$/, '$1 SMS · $2 huroof'],

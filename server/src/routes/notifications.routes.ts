@@ -8,6 +8,9 @@ import { AuditService } from '../services/AuditService.js';
 import { SmsRelayService } from '../services/SmsRelayService.js';
 import { SmsAggregatorService } from '../services/SmsAggregatorService.js';
 import { smsSegments } from '../utils/smsSegments.js';
+import { WhatsAppDispatchService } from '../services/whatsapp/WhatsAppDispatchService.js';
+import { WhatsAppLinkService } from '../services/whatsapp/WhatsAppLinkService.js';
+import { WHATSAPP_KINDS, WHATSAPP_KIND_LABEL } from '../services/whatsapp/templates.js';
 import {
   requireDealerStaff, getAuthUser, resolveDealerScope, resolveWritableDealerId,
   assertDealerAccess, clientIp, routeParam,
@@ -92,6 +95,8 @@ notificationsRouter.get(
       relays: delivery.relays,
       smsChannel,
       aggregator,
+      /** True only when WhatsApp Business Cloud API credentials are configured. */
+      whatsappCloudEnabled: WhatsAppDispatchService.isEnabled(),
       deliveryNote: viaAggregator
         ? smsChannel === 'AGGREGATOR_THEN_PHONE'
           ? 'The SMS gateway is sending these messages. One the gateway cannot send is passed to your paired phone. "SENT" means the gateway or the SIM accepted the message, not that it was delivered.'
@@ -120,7 +125,7 @@ const sendSchema = z.object({
   type: z
     .enum(['PAYMENT_DUE', 'PAYMENT_OVERDUE', 'DEVICE_LOCKED', 'DEVICE_UNLOCKED', 'DEVICE_OFFLINE', 'ENROLLMENT_SUCCESS', 'SECURITY_ALERT'])
     .default('PAYMENT_DUE'),
-  channel: z.enum(['IN_APP', 'SMS', 'EMAIL', 'PUSH']).default('SMS'),
+  channel: z.enum(['IN_APP', 'SMS', 'EMAIL', 'PUSH', 'WHATSAPP']).default('SMS'),
   title: z.string().trim().min(2, 'Title is required.').max(120),
   message: z.string().trim().min(2, 'Message is required.').max(600),
 });
@@ -133,6 +138,15 @@ notificationsRouter.post(
     const user = getAuthUser(req);
     const body = req.body as z.infer<typeof sendSchema>;
     const dealerId = await resolveWritableDealerId(req, body.dealerId);
+
+    // Refused outright rather than queued: with no provider behind it the
+    // message would sit there for ever looking as though it were on its way.
+    if (body.channel === 'WHATSAPP' && !WhatsAppDispatchService.isEnabled()) {
+      throw AppError.badRequest(
+        'The WhatsApp Business API is not connected on this server, so this message cannot be queued for WhatsApp. ' +
+          'Use the WhatsApp button on the customer to send it from the shop\'s own WhatsApp.'
+      );
+    }
 
     if (body.customerId) {
       const customer = await repo.customers.findById(body.customerId);
@@ -176,6 +190,79 @@ notificationsRouter.post(
       notification,
       message: 'Message queued. It will be delivered once an SMS gateway is connected.',
     });
+  })
+);
+
+// ---------------------------------------------------------------------------
+// CLICK-TO-WHATSAPP — the shop's own WhatsApp, with the message typed in.
+// ---------------------------------------------------------------------------
+
+const whatsappSchema = z.object({
+  customerId: z.string().trim().min(1).max(64),
+  kind: z.enum(WHATSAPP_KINDS),
+  installmentId: z.string().trim().max(64).optional(),
+  planId: z.string().trim().max(64).optional(),
+  paymentId: z.string().trim().max(64).optional(),
+});
+
+async function composeFor(req: Parameters<typeof getAuthUser>[0], input: z.infer<typeof whatsappSchema>) {
+  const customer = await repo.customers.findById(input.customerId);
+  if (!customer) throw AppError.notFound('Customer');
+  assertDealerAccess(req, customer.dealerId, 'customer');
+
+  return WhatsAppLinkService.compose({
+    customer,
+    kind: input.kind,
+    installmentId: input.installmentId || undefined,
+    planId: input.planId || undefined,
+    paymentId: input.paymentId || undefined,
+  });
+}
+
+/** The message and its wa.me link, for the preview. Records nothing. */
+notificationsRouter.get(
+  '/whatsapp/message',
+  requireDealerStaff,
+  validateQuery(whatsappSchema),
+  asyncHandler(async (req, res) => {
+    res.json(await composeFor(req, getQuery<z.infer<typeof whatsappSchema>>(req)));
+  })
+);
+
+/**
+ * Records that a member of staff opened WhatsApp with this message.
+ *
+ * "Opened" is the whole claim. The chat opens with the text typed in and the
+ * person still has to press send, in an app this server cannot see — so the
+ * trail says who opened what and when, and never "sent" or "delivered".
+ *
+ * The message is rebuilt here from the ledger rather than taken from the
+ * request, so the record cannot say something the dashboard never offered.
+ */
+notificationsRouter.post(
+  '/whatsapp/opened',
+  requireDealerStaff,
+  validateBody(whatsappSchema),
+  asyncHandler(async (req, res) => {
+    const user = getAuthUser(req);
+    const composed = await composeFor(req, req.body as z.infer<typeof whatsappSchema>);
+    const customer = (await repo.customers.findById(composed.customerId))!;
+
+    const log = await AuditService.log({
+      dealerId: customer.dealerId,
+      userId: user.userId,
+      actorName: user.name,
+      actorRole: user.role,
+      action: 'WHATSAPP_OPENED',
+      targetType: 'CUSTOMER',
+      targetId: customer.id,
+      details:
+        `${user.name} opened WhatsApp to ${customer.name} (${composed.phone}) with this message typed in: ` +
+        `${WHATSAPP_KIND_LABEL[composed.kind]}. Opened in the shop's own WhatsApp — whether it was sent or delivered is not known.`,
+      ipAddress: clientIp(req),
+    });
+
+    res.status(201).json({ success: true, openedAt: log.createdAt, ...composed });
   })
 );
 
