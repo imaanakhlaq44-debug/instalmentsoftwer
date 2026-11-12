@@ -2,16 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor, fireEvent } from '@testing-library/react';
 
 import { AddCustomerWizardModal } from './AddCustomerWizardModal.js';
-import { mockApi, renderPage, fill, fail, type MockApi } from '../../test/harness.js';
+import { mockApi, renderPage, fill, fail, type MockApi, type MockRequest } from '../../test/harness.js';
 import type { UserRole } from '../../types/index.js';
 
 /**
- * Registering a financed sale: the four-step wizard at the counter.
+ * Registering a financed sale: the one-page form at the counter.
  *
  * This is where a shop commits a phone and a repayment plan to a customer, so
- * the tests follow what the shopkeeper sees: which box is wrong, whether the
- * phone can take a lock, what the server is told, and what happens when the
- * server says no.
+ * the tests follow what the shopkeeper sees: which box is wrong, what fills in
+ * by itself, whether the phone can take a lock, what the server is told, and
+ * what happens when the server says no.
  */
 
 const VALID_IMEI = '490154203237518';
@@ -25,11 +25,28 @@ const SALE_CREATED = {
   enrollmentToken: { token: 'ENR-7K2M-QX', expiresAt: '2030-01-01T00:00:00Z' },
 };
 
+const HELPER = {
+  customer: null,
+  recentModels: [
+    { brand: 'Tecno', model: 'Spark 20', ramStorage: '8GB / 128GB', price: 38000 },
+    { brand: 'Samsung', model: 'Galaxy A15', ramStorage: '6GB / 128GB', price: 54000 },
+  ],
+  gracePeriodDays: 5,
+};
+
+/** Answers the CNIC lookup with a returning customer for one CNIC only. */
+const helperWith =
+  (returning: { name: string; phonesOnFile: number; overdueInstallments: number }) => (req: MockRequest) => ({
+    ...HELPER,
+    customer: req.query.get('cnic') === '3520212345671' ? returning : null,
+  });
+
 function open(role: UserRole = 'DEALER_ADMIN', routes: Record<string, unknown> = {}) {
   const api = mockApi({
     role,
     routes: {
       'GET /enrollment/readiness': { frpConfigured: true, frpAccountsCount: 1, provisioningReady: true },
+      'GET /customers/sale-helper': HELPER,
       'POST /customers': SALE_CREATED,
       ...routes,
     },
@@ -40,14 +57,15 @@ function open(role: UserRole = 'DEALER_ADMIN', routes: Record<string, unknown> =
   return { api, onClose, onSuccess };
 }
 
-const next = () => fireEvent.click(screen.getByRole('button', { name: /next/i }));
+/** Both "Register" buttons (the desktop one and the bottom bar) submit the same form. */
+const register = () => fireEvent.click(screen.getAllByRole('button', { name: /Register sale|Registering/ })[0]);
 
-async function fillCustomer(overrides: Record<string, string> = {}) {
-  await screen.findByText('Customer Details');
+async function fillNewCustomer(overrides: Record<string, string> = {}) {
+  await screen.findByText('Sell a phone on installments');
   const values: Record<string, string> = {
+    '35202-1234567-1': '35202-1234567-1',
     'e.g. Muhammad Aslam': 'Muhammad Aslam',
     '0300-1234567': '0300-1234567',
-    '35202-1234567-1': '35202-1234567-1',
     'House / Street / City': 'House 12, Street 4, Lahore',
     'e.g. Asif Aslam (Brother)': 'Asif Aslam',
     '0321-7654321': '0321-7654321',
@@ -58,19 +76,16 @@ async function fillCustomer(overrides: Record<string, string> = {}) {
   }
 }
 
-/** Customer and device steps filled in correctly; leaves the wizard on Financing. */
-async function reachFinancing() {
-  await fillCustomer();
-  next();
-  fill(await screen.findByPlaceholderText('15-digit IMEI'), VALID_IMEI);
-  next();
-  await screen.findByText('Installment Structure');
+async function fillPhone() {
+  await screen.findByText('Sell a phone on installments');
+  fill(screen.getByPlaceholderText('e.g. Galaxy A15 / Spark 20'), 'Galaxy A15');
+  fill(screen.getByPlaceholderText('15-digit IMEI'), VALID_IMEI);
+  fill(screen.getByPlaceholderText('e.g. 54000'), '54000');
 }
 
-async function reachReview() {
-  await reachFinancing();
-  next();
-  await screen.findByText('Installment Financing Agreement');
+async function fillEverything() {
+  await fillNewCustomer();
+  await fillPhone();
 }
 
 const lastSale = (api: MockApi) => api.to('POST /customers').at(-1)?.body;
@@ -79,102 +94,170 @@ beforeEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('registering a financed sale — validation', () => {
-  it('names every wrong box on the customer step and does not move on', async () => {
+describe('the sale form — one page', () => {
+  it('shows the customer, the phone and the plan together, with one button to register', async () => {
     open();
-    await screen.findByText('Customer Details');
+    await screen.findByText('Sell a phone on installments');
 
-    next();
+    expect(screen.getByRole('heading', { name: 'Customer' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'The phone' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Installment plan' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /next/i })).not.toBeInTheDocument();
+  });
+
+  it("starts the plan from the shop's own grace period", async () => {
+    open();
+    await waitFor(() => expect(screen.getByLabelText('Grace period (days)')).toHaveValue(5));
+  });
+
+  it('fills brand, model and price from a model sold recently, with a 25% advance', async () => {
+    open();
+    fireEvent.click(await screen.findByRole('button', { name: /Tecno Spark 20/ }));
+
+    expect(screen.getByLabelText('Brand')).toHaveValue('Tecno');
+    expect(screen.getByLabelText('Model')).toHaveValue('Spark 20');
+    expect(screen.getByLabelText('Phone price (Rs)')).toHaveValue(38000);
+    expect(screen.getByLabelText('Advance (Rs)')).toHaveValue(9500);
+  });
+
+  it('works out the monthly installment as the advance and months are tapped', async () => {
+    open();
+    await fillPhone();
+
+    // Rs 54,000 with a 25% advance (Rs 13,500) over 6 months.
+    expect(screen.getAllByText('Rs 6,750').length).toBeGreaterThan(0);
+    expect(screen.getByText('Rs 40,500')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '30%' }));
+    fireEvent.click(screen.getByRole('button', { name: /^12\s*months$/ }));
+
+    // Rs 54,000 less Rs 16,200, over 12 months.
+    expect(screen.getByText('Rs 37,800')).toBeInTheDocument();
+    expect(screen.getAllByText('Rs 3,150').length).toBeGreaterThan(0);
+  });
+});
+
+describe('the sale form — validation', () => {
+  it('names every wrong box at once and sends nothing', async () => {
+    const { api } = open();
+    await screen.findByText('Sell a phone on installments');
+
+    register();
 
     expect(await screen.findByText('Customer name must be at least 3 characters.')).toBeInTheDocument();
     expect(screen.getByText('CNIC must be 13 digits, e.g. 35202-1234567-1.')).toBeInTheDocument();
     expect(screen.getByText('Please enter a complete address.')).toBeInTheDocument();
     expect(screen.getAllByText('Enter a Pakistani mobile number, e.g. 0300-1234567.')).toHaveLength(2);
+    expect(screen.getByText('Please enter the phone model.')).toBeInTheDocument();
+    expect(screen.getByText(/IMEI must be 15 digits/)).toBeInTheDocument();
     expect(screen.getByText('Please fix the fields marked in red.')).toBeInTheDocument();
-    // Still on the customer step.
-    expect(screen.getByText('Customer Details')).toBeInTheDocument();
-    expect(screen.queryByText('Financed Smartphone Specs')).not.toBeInTheDocument();
+    expect(api.to('POST /customers')).toHaveLength(0);
   });
 
   it('clears a message as soon as that box is corrected', async () => {
     open();
-    await screen.findByText('Customer Details');
-    next();
+    await screen.findByText('Sell a phone on installments');
+    register();
     await screen.findByText('Customer name must be at least 3 characters.');
 
     fill(screen.getByPlaceholderText('e.g. Muhammad Aslam'), 'Muhammad Aslam');
 
     expect(screen.queryByText('Customer name must be at least 3 characters.')).not.toBeInTheDocument();
-    // The others are still wrong, and still say so.
     expect(screen.getByText('Please enter a complete address.')).toBeInTheDocument();
   });
 
   it('refuses an IMEI that fails the checksum', async () => {
-    open();
-    await fillCustomer();
-    next();
-    fill(await screen.findByPlaceholderText('15-digit IMEI'), '123456789012345');
+    const { api } = open();
+    await fillEverything();
+    fill(screen.getByPlaceholderText('15-digit IMEI'), '123456789012345');
 
-    next();
+    register();
 
     expect(await screen.findByText(/IMEI must be 15 digits with a valid checksum/)).toBeInTheDocument();
-    expect(screen.queryByText('Installment Structure')).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText('15-digit IMEI')).toHaveAttribute('aria-invalid', 'true');
+    expect(api.to('POST /customers')).toHaveLength(0);
   });
 
-  it('refuses a down payment that is not less than the price', async () => {
+  it('refuses an advance that is not less than the price', async () => {
     open();
-    await reachFinancing();
-    fill(screen.getByDisplayValue('13500'), '54000');
+    await fillEverything();
+    fill(screen.getByLabelText('Advance (Rs)'), '54000');
 
-    next();
+    register();
 
     expect(await screen.findByText('Down payment must be less than the phone price.')).toBeInTheDocument();
-    expect(screen.queryByText('Installment Financing Agreement')).not.toBeInTheDocument();
-  });
-
-  it('works out the monthly installment from price, advance and months', async () => {
-    open();
-    await reachFinancing();
-
-    // Rs. 54,000 less Rs. 13,500 over 6 months.
-    expect(screen.getByText('Rs. 40,500')).toBeInTheDocument();
-    expect(screen.getByText('Rs. 6,750')).toBeInTheDocument();
-
-    fill(screen.getByDisplayValue('13500'), '14000');
-    fireEvent.change(screen.getByDisplayValue('6 Months'), { target: { value: '12' } });
-
-    expect(screen.getByText('Rs. 40,000')).toBeInTheDocument();
-    expect(screen.getByText('Rs. 3,333')).toBeInTheDocument();
   });
 });
 
-describe('registering a financed sale — phone support check', () => {
-  async function reachDevice() {
-    await fillCustomer();
-    next();
-    await screen.findByText('Phone check');
-  }
+describe('the sale form — a returning customer', () => {
+  it('recognises a CNIC on file, fills the name and asks for nothing else', async () => {
+    const { api } = open('DEALER_STAFF', {
+      'GET /customers/sale-helper': helperWith({ name: 'Muhammad Aslam', phonesOnFile: 1, overdueInstallments: 0 }),
+    });
+    await screen.findByText('Sell a phone on installments');
 
+    fill(screen.getByPlaceholderText('35202-1234567-1'), '35202-1234567-1');
+
+    expect(await screen.findByText('Returning customer')).toBeInTheDocument();
+    expect(screen.getByLabelText('Full name')).toHaveValue('Muhammad Aslam');
+    expect(screen.getByLabelText('Full name')).toHaveAttribute('readonly');
+    expect(screen.queryByPlaceholderText('House / Street / City')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('0300-1234567')).not.toBeInTheDocument();
+
+    await fillPhone();
+    register();
+
+    await screen.findByText("Scan this QR on the customer's phone");
+    // The record on file is used: only the name and CNIC are sent.
+    expect(lastSale(api).customer).toEqual({ name: 'Muhammad Aslam', cnic: '35202-1234567-1' });
+  });
+
+  it('warns when an earlier phone has overdue installments', async () => {
+    open('DEALER_STAFF', {
+      'GET /customers/sale-helper': helperWith({ name: 'Muhammad Aslam', phonesOnFile: 2, overdueInstallments: 3 }),
+    });
+    await screen.findByText('Sell a phone on installments');
+
+    fill(screen.getByPlaceholderText('35202-1234567-1'), '3520212345671');
+
+    expect(await screen.findByText(/installment\(s\) overdue on an earlier phone/)).toBeInTheDocument();
+  });
+
+  it('asks for the full details again when the CNIC is changed to an unknown one', async () => {
+    open('DEALER_STAFF', {
+      'GET /customers/sale-helper': helperWith({ name: 'Muhammad Aslam', phonesOnFile: 1, overdueInstallments: 0 }),
+    });
+    await screen.findByText('Sell a phone on installments');
+    fill(screen.getByPlaceholderText('35202-1234567-1'), '35202-1234567-1');
+    await screen.findByText('Returning customer');
+
+    fill(screen.getByPlaceholderText('35202-1234567-1'), '35202-7654321-9');
+
+    expect(await screen.findByPlaceholderText('House / Street / City')).toBeInTheDocument();
+    expect(screen.queryByText('Returning customer')).not.toBeInTheDocument();
+  });
+});
+
+describe('the sale form — phone support check', () => {
   it('says a current Android phone is fully supported', async () => {
     open();
-    await reachDevice();
+    await screen.findByText('Phone check');
     expect(screen.getByText(/Fully supported/)).toBeInTheDocument();
     expect(screen.queryByText(/No lock will be used/)).not.toBeInTheDocument();
   });
 
   it('warns that Android 8–10 locks but has weak reset protection', async () => {
     open();
-    await reachDevice();
-    fireEvent.change(screen.getByDisplayValue('Android 11 or newer'), { target: { value: '8-10' } });
+    await screen.findByText('Phone check');
+    fireEvent.click(screen.getByRole('button', { name: '8 – 10' }));
 
     expect(screen.getByText(/Lock works, reset protection does not/)).toBeInTheDocument();
-    expect(screen.queryByText(/No lock will be used/)).not.toBeInTheDocument();
   });
 
   it('tells the shop a phone without Play Store cannot be locked', async () => {
     open();
-    await reachDevice();
-    fireEvent.change(screen.getByDisplayValue('Yes, Play Store works'), { target: { value: 'no' } });
+    await screen.findByText('Phone check');
+    fireEvent.click(screen.getByRole('button', { name: 'No Play Store' }));
 
     expect(screen.getByText(/No Google Play, so no lock/)).toBeInTheDocument();
     expect(screen.getByText(/No lock will be used and no QR is needed/)).toBeInTheDocument();
@@ -184,20 +267,15 @@ describe('registering a financed sale — phone support check', () => {
     const { api } = open('DEALER_ADMIN', {
       'POST /customers': { success: true, customer: { id: 'cust-9' }, device: { id: 'dev-9', noLock: true } },
     });
-    await reachDevice();
-    fireEvent.change(screen.getByDisplayValue('Samsung'), { target: { value: 'Apple' } });
+    await fillEverything();
+    fireEvent.change(screen.getByLabelText('Brand'), { target: { value: 'Apple' } });
 
     expect(screen.getByText(/iPhone cannot be locked/)).toBeInTheDocument();
     // The Android questions no longer apply.
-    expect(screen.getByDisplayValue('Android 11 or newer')).toBeDisabled();
+    expect(screen.getByRole('button', { name: '11 or newer' })).toBeDisabled();
+    expect(screen.getByText('Sold without a lock')).toBeInTheDocument();
 
-    fill(screen.getByPlaceholderText('15-digit IMEI'), VALID_IMEI);
-    next();
-    await screen.findByText('Installment Structure');
-    next();
-    expect(await screen.findByText(/Sold without a lock:/)).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Approve & Register Sale' }));
+    register();
 
     expect(await screen.findByText('Sale registered without a lock')).toBeInTheDocument();
     expect(lastSale(api).noLock).toBe(true);
@@ -208,11 +286,9 @@ describe('registering a financed sale — phone support check', () => {
     open('DEALER_STAFF', {
       'GET /enrollment/readiness': { frpConfigured: false, frpAccountsCount: 0, provisioningReady: true },
     });
-    await reachDevice();
 
     expect(await screen.findByText('Factory Reset Protection is off for this shop')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /How to get Google Account ID/ })).toBeInTheDocument();
-    // Staff cannot open Settings, so they are not offered it.
     expect(screen.queryByRole('button', { name: 'Open Settings' })).not.toBeInTheDocument();
   });
 
@@ -220,7 +296,6 @@ describe('registering a financed sale — phone support check', () => {
     const { onClose } = open('DEALER_ADMIN', {
       'GET /enrollment/readiness': { frpConfigured: false, frpAccountsCount: 0, provisioningReady: true },
     });
-    await reachDevice();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Open Settings' }));
 
@@ -229,16 +304,12 @@ describe('registering a financed sale — phone support check', () => {
   });
 });
 
-describe('registering a financed sale — sending it', () => {
+describe('the sale form — sending it', () => {
   it('sends the customer, phone and plan exactly as entered and shows the QR', async () => {
     const { api, onSuccess, onClose } = open();
-    await reachReview();
+    await fillEverything();
 
-    // The review step repeats the figures the customer is agreeing to.
-    expect(screen.getByText('Rs. 54,000 / Rs. 13,500')).toBeInTheDocument();
-    expect(screen.getByText(/Rs\. 6,750 \/ month × 6 months/)).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Approve & Generate QR' }));
+    register();
 
     expect(await screen.findByText("Scan this QR on the customer's phone")).toBeInTheDocument();
     expect(screen.getByAltText('QR code to scan on the new phone')).toHaveAttribute('src', SALE_CREATED.qrImageDataUrl);
@@ -253,8 +324,8 @@ describe('registering a financed sale — sending it', () => {
       emergencyContactName: 'Asif Aslam',
       emergencyContactPhone: '0321-7654321',
     });
-    expect(sent.device).toMatchObject({ brand: 'Samsung', imei: VALID_IMEI, purchasePrice: 54000 });
-    expect(sent.plan).toMatchObject({ downPayment: 13500, totalInstallments: 6, gracePeriodDays: 3 });
+    expect(sent.device).toMatchObject({ brand: 'Samsung', model: 'Galaxy A15', imei: VALID_IMEI, purchasePrice: 54000 });
+    expect(sent.plan).toMatchObject({ downPayment: 13500, totalInstallments: 6, gracePeriodDays: 5 });
     expect(sent.noLock).toBe(false);
     expect(api.to('POST /customers')).toHaveLength(1);
 
@@ -265,8 +336,8 @@ describe('registering a financed sale — sending it', () => {
 
   it('opens the QR page for the new phone', async () => {
     open();
-    await reachReview();
-    fireEvent.click(screen.getByRole('button', { name: 'Approve & Generate QR' }));
+    await fillEverything();
+    register();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Open QR page' }));
 
@@ -275,98 +346,71 @@ describe('registering a financed sale — sending it', () => {
 
   it('warns when the server cannot serve the app download for this QR', async () => {
     open('DEALER_ADMIN', { 'POST /customers': { ...SALE_CREATED, qrProvisioningReady: false } });
-    await reachReview();
-    fireEvent.click(screen.getByRole('button', { name: 'Approve & Generate QR' }));
+    await fillEverything();
+    register();
 
     expect(await screen.findByText(/this QR cannot install the app yet/)).toBeInTheDocument();
   });
 
-  it('refuses the sale when the shop has no locks left, and shows why', async () => {
+  it('refuses the sale when the shop has no locks left, and keeps everything typed', async () => {
     const refusal =
       'You have no device locks left. Each handset needs its own lock, and a lock is not returned when a plan is paid off. Buy a pack before registering another financed sale.';
     const { api, onSuccess } = open('DEALER_ADMIN', { 'POST /customers': fail(403, refusal) });
-    await reachReview();
+    await fillEverything();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Approve & Generate QR' }));
+    register();
 
     expect(await screen.findByText(refusal)).toBeInTheDocument();
-    // Nothing was registered: still on the review step, no QR, and the button is usable again.
-    expect(screen.getByText('Installment Financing Agreement')).toBeInTheDocument();
     expect(screen.queryByText("Scan this QR on the customer's phone")).not.toBeInTheDocument();
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Approve & Generate QR' })).toBeEnabled());
+    await waitFor(() => expect(screen.getAllByRole('button', { name: /Register sale/ })[0]).toBeEnabled());
+    expect(screen.getByPlaceholderText('15-digit IMEI')).toHaveValue(VALID_IMEI);
     expect(api.to('POST /customers')).toHaveLength(1);
     expect(onSuccess).not.toHaveBeenCalled();
   });
 
-  it('takes the shop back to the box the server rejected', async () => {
+  it('marks the box the server rejected', async () => {
     open('DEALER_ADMIN', {
       'POST /customers': fail(422, 'Validation failed', {
         details: [{ field: 'device.imei', message: 'This IMEI failed the checksum.' }],
       }),
     });
-    await reachReview();
+    await fillEverything();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Approve & Generate QR' }));
+    register();
 
-    // Back on the device step, with the server's words under the IMEI box.
-    expect(await screen.findByText('Financed Smartphone Specs')).toBeInTheDocument();
-    expect(screen.getAllByText('This IMEI failed the checksum.').length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('This IMEI failed the checksum.')).length).toBeGreaterThan(0);
     expect(screen.getByPlaceholderText('15-digit IMEI')).toHaveAttribute('aria-invalid', 'true');
   });
 
   it('does not register twice when the button is pressed twice', async () => {
     const { api } = open();
-    await reachReview();
-    const approve = screen.getByRole('button', { name: 'Approve & Generate QR' });
+    await fillEverything();
 
-    fireEvent.click(approve);
-    fireEvent.click(approve);
+    register();
+    register();
 
     await screen.findByText("Scan this QR on the customer's phone");
     expect(api.to('POST /customers')).toHaveLength(1);
   });
-});
 
-describe('registering a financed sale — a returning customer', () => {
-  it('adds another phone for a CNIC already on file', async () => {
-    // The server finds the CNIC, attaches the sale to the existing record and
-    // answers exactly as for a new customer.
-    const { api } = open('DEALER_STAFF', {
-      'POST /customers': { ...SALE_CREATED, customer: { id: 'cust-existing', name: 'Muhammad Aslam' } },
-    });
-    await reachReview();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Approve & Generate QR' }));
-
-    expect(await screen.findByText("Scan this QR on the customer's phone")).toBeInTheDocument();
-    expect(screen.getByText(/Samsung Galaxy A15 for Muhammad Aslam/)).toBeInTheDocument();
-    expect(lastSale(api).customer.cnic).toBe('35202-1234567-1');
-  });
-
-  it('explains when the CNIC is on file under a different name', async () => {
+  it('shows the server message when the CNIC is on file under a different name', async () => {
     const refusal =
       'This CNIC is already on file for Muhammad Aslam Khan. To sell them another phone, enter the name exactly as on file. If this is a different person, check the CNIC.';
     open('DEALER_STAFF', { 'POST /customers': fail(409, refusal) });
-    await reachReview();
+    await fillEverything();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Approve & Generate QR' }));
+    register();
 
     expect(await screen.findByText(refusal)).toBeInTheDocument();
-    expect(screen.queryByText("Scan this QR on the customer's phone")).not.toBeInTheDocument();
-
-    // The shop can go back, correct the name and try again without retyping the rest.
-    fireEvent.click(screen.getByRole('button', { name: /back/i }));
-    fireEvent.click(screen.getByRole('button', { name: /back/i }));
-    fireEvent.click(screen.getByRole('button', { name: /back/i }));
     expect(screen.getByPlaceholderText('35202-1234567-1')).toHaveValue('35202-1234567-1');
   });
 
   it('refuses a duplicate IMEI with the server message', async () => {
     const refusal = 'A device with this IMEI is already registered in the system.';
     open('DEALER_STAFF', { 'POST /customers': fail(409, refusal) });
-    await reachReview();
+    await fillEverything();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Approve & Generate QR' }));
+    register();
 
     expect(await screen.findByText(refusal)).toBeInTheDocument();
   });

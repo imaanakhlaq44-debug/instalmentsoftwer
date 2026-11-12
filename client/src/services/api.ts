@@ -274,6 +274,15 @@ export class ApiService {
     return this.request<any>(`/customers/${id}`);
   }
 
+  /** What the sale form can fill in: a returning customer by CNIC, recent models, the shop's grace period. */
+  static getSaleHelper(params: { cnic?: string; dealerId?: string } = {}) {
+    return this.request<{
+      customer: { name: string; phonesOnFile: number; overdueInstallments: number } | null;
+      recentModels: { brand: string; model: string; ramStorage: string; price: number }[];
+      gracePeriodDays: number;
+    }>(`/customers/sale-helper${buildQuery(params)}`);
+  }
+
   static createCustomerWithDevice(data: unknown) {
     return this.request<any>('/customers', { method: 'POST', body: JSON.stringify(data) });
   }
