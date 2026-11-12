@@ -105,6 +105,69 @@ customersRouter.get('/', validateQuery(listQuerySchema), asyncHandler(async (req
 // DETAIL
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// SALE HELPER — what the counter's sale form can fill in by itself
+// ---------------------------------------------------------------------------
+
+const saleHelperQuerySchema = z.object({
+  cnic: z.string().trim().max(20).optional(),
+  dealerId: z.string().trim().max(64).optional(),
+});
+
+/**
+ * One call when the sale form opens, and again once a full CNIC is typed:
+ *
+ *  - whether that CNIC is already a customer here, by name only — enough to
+ *    sell them another phone without retyping anything, and nothing a
+ *    counter-staff login is not otherwise allowed to see;
+ *  - the models this shop sold most recently, with the last price, so a
+ *    repeat model is one tap;
+ *  - the shop's grace period, so the plan starts from the shop's own rule.
+ */
+customersRouter.get(
+  '/sale-helper',
+  requireDealerStaff,
+  validateQuery(saleHelperQuerySchema),
+  asyncHandler(async (req, res) => {
+    const q = getQuery<z.infer<typeof saleHelperQuerySchema>>(req);
+    const dealerId = await resolveWritableDealerId(req, q.dealerId);
+
+    let customer: { name: string; phonesOnFile: number; overdueInstallments: number } | null = null;
+    const digits = (q.cnic ?? '').replace(/\D/g, '');
+    if (digits.length === 13) {
+      const found = await repo.customers.findFirst({ dealerId, cnic: { in: cnicForms(digits) } });
+      if (found) {
+        const devices = await repo.devices.findByCustomer(found.id);
+        const plans = await repo.installmentPlans.findByCustomer(found.id);
+        const installments = plans.length ? await repo.installments.findByPlans(plans.map((p) => p.id)) : [];
+        customer = {
+          name: found.name,
+          phonesOnFile: devices.length,
+          overdueInstallments: installments.filter((i) => i.status === 'OVERDUE').length,
+        };
+      }
+    }
+
+    const recent = await repo.devices.findMany({
+      where: { dealerId },
+      orderBy: { createdAt: 'desc' },
+      take: 60,
+    });
+    const seen = new Set<string>();
+    const recentModels: { brand: string; model: string; ramStorage: string; price: number }[] = [];
+    for (const d of recent) {
+      const key = `${d.brand}|${d.model}`.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      recentModels.push({ brand: d.brand, model: d.model, ramStorage: d.ramStorage, price: d.purchasePrice });
+      if (recentModels.length === 6) break;
+    }
+
+    const policy = await repo.devicePolicies.findByDealer(dealerId);
+    res.json({ customer, recentModels, gracePeriodDays: policy?.gracePeriodDays ?? 3 });
+  })
+);
+
 customersRouter.get('/:id', asyncHandler(async (req, res) => {
   const user = getAuthUser(req);
   const customer = await repo.customers.findById(routeParam(req, 'id'));
@@ -163,6 +226,25 @@ customersRouter.get('/:id', asyncHandler(async (req, res) => {
   });
 }));
 
+/** The contact boxes a brand-new customer must fill, as 422 details. */
+function newCustomerGaps(c: {
+  phone?: string;
+  address?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+}): { field: string; message: string }[] {
+  const gaps: { field: string; message: string }[] = [];
+  if (!c.phone) gaps.push({ field: 'customer.phone', message: 'Enter a Pakistani mobile number, e.g. 0300-1234567.' });
+  if (!c.address) gaps.push({ field: 'customer.address', message: 'Please enter a complete address.' });
+  if (!c.emergencyContactName) {
+    gaps.push({ field: 'customer.emergencyContactName', message: 'Emergency contact name is required.' });
+  }
+  if (!c.emergencyContactPhone) {
+    gaps.push({ field: 'customer.emergencyContactPhone', message: 'Enter a Pakistani mobile number, e.g. 0300-1234567.' });
+  }
+  return gaps;
+}
+
 // ---------------------------------------------------------------------------
 // CREATE (customer + optional device + financing plan)
 // ---------------------------------------------------------------------------
@@ -183,11 +265,16 @@ const createSchema = z.object({
   dealerId: z.string().trim().max(64).optional(),
   customer: z.object({
     name: z.string().trim().min(3, 'Customer name must be at least 3 characters.').max(120),
-    phone: pakistaniPhoneSchema,
     cnic: cnicSchema,
-    address: z.string().trim().min(5, 'Please enter a complete address.').max(300),
-    emergencyContactName: z.string().trim().min(3, 'Emergency contact name is required.').max(120),
-    emergencyContactPhone: pakistaniPhoneSchema,
+    /**
+     * Required for a new customer. For a CNIC already on file the record on
+     * file is used and these are ignored, so the counter does not retype a
+     * returning customer's address — and staff, who never see it, need not.
+     */
+    phone: pakistaniPhoneSchema.optional(),
+    address: z.string().trim().min(5, 'Please enter a complete address.').max(300).optional(),
+    emergencyContactName: z.string().trim().min(3, 'Emergency contact name is required.').max(120).optional(),
+    emergencyContactPhone: pakistaniPhoneSchema.optional(),
     notes: z.string().trim().max(1000).optional(),
   }),
   device: z
@@ -232,7 +319,6 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
     throw AppError.badRequest('A device is required when creating a financing plan.');
   }
 
-  const normalizedPhone = normalizePhone(body.customer.phone);
 
   /**
    * One person, many phones.
@@ -258,11 +344,16 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
     }
     returningCustomer = sameCnic;
   } else {
+    // A new customer: every contact box is needed, named the way the
+    // schema would name it so the counter's form marks the right one.
+    const missing = newCustomerGaps(body.customer);
+    if (missing.length > 0) throw AppError.unprocessable('Validation failed', missing);
+
     // A phone number already used by a different CNIC is still refused.
     const duplicate = await repo.customers.findDuplicate({
       dealerId,
       cnic: body.customer.cnic,
-      phone: normalizedPhone,
+      phone: normalizePhone(body.customer.phone!),
     });
     if (duplicate) {
       throw AppError.conflict(`A customer with this phone number already exists: ${duplicate.name}.`);
@@ -305,11 +396,11 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
       id: `cust-${uuidv4().substring(0, 8)}`,
       dealerId,
       name: body.customer.name,
-      phone: normalizedPhone,
+      phone: normalizePhone(body.customer.phone!),
       cnic: body.customer.cnic,
-      address: body.customer.address,
-      emergencyContactName: body.customer.emergencyContactName,
-      emergencyContactPhone: normalizePhone(body.customer.emergencyContactPhone),
+      address: body.customer.address!,
+      emergencyContactName: body.customer.emergencyContactName!,
+      emergencyContactPhone: normalizePhone(body.customer.emergencyContactPhone!),
       notes: body.customer.notes,
       active: true,
       createdAt: nowIso,

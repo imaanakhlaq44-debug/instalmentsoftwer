@@ -198,7 +198,7 @@ describe('who sees which controls', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Add Device Now' }));
 
-    expect(await screen.findByText('Register Financed Device')).toBeInTheDocument();
+    expect(await screen.findByText('Sell a phone on installments')).toBeInTheDocument();
   });
 });
 

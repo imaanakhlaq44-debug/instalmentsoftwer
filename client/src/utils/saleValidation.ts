@@ -118,6 +118,29 @@ export function validateSaleStep(step: number, f: SaleForm): SaleErrors {
   return {};
 }
 
+/**
+ * Every problem on the one-page sale form at once. A returning customer's
+ * contact details are already on file and are not sent, so only the name and
+ * CNIC are checked for them.
+ */
+export function validateSale(f: SaleForm, opts: { returningCustomer?: boolean } = {}): SaleErrors {
+  const customer = customerErrors(f);
+  if (opts.returningCustomer) {
+    delete customer.customerPhone;
+    delete customer.customerAddress;
+    delete customer.emergencyName;
+    delete customer.emergencyPhone;
+  }
+  return { ...customer, ...deviceErrors(f), ...planErrors(f) };
+}
+
+/** The order the boxes appear on the form, so the first problem can be scrolled to. */
+export const SALE_FIELD_ORDER: SaleField[] = [
+  'customerCnic', 'customerName', 'customerPhone', 'customerAddress', 'emergencyName', 'emergencyPhone',
+  'brand', 'model', 'imei', 'purchasePrice', 'serialNumber', 'ramStorage',
+  'downPayment', 'totalInstallments', 'firstDueDate', 'gracePeriodDays',
+];
+
 /** Which wizard step a field lives on. */
 export function stepOf(field: SaleField): 1 | 2 | 3 {
   if (field.startsWith('customer') || field.startsWith('emergency')) return 1;

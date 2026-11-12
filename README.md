@@ -86,6 +86,7 @@ Also true, and easy to miss:
 - **Returning customers** — a second phone for a CNIC already on file is added to that customer's record. Still refused: the same CNIC under a different name, and a phone number already used by a different CNIC.
 
 ### Dashboard
+- **A one-page sale form.** Customer, phone and plan on one screen, with the monthly figure always in view. A CNIC already on file fills in the customer by name and asks for nothing else (`GET /api/customers/sale-helper`); the shop's recent models are one tap with their last price; the advance (20/25/30%) and the months are buttons; the grace period comes from the shop's settings.
 - **A shop registers itself** at `/register`, linked from the login page. No locks are issued until the platform confirms payment.
 - **English, Roman Urdu and Urdu** for the whole dashboard, remembered per user. Urdu is in Urdu script, laid out right to left. Text with no entry stays English; the signed agreement keeps its own wording.
 - **A platform menu for the super admin** — Home, Lock orders, Shops, Locks sold — separate from a shop's own menu.
@@ -799,6 +800,7 @@ committed, then typechecks, tests and builds both halves of the app.
 | `tests/api/frp.test.ts` | The FRP status a handset reports reaching the dashboard, and the Google ID rules |
 | `tests/api/platform.test.ts` | The super admin's overview: access, shops awaiting payment, revenue and fleet counts |
 | `tests/api/admin-guards.test.ts`, `tests/api/super-admin-bootstrap.test.ts` | Admin-only actions refusing everyone else; creating the first super admin from the server shell |
+| `tests/api/sale-helper.test.ts` | A returning customer found by CNIC with or without dashes, by name only and never across shops; recent models once each; the shop's grace period; a returning customer sold another phone with only CNIC and name, while a new one is still asked for every contact box |
 | `tests/db/connection.test.ts` | The database is UTF-8, so an Urdu name can be stored at all |
 
 **Client** (`client/src/**/*.test.ts(x)`)
