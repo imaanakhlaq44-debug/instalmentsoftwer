@@ -6,8 +6,9 @@ phone should be restricted, this decides *whether the restriction is real*, and
 tells the server the truth either way.
 
 Kotlin, minSdk 26, no Compose, no HTTP library. It talks to four endpoints and
-draws two screens; anything larger than that would be weight carried on someone
-else's phone for no reason.
+draws a handful of screens (status, lock, enrolment, released); anything larger
+would be weight carried on someone else's phone for no reason. Current version:
+**1.5.1** (`versionCode` 8).
 
 ---
 
@@ -16,21 +17,35 @@ else's phone for no reason.
 | | |
 |---|---|
 | **Enrols** | Redeems the shop's code at `POST /enroll` and keeps the device credential it is issued. The code arrives in the provisioning bundle, so nobody types it. |
-| **Checks in** | Every fifteen minutes via WorkManager: battery, OS build, patch level, carrier. Collects any waiting command. |
+| **Checks in** | Every fifteen minutes via WorkManager: battery, OS build, patch level, carrier, and (from 1.5.0) the hardware snapshot — IMEIs, serial, device-owner state, integrity signals, FRP status. Collects any waiting command. |
 | **Applies commands** | `LOCK` pins the phone to the lock screen as device owner; `UNLOCK` releases it. |
 | **Acknowledges honestly** | Reports `applied: true` only when the restriction actually took hold. |
 | **Holds itself when nobody can reach it** | If it has not reached the server for the dealer's limit *and* an installment is past its grace period by the schedule it already holds, it restricts itself. See [The offline rule](#the-offline-rule). |
 | **Survives restarts** | The lock is restored from the last state the phone *enforced*, before the network is consulted. |
-| **Gives the phone back** | When the server answers 403 — device removed or retired — it unwinds every restriction and erases its own credential. |
+| **Gives the phone back** | When the server answers 403 — paid off, released or retired — it unwinds every restriction, gives up device owner and erases its own credential. See [Letting the phone go](#letting-the-phone-go). |
+| **Reports tampering** | IMEIs, serial and OS integrity on every check-in, and a hardware attestation from the secure chip when the server asks. See [Hardware integrity](#hardware-integrity-140-and-key-attestation-150). |
 
 ## What it deliberately does not do
 
-- **No location, no Wi-Fi SSID.** The server's check-in schema accepts both.
-  Neither is ever sent. Whether an installment is overdue does not depend on
-  where the customer is, and a financing app that quietly tracks people is a
-  different product from this one.
-- **No contacts, no call log, no SMS, no camera.** The full permission list is
-  `INTERNET`, `ACCESS_NETWORK_STATE` and `RECEIVE_BOOT_COMPLETED`.
+- **No tracking.** Location is read only in answer to a recovery request the
+  server has approved — see [Location for recovery](#location-for-recovery-130)
+  for exactly when. The permission is granted for that one fix and set back to
+  denied straight after, and the customer is shown a notification each time.
+  The Wi-Fi SSID, which the server's check-in schema also accepts, is never
+  sent.
+- **No contacts, no call log, no SMS, no camera.** The manifest asks for
+  exactly these permissions:
+
+  | Permission | Why |
+  |---|---|
+  | `INTERNET`, `ACCESS_NETWORK_STATE` | Talking to the server |
+  | `RECEIVE_BOOT_COMPLETED` | Restoring the lock after a restart |
+  | `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION` (1.3+) | One fix per approved recovery request; granted and revoked around it by the app itself as device owner |
+  | `POST_NOTIFICATIONS` (1.3+) | Telling the customer their location was shared |
+  | `READ_PHONE_STATE` (1.4+) | Reading the handset's own IMEI(s) and serial, to compare with the sale record |
+
+  `READ_PHONE_STATE` is the broadest-sounding of these. The app uses it for
+  `getImei()` and `Build.getSerial()` and for nothing else.
 - **No remote wipe.** The protocol has no such command and this app implements
   none. Locking a financed handset is a contractual remedy; destroying the
   photographs on it is not.
@@ -121,6 +136,7 @@ to the counter.
 | Android 8–10 | Managed configuration on `com.google.android.gms`, key `factoryResetProtectionAdmin`, followed by the `com.google.android.gms.auth.FRP_CONFIG_CHANGED` broadcast. Merged into any restrictions Play services already has. |
 | `FactoryResetProtection` | Picks the route and decides whether anything changed. Pure and unit-tested. The heartbeat makes a platform call only when the accounts or the route change. A change of route happens when the OS is upgraded from 10 to 11. |
 | `Prefs.frpAppliedIds` | What the platform actually accepted. A refused call is retried at the next check-in. |
+| Read-back (1.5.1) | After every apply the app reads the policy back from the OS and reports what it found as `frp` on the check-in: `ACTIVE` (Android 11+ policy in force), `LEGACY` (the Play services route, Android 8–10), `REFUSED` with the reason, or `NOT_CONFIGURED`. A firmware that accepts the call and silently drops the policy shows up as `REFUSED` on the dashboard instead of as protected. A change of status is reported straight away rather than at the next heartbeat. |
 
 It runs at enrolment and again on every check-in, so a dealer who adds an
 account after the sale still reaches phones already in the field. An empty list
@@ -136,6 +152,7 @@ obfuscated GAIA ID). An email address would leave a wiped phone asking for an
 account nobody can sign in with, which strands it for the dealer too. The
 server rejects anything that is not 6–30 digits, and the app drops such values
 rather than install them.
+The dashboard has a guide, in English and Urdu, for finding that number.
 
 ### What FRP cannot do
 
@@ -180,6 +197,19 @@ allowed, then closes the request. Coordinates are left out of every ordinary
 device response. An owner opens them on purpose, and the server logs it
 (`LOCATION_VIEWED`). Releasing the phone deletes them.
 
+The notification reads, in English: *"Your location was shared with the shop.
+An installment on this phone is overdue, so the shop asked for its location, as
+your signed agreement allows. It was taken once, and only the shop owner can see
+it. Pay the overdue amount or contact the shop."* The Urdu build carries the
+same text in Urdu (`values-ur/strings.xml`).
+
+**Not wired up on the heartbeat.** In 1.3.0 through 1.5.1, `DpcSync` calls
+`answerLocationRequest` from `enroll()` only. `syncOnce()` — the fifteen-minute
+check-in — saves the policy and never looks at `reportLocation`. A recovery
+request is only ever made for a phone that is already enrolled, so in practice
+the phone does not answer it. Until `syncOnce()` calls it too, treat location
+for recovery as not working on real handsets.
+
 ---
 
 ## Letting the phone go
@@ -202,6 +232,38 @@ and `releaseFromManagement()` undoes everything in this order:
 The app then opens on `ReleasedActivity` ("This phone is yours"), which offers
 **Remove this app**. Nothing about a release can be undone from the dashboard.
 Managing the phone again means a factory reset and a fresh QR.
+
+---
+
+## Hardware integrity (1.4.0) and key attestation (1.5.0)
+
+`DeviceIntegrityCollector` reads, as device owner: the IMEI of each SIM slot,
+the serial number, whether the app still holds device owner, whether an `su`
+binary is present, whether the build is signed with test-keys, and the
+bootloader state from `ro.boot.verifiedbootstate` / `ro.boot.flash.locked`.
+`DeviceIntegrity` turns that into a report and is unit-tested. From 1.5.0 it
+travels on every check-in; 1.4.0 sent it only at enrolment.
+
+The server compares it with the sale record and raises tamper flags on the
+dashboard — a different IMEI, a different serial from the one pinned after
+enrolment, device owner lost, root, an unlocked bootloader.
+
+**Key attestation.** `KeyAttestor` asks the phone's secure chip (TEE or
+StrongBox) to sign a throwaway key's certificate over a challenge from the
+server, with the factory IMEI(s) and serial included where the maker provisioned
+them. It tries IMEI + serial, then serial, then no IDs, then plain keystore
+attestation, and says which it managed. The challenge is derived from the
+enrolment code the first time (`AttestationChallenge`, tested against the same
+vector as the server) and issued by the server about once a day after that.
+
+What it cannot do: root, test-keys and the bootloader properties are read from
+the OS, and a rooted phone can lie about them. The attestation chain is the
+part the OS cannot forge, and the server checks it against Google's roots and
+revocation list — but many budget phones do not provision IDs, and then it
+proves less. None of this has been tried across real handsets.
+
+**Day-1 hardening (1.4.0).** USB debugging and installs from unknown sources are
+blocked from enrolment, not only while locked, and lifted only on release.
 
 ---
 
@@ -235,9 +297,11 @@ The debug APK lands in `dpc/build/outputs/apk/debug/`. `local.properties` needs
 `sdk.dir` pointing at your Android SDK; Android Studio writes it for you, and CI
 gets it from `ANDROID_HOME`.
 
-Unit tests are plain JVM tests — the JSON parsing that decides what a lock
-screen says, and the URL joining that decides whether a provisioned phone can
-find its server at all.
+Unit tests are plain JVM tests (48 of them): the JSON parsing that decides
+what a lock screen says, the URL joining that decides whether a provisioned
+phone can find its server at all, the offline rule, staged restrictions, which
+FRP call is due, IMEI and integrity parsing, check-in serialisation and the
+attestation challenge. Nothing that calls `DevicePolicyManager` can run there.
 
 ### Pointing it at a server
 
@@ -266,7 +330,7 @@ device owner survives until a factory reset — which the app then blocks.
 
    ```bash
    DPC_SERVER_URL=https://api.your-domain.pk/api/dpc
-   DPC_APK_URL=https://github.com/<owner>/<repo>/releases/download/dpc-v1.0.0/almas-sdm-dpc-v1.0.0.apk
+   DPC_APK_URL=https://github.com/<owner>/<repo>/releases/download/dpc-v1.5.1/almas-sdm-dpc-v1.5.1.apk
    DPC_APK_SIGNATURE_CHECKSUM=<base64url SHA-256 of the signing certificate>
    ```
 
@@ -281,9 +345,11 @@ device owner survives until a factory reset — which the app then blocks.
    certificate against the checksum, installs it as device owner and hands the
    enrolment code to `AlmasDeviceAdminReceiver`.
 
-4. The app redeems the code, hardens the installation — no factory reset, no
-   safe boot, no added users, cannot be uninstalled, and FRP set to the
-   dealer's Google accounts if any are configured — and starts checking in.
+4. The app redeems the code (sending its hardware snapshot and an attestation
+   with it), hardens the installation — no factory reset, no safe boot, no
+   added users, no USB debugging, no unknown-source installs, cannot be
+   uninstalled, and FRP set to the dealer's Google accounts if any are
+   configured — and starts checking in.
 
 ### The signature checksum
 
@@ -303,26 +369,28 @@ provisioned as owner of somebody's phone.
 
 ## Trying it without a phone
 
-Two ways, and neither needs a handset:
+The dashboard's Simulator page has been removed — it acted on real records, and
+on a live server that is a way to lock a real phone by mistake.
+`/api/simulator` still exists outside production for the server's own tests.
 
-- **The dashboard's Simulator page** drives the real endpoints against real
-  records. It stands in for the phone, so `TOGGLE_ONLINE` performs the check-in
-  and the acknowledgement in one step rather than the two round trips this app
-  makes.
-- **An emulator** running the debug build against `10.0.2.2:5000`, enrolling
-  through the typed form with a code from the Enrollment page. It will check in,
-  receive commands and acknowledge them — and it will refuse every lock with
-  "device-owner privileges are not held", because an app installed by `adb` is
-  not an owner. That refusal appearing on the dashboard is the protocol working.
+**An emulator** running the debug build against `10.0.2.2:5000`, enrolling
+through the typed form with a code from the Enrollment page, will check in,
+receive commands and acknowledge them — and it will refuse every lock with
+"device-owner privileges are not held", because an app installed by `adb` is
+not an owner. That refusal appearing on the dashboard is the protocol working.
 
 ---
 
 ## Layout
 
 ```
-admin/   EmiDeviceAdminReceiver — provisioning hook
+admin/   AlmasDeviceAdminReceiver — provisioning hook
          LockController         — everything that actually restricts the phone
-         FactoryResetProtection — which FRP call is due, if any
+         FactoryResetProtection — which FRP call is due, if any, and the read-back report
+         StagedRestrictions     — level → restrictions and suspended apps
+         LocationReporter       — one fix for an approved recovery request
+         DeviceIntegrity(+Collector) — IMEIs, serial, root/bootloader signals
+         KeyAttestor, AttestationChallenge — the secure chip's signed word
 data/    Prefs                  — credential, cached policy, enforced lock state
          PolicyView             — the server's answer, parsed
 net/     DpcApi                 — the four endpoints
@@ -331,9 +399,11 @@ work/    DpcSync                — one round of the protocol, in one place
          CheckInWorker          — the heartbeat
          CheckInScheduler       — cadence
          BootReceiver           — restore after a restart
+         OfflineLockRule, OfflineWatchdogWorker — the offline rule
 ui/      LockActivity           — the restricted screen
          StatusActivity         — the unrestricted one
          EnrollActivity         — redeems the code
+         ReleasedActivity       — "This phone is yours"
 ```
 
 Every state change goes through `DpcSync`, so the periodic worker, the boot

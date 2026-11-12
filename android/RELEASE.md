@@ -1,13 +1,13 @@
 # Releasing the DPC
 
 The app in [`dpc/`](dpc/) is the half of the lock that actually holds a handset.
-Until a signed build of it is hosted somewhere a factory-reset phone can reach,
-the product's central promise is written but unproven — a QR that provisions
-nothing.
+Signed builds are published as GitHub Releases — `dpc-v1.0.0` through
+`dpc-v1.5.1` so far, all signed with the same key. What is still missing is
+step 6: a recorded pass on real handsets.
 
-This is the runbook for changing that. Read it once before starting: the signing
-key is created in step 1 and cannot be replaced afterwards without a factory
-reset on every phone in the fleet.
+This is the runbook. Steps 1–3 have been done once and must not be done again —
+the signing key cannot be replaced without a factory reset on every phone in
+the fleet. A new release is steps 4 and 5.
 
 ---
 
@@ -116,8 +116,8 @@ Raise `versionCode` and `versionName` in [`dpc/build.gradle.kts`](dpc/build.grad
 commit, then tag:
 
 ```bash
-git tag dpc-v1.0.0
-git push origin dpc-v1.0.0
+git tag dpc-v1.5.2        # the next version; the latest published is dpc-v1.5.1
+git push origin dpc-v1.5.2
 ```
 
 `versionCode` must go **up** every time. Android refuses to install a build
@@ -158,7 +158,7 @@ cd android && ./gradlew :dpc:assembleRelease
 
 ```bash
 DPC_SERVER_URL=https://api.your-domain.pk/api/dpc
-DPC_APK_URL=https://github.com/<owner>/<repo>/releases/download/dpc-v1.0.0/almas-sdm-dpc-v1.0.0.apk
+DPC_APK_URL=https://github.com/<owner>/<repo>/releases/download/dpc-v1.5.1/almas-sdm-dpc-v1.5.1.apk
 DPC_APK_SIGNATURE_CHECKSUM=<from step 3>
 ```
 
@@ -198,6 +198,12 @@ one.
 | Turn off mobile data for longer than the offline limit | The handset restricts itself, and reports it on reconnect |
 | Try to factory-reset from Settings | Device owner blocks it |
 | Try to uninstall the app | Blocked |
+| With a dealer Google ID set, check the device page | FRP shows `ACTIVE` (Android 11+) or `LEGACY` (8–10), not `REFUSED` |
+| Wipe from the recovery menu | Setup stops at the dealer's Google account; **Re-enroll** and a fresh QR bring it back on the same lock |
+| Let installments fall overdue with staged restrictions on | Outgoing calls/SMS stop at one, the listed apps at two, the lock at three; incoming and emergency calls keep working |
+| Check the device page after enrolment | IMEI matches, no tamper flag, and what the attestation managed (IDs attested or not) |
+| Ask for location on a locked phone | Expected to stay "waiting for the phone" in 1.5.1 — the heartbeat does not answer it yet. Record what happens |
+| Pay off the plan | The phone shows "This phone is yours" and the app can be uninstalled |
 
 **Cover the range a Pakistani shop actually sells** — an Infinix or Tecno, a
 Vivo or Oppo, a Samsung A-series, a Xiaomi, and at least one handset on Android

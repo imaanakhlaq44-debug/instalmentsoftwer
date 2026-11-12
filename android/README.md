@@ -6,7 +6,7 @@ nor the DPC on a shop's counter phone.
 
 | Module | Phone | Job |
 |---|---|---|
-| [`dpc/`](dpc/README.md) | The customer's financed handset | Enrols, checks in, applies and honestly acknowledges the lock |
+| [`dpc/`](dpc/README.md) | The customer's financed handset | Enrols, checks in, applies and honestly acknowledges the lock; staged restrictions, FRP, release on payoff, tamper reporting (v1.5.1) |
 | `sms-relay/` | The shop's own counter phone | Sends the queued payment reminders from its SIM |
 
 ```bash
