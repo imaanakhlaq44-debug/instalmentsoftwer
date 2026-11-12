@@ -1,10 +1,10 @@
 # Publishing the marketing site
 
-The site is five pages of plain HTML, one stylesheet and four images — about
-380 kB in total. It has no server side, so unlike the dashboard and the API it
-**can** live on ordinary shared hosting. This is the runbook for putting it on
-Hostinger's web hosting, which is where it goes first, before the rest of the
-system has anywhere to run.
+The site is six pages of plain HTML, one stylesheet and four images, plus an
+unlisted folder of social-media images under `m/`. It has no server side, so
+unlike the dashboard and the API it **can** live on ordinary shared hosting.
+This is the runbook for putting it on Hostinger's web hosting. The dashboard and
+API now run separately, on the VPS.
 
 > The dashboard and the API cannot go here. They are a long-lived Node process
 > with PostgreSQL beside it, and shared plans offer neither — see
@@ -20,12 +20,12 @@ baked in at build time and the DNS records are easier to add together.
 | Name | Points at | When |
 |---|---|---|
 | `almassdm.pro` (or whatever you registered) | Hostinger shared hosting — this site | now |
-| `app.almassdm.pro` | the VPS the dashboard will run on | later |
+| `app.almassdm.pro` | the VPS the dashboard runs on | when the VPS is up |
 
 The two live in different places, and that is fine: the domain's DNS zone in
 hPanel holds an `A` record for the VPS's IP under the name `app`, while the
-root name keeps pointing at the shared hosting. Nothing about publishing the
-site now blocks the dashboard later.
+root name keeps pointing at the shared hosting. The two do not depend on each
+other.
 
 ---
 
@@ -74,12 +74,13 @@ rather than failing later with a connection error that explains nothing.
 
 ## 3. The "Sign in" button
 
-While the dashboard is not hosted anywhere, `SITE_APP_URL` stays unset. The
-button is then left out of the page entirely — a shop reading the site should
-not meet a dead link where the product is supposed to be.
+With `SITE_APP_URL` unset the button is left out of the page entirely — a shop
+reading the site should not meet a dead link where the product is supposed to
+be.
 
-Once the dashboard is live, set the variable to `https://app.almassdm.pro` and
-run the workflow by hand from the **Actions** tab (a variable is not a commit,
+The dashboard is now hosted. If the variable has not been set yet, set it to the
+dashboard's real address (for example `https://app.almassdm.pro`) and run the
+workflow by hand from the **Actions** tab (a variable is not a commit,
 so nothing triggers a deploy on its own). The button comes back pointing at the
 real address.
 
@@ -115,8 +116,8 @@ the people this site is for will see it:
 - the padlock in the address bar,
 - the Urdu toggle in the header (it writes to `localStorage`, so it should
   still be Urdu on the second visit),
-- `/pricing.html`, `/how-it-works.html`, `/dpc.html`, `/legal.html`,
-- no "Sign in" button, because there is nothing to sign in to yet.
+- `/guide.html`, `/pricing.html`, `/how-it-works.html`, `/dpc.html`, `/legal.html`,
+- the "Sign in" button, if `SITE_APP_URL` is set, opening the dashboard.
 
 ---
 
@@ -136,7 +137,8 @@ own log lists every file it sent, so start there before suspecting either.
 ## Uploading by hand, if you ever have to
 
 The workflow is the normal path. If GitHub is down or the FTP account is being
-replaced, the same result is thirteen files: build as above, then in hPanel go
+replaced, the same result is the contents of `site/dist` (fifteen files and the
+`m/` folder): build as above, then in hPanel go
 to **Files → File Manager → `public_html`**, delete Hostinger's placeholder
 `default.php` / `index.html`, and upload the **contents of `site/dist`** — not
 the folder itself. Zip it first; File Manager unpacks a zip, and that is the
