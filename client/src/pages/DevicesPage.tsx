@@ -311,12 +311,15 @@ export const DevicesPage: React.FC = () => {
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
               Add your first financed device to start managing installments, monitoring status, and securing hardware.
             </p>
+            {/* A customer with no phone on record must not be handed the sale form. */}
+            {isStaff && (
             <button
               onClick={() => setShowAddWizard(true)}
               className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold"
             >
               Add Device Now
             </button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
