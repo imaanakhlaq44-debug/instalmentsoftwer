@@ -399,6 +399,57 @@ export class ApiService {
     return this.request<any>('/licenses/packs', { method: 'POST', body: JSON.stringify(body) });
   }
 
+  // -------------------------------------------------------------------------
+  // Lock orders
+  // -------------------------------------------------------------------------
+
+  /** A shop owner's own orders; for a super admin, every shop's (or one status). */
+  static getLockOrders(params: { status?: string; dealerId?: string } = {}) {
+    return this.request<{
+      orders: any[];
+      paymentInstructions: string;
+      maxPendingOrders: number;
+    }>(`/lock-orders${buildQuery(params)}`);
+  }
+
+  /** Shop owner only — reports a transfer and asks for a pack. Issues nothing. */
+  static submitLockOrder(body: {
+    size: number;
+    paymentMethod: string;
+    transactionId: string;
+    amountPaid: number;
+    proofImage?: string;
+    note?: string;
+  }) {
+    return this.request<any>('/lock-orders', { method: 'POST', body: JSON.stringify(body) });
+  }
+
+  static cancelLockOrder(orderId: string) {
+    return this.request<any>(`/lock-orders/${orderId}/cancel`, { method: 'POST' });
+  }
+
+  static getLockOrderProof(orderId: string) {
+    return this.request<{ proofImage: string }>(`/lock-orders/${orderId}/proof`);
+  }
+
+  /** Super admin only — confirms the payment and issues the pack, once. */
+  static approveLockOrder(orderId: string) {
+    return this.request<any>(`/lock-orders/${orderId}/approve`, { method: 'POST' });
+  }
+
+  /** Super admin only. */
+  static rejectLockOrder(orderId: string, reason: string) {
+    return this.request<any>(`/lock-orders/${orderId}/reject`, { method: 'POST', body: JSON.stringify({ reason }) });
+  }
+
+  /** Super admin only — where shops are told to send the money. */
+  static saveLockPaymentInstructions(paymentInstructions: string) {
+    return this.request<any>('/lock-orders/payment-instructions', {
+      method: 'PUT',
+      body: JSON.stringify({ paymentInstructions }),
+    });
+  }
+
   static getNotifications(params: Record<string, unknown> = {}) {
     return this.request<
       Paged<any> & {

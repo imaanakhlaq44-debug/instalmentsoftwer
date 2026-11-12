@@ -788,6 +788,117 @@ export const ROMAN_URDU: Record<string, string> = {
   Call: 'Call',
   'Giving locks…': 'Locks de rahe hain…',
 
+  // ------------------------------------------------------------- buying locks: orders
+  'Buy locks': 'Locks khareedein',
+  'One lock holds one phone. Choose how many you need, pay, and send us the transaction ID. Your locks are added as soon as we confirm the payment.':
+    'Ek lock ek phone ke liye hota hai. Jitne chahiye chunein, payment karein aur humein transaction ID bhej dein. Payment confirm hote hi aap ke locks add ho jayenge.',
+  'How many locks?': 'Kitne locks chahiye?',
+  'Number of locks': 'Locks ki tadaad',
+  '1–29: Rs 1,000 · 30–49: Rs 800 · 50–99: Rs 700 · 100+: Rs 600 per phone':
+    '1–29: Rs 1,000 · 30–49: Rs 800 · 50–99: Rs 700 · 100+: Rs 600 fi phone',
+  'Choose between 1 and 500 locks.': '1 se 500 ke darmiyan locks chunein.',
+  'Send the payment': 'Payment bhejein',
+  'Amount to send:': 'Bhejni wali raqam:',
+  'Pay to': 'Is account mein bhejein',
+  'Ask us on WhatsApp for the account to pay into.': 'Payment ka account WhatsApp par hum se pooch lein.',
+  'Ask on WhatsApp': 'WhatsApp par poochein',
+  'Tell us you have paid': 'Humein batayein ke payment kar di',
+  'Your earlier orders are still being checked. Please wait for those before sending another.':
+    'Aap ke pehle orders abhi check ho rahe hain. Naya order bhejne se pehle un ka intezar karein.',
+  'Paid by': 'Payment ka tareeqa',
+  'Amount sent (Rs)': 'Bheji gayi raqam (Rs)',
+  'Note (optional)': 'Note (zaroori nahin)',
+  'The amount you sent is different from the price of this pack. Please check before sending.':
+    'Aap ki bheji hui raqam is pack ki qeemat se mukhtalif hai. Bhejne se pehle check kar lein.',
+  'Preparing…': 'Tayyar ho raha hai…',
+  'Screenshot attached': 'Screenshot lag gaya',
+  'Attach screenshot (optional)': 'Screenshot lagayein (zaroori nahin)',
+  'Sending…': 'Bhej rahe hain…',
+  'Send order': 'Order bhejein',
+  'Sending this does not add locks by itself. We check the payment first, usually the same day.':
+    'Yeh bhejne se locks khud add nahin hote. Pehle hum payment check karte hain, aam tor par usi din.',
+  'Your orders': 'Aap ke orders',
+  'Newest first': 'Naye sab se upar',
+  'No orders yet': 'Abhi koi order nahin',
+  'When you send an order it appears here, with its status.':
+    'Jab aap order bhejenge to woh apne status ke saath yahan nazar aayega.',
+  'Being checked': 'Check ho raha hai',
+  'Locks added': 'Locks add ho gaye',
+  'Rejected': 'Rad kar diya',
+  'Cancelled': 'Cancel ho gaya',
+  'Reason:': 'Wajah:',
+  'Cancel order': 'Order cancel karein',
+  'Cancelling…': 'Cancel ho raha hai…',
+  'Payment screenshot': 'Payment ka screenshot',
+  'Could not load your orders': 'Aap ke orders load nahin hue',
+  'Could not send the order. Please try again.': 'Order nahin bheja ja saka. Dobara koshish karein.',
+  'Could not cancel the order': 'Order cancel nahin hua',
+  'Could not open the screenshot': 'Screenshot nahin khula',
+  'Order received.': 'Order mil gaya.',
+  'Order received. Your locks are added as soon as the payment is confirmed.':
+    'Order mil gaya. Payment confirm hote hi aap ke locks add ho jayenge.',
+  'Order cancelled.': 'Order cancel ho gaya.',
+  'Order rejected.': 'Order rad kar diya gaya.',
+  'Choose how you paid.': 'Batayein ke payment kis tareeqe se ki.',
+  'Enter the transaction ID from your transfer.': 'Apni transfer ka transaction ID likhein.',
+  'A transaction ID is letters and numbers only.': 'Transaction ID mein sirf huroof aur number hote hain.',
+  'Enter the amount you sent, in whole rupees.': 'Jitni raqam bheji woh poore rupon mein likhein.',
+  'This transaction ID has already been used for a lock order.':
+    'Yeh transaction ID pehle hi ek lock order mein istemal ho chuka hai.',
+  'One lock per phone. Bigger packs cost less per phone.':
+    'Ek phone ke liye ek lock. Bara pack lene par fi phone qeemat kam hoti hai.',
+  'Pay and get my locks': 'Payment karein aur locks lein',
+  'Ask us on WhatsApp': 'WhatsApp par hum se poochein',
+  'Open my dashboard': 'Mera dashboard kholein',
+  'A shop orders locks from its own dashboard and sends you the transaction ID. Check that the money arrived, then give it the locks here.':
+    'Dukaan apne dashboard se locks order karti hai aur aap ko transaction ID bhejti hai. Check karein ke raqam aa gayi, phir yahan se locks de dein.',
+  'It picks a pack of locks on its Buy locks page.':
+    '"Locks khareedein" page par locks ka pack chunti hai.',
+  'By JazzCash, Easypaisa or bank, and sends the transaction ID.':
+    'JazzCash, Easypaisa ya bank se, aur transaction ID bhejti hai.',
+  'Find the transfer in your account, then press "Payment received". The shop can sell at once.':
+    'Apne account mein transfer dhoondein, phir "Payment mil gayi" dabayein. Dukaan foran sale kar sakti hai.',
+  'Payments to check': 'Check karne wali payments',
+  'Shops that say they have paid. Find the transfer in your account, then decide.':
+    'Dukanein jo kehti hain ke payment kar di. Apne account mein transfer dhoondein, phir faisla karein.',
+  'No payments to check': 'Check karne ko koi payment nahin',
+  'When a shop sends its transaction ID, the order appears here.':
+    'Jab koi dukaan transaction ID bhejegi to order yahan aayega.',
+  'Ordered:': 'Order:',
+  'Shop says it paid:': 'Dukaan ke mutabiq ada kiye:',
+  'The amount sent does not match the price.': 'Bheji gayi raqam qeemat ke barabar nahin.',
+  'Reject': 'Rad karein',
+  'Working…': 'Kaam ho raha hai…',
+  'Why is it rejected? (the shop will see this)': 'Rad kyun kiya? (dukaan ko yeh nazar aayega)',
+  'e.g. No payment with this transaction ID reached our account.':
+    'maslan: Is transaction ID ki koi payment hamare account mein nahin aayi.',
+  'Reject order': 'Order rad karein',
+  'Write the reason, so the shop knows what to fix.':
+    'Wajah likhein, taake dukaan ko pata chale kya theek karna hai.',
+  'Where shops pay': 'Dukanein payment kahan karein',
+  'Shown to every shop on its Buy locks page':
+    'Har dukaan ko us ke "Locks khareedein" page par nazar aata hai',
+  'Your account details': 'Aap ke account ki detail',
+  'Shops see exactly what is written here.': 'Dukanon ko bilkul wohi nazar aata hai jo yahan likha hai.',
+  'Nothing is saved yet. Shops are told to ask on WhatsApp.':
+    'Abhi kuch save nahin. Dukanon ko WhatsApp par poochne ka kaha jata hai.',
+  'Saving…': 'Save ho raha hai…',
+  'Save': 'Save karein',
+  'Payment instructions saved.': 'Payment ki detail save ho gayi.',
+  'Decided orders': 'Faisla shuda orders',
+  'The last 20 approved, rejected or cancelled': 'Aakhri 20: manzoor, rad ya cancel',
+  'Signed up, not paid yet': 'Signup ho gaya, payment abhi nahin',
+  'New shops that picked a pack but have not sent a payment':
+    'Nayi dukanein jinhon ne pack chuna magar payment nahin bheji',
+  'A new shop that has not sent its payment yet appears here.':
+    'Jis nayi dukaan ne abhi payment nahin bheji woh yahan nazar aayegi.',
+  'Could not load the lock orders': 'Lock orders load nahin hue',
+  'Could not approve the order': 'Order manzoor nahin hua',
+  'Could not reject the order': 'Order rad nahin hua',
+  'Could not save the payment instructions': 'Payment ki detail save nahin hui',
+  'This order has already been decided. Locks are issued once per order and will not be issued again.':
+    'Is order ka faisla pehle ho chuka hai. Har order par locks sirf ek dafa milte hain, dobara nahin milenge.',
+
   // ------------------------------------------------------------- location for recovery
   'Location for Phone Recovery': 'Phone wapas lene ke liye location',
   "Lets the shop owner ask a locked or overdue phone for its location, to recover it. Never for a customer who is up to date. The customer's agreement says so, the phone shows them a notice each time, and every request and view is recorded. Applies only to agreements signed while it is on, and needs phone app 1.3 or newer.":
@@ -929,5 +1040,10 @@ export const ROMAN_URDU_PATTERNS: Array<[RegExp, string]> = [
     /^This handset did not hold OS-level Factory Reset Protection(.*)\. A recovery-mode wipe may not ask for your shop Google account\. Check Play Services \/ Android version in person; Android 15\+ gives strongest recovery reset protection\.$/,
     'Is phone ke system ne Factory Reset Protection nahin lagayi$1. Recovery mode se format karne par shayad dukaan ka Google account na mange. Phone par Play Services aur Android version check karein; Android 15+ par hifazat sab se mazboot hoti hai.',
   ],
+  [/^· (Rs [\d,]+) per phone ·$/, '· $1 fi phone ·'],
+  [/^(Rs [\d,]+) total$/, 'kul $1'],
+  [/^Payment received: give (\d+) locks$/, 'Payment mil gayi: $1 locks dein'],
+  [/^(\d+) device locks issued\.$/, '$1 locks de diye gaye.'],
+  [/^You already have (\d+) orders waiting to be checked\. Please wait for those before sending another\.$/, 'Aap ke $1 orders pehle se check ho rahe hain. Naya bhejne se pehle un ka intezar karein.'],
   [/^Detected (.+)$/, 'Pata chala: $1'],
 ];

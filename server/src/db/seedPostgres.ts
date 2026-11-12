@@ -103,6 +103,8 @@ const ALL_TABLES = [
   'customers',
   'users',
   'device_policies',
+  'lock_orders',
+  'platform_settings',
   'device_licenses',
   'license_packs',
   'dealers',

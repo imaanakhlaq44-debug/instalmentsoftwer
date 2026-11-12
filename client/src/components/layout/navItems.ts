@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Smartphone, Users, CalendarDays, CreditCard, QrCode,
-  KeyRound, Bell, FileSpreadsheet, Settings, Activity, ClipboardList, Store,
+  KeyRound, Bell, FileSpreadsheet, Settings, Activity, ClipboardList, Store, ShoppingCart,
 } from 'lucide-react';
 import { UserRole } from '../../types/index.js';
 
@@ -42,6 +42,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/enrollment', label: 'QR Enrollment', icon: QrCode, roles: STAFF, group: 'Operations' },
   { to: '/transactions', label: 'Transactions', icon: FileSpreadsheet, roles: STAFF, group: 'Operations' },
   { to: '/licenses', label: 'Device Locks', icon: KeyRound, roles: ADMIN, group: 'Administration' },
+  { to: '/buy-locks', label: 'Buy locks', icon: ShoppingCart, roles: ['DEALER_ADMIN'], group: 'Administration' },
   { to: '/notifications', label: 'Notifications', icon: Bell, roles: ALL, group: 'Operations' },
   { to: '/audit-logs', label: 'Audit Logs', icon: Activity, roles: ADMIN, group: 'Administration' },
   { to: '/settings', label: 'Settings', icon: Settings, roles: ADMIN, group: 'Administration' },

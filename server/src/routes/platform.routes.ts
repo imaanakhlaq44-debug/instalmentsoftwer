@@ -32,7 +32,7 @@ platformRouter.get(
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const staleBefore = new Date(now.getTime() - STALE_DAYS * 24 * 60 * 60 * 1000);
 
-    const [dealers, packs, licenceCounts, deviceCounts, staleDevices] = await Promise.all([
+    const [dealers, packs, licenceCounts, deviceCounts, staleDevices, pendingOrders] = await Promise.all([
       prisma.dealer.findMany({ orderBy: { createdAt: 'desc' } }),
       prisma.licensePack.findMany({
         select: { dealerId: true, size: true, totalPrice: true, createdAt: true },
@@ -42,7 +42,13 @@ platformRouter.get(
       prisma.device.count({
         where: { status: { in: [...MANAGED] }, lastSeen: { lt: staleBefore } },
       }),
+      prisma.lockOrder.findMany({ where: { status: 'PENDING' }, select: { dealerId: true } }),
     ]);
+
+    // A shop that has reported its payment is in the orders queue, with its
+    // transaction ID. Listing it here as well would offer two buttons that each
+    // give it locks for the one payment.
+    const hasPendingOrder = new Set(pendingOrders.map((o) => o.dealerId));
 
     const licences = (dealerId: string, status: string) =>
       licenceCounts.find((c) => c.dealerId === dealerId && c.status === status)?._count._all ?? 0;
@@ -81,7 +87,7 @@ platformRouter.get(
     });
 
     const awaitingPayment = shops
-      .filter((s) => s.requestedPack && s.packsBought === 0)
+      .filter((s) => s.requestedPack && s.packsBought === 0 && !hasPendingOrder.has(s.dealerId))
       .map(({ dealerId, name, ownerName, phone, email, city, createdAt, requestedPack }) => ({
         dealerId,
         name,
@@ -101,6 +107,7 @@ platformRouter.get(
       totals: {
         shops: dealers.length,
         shopsAwaitingPayment: awaitingPayment.length,
+        ordersToCheck: pendingOrders.length,
         locksSold: packs.reduce((sum, p) => sum + p.size, 0),
         locksSoldThisMonth: thisMonth.reduce((sum, p) => sum + p.size, 0),
         revenue: packs.reduce((sum, p) => sum + p.totalPrice, 0),

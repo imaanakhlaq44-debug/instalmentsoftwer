@@ -386,6 +386,43 @@ export interface LicensePack {
   createdAt: string;
 }
 
+export type LockOrderStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+
+/** How a shop may pay the platform for locks. Cash is not on the list. */
+export type LockOrderPaymentMethod = 'JAZZCASH' | 'EASYPAISA' | 'BANK_TRANSFER' | 'RAAST';
+
+/** A shop's order for a pack of locks — see the model comment in schema.prisma. */
+export interface LockOrder {
+  id: string;
+  dealerId: string;
+  size: number;
+  unitPrice: number;
+  totalPrice: number;
+  status: LockOrderStatus;
+  paymentMethod: LockOrderPaymentMethod;
+  transactionId: string;
+  amountPaid: number;
+  proofImage?: string | null;
+  note?: string | null;
+  submittedById: string;
+  submittedByName: string;
+  reviewedById?: string | null;
+  reviewedByName?: string | null;
+  reviewedAt?: string | null;
+  rejectionReason?: string | null;
+  packId?: string | null;
+  createdAt: string;
+}
+
+/** One platform-wide setting, edited by the super admin. */
+export interface PlatformSetting {
+  id: string;
+  value: string;
+  updatedById?: string | null;
+  updatedByName?: string | null;
+  updatedAt: string;
+}
+
 /**
  * One lock for one handset. Spent at enrolment onto a single IMEI, and never
  * returned — see the model comment in schema.prisma.

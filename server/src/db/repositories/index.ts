@@ -13,7 +13,7 @@ import { toDomainList } from '../mappers.js';
 import {
   Dealer, User, Customer, Device, EnrollmentToken, InstallmentPlan, Installment,
   Payment, Transaction, DeviceActionLog, AuditLog, DevicePolicy,
-  LicensePack, DeviceLicense, DeviceLicenseStatus,
+  LicensePack, DeviceLicense, DeviceLicenseStatus, LockOrder, PlatformSetting,
   Notification, NotificationTemplate, SmsRelay, Contract,
 } from '../../types/index.js';
 
@@ -144,6 +144,23 @@ export const licensePacks = {
     return this.findMany({ where: { dealerId }, orderBy: { createdAt: 'desc' } }, tx);
   },
 };
+
+export const lockOrders = {
+  ...makeRepository<LockOrder>('lockOrder'),
+
+  /**
+   * Compare-and-set: moves an order out of PENDING only if it is still there.
+   *
+   * Returns false when somebody else decided it first. Two approvals racing for
+   * the same order therefore cannot both go on to mint a pack — the second one
+   * blocks on the row, then finds it no longer PENDING.
+   */
+  async decide(id: string, updates: Partial<LockOrder>, tx?: Tx): Promise<boolean> {
+    return (await this.updateMany({ id, status: 'PENDING' }, updates, tx)) === 1;
+  },
+};
+
+export const platformSettings = makeRepository<PlatformSetting>('platformSetting');
 
 export const deviceLicenses = {
   ...makeRepository<DeviceLicense>('deviceLicense'),
@@ -889,6 +906,8 @@ export const repo = {
   auditLogs,
   licensePacks,
   deviceLicenses,
+  lockOrders,
+  platformSettings,
   devicePolicies,
   notifications,
   notificationTemplates,
