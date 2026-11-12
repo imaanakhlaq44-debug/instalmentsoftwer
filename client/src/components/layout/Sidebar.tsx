@@ -49,7 +49,7 @@ export const Sidebar: React.FC = () => {
   })).filter((g) => g.items.length > 0);
 
   return (
-    <aside className="hidden w-60 shrink-0 select-none flex-col border-r-2 border-ink-900 bg-paper-50 lg:flex">
+    <aside className="hidden w-60 shrink-0 select-none flex-col border-e-2 border-ink-900 bg-paper-50 lg:flex">
       <div className="flex h-16 items-center gap-2.5 px-5">
         {/* The mark carries no background plate: it is drawn with white lines
             between its facets, and a coloured tile behind it fights them. */}
@@ -84,7 +84,7 @@ export const Sidebar: React.FC = () => {
               }}
               className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border-2 border-ink-900 bg-white px-2 py-1 text-caption font-extrabold text-ink-900 hover:bg-sun-200"
             >
-              <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Back to platform
+              <ArrowLeft className="rtl:rotate-180 h-3.5 w-3.5" aria-hidden="true" /> Back to platform
             </button>
           )}
         </div>

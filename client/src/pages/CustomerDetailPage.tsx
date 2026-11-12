@@ -113,7 +113,7 @@ export const CustomerDetailPage: React.FC = () => {
             className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
             aria-label="Back to customers"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="rtl:rotate-180 w-4 h-4" />
           </button>
           <div>
             <div className="flex items-center gap-2.5">
@@ -248,12 +248,12 @@ export const CustomerDetailPage: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b border-slate-200">
-                <tr className="text-left text-xs uppercase tracking-wide text-slate-500">
+                <tr className="text-start text-xs uppercase tracking-wide text-slate-500">
                   <th className="px-4 py-2.5 font-semibold">#</th>
                   <th className="px-4 py-2.5 font-semibold">Due date</th>
-                  <th className="px-4 py-2.5 font-semibold text-right">Amount</th>
-                  <th className="px-4 py-2.5 font-semibold text-right">Paid</th>
-                  <th className="px-4 py-2.5 font-semibold text-right">Late fee</th>
+                  <th className="px-4 py-2.5 font-semibold text-end">Amount</th>
+                  <th className="px-4 py-2.5 font-semibold text-end">Paid</th>
+                  <th className="px-4 py-2.5 font-semibold text-end">Late fee</th>
                   <th className="px-4 py-2.5 font-semibold">Status</th>
                 </tr>
               </thead>
@@ -262,9 +262,9 @@ export const CustomerDetailPage: React.FC = () => {
                   <tr key={i.id} className="hover:bg-slate-50/60">
                     <td className="px-4 py-2.5 text-slate-500">{i.installmentNumber}</td>
                     <td className="px-4 py-2.5 text-slate-700">{i.dueDate}</td>
-                    <td className="px-4 py-2.5 text-right font-semibold text-slate-900">{rs(i.amountDue)}</td>
-                    <td className="px-4 py-2.5 text-right text-slate-600">{rs(i.amountPaid)}</td>
-                    <td className="px-4 py-2.5 text-right text-amber-700">
+                    <td className="px-4 py-2.5 text-end font-semibold text-slate-900">{rs(i.amountDue)}</td>
+                    <td className="px-4 py-2.5 text-end text-slate-600">{rs(i.amountPaid)}</td>
+                    <td className="px-4 py-2.5 text-end text-amber-700">
                       {i.lateFee > 0 ? rs(i.lateFee - (i.lateFeePaid ?? 0)) : '—'}
                     </td>
                     <td className="px-4 py-2.5">
@@ -287,13 +287,13 @@ export const CustomerDetailPage: React.FC = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200">
-                  <tr className="text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr className="text-start text-xs uppercase tracking-wide text-slate-500">
                     <th className="px-4 py-2.5 font-semibold">Receipt</th>
                     <th className="px-4 py-2.5 font-semibold">Date</th>
                     <th className="px-4 py-2.5 font-semibold">Method</th>
-                    <th className="px-4 py-2.5 font-semibold text-right">Amount</th>
+                    <th className="px-4 py-2.5 font-semibold text-end">Amount</th>
                     <th className="px-4 py-2.5 font-semibold">Status</th>
-                    <th className="px-4 py-2.5 font-semibold text-right">Receipt</th>
+                    <th className="px-4 py-2.5 font-semibold text-end">Receipt</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -306,14 +306,14 @@ export const CustomerDetailPage: React.FC = () => {
                         {new Date(p.createdAt).toLocaleDateString('en-PK')}
                       </td>
                       <td className="px-4 py-2.5 text-slate-600">{p.paymentMethod}</td>
-                      <td className="px-4 py-2.5 text-right font-semibold text-slate-900">
+                      <td className="px-4 py-2.5 text-end font-semibold text-slate-900">
                         {p.reversedAt && <span className="line-through">{rs(p.amount)}</span>}
                         {!p.reversedAt && rs(p.amount)}
                       </td>
                       <td className="px-4 py-2.5">
                         <Badge status={p.reversedAt ? 'REVERSED' : p.status} />
                       </td>
-                      <td className="px-4 py-2.5 text-right">
+                      <td className="px-4 py-2.5 text-end">
                         {p.status === 'VERIFIED' && (
                           <button
                             onClick={() => setReceiptPaymentId(p.id)}

@@ -215,7 +215,7 @@ export const SubmitPaymentCard: React.FC<{ onSubmitted: () => void }> = ({ onSub
         <button
           onClick={submit}
           disabled={submitting || preparingImage || !planId || !amount || reference.trim().length < 4}
-          className="ml-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white rounded-xl text-xs font-bold"
+          className="ms-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white rounded-xl text-xs font-bold"
         >
           {submitting ? 'Sending…' : 'Send to the shop'}
         </button>

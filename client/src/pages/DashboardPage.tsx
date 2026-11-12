@@ -258,14 +258,14 @@ export const DashboardPage: React.FC = () => {
         <button
           type="button"
           onClick={() => navigate('/payments?status=PENDING')}
-          className="flex w-full items-center gap-3 rounded-lg border border-accent-200 bg-accent-50 px-4 py-3 text-left transition-colors hover:bg-accent-100"
+          className="flex w-full items-center gap-3 rounded-lg border border-accent-200 bg-accent-50 px-4 py-3 text-start transition-colors hover:bg-accent-100"
         >
           <BadgeCheck className="h-5 w-5 shrink-0 text-accent-700" aria-hidden="true" />
           <span className="flex-1 text-body text-accent-900">
             <strong className="font-medium">{money(stats?.pendingVerificationAmount)}</strong> in
             customer-reported payments is waiting for you to confirm it
           </span>
-          <ArrowRight className="h-4 w-4 shrink-0 text-accent-700" aria-hidden="true" />
+          <ArrowRight className="rtl:rotate-180 h-4 w-4 shrink-0 text-accent-700" aria-hidden="true" />
         </button>
       )}
 
@@ -273,13 +273,13 @@ export const DashboardPage: React.FC = () => {
         <button
           type="button"
           onClick={() => navigate('/devices?tamper=true')}
-          className="flex w-full items-center gap-3 rounded-lg border-2 border-rose-300 bg-rose-50 px-4 py-3 text-left transition-colors hover:bg-rose-100"
+          className="flex w-full items-center gap-3 rounded-lg border-2 border-rose-300 bg-rose-50 px-4 py-3 text-start transition-colors hover:bg-rose-100"
         >
           <ShieldAlert className="h-5 w-5 shrink-0 text-rose-700" aria-hidden="true" />
           <span className="flex-1 text-body font-medium text-rose-950">
             {`${stats?.tamperAlertDevices} device(s) have active hardware or tamper alerts waiting for inspection`}
           </span>
-          <ArrowRight className="h-4 w-4 shrink-0 text-rose-700" aria-hidden="true" />
+          <ArrowRight className="rtl:rotate-180 h-4 w-4 shrink-0 text-rose-700" aria-hidden="true" />
         </button>
       )}
 
@@ -287,13 +287,13 @@ export const DashboardPage: React.FC = () => {
         <button
           type="button"
           onClick={() => navigate('/notifications')}
-          className="flex w-full items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-left transition-colors hover:bg-amber-100"
+          className="flex w-full items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-start transition-colors hover:bg-amber-100"
         >
           <AlertTriangle className="h-5 w-5 shrink-0 text-amber-700" aria-hidden="true" />
           <span className="flex-1 text-body font-medium text-amber-950">
             {`${stats?.silentDevices} managed phone(s) have been silent for over 72 hours`}
           </span>
-          <ArrowRight className="h-4 w-4 shrink-0 text-amber-700" aria-hidden="true" />
+          <ArrowRight className="rtl:rotate-180 h-4 w-4 shrink-0 text-amber-700" aria-hidden="true" />
         </button>
       )}
 
@@ -335,13 +335,13 @@ export const DashboardPage: React.FC = () => {
         <button
           type="button"
           onClick={() => navigate('/devices?frp=refused')}
-          className="flex w-full items-center gap-3 rounded-lg border-2 border-rose-300 bg-rose-50 px-4 py-3 text-left transition-colors hover:bg-rose-100"
+          className="flex w-full items-center gap-3 rounded-lg border-2 border-rose-300 bg-rose-50 px-4 py-3 text-start transition-colors hover:bg-rose-100"
         >
           <ShieldAlert className="h-5 w-5 shrink-0 text-rose-700" aria-hidden="true" />
           <span className="flex-1 text-body font-medium text-rose-950">
             {`${stats?.frpRefusedDevices} phone(s) refused Factory Reset Protection — recovery reset may bypass shop lock`}
           </span>
-          <ArrowRight className="h-4 w-4 shrink-0 text-rose-700" aria-hidden="true" />
+          <ArrowRight className="rtl:rotate-180 h-4 w-4 shrink-0 text-rose-700" aria-hidden="true" />
         </button>
       )}
 
@@ -362,9 +362,9 @@ export const DashboardPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => navigate('/installments?status=OVERDUE')}
-                    className="btn-ghost -mr-2 text-caption"
+                    className="btn-ghost -me-2 text-caption"
                   >
-                    See all <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                    See all <ArrowRight className="rtl:rotate-180 h-3.5 w-3.5" aria-hidden="true" />
                   </button>
                 }
               />

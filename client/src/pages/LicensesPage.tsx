@@ -355,7 +355,7 @@ export const LicensesPage: React.FC = () => {
                       {p.reference && ` · ref ${p.reference}`}
                     </p>
                   </div>
-                  <div className="shrink-0 text-right">
+                  <div className="shrink-0 text-end">
                     <p className="text-body font-medium text-ink-900 tabular">
                       {money(p.totalPrice)}
                     </p>

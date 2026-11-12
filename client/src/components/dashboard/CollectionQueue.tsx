@@ -133,7 +133,7 @@ export const CollectionQueue: React.FC<{ rows: OverdueRow[]; limit?: number }> =
             </p>
           </div>
 
-          <div className="shrink-0 text-right">
+          <div className="shrink-0 text-end">
             <p className="text-body font-medium text-ink-900 tabular">{money(c.total)}</p>
             <p className="text-micro normal-case tracking-normal text-ink-400">outstanding</p>
           </div>
@@ -154,7 +154,7 @@ export const CollectionQueue: React.FC<{ rows: OverdueRow[]; limit?: number }> =
               title="Open device"
               aria-label={`Open ${c.deviceName}`}
             >
-              <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              <ChevronRight className="rtl:rotate-180 h-4 w-4" aria-hidden="true" />
             </button>
           </div>
         </li>

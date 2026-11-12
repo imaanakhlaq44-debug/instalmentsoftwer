@@ -270,13 +270,13 @@ export const DevicesPage: React.FC = () => {
         {/* Search & Brand Filter Controls */}
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <form onSubmit={handleSearchSubmit} className="flex-1 w-full relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-400 absolute start-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search by customer name, device model, or IMEI..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+              className="w-full ps-10 pe-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
             />
           </form>
 
@@ -320,7 +320,7 @@ export const DevicesPage: React.FC = () => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-start border-collapse">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-bold text-slate-600 uppercase tracking-wider">
                   <th className="py-3 px-4">Device & Model</th>
@@ -330,7 +330,7 @@ export const DevicesPage: React.FC = () => {
                   <th className="py-3 px-4">Next Due Date</th>
                   <th className="py-3 px-4">Device Status</th>
                   <th className="py-3 px-4">Last Seen</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-3 px-4 text-end">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
@@ -458,7 +458,7 @@ export const DevicesPage: React.FC = () => {
                       </td>
 
                       {/* Actions */}
-                      <td className="py-3.5 px-4 text-right">
+                      <td className="py-3.5 px-4 text-end">
                         <div className="flex items-center justify-end gap-1.5">
                           {/* View 360 */}
                           <button

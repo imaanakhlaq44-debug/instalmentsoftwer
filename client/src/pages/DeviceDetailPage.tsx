@@ -277,7 +277,7 @@ export const DeviceDetailPage: React.FC = () => {
             onClick={() => navigate('/devices')}
             className="p-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-600 transition-colors"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="rtl:rotate-180 w-4 h-4" />
           </button>
           <div>
             <div className="flex items-center gap-2">
@@ -819,7 +819,7 @@ export const DeviceDetailPage: React.FC = () => {
             <div className="bg-white p-5 rounded-3xl border-2 border-ink-900 shadow-card space-y-4">
               <h2 className="text-sm font-bold text-slate-900">Installment Repayment Schedule</h2>
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
+                <table className="w-full text-start text-xs border-collapse">
                   <thead>
                     <tr className="border-b border-slate-100 text-slate-600 uppercase text-micro">
                       <th className="py-2">#</th>
@@ -864,9 +864,9 @@ export const DeviceDetailPage: React.FC = () => {
             </h2>
 
             {device.actionLogs && device.actionLogs.length > 0 ? (
-              <div className="space-y-3 relative before:absolute before:inset-0 before:left-3.5 before:w-0.5 before:bg-slate-100">
+              <div className="space-y-3 relative before:absolute before:inset-0 before:start-3.5 before:w-0.5 before:bg-slate-100">
                 {device.actionLogs.map((log: any) => (
-                  <div key={log.id} className="relative flex items-start gap-3 pl-2">
+                  <div key={log.id} className="relative flex items-start gap-3 ps-2">
                     <div
                       className={`w-4 h-4 rounded-full mt-1 border-2 border-white shadow-sm shrink-0 ${
                         log.action === 'LOCK'
@@ -1003,7 +1003,7 @@ export const DeviceDetailPage: React.FC = () => {
               </p>
             </div>
 
-            <ol className="p-3 rounded-xl bg-slate-50 border-2 border-slate-200 text-sm text-slate-800 space-y-1.5 list-decimal pl-8">
+            <ol className="p-3 rounded-xl bg-slate-50 border-2 border-slate-200 text-sm text-slate-800 space-y-1.5 list-decimal ps-8">
               <li>Factory reset the phone again and stop on the first Welcome screen.</li>
               <li>Do not add a Google account or finish setup.</li>
               <li>Tap 6 times, connect Wi-Fi and scan the new QR.</li>
@@ -1060,7 +1060,7 @@ export const DeviceDetailPage: React.FC = () => {
               </p>
             </div>
 
-            <ul className="p-3 rounded-xl bg-slate-50 border-2 border-slate-200 text-sm text-slate-800 space-y-1.5 list-disc pl-8">
+            <ul className="p-3 rounded-xl bg-slate-50 border-2 border-slate-200 text-sm text-slate-800 space-y-1.5 list-disc ps-8">
               <li>The lock, app blocks and reset protection come off when the phone next connects.</li>
               <li>The customer can then delete the app.</li>
               <li className="font-bold text-rose-700">This cannot be undone. To manage the phone again it must be re-enrolled from scratch.</li>

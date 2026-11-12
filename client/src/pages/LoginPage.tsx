@@ -115,13 +115,13 @@ export const LoginPage: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={submitting}
-                className="input pr-11"
+                className="input pe-11"
                 placeholder="••••••••"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-ink-400 transition-colors hover:text-ink-700"
+                className="absolute end-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-ink-400 transition-colors hover:text-ink-700"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? (

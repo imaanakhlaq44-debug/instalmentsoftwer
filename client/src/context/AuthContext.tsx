@@ -260,7 +260,7 @@ const ToastStack: React.FC<{ toasts: Toast[]; onDismiss: (id: number) => void }>
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-[100] flex flex-col gap-2 max-w-[calc(100vw-2rem)] sm:max-w-md">
+    <div className="fixed bottom-20 sm:bottom-6 end-4 sm:end-6 z-[100] flex flex-col gap-2 max-w-[calc(100vw-2rem)] sm:max-w-md">
       {toasts.map((toast) => (
         <div
           key={toast.id}

@@ -73,13 +73,13 @@ export const FleetBar: React.FC<{ segments: FleetSegment[]; total: number }> = (
             <button
               type="button"
               onClick={() => navigate(`/devices?status=${s.status}`)}
-              className="group flex w-full items-baseline gap-2 text-left"
+              className="group flex w-full items-baseline gap-2 text-start"
             >
               <span className={`${DOT[s.tone]} h-2 w-2 shrink-0 translate-y-[-1px] rounded-full`} />
               <span className="truncate text-caption text-ink-500 group-hover:text-ink-900">
                 {s.label}
               </span>
-              <span className="ml-auto text-body font-medium text-ink-900 tabular">{s.count}</span>
+              <span className="ms-auto text-body font-medium text-ink-900 tabular">{s.count}</span>
             </button>
           </li>
         ))}
