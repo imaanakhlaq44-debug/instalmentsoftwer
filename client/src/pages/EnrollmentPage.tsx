@@ -303,7 +303,7 @@ export const EnrollmentPage: React.FC = () => {
                         onClick={() => generate(d.id)}
                         disabled={generating}
                         aria-pressed={active}
-                        className={`flex w-full items-center gap-3 rounded-md border-2 px-3 py-3 text-left transition ${
+                        className={`flex w-full items-center gap-3 rounded-md border-2 px-3 py-3 text-start transition ${
                           active
                             ? 'border-ink-900 bg-sun-400 shadow-[3px_3px_0_#0F1419]'
                             : 'border-transparent hover:border-ink-900 hover:bg-sun-100'
@@ -436,7 +436,7 @@ export const EnrollmentPage: React.FC = () => {
           <CardHeader title="Recent QR codes" hint="Each code works once, for the phone it was made for, for 2 hours" />
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-body">
+          <table className="w-full text-start text-body">
             <thead>
               <tr className="border-y-2 border-ink-900 bg-paper-200/60 text-micro font-extrabold uppercase tracking-[0.1em] text-ink-700">
                 <th className="px-5 py-2.5">Phone and customer</th>
@@ -487,7 +487,7 @@ export const EnrollmentPage: React.FC = () => {
                     <td className="px-3 py-3 text-caption text-ink-500">
                       {t.status === 'ENROLLED' || t.isExpired ? '—' : timeLeft(t.expiresAt, now)}
                     </td>
-                    <td className="px-5 py-3 text-right">
+                    <td className="px-5 py-3 text-end">
                       {t.token && (
                         <button type="button" onClick={() => copy(t.token)} className="btn-ghost px-2 py-1" aria-label="Copy code">
                           <Copy className="h-3.5 w-3.5" aria-hidden="true" />
@@ -526,7 +526,7 @@ export const EnrollmentPage: React.FC = () => {
           </p>
           <button
             type="button"
-            className="absolute right-4 top-4 rounded-full border-2 border-ink-900 bg-white p-2"
+            className="absolute end-4 top-4 rounded-full border-2 border-ink-900 bg-white p-2"
             aria-label="Close full screen QR"
             onClick={() => setFullScreen(false)}
           >

@@ -92,7 +92,7 @@ export const Navbar: React.FC = () => {
         <div className="hidden max-w-sm flex-1 sm:block">
           <div className="relative">
             <Search
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
+              className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
               aria-hidden="true"
             />
             <input
@@ -101,7 +101,7 @@ export const Navbar: React.FC = () => {
               onChange={(e) => setSearchValue(e.target.value)}
               placeholder="Search IMEI, customer, phone or model…"
               aria-label="Search devices"
-              className="input py-1.5 pl-9"
+              className="input py-1.5 ps-9"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && searchValue.trim()) {
                   navigate(`/devices?search=${encodeURIComponent(searchValue.trim())}`);
@@ -111,7 +111,7 @@ export const Navbar: React.FC = () => {
           </div>
         </div>
 
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="ms-auto flex items-center gap-1.5">
           {/* Dealer switcher — super admin only. A dealer user has exactly one
               dealership and the server ignores the parameter for them anyway. */}
           {isSuperAdmin && (
@@ -128,7 +128,7 @@ export const Navbar: React.FC = () => {
               </button>
 
               {showDealerMenu && (
-                <div className="absolute right-0 z-50 mt-1.5 max-h-80 w-72 overflow-y-auto rounded-lg border-2 border-ink-900 bg-paper-50 py-1 shadow-overlay">
+                <div className="absolute end-0 z-50 mt-1.5 max-h-80 w-72 overflow-y-auto rounded-lg border-2 border-ink-900 bg-paper-50 py-1 shadow-overlay">
                   <p className="eyebrow px-3 py-1.5">Open a shop</p>
                   <button
                     type="button"
@@ -163,7 +163,7 @@ export const Navbar: React.FC = () => {
                         }`}
                         aria-hidden="true"
                       />
-                      <span className="min-w-0 flex-1 text-left">
+                      <span className="min-w-0 flex-1 text-start">
                         <span className="block truncate">{d.name}</span>
                         <span className="block truncate text-caption text-ink-400">{d.city}</span>
                       </span>
@@ -186,7 +186,7 @@ export const Navbar: React.FC = () => {
             >
               <Bell className="h-4 w-4" aria-hidden="true" />
               {unreadCount > 0 && (
-                <span className="absolute right-1 top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-critical-600 px-1 text-micro font-medium tabular text-white ring-2 ring-paper-100">
+                <span className="absolute end-1 top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-critical-600 px-1 text-micro font-medium tabular text-white ring-2 ring-paper-100">
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
@@ -205,7 +205,7 @@ export const Navbar: React.FC = () => {
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent-800 text-caption font-medium text-white">
                 {user?.name.charAt(0).toUpperCase() ?? '?'}
               </span>
-              <span className="hidden text-left xl:block">
+              <span className="hidden text-start xl:block">
                 <span className="block text-caption font-medium leading-tight text-ink-900">
                   {user?.name}
                 </span>
@@ -217,7 +217,7 @@ export const Navbar: React.FC = () => {
             </button>
 
             {showProfile && (
-              <div className="absolute right-0 z-50 mt-1.5 w-64 rounded-lg border-2 border-ink-900 bg-paper-50 py-1 shadow-overlay">
+              <div className="absolute end-0 z-50 mt-1.5 w-64 rounded-lg border-2 border-ink-900 bg-paper-50 py-1 shadow-overlay">
                 <div className="border-b border-paper-300 px-3 pb-2.5 pt-2">
                   <p className="truncate text-body font-medium text-ink-900">{user?.name}</p>
                   <p className="truncate text-caption text-ink-400">{user?.email}</p>

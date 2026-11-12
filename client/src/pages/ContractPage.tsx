@@ -77,7 +77,10 @@ export const ContractPage: React.FC = () => {
   const canSign = contract.status === 'DRAFT' && user?.role !== 'CUSTOMER';
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6" data-i18n-skip>
+    // The agreement is one fixed bilingual document: its English runs left to
+    // right and its Urdu clauses carry their own dir="rtl", whichever language
+    // the dashboard is in. So it reads and prints the same in all three.
+    <div className="max-w-4xl mx-auto space-y-6" data-i18n-skip dir="ltr" lang="en">
       {/*
         The A4 page rules live here rather than in index.css, which sizes the
         page for 80mm thermal receipt rolls. Two documents, two page sizes, and
@@ -275,10 +278,10 @@ export const ContractPage: React.FC = () => {
           </h3>
           <table className="w-full text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-300 text-left">
+              <tr className="border-b border-slate-300 text-start">
                 <th className="py-1 font-bold">#</th>
                 <th className="py-1 font-bold">Due date</th>
-                <th className="py-1 font-bold text-right">Amount</th>
+                <th className="py-1 font-bold text-end">Amount</th>
               </tr>
             </thead>
             <tbody>
@@ -286,7 +289,7 @@ export const ContractPage: React.FC = () => {
                 <tr key={row.installmentNumber} className="border-b border-slate-100">
                   <td className="py-1">{row.installmentNumber}</td>
                   <td className="py-1">{row.dueDate}</td>
-                  <td className="py-1 text-right">{money(row.amountDue)}</td>
+                  <td className="py-1 text-end">{money(row.amountDue)}</td>
                 </tr>
               ))}
             </tbody>

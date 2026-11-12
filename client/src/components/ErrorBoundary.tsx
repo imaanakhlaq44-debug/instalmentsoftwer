@@ -38,7 +38,7 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
             happening, please report it with the message below.
           </p>
 
-          <pre className="text-left text-xs bg-slate-950 border border-slate-800 rounded-lg p-3 mb-6 overflow-x-auto text-rose-300">
+          <pre dir="ltr" className="text-left text-xs bg-slate-950 border border-slate-800 rounded-lg p-3 mb-6 overflow-x-auto text-rose-300">
             {error.message}
           </pre>
 

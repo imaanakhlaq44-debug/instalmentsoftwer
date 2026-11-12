@@ -237,7 +237,7 @@ const TodoTile: React.FC<{
       <span className="figure text-3xl">{count ?? '—'}</span>
       <span className="text-body font-bold text-ink-900">{busy ? title : done}</span>
       <span className="mt-auto inline-flex items-center gap-1 text-caption font-extrabold text-accent-700">
-        {action} <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+        {action} <ArrowRight className="rtl:rotate-180 h-3.5 w-3.5" aria-hidden="true" />
       </span>
     </Link>
   );
@@ -295,7 +295,7 @@ export const PlatformDashboardPage: React.FC = () => {
       </section>
 
       {/* Money: what the platform has earned. */}
-      <div className="surface grid divide-y-2 divide-paper-300 sm:grid-cols-3 sm:divide-x-2 sm:divide-y-0">
+      <div className="surface grid divide-y-2 divide-paper-300 sm:grid-cols-3 sm:divide-x-2 rtl:divide-x-reverse sm:divide-y-0">
         <div className="p-5">
           <p className="eyebrow">Earned this month</p>
           <p className="figure mt-2 text-2xl">{t ? money(t.revenueThisMonth) : '—'}</p>
@@ -320,7 +320,7 @@ export const PlatformDashboardPage: React.FC = () => {
             hint="By phones under management"
             action={
               <Link to="/shops" className="btn-ghost px-2 py-1 text-caption">
-                All shops <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                All shops <ArrowRight className="rtl:rotate-180 h-3.5 w-3.5" aria-hidden="true" />
               </Link>
             }
           />
@@ -417,7 +417,7 @@ export const PlatformOrdersPage: React.FC = () => {
           hint="Paying shops with five locks or fewer left"
           action={
             <Link to="/licenses" className="btn-ghost px-2 py-1 text-caption">
-              Give a pack <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+              Give a pack <ArrowRight className="rtl:rotate-180 h-3.5 w-3.5" aria-hidden="true" />
             </Link>
           }
         />
@@ -479,14 +479,14 @@ export const PlatformShopsPage: React.FC = () => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-body">
+            <table className="w-full text-start text-body">
               <thead>
                 <tr className="border-b-2 border-ink-900 bg-paper-200/60 text-micro font-extrabold uppercase tracking-[0.1em] text-ink-700">
                   <th className="px-5 py-3">Shop</th>
-                  <th className="px-3 py-3 text-right">Locks left</th>
-                  <th className="px-3 py-3 text-right">Phones</th>
-                  <th className="px-3 py-3 text-right">Paid</th>
-                  <th className="px-5 py-3 text-right">Actions</th>
+                  <th className="px-3 py-3 text-end">Locks left</th>
+                  <th className="px-3 py-3 text-end">Phones</th>
+                  <th className="px-3 py-3 text-end">Paid</th>
+                  <th className="px-5 py-3 text-end">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-paper-300">
@@ -498,17 +498,17 @@ export const PlatformShopsPage: React.FC = () => {
                         {s.city} · {s.ownerName} · {s.phone}
                       </p>
                     </td>
-                    <td className="px-3 py-3 text-right tabular">
+                    <td className="px-3 py-3 text-end tabular">
                       <span className={s.outOfLocks ? 'font-bold text-critical-700' : s.runningLow ? 'font-bold text-caution-700' : 'text-ink-900'}>
                         {s.available}
                       </span>
-                      {s.requestedPack && s.packsBought === 0 && <span className="ml-2 status-pill status-pending">unpaid</span>}
+                      {s.requestedPack && s.packsBought === 0 && <span className="ms-2 status-pill status-pending">unpaid</span>}
                     </td>
-                    <td className="px-3 py-3 text-right tabular text-ink-900">
+                    <td className="px-3 py-3 text-end tabular text-ink-900">
                       {s.devices.total}
-                      {s.devices.locked > 0 && <span className="ml-1 text-caption text-critical-700">({s.devices.locked} locked)</span>}
+                      {s.devices.locked > 0 && <span className="ms-1 text-caption text-critical-700">({s.devices.locked} locked)</span>}
                     </td>
-                    <td className="px-3 py-3 text-right tabular text-ink-900">{money(s.billed)}</td>
+                    <td className="px-3 py-3 text-end tabular text-ink-900">{money(s.billed)}</td>
                     <td className="px-5 py-3">
                       <span className="flex justify-end gap-2">
                         <a
@@ -521,7 +521,7 @@ export const PlatformShopsPage: React.FC = () => {
                           <MessageCircle className="h-4 w-4" aria-hidden="true" />
                         </a>
                         <button type="button" className="btn-secondary py-1 text-caption" onClick={() => openShop(s.dealerId)}>
-                          Open shop <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                          Open shop <ArrowRight className="rtl:rotate-180 h-3.5 w-3.5" aria-hidden="true" />
                         </button>
                       </span>
                     </td>

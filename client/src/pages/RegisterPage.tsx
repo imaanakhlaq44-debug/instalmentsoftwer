@@ -212,7 +212,7 @@ export const RegisterPage: React.FC = () => {
                 <input
                   id="r-password"
                   type={showPassword ? 'text' : 'password'}
-                  className="input pr-11"
+                  className="input pe-11"
                   value={form.password}
                   onChange={set('password')}
                   disabled={submitting}
@@ -221,7 +221,7 @@ export const RegisterPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-ink-400 hover:text-ink-700"
+                  className="absolute end-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-ink-400 hover:text-ink-700"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}

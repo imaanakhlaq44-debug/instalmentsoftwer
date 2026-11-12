@@ -90,7 +90,7 @@ export const Pagination: React.FC<Props> = ({
             aria-label="Previous page"
             className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            <ChevronLeft className="w-4 h-4" aria-hidden="true" />
+            <ChevronLeft className="rtl:rotate-180 w-4 h-4" aria-hidden="true" />
           </button>
 
           {pageWindow(page, totalPages).map((entry, idx) =>
@@ -123,7 +123,7 @@ export const Pagination: React.FC<Props> = ({
             aria-label="Next page"
             className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            <ChevronRight className="w-4 h-4" aria-hidden="true" />
+            <ChevronRight className="rtl:rotate-180 w-4 h-4" aria-hidden="true" />
           </button>
         </nav>
       )}

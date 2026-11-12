@@ -190,7 +190,7 @@ export const PaymentsPage: React.FC = () => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-start border-collapse">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-bold text-slate-600 uppercase tracking-wider">
                   <th className="py-3 px-4">Receipt Ref #</th>
@@ -200,7 +200,7 @@ export const PaymentsPage: React.FC = () => {
                   <th className="py-3 px-4">Timestamp</th>
                   <th className="py-3 px-4">Verification Status</th>
                   <th className="py-3 px-4">Notes</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-3 px-4 text-end">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
@@ -240,7 +240,7 @@ export const PaymentsPage: React.FC = () => {
                     <td className="py-3.5 px-4 text-slate-500 text-xs max-w-xs truncate">
                       {p.notes || 'Monthly installment'}
                     </td>
-                    <td className="py-3.5 px-4 text-right">
+                    <td className="py-3.5 px-4 text-end">
                       {/* Verification releases money against the plan and can
                           trigger an auto-unlock, so it stays with the owner. */}
                       {p.status !== 'VERIFIED' && !isReversed ? (

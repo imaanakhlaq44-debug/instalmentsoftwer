@@ -61,7 +61,9 @@ export const CollectionTrend: React.FC<{ data: TrendPoint[] }> = ({ data }) => {
 
   return (
     <figure className="m-0">
-      <div className="relative">
+      {/* Time runs left to right in every language, as it does on a printed
+          statement; only the words on the plot are translated. */}
+      <div className="relative" dir="ltr">
         <svg
           viewBox={`0 0 ${W} ${H}`}
           className="w-full h-auto"
@@ -190,7 +192,7 @@ export const CollectionTrend: React.FC<{ data: TrendPoint[] }> = ({ data }) => {
         {active && hovered !== null && (
           <div
             className="pointer-events-none absolute z-10 -translate-x-1/2 rounded-md border
-                       border-paper-300 bg-paper-50 px-3 py-2 shadow-overlay min-w-[9.5rem]"
+                       border-paper-300 bg-paper-50 px-3 py-2 shadow-overlay min-w-[9.5rem] rtl:[direction:rtl]"
             style={{
               // Centred on the hovered column, but held far enough from either
               // edge that the tooltip's own width cannot push it outside the

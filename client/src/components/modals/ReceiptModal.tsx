@@ -190,6 +190,6 @@ export const ReceiptModal: React.FC<Props> = ({ paymentId, onClose }) => {
 const Row: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <div className="flex justify-between gap-3">
     <span className="text-slate-600">{label}</span>
-    <span className="font-semibold text-right break-all">{value}</span>
+    <span className="font-semibold text-end break-all">{value}</span>
   </div>
 );

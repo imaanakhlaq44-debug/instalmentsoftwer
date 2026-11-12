@@ -124,13 +124,13 @@ export const CustomersPage: React.FC = () => {
           }}
           className="relative"
         >
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-slate-400 absolute start-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Search by customer name, mobile phone, or CNIC..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+            className="w-full ps-10 pe-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
           />
         </form>
       </div>
@@ -150,7 +150,7 @@ export const CustomersPage: React.FC = () => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-start border-collapse">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-bold text-slate-600 uppercase tracking-wider">
                   <th className="py-3 px-4">Customer Name</th>
@@ -160,7 +160,7 @@ export const CustomersPage: React.FC = () => {
                   <th className="py-3 px-4">Outstanding Balance</th>
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4">Last Payment</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-3 px-4 text-end">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
@@ -193,7 +193,7 @@ export const CustomersPage: React.FC = () => {
                     <td className="py-3.5 px-4 text-slate-500 text-xs">
                       {c.lastPaymentAmount ? `Rs. ${c.lastPaymentAmount.toLocaleString()}` : 'None yet'}
                     </td>
-                    <td className="py-3.5 px-4 text-right">
+                    <td className="py-3.5 px-4 text-end">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleViewCustomerDetail(c.id)}
@@ -311,7 +311,7 @@ export const CustomersPage: React.FC = () => {
                   <div key={p.id} className="py-2 flex items-center justify-between">
                     <div>
                       <span className="font-bold text-slate-800">Rs. {p.amount.toLocaleString()}</span>
-                      <span className="text-micro text-slate-400 ml-2">via {p.paymentMethod} (Ref: {p.referenceNumber})</span>
+                      <span className="text-micro text-slate-400 ms-2">via {p.paymentMethod} (Ref: {p.referenceNumber})</span>
                     </div>
                     <span className="text-micro text-emerald-600 font-semibold">Verified ✓</span>
                   </div>

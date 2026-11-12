@@ -147,7 +147,7 @@ export const InstallmentsPage: React.FC = () => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-start border-collapse">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-bold text-slate-600 uppercase tracking-wider">
                   <th className="py-3 px-4">Plan / Contract</th>
@@ -158,7 +158,7 @@ export const InstallmentsPage: React.FC = () => {
                   <th className="py-3 px-4">Repayment Progress</th>
                   <th className="py-3 px-4">Remaining Balance</th>
                   <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-3 px-4 text-end">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
@@ -211,7 +211,7 @@ export const InstallmentsPage: React.FC = () => {
                         {p.status}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-right">
+                    <td className="py-3.5 px-4 text-end">
                       <button
                         onClick={() => navigate(`/devices/${p.deviceId}`)}
                         className="px-3 py-1.5 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 rounded-lg text-xs font-semibold text-slate-700 transition-colors"
