@@ -11,6 +11,7 @@ import {
 import { useAuth } from '../../context/AuthContext.js';
 import { GoogleIdGuideModal } from './GoogleIdGuideModal.js';
 import { SaleSignStep, SaleSignState } from '../contract/SaleSignStep.js';
+import { ImeiScanButton } from './ImeiScanButton.js';
 import {
   X,
   User,
@@ -770,16 +771,19 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
 
                 <div>
                   <label htmlFor="sale-imei" className="field-label">IMEI (15 digits)</label>
-                  <input
-                    id="sale-imei"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    placeholder="15-digit IMEI"
-                    value={formData.imei}
-                    onChange={(e) => setField('imei', e.target.value)}
-                    aria-invalid={!!errors.imei}
-                    className={inputClass('imei', 'font-mono tracking-wide')}
-                  />
+                  <div className="flex flex-wrap items-stretch gap-2">
+                    <input
+                      id="sale-imei"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      placeholder="15-digit IMEI"
+                      value={formData.imei}
+                      onChange={(e) => setField('imei', e.target.value)}
+                      aria-invalid={!!errors.imei}
+                      className={inputClass('imei', 'font-mono tracking-wide min-w-0 flex-1')}
+                    />
+                    <ImeiScanButton onScan={(imei) => setField('imei', imei)} />
+                  </div>
                   {fieldError('imei')}
                 </div>
 
