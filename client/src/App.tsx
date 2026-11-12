@@ -45,6 +45,8 @@ import { BuyLocksPage } from './pages/BuyLocksPage.js';
 import { NotificationsPage } from './pages/NotificationsPage.js';
 import { AuditLogsPage } from './pages/AuditLogsPage.js';
 import { SettingsPage } from './pages/SettingsPage.js';
+import { FeedbackPage } from './pages/FeedbackPage.js';
+import { ShopFeedbackPage } from './pages/ShopFeedbackPage.js';
 
 /** The language follows whoever is signed in. */
 const Languages: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -103,6 +105,9 @@ export function App() {
 
               <Route path="/orders" element={<RequireRole roles={["SUPER_ADMIN"]}><PlatformOrdersPage /></RequireRole>} />
               <Route path="/shops" element={<RequireRole roles={["SUPER_ADMIN"]}><PlatformShopsPage /></RequireRole>} />
+              <Route path="/shop-feedback" element={<RequireRole roles={["SUPER_ADMIN"]}><ShopFeedbackPage /></RequireRole>} />
+              {/* The owner's alone: it puts the shop's name on the public website. */}
+              <Route path="/feedback" element={<RequireRole roles={["DEALER_ADMIN"]}><FeedbackPage /></RequireRole>} />
               <Route path="/enrollment" element={<RequireRole roles={[...STAFF]}><EnrollmentPage /></RequireRole>} />
 
               {/* A customer may read the agreement they signed; only staff may take a signature. */}

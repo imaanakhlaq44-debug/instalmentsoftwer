@@ -21,6 +21,11 @@ on:
   # Lets a deploy be triggered by hand — after changing SITE_APP_URL, say,
   # which is a variable rather than a commit.
   workflow_dispatch:
+  # Once a day, so a testimonial a shop withdrew (or the platform approved or
+  # unpublished) reaches the site without anybody having to push a commit.
+  # Skipped entirely until SITE_API_URL is set: see the job's `if`.
+  schedule:
+    - cron: '17 21 * * *' # 02:17 PKT
 
 # One deploy at a time, and never cancel one in flight: an FTP transfer killed
 # halfway leaves the site half-uploaded, which is worse than being one commit
@@ -34,6 +39,9 @@ jobs:
     name: Build and upload
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # The nightly run exists only to refresh testimonials from the API. With no
+    # API address there is nothing to refresh, so it does not deploy at all.
+    if: github.event_name != 'schedule' || vars.SITE_API_URL != ''
 
     env:
       # Where the site's "Sign in" button goes. Set the repository variable
@@ -41,6 +49,10 @@ jobs:
       # the default leaves the button out of the page entirely, because a shop
       # reading this site should not meet a dead link where the product is.
       APP_URL: ${{ vars.SITE_APP_URL || 'none' }}
+      # The API's public address, for the testimonials. Set the repository
+      # variable SITE_API_URL once the API is hosted (e.g. https://api.example.pk).
+      # Unset, the site is built from the committed src/data/testimonials.json.
+      TESTIMONIALS_API_URL: ${{ vars.SITE_API_URL || '' }}
 
     steps:
       - uses: actions/checkout@v5
@@ -75,6 +87,14 @@ jobs:
 
       - name: Build Tools
         run: npm run --prefix tools build
+
+      # Only approved, consented, non-withdrawn feedback comes back from this
+      # endpoint. If the API cannot be reached the step fails and nothing is
+      # uploaded: the site stays as it was rather than being rebuilt from a list
+      # nobody could check.
+      - name: Pull approved testimonials
+        if: env.TESTIMONIALS_API_URL != ''
+        run: npm run --prefix site testimonials:pull
 
       - name: Build Site
         run: npm run --prefix site build

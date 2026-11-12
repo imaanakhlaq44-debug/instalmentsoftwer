@@ -262,6 +262,7 @@ model Dealer {
   notifications    Notification[]
   smsRelays        SmsRelay[]
   contracts        Contract[]
+  testimonial      Testimonial?
 
   @@index([active])
   @@map("dealers")
@@ -973,4 +974,60 @@ model NotificationTemplate {
   bodyTemplate    String @map("body_template") @db.VarChar(1000)
 
   @@map("notification_templates")
+}
+
+enum TestimonialStatus {
+  /// Submitted by the shop, waiting for the platform to read it.
+  PENDING
+  /// Read and accepted. The only state the public endpoint returns.
+  APPROVED
+  /// Declined in review, with a note the shop can read.
+  REJECTED
+  /// Was approved, then taken down by the platform.
+  UNPUBLISHED
+  /// Taken back by the shop. Their decision, and final until they submit again.
+  WITHDRAWN
+}
+
+/// What a shop said about the product, in its own words, with its permission
+/// to print it.
+///
+/// One per dealership. Nobody but the shop can change the quote, name or city:
+/// the platform may only approve, reject or unpublish what was written, so the
+/// words under a shop's name on the website are always the words it typed and
+/// consented to. Editing sends the row back to PENDING with a fresh consent.
+model Testimonial {
+  id       String @id
+  dealerId String @unique @map("dealer_id")
+
+  quote       String @db.VarChar(600)
+  rating      Int    @db.SmallInt
+  displayName String @map("display_name") @db.VarChar(80)
+  city        String @db.VarChar(60)
+  /// 'ur' when the quote is written in Urdu script, otherwise 'en' (which
+  /// covers Roman Urdu). Decides direction and typeface on the site.
+  language    String @db.VarChar(2)
+
+  status TestimonialStatus @default(PENDING)
+
+  /// The consent, as given: the exact sentence the owner ticked, who ticked it
+  /// and when. Replaced whenever the text is edited.
+  consentText     String   @map("consent_text") @db.VarChar(500)
+  consentAt       DateTime @map("consent_at") @db.Timestamptz(3)
+  consentByUserId String   @map("consent_by_user_id") @db.VarChar(64)
+  consentByName   String   @map("consent_by_name") @db.VarChar(120)
+
+  reviewedAt     DateTime? @map("reviewed_at") @db.Timestamptz(3)
+  reviewedByName String?   @map("reviewed_by_name") @db.VarChar(120)
+  /// Why it was rejected or unpublished. Shown to the shop.
+  reviewNote     String?   @map("review_note") @db.VarChar(300)
+  withdrawnAt    DateTime? @map("withdrawn_at") @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  dealer Dealer @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+
+  @@index([status, reviewedAt(sort: Desc)])
+  @@map("testimonials")
 }

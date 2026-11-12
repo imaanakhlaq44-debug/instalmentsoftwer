@@ -5,6 +5,8 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { fileURLToPath } from 'url';
 
+import { readTestimonials } from './scripts/testimonials.mjs';
+
 const run = promisify(execFile);
 
 /**
@@ -37,6 +39,61 @@ function withoutSampleTestimonials(html) {
   return html.replace(/<!--\s*voices\s*-->[\s\S]*?<!--\s*\/voices\s*-->/g, (block) =>
     countSamples(block) ? '' : block
   );
+}
+
+/**
+ * Real testimonials, and where they come from.
+ *
+ * A shop owner writes feedback in the dashboard and ticks a consent box; the
+ * platform approves it; the API's public endpoint then lists it. `npm run
+ * testimonials:pull` copies that list into src/data/testimonials.json, and
+ * this build prints whatever that file holds. Build-time rather than a fetch
+ * from the visitor's browser: the page stays plain HTML that works with the
+ * API down, on a slow connection and without JavaScript, and nothing about the
+ * API's address or CORS rules has to be right for the home page to load.
+ *
+ * When the file has entries they take the samples' place inside the same
+ * section — the samples are removed from the output, never mixed in. When it
+ * is empty nothing here runs, the samples are still in the block, and the rule
+ * above drops the whole section as before.
+ */
+const VOICES = /<!--\s*voices\s*-->[\s\S]*?<!--\s*\/voices\s*-->/g;
+const escapeHtml = (s) =>
+  String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+function testimonialFigure(t, index) {
+  const stars = '★'.repeat(t.rating) + '☆'.repeat(5 - t.rating);
+  // The quote is printed as the shop wrote it, in the language it wrote it in,
+  // whichever language the page is showing: translating it would put words in
+  // the shop's mouth. So it carries its own lang and dir and no data-ur.
+  const dir = t.language === 'ur' ? 'rtl' : 'ltr';
+  return `        <figure class="tq${index === 0 ? ' big' : ''}">
+          <div class="bubble">
+            <q lang="${t.language}" dir="${dir}">${escapeHtml(t.quote)}</q>
+            <div class="meta"><span class="stars" role="img" aria-label="${t.rating} out of 5">${stars}</span></div>
+          </div>
+          <figcaption class="who"><span class="av">${escapeHtml([...t.displayName][0].toUpperCase())}</span><div><b dir="auto">${escapeHtml(t.displayName)}</b><span dir="auto">${escapeHtml(t.city)}</span></div></figcaption>
+        </figure>`;
+}
+
+function withRealTestimonials(html, real) {
+  if (!real.length) return html;
+  return html.replace(VOICES, (block) => {
+    const grid = '<div class="tgrid">';
+    if (!block.includes(grid)) throw new Error('The voices section has no <div class="tgrid"> to put testimonials in.');
+    // An Urdu quote needs the Urdu face even while the page is in English,
+    // and the toggle only loads it on switching.
+    const font = real.some((t) => t.language === 'ur')
+      ? '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@500;600;700&display=swap" />\n  '
+      : '';
+    return (
+      font +
+      block
+        .replace(/<!--\s*SAMPLE testimonials[\s\S]*?-->\s*/, '')
+        .replace(/\s*<figure[^>]*\sdata-sample-testimonial[\s\S]*?<\/figure>/g, '')
+        .replace(grid, `${grid}\n${real.map(testimonialFigure).join('\n\n')}`)
+    );
+  });
 }
 
 /**
@@ -185,11 +242,14 @@ async function build() {
       : html.replace(/<!--\s*signin\s*-->[\s\S]*?<!--\s*\/signin\s*-->/g, '');
   const layout = withSignin(rawLayout).replaceAll('/styles.css', `/styles.css?v=${BUILD_VERSION}`);
   const pages = (await readdir(path.join(SRC, 'pages'))).filter((f) => f.endsWith('.html'));
+  const realTestimonials = await readTestimonials();
 
   await mkdir(OUT, { recursive: true });
 
   for (const file of pages) {
-    const raw = withoutSampleTestimonials(await readFile(path.join(SRC, 'pages', file), 'utf8'));
+    const raw = withoutSampleTestimonials(
+      withRealTestimonials(await readFile(path.join(SRC, 'pages', file), 'utf8'), realTestimonials)
+    );
     const meta = readMeta(raw);
     const body = raw.replace(/<!--\s*meta[\s\S]*?-->/, '').trim();
 
@@ -296,7 +356,10 @@ if (!process.env.APP_URL) {
 {
   const home = await readFile(path.join(SRC, 'pages', 'index.html'), 'utf8');
   const samples = countSamples(home);
-  if (samples) {
+  const real = (await readTestimonials()).length;
+  if (real) {
+    process.stdout.write(`  Testimonials: ${real} real, from src/data/testimonials.json (samples left out)\n`);
+  } else if (samples) {
     process.stdout.write(
       SHOW_SAMPLES
         ? `  ⚠ ${samples} SAMPLE testimonial(s) shown — local preview only, do not publish this build\n`

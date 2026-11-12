@@ -30,6 +30,7 @@ import { usersRouter } from './routes/users.routes.js';
 import { dpcRouter } from './routes/dpc.routes.js';
 import { smsRelayRouter } from './routes/smsRelay.routes.js';
 import { contractsRouter } from './routes/contracts.routes.js';
+import { testimonialsRouter, publicTestimonialsRouter } from './routes/testimonials.routes.js';
 
 const app = express();
 
@@ -188,6 +189,15 @@ app.use('/api/dpc', dpcLimiter, dpcRouter);
  */
 app.use('/api/sms-relay', dpcLimiter, smsRelayRouter);
 
+/**
+ * What shops have said about the product, for the website.
+ *
+ * Public and read-only on purpose: it returns only testimonials a shop
+ * consented to publish and the platform approved, and only the five fields the
+ * site prints. Everything that writes one is under `requireAuth` below.
+ */
+app.use('/api/public/testimonials', publicTestimonialsRouter);
+
 // ---------------------------------------------------------------------------
 // Protected routes — every single one requires a valid JWT
 // ---------------------------------------------------------------------------
@@ -202,6 +212,7 @@ app.use('/api/contracts', requireAuth, contractsRouter);
 app.use('/api/licenses', requireAuth, licensesRouter);
 app.use('/api/lock-orders', requireAuth, lockOrdersRouter);
 app.use('/api/platform', requireAuth, platformRouter);
+app.use('/api/testimonials', requireAuth, testimonialsRouter);
 app.use('/api/notifications', requireAuth, notificationsRouter);
 app.use('/api/audit-logs', requireAuth, auditRouter);
 app.use('/api/settings', requireAuth, settingsRouter);
