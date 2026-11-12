@@ -31,6 +31,9 @@ const SETTINGS = {
     customerReminderEnabled: true,
     emergencyCallsAllowed: true,
     frpAccountIds: ['118223344556677889900'],
+    // What the server returns for a shop that never touched these.
+    smsChannel: 'PHONE',
+    whatsappLanguage: 'ROMAN_UR',
   },
 };
 

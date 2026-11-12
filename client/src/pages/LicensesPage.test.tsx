@@ -104,7 +104,8 @@ describe('a shop owner', () => {
     const api = open('DEALER_ADMIN', { dealers: [shop()], packs: [PACK], catalogue: CATALOGUE });
     await screen.findByText('Ready to enrol');
 
-    expect(screen.getByText('Contact the platform to buy')).toBeInTheDocument();
+    // Buying goes through the lock-order screen, not this page.
+    expect(screen.getByRole('link', { name: /Buy locks/ })).toHaveAttribute('href', '/buy-locks');
     expect(packCard(50).getByText(/35,000/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Issue/ })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Shop to issue locks to')).not.toBeInTheDocument();

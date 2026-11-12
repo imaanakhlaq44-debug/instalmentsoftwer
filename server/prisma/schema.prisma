@@ -1076,6 +1076,8 @@ model Testimonial {
 
   @@index([status, reviewedAt(sort: Desc)])
   @@map("testimonials")
+}
+
 enum HandsetTestOverall {
   PASS
   FAIL

@@ -18,13 +18,13 @@ The server is **hosted and running**, the handset app is at **v1.5.1** — and t
 | Device locking — server | ✅ The DPC API (enroll, check-in, command, acknowledge) is built and tested. See [Device Policy Controller API](#-device-policy-controller-api) |
 | Device locking — handset | ⚠️ **The Android DPC is written, signed and published** (`android/dpc/`), now at **v1.5.1** (`versionCode` 8; tags `dpc-v1.0.0` … `dpc-v1.5.1`, each a signed release APK on GitHub). On top of enrolment, heartbeat, device-owner kiosk lock, honest acknowledgement and boot restore it now has staged restrictions, Factory Reset Protection that is read back and reported, release on payoff, hardware integrity checks and key attestation — see [What the handset app gained since v1.0.0](#what-the-handset-app-gained-since-v100). It builds and its unit tests run in CI. **Nothing in this repository records a pass across a fleet of real phones**, and that is still what stands between this and a product: the Android versions and OEM skins a Pakistani shop actually sells. The release key exists and cannot be rotated, so every later build has to be signed with it. Runbook: [android/RELEASE.md](android/RELEASE.md) |
 | Customer consent | ✅ **A device cannot be locked without a signed agreement.** Every financed sale drafts a bilingual contract; the customer signs it on screen; the lock refuses on anything unsigned, voided, or whose figures no longer match the plan. See [Consent](#-consent-the-contract-a-lock-rests-on) |
-| SMS delivery | ⚠️ **No aggregator, but messages can move.** A shop can pair a phone of its own and it sends the queue from its SIM ([`android/sms-relay/`](android/README.md)). Nothing is marked `SENT` until that handset reports the SIM accepted it. This is right for a small shop and for testing. For volume, an aggregator channel is built ([SMS through an aggregator](#sms-through-an-aggregator)) and switches on once an operator account with a registered sender mask is put in `server/.env`; it has only been tested against a mocked gateway |
+| SMS delivery | ⚠️ **A paired phone sends today; an aggregator channel is built but has no account.** A shop can pair a phone of its own and it sends the queue from its SIM ([`android/sms-relay/`](android/README.md)). Nothing is marked `SENT` until that handset reports the SIM accepted it. This is right for a small shop and for testing. For volume, an aggregator channel is built ([SMS through an aggregator](#sms-through-an-aggregator)) and switches on once an operator account with a registered sender mask is put in `server/.env`; it has only been tested against a mocked gateway |
 | WhatsApp delivery | ⚠️ **Click-to-WhatsApp works; the Business API is a seam.** A WhatsApp button beside each customer opens the shop's own WhatsApp (`wa.me`) with a reminder, overdue notice, receipt or lock warning written by the server from the plan's figures, in Urdu, Roman Urdu or English. The audit trail records who *opened* it — never "sent", because that cannot be known. Automatic sending through the WhatsApp Business Cloud API is built and tested against a mocked Meta, and is **off** until `WHATSAPP_CLOUD_*` credentials are set (see `server/.env.example`) |
-| Payments | ⚠️ **No gateway, but a customer can report a transfer.** Counter payments work fully; a customer who has sent money by JazzCash/Easypaisa/Raast can submit the transaction ID from home, and the shop confirms it against their own account. Nothing is applied until a person confirms. See [Customer-reported payments](#-customer-reported-payments) |
-| Payment gateways (JazzCash / Easypaisa / Raast) | ❌ Not integrated — that needs a merchant account. The seam where one attaches is in place |
+| Payments | ⚠️ **A customer can report a transfer; a gateway is built but switched off.** Counter payments work fully; a customer who has sent money by JazzCash/Easypaisa/Raast can submit the transaction ID from home, and the shop confirms it against their own account. Nothing is applied until a person confirms. See [Customer-reported payments](#-customer-reported-payments) |
+| Payment gateways (JazzCash / Easypaisa / Raast) | ⚠️ **JazzCash hosted checkout is built and off.** It switches on only with a merchant account in `server/.env`; the signing recipe has not been run against the JazzCash sandbox. Easypaisa and Raast are not built. See [Where a gateway attaches](#where-a-gateway-attaches) |
 | Commercial model | ✅ **A lock per handset, not a subscription.** Locks are bought in packs, spent on one IMEI at enrolment, and never returned. See [Licensing](#-licensing-one-lock-one-handset) |
 | Deployment | ✅ **Hosted.** The owner runs the server on a VPS. `deploy/` holds what that takes — a three-container compose file (PostgreSQL, the API, and Caddy terminating TLS), a backup script and a runbook for a bare Ubuntu VPS ([deploy/DEPLOY.md](deploy/DEPLOY.md)). CI builds both images on every push. The address and the state of that machine are deliberately not recorded here; whether its backups have ever been restored is something only the person running it can answer |
-| Automated tests | ✅ **601 tests** — 416 backend against a real PostgreSQL instance, 135 on the React client, 50 on the two Android apps (48 DPC, 2 SMS relay). All run on every push via GitHub Actions. See [Testing](#-testing) |
+| Automated tests | ✅ **1,054 tests** — 671 backend against a real PostgreSQL instance, 333 on the React client, 50 on the two Android apps (48 DPC, 2 SMS relay). All run on every push via GitHub Actions. See [Testing](#-testing) |
 
 What is left before this is a real product is **proving the signed DPC on real handsets**. The server is hosted, so a handset has somewhere to reach; what nobody has written down yet is how the app behaves across the phones a shop actually sells. The protocol is complete on both sides and the app refuses to claim a lock it did not apply, so a phone that cannot be held says so on the dashboard rather than silently pretending.
 
@@ -32,7 +32,7 @@ Also true, and easy to miss:
 
 - **Location for recovery does not work on phones running DPC 1.3.0–1.5.1.** Those builds answer a location request only while enrolling, never on the periodic check-in, so a request for a phone in the field stays "waiting for the phone". The source is fixed for **1.5.2** (not yet tagged or released), and phones only get it once that release is published and they update. See [Location for recovery](#location-for-recovery).
 - **The newer handset features are unit-tested, not field-tested.** Key attestation, the integrity signals and FRP read-back all depend on what each OEM's firmware actually does.
-- No SMS aggregator, no WhatsApp, no payment gateway — unchanged, see the table above.
+- **SMS aggregator, automatic WhatsApp and the JazzCash gateway are code without accounts.** Each is tested against a mocked provider and stays off until real credentials are configured. Click-to-WhatsApp needs no account and works now.
 
 ---
 
@@ -87,7 +87,7 @@ Also true, and easy to miss:
 
 ### Dashboard
 - **A shop registers itself** at `/register`, linked from the login page. No locks are issued until the platform confirms payment.
-- **English / Roman Urdu switch** for the whole dashboard, remembered per browser. Text with no entry stays English; the signed agreement keeps its own Urdu. This is Roman Urdu, not Urdu script — there is no RTL dashboard.
+- **English, Roman Urdu and Urdu** for the whole dashboard, remembered per user. Urdu is in Urdu script, laid out right to left. Text with no entry stays English; the signed agreement keeps its own wording.
 - **A platform menu for the super admin** — Home, Lock orders, Shops, Locks sold — separate from a shop's own menu.
 - **A Google ID guide**, in English and Urdu, for finding the numeric account ID that Factory Reset Protection needs.
 
@@ -251,10 +251,12 @@ left the shop. If a dealer does run out mid-enrolment, the QR stays valid: buy a
 pack and the same code completes.
 
 Locks are minted only by `POST /api/licenses/packs`, which is super-admin only.
-There is no payment gateway, so that endpoint *is* the platform confirming money
-arrived; a dealer who could call it could mint themselves free stock. Sign-up
-records the pack a shop asked for and mints nothing; the super admin's **Lock
-orders** page lists who is waiting and issues the locks once paid.
+No gateway sits in front of it, so issuing a pack *is* the platform confirming
+money arrived; a dealer who could do it could mint themselves free stock. A
+shop orders on its **Buy locks** page — the pack, how it paid, the transaction
+ID and an optional screenshot — and the super admin approves or rejects it on
+**Lock orders**. Approval issues the pack in the same transaction, once per
+order, so a second or concurrent approval issues nothing.
 
 ---
 
@@ -900,8 +902,8 @@ Two operations deliberately run *after* their transaction commits, because they 
 
 1. **Run the DPC on real handsets.** The app is written, signed and published ([`android/dpc/`](android/dpc/README.md)); the current release is `dpc-v1.5.1` (`almas-sdm-dpc-v1.5.1.apk`), and its release notes carry the two lines of server configuration — `DPC_APK_URL` and `DPC_APK_SIGNATURE_CHECKSUM`. See [android/RELEASE.md](android/RELEASE.md). What is missing is a recorded pass across the Android versions and OEM skins a Pakistani shop actually sells: provisioning by QR from a factory-reset handset, the kiosk lock under each vendor's skin, boot restore, and now also FRP after a recovery wipe, staged restrictions, release on payoff and whether each phone's secure chip attests its IMEI. The signing key can only be created once and cannot be rotated — an APK signed with a different key will not update an installed one, and those handsets are device owner, so the customer cannot factory-reset out of a bad build.
 2. **Release DPC 1.5.2 and prove location for recovery on a phone.** The heartbeat now answers `reportLocation` in the source ([above](#location-for-recovery)); tag `dpc-v1.5.2`, point the server at the new APK, and try it on a locked phone before telling a shop the feature works.
-3. **An SMS aggregator account** (Jazz / Telenor / Zong corporate, or Twilio) with a PTA-approved sender mask. A paired phone gets reminders moving today, but a consumer SIM is not a delivery channel for a shop at volume — and a reminder that arrives from a random mobile number is a reminder customers ignore.
-4. **A payment gateway.** JazzCash's hosted checkout is the simplest of the real ones — an HMAC-signed form POST, no OAuth, no SDK — and the blocker is not code but a merchant account, which needs business registration and a bank account. Customers can already report transfers ([above](#-customer-reported-payments)); a gateway removes the manual confirmation, not the capability.
+3. **An SMS aggregator account** (Jazz / Telenor / Zong corporate, or Twilio) with a PTA-approved sender mask. The channel is built ([SMS through an aggregator](#sms-through-an-aggregator)); what is missing is the account, and a first real send through it.
+4. **A JazzCash merchant account, and a sandbox run.** The hosted checkout is built ([Where a gateway attaches](#where-a-gateway-attaches)); the blocker is a merchant account, which needs business registration and a bank account, and then proving the signature against the JazzCash sandbox before production.
 5. **Deeper client coverage** — guards, auth, the API client, CSV export and pagination are tested, and so are the money and lock screens: the financed-sale wizard, payments (record, verify, reverse, customer-reported transfers), lock / unlock / release, contract signing, enrolment QR, licences, settings and the Roman Urdu switch (`client/src/test/harness.tsx` is the shared page-test setup). Still untested: the dashboard, customers, notifications, audit log and platform pages. Rescheduling a plan and waiving a late fee exist in the API client but have no screen yet.
 6. **Legal review of the contract terms** — the agreement is written, bilingual, signed and enforced ([Consent](#-consent-the-contract-a-lock-rests-on)), but it was drafted by engineers. A Pakistani lawyer should read it before a shop relies on it — clause 4, and within it the paragraph (from terms v1.1) that permits a handset to restrict itself when it cannot reach the shop, is what to put in front of them first. The brief to hand over is [docs/legal-review-brief.md](docs/legal-review-brief.md).
 7. PWA offline mode.
