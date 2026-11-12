@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { repo } from '../db/repositories/index.js';
 import { ContractService } from '../services/ContractService.js';
+import { ContractPdfService } from '../services/ContractPdfService.js';
 import {
   requireDealerStaff, requireDealerAdmin, getAuthUser, resolveDealerScope,
   assertDealerAccess, clientIp, routeParam,
@@ -71,6 +72,35 @@ contractsRouter.get(
     }
 
     res.json(await ContractService.render(contract.id));
+  })
+);
+
+/**
+ * The same document as a PDF, rendered here so the Urdu is shaped properly
+ * whatever device asks for it.
+ *
+ * Exactly the access rules of the route above, checked before anything is
+ * rendered: the dealership that owns it, and a customer only their own.
+ */
+contractsRouter.get(
+  '/:id/pdf',
+  asyncHandler(async (req, res) => {
+    const user = getAuthUser(req);
+    const contract = await repo.contracts.findById(routeParam(req, 'id'));
+    if (!contract) throw AppError.notFound('Contract');
+
+    assertDealerAccess(req, contract.dealerId, 'contract');
+    if (user.role === 'CUSTOMER' && contract.customerId !== user.customerId) {
+      throw AppError.notFound('Contract');
+    }
+
+    const { pdf, filename } = await ContractPdfService.render(contract.id);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    // A signed agreement carries a CNIC and a home address.
+    res.setHeader('Cache-Control', 'no-store');
+    res.send(pdf);
   })
 );
 

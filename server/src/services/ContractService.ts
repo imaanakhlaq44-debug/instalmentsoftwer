@@ -11,6 +11,7 @@ import {
   CURRENT_TERMS_VERSION,
   ContractSnapshot,
   DECLARATION,
+  declarationFor,
   renderClauses,
 } from './contractTerms.js';
 
@@ -249,7 +250,8 @@ export class ContractService {
       // Rendered under the version this contract was signed with, not the
       // current one — that is what makes an old signature keep its meaning.
       clauses: renderClauses(snapshot, contract.termsVersion),
-      declaration: DECLARATION,
+      // Versioned with the clauses, for the same reason.
+      declaration: declarationFor(contract.termsVersion),
       hashMatches: contract.documentHash
         ? contract.documentHash === this.hash(contract.termsVersion, contract.snapshot)
         : null,

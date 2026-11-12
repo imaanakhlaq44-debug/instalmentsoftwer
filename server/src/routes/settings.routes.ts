@@ -117,7 +117,9 @@ const policySchema = z
      * the aggregator with the phone behind it.
      */
     smsChannel: z.enum(['PHONE', 'AGGREGATOR', 'AGGREGATOR_THEN_PHONE']).optional(),
-    emergencyCallsAllowed: z.boolean().optional(),
+    // Accepted so an older dashboard can still save, and always stored as
+    // true: clause 4 of every terms version promises emergency calls.
+    emergencyCallsAllowed: z.boolean().transform(() => true).optional(),
     paymentMethodsOnLock: z.array(z.string().trim().max(30)).max(10).optional(),
 
     lateFeeEnabled: z.boolean().optional(),

@@ -6,6 +6,7 @@ import { toDomainList } from '../db/mappers.js';
 import { Device, FrpStatus } from '../types/index.js';
 import { AuditService } from './AuditService.js';
 import { ContractService } from './ContractService.js';
+import { integrityChecksDisclosedFor } from './DisclosurePolicy.js';
 import { deviceManagementService } from './DeviceManagementService.js';
 import { AppError } from '../utils/AppError.js';
 import { maskImei } from '../utils/mask.js';
@@ -273,6 +274,8 @@ export class DeviceIntegrityService {
    */
   static async attestationChallengeFor(device: Device, now: Date = new Date()): Promise<string | undefined> {
     if (device.noLock) return undefined;
+    // Not asked of a handset whose customer was never told about these checks.
+    if (!(await integrityChecksDisclosedFor(device))) return undefined;
     const t = now.getTime();
     const checkedAt = device.attestationCheckedAt ? new Date(device.attestationCheckedAt).getTime() : 0;
     if (t - checkedAt < ATTESTATION_INTERVAL_MS) return undefined;
@@ -468,6 +471,20 @@ export class DeviceIntegrityService {
     nowIso: string,
     ipAddress?: string
   ): Promise<{ device: Device; tamperLocked: boolean }> {
+    // Terms before v1.4 never told the customer that the handset reports its
+    // hardware identity and integrity, or that tampering can restrict it. For
+    // those agreements (and for a handset with no agreement at all) the
+    // signals are dropped here: not evaluated, not stored, not acted on. The
+    // app still sends them — it cannot know what was signed — which is why the
+    // refusal lives on this side. Only the reset-protection status is kept,
+    // and for such a handset that status is "not configured".
+    if (!(await integrityChecksDisclosedFor(device))) {
+      const frpOnly = this.frpUpdates(payload?.frp, nowIso);
+      if (Object.keys(frpOnly).length === 0) return { device, tamperLocked: false };
+      const kept = await repo.devices.update(device.id, { ...frpOnly, updatedAt: nowIso });
+      return { device: kept ?? device, tamperLocked: false };
+    }
+
     const expected = device.attestationChallenge ? Buffer.from(device.attestationChallenge, 'base64url') : undefined;
     const attestation = await verifyKeyAttestation(payload?.attestation, expected, new Date(nowIso));
     const evaluation = this.evaluate(device, payload, attestation);

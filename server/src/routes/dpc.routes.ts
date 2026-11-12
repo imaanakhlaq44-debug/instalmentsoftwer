@@ -7,6 +7,7 @@ import { EnrollmentService } from '../services/EnrollmentService.js';
 import { offlineLockDaysFor } from '../services/OfflineLockPolicy.js';
 import { RESTRICTED_APPS, restrictionLevelFor } from '../services/StagedRestrictions.js';
 import { LocationService } from '../services/LocationService.js';
+import { resetProtectionDisclosedFor } from '../services/DisclosurePolicy.js';
 import { DeviceIntegrityService } from '../services/DeviceIntegrityService.js';
 import { deviceManagementService } from '../services/DeviceManagementService.js';
 import { AuditService } from '../services/AuditService.js';
@@ -58,7 +59,8 @@ interface DevicePolicyView {
    * factory reset. Sent only while something is still owed: once the plan is
    * paid off the list goes empty and the phone drops the protection, so a
    * customer who owns their handset outright is never left needing the
-   * dealer's account to use it.
+   * dealer's account to use it. Also empty unless the customer's signed
+   * agreement (terms v1.4 or later) tells them about it.
    */
   frpAccountIds: string[];
   /**
@@ -96,13 +98,18 @@ async function buildPolicyView(device: Device): Promise<DevicePolicyView> {
   return {
     locked,
     lockMessage: device.status === 'LOCKED' ? device.lockMessage ?? device.lockReason ?? null : null,
-    emergencyCallsAllowed: policy.emergencyCallsAllowed !== false,
+    // Not a setting. Every version of the agreement promises that a restricted
+    // handset still makes emergency calls, so no stored policy can say otherwise.
+    emergencyCallsAllowed: true,
     paymentMethods: policy.paymentMethodsOnLock ?? ['CASH'],
     amountDue: overdue.reduce((sum, i) => sum + amountOutstanding(i), 0),
     nextDueDate: unpaid[0]?.dueDate ?? null,
     offlineLockAfterDays: await offlineLockDaysFor(device, policy),
     gracePeriodDays: policy.gracePeriodDays ?? DEFAULT_POLICY.gracePeriodDays,
-    frpAccountIds: unpaid.length > 0 ? policy.frpAccountIds ?? [] : [],
+    frpAccountIds:
+      unpaid.length > 0 && (policy.frpAccountIds?.length ?? 0) > 0 && (await resetProtectionDisclosedFor(device))
+        ? policy.frpAccountIds ?? []
+        : [],
     restrictionLevel,
     restrictedApps: restrictionLevel >= 2 ? [...RESTRICTED_APPS] : [],
     reportLocation: await LocationService.shouldReport(device, policy),

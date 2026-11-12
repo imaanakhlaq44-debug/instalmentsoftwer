@@ -239,4 +239,12 @@ export const config = {
     leaveSystemAppsEnabled: bool(process.env.DPC_LEAVE_SYSTEM_APPS_ENABLED, true),
     skipEncryption: bool(process.env.DPC_SKIP_ENCRYPTION, false),
   },
+
+  /**
+   * The contract PDF is printed by the system's Chromium (see
+   * `ContractPdfService`). Leave unset to use the usual install locations.
+   */
+  pdf: {
+    chromiumPath: (process.env.PDF_CHROMIUM_PATH || '').trim(),
+  },
 } as const;
