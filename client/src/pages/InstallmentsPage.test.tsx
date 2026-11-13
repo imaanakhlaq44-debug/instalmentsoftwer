@@ -8,9 +8,8 @@ import type { UserRole } from '../types/index.js';
 /**
  * Installment plans.
  *
- * Note: the API client has `reschedulePlan` and `waiveLateFee`, but no screen
- * in the dashboard calls them yet, so there is no reschedule or waiver UI to
- * test. What is here — the plan list and the overdue run — is covered.
+ * Restructuring a plan and waiving a late fee live on the phone's page, next to
+ * its schedule; see DeviceDetailPage.adjustments.test.tsx.
  */
 
 const PLANS = [
