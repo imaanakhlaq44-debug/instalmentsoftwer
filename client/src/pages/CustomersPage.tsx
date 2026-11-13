@@ -313,7 +313,13 @@ export const CustomersPage: React.FC = () => {
                       <span className="font-bold text-slate-800">Rs. {p.amount.toLocaleString()}</span>
                       <span className="text-micro text-slate-400 ms-2">via {p.paymentMethod} (Ref: {p.referenceNumber})</span>
                     </div>
-                    <span className="text-micro text-emerald-600 font-semibold">Verified ✓</span>
+                    {/* The profile lists every payment, including ones still awaiting
+                        the shop and ones reversed; only a settled one is "Verified". */}
+                    {p.status === 'VERIFIED' && !p.reversedAt ? (
+                      <span className="text-micro text-emerald-600 font-semibold">Verified ✓</span>
+                    ) : (
+                      <span className="text-micro text-amber-700 font-semibold">{p.reversedAt ? 'REVERSED' : p.status}</span>
+                    )}
                   </div>
                 ))}
               </div>

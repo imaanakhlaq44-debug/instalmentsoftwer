@@ -161,7 +161,9 @@ export const NotificationsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Paired phones */}
+      {/* Paired phones — pairing and unpairing are staff-only on the server, so
+          a customer reading their messages is not offered either. */}
+      {isStaff && (
       <div className="bg-white rounded-3xl border-2 border-ink-900 shadow-card p-5 sm:p-6 space-y-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
@@ -253,6 +255,7 @@ export const NotificationsPage: React.FC = () => {
           </button>
         </div>
       </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left 2 Cols: Notification Stream */}
