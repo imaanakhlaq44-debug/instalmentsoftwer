@@ -1266,6 +1266,30 @@ export const URDU: Record<string, string> = {
   "The customer has signed the agreement.": "گاہک نے معاہدے پر دستخط کر دیے ہیں۔",
   "Agreement not signed yet": "معاہدے پر ابھی دستخط نہیں ہوئے",
   "This phone cannot be locked until the customer signs. You can sign later from the customer's page.": "گاہک کے دستخط تک یہ فون لاک نہیں ہو سکتا۔ بعد میں گاہک کے صفحے سے دستخط کروا سکتے ہیں۔",
+  // ------------------------------------- restructure plan / waive late fee
+  "Restructure plan": "پلان دوبارہ بنائیں",
+  "Waive late fee": "لیٹ فیس معاف کریں",
+  "Restructure this plan": "یہ پلان دوبارہ بنائیں",
+  "Paid installments stay as they are. What is still owed is spread over new months.": "ادا شدہ قسطیں ویسی ہی رہیں گی۔ جو باقی ہے وہ نئے مہینوں میں بانٹ دیا جائے گا۔",
+  "Still owed": "ابھی باقی",
+  "Number of new months": "نئے مہینوں کی تعداد",
+  "First new due date": "پہلی نئی قسط کی تاریخ",
+  "Grace days": "رعایت کے دن",
+  "New schedule": "نیا شیڈول",
+  "Enter the months and the first due date to see the new schedule.": "نیا شیڈول دیکھنے کے لیے مہینے اور پہلی تاریخ لکھیں۔",
+  "The signed agreement will no longer match.": "دستخط شدہ معاہدہ اب میل نہیں کھائے گا۔",
+  "Restructuring changes the figures the customer signed. Until a new agreement is signed, this phone cannot be locked.": "پلان بدلنے سے وہ رقم بدل جاتی ہے جس پر گاہک نے دستخط کیے تھے۔ نئے معاہدے پر دستخط ہونے تک یہ فون لاک نہیں ہو سکتا۔",
+  "Reason (required)": "وجہ (ضروری)",
+  "Write at least 10 characters.": "کم از کم 10 حروف لکھیں۔",
+  "Why is this plan being restructured?": "یہ پلان کیوں بدلا جا رہا ہے؟",
+  "Confirm restructure": "پلان بدلنا پکا کریں",
+  "Waive the late fee": "لیٹ فیس معاف کریں",
+  "Late fee owed": "باقی لیٹ فیس",
+  "The installment itself is still owed. Only the late fee is removed.": "قسط ابھی بھی باقی ہے۔ صرف لیٹ فیس ہٹائی جائے گی۔",
+  "Why is this late fee being waived?": "یہ لیٹ فیس کیوں معاف کی جا رہی ہے؟",
+  "Confirm waiver": "معافی پکی کریں",
+  "Late fee waived.": "لیٹ فیس معاف ہو گئی۔",
+  "Plan restructured.": "پلان دوبارہ بن گیا۔",
 };
 
 /**
@@ -1338,6 +1362,8 @@ export const URDU_PATTERNS: Array<[RegExp, string]> = [
   [/^(\d+) hours? ago$/, '$1 گھنٹے پہلے'],
   [/^(\d+) days? ago$/, '$1 دن پہلے'],
   [/^due in (\d+) days$/, '$1 دن میں واجب'],
+  // restructure plan / waive late fee
+  [/^Plan restructured into (\d+) new installment\(s\)\.$/, 'پلان $1 نئی قسطوں میں دوبارہ بن گیا۔'],
 ];
 
 /** The same, for lines with no number in them. Kept apart so `URDU` mirrors Roman Urdu key for key. */
