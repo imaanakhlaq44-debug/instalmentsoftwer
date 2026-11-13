@@ -173,10 +173,21 @@
    the script itself needs.
    --------------------------------------------------------------------------- */
 
-/* Naskh, as on the home page: Nastaliq is beautiful and unreadable at 13px.
+/* Jameel Noori Nastaleeq, the face Pakistani shops read Urdu in. It is not on
+   a font CDN, so it comes from the computer: almost every shop PC has it from
+   InPage or Windows Urdu packs. Where it is missing, Naskh takes over.
    Archivo stays first so figures, IMEIs and English names keep their face. */
+@font-face {
+  font-family: 'Urdu Nastaleeq';
+  src: local('Jameel Noori Nastaleeq'), local('JameelNooriNastaleeq'),
+    local('Jameel Noori Nastaleeq Regular'), local('Jameel Noori Nastaleeq Kasheeda');
+  unicode-range: U+0600-06FF, U+0750-077F, U+FB50-FDFF, U+FE70-FEFF;
+  font-display: swap;
+}
 body:lang(ur) {
-  font-family: 'Archivo', 'Noto Naskh Arabic', 'Noto Nastaliq Urdu', system-ui, sans-serif;
+  font-family: 'Archivo', 'Urdu Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Naskh Arabic',
+    'Noto Nastaliq Urdu', system-ui, sans-serif;
+  line-height: 1.8;
 }
 
 /* Letter-spacing pulls joined Urdu letters apart, and there are no capitals. */
@@ -194,12 +205,13 @@ body:lang(ur) {
 }
 .text-caption:lang(ur),
 .text-xs:lang(ur) {
-  line-height: 1.375rem;
+  line-height: 1.625rem;
 }
+/* Nastaleeq climbs and drops further than Naskh. */
 .leading-tight:lang(ur),
 .leading-none:lang(ur),
 .leading-snug:lang(ur) {
-  line-height: 1.5;
+  line-height: 1.7;
 }
 
 /* What is typed decides its own direction: a name in Urdu runs right to left,
