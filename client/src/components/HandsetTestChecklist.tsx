@@ -57,7 +57,7 @@ export const HandsetTestChecklist: React.FC<{ onClose: () => void }> = ({ onClos
       <style>{`
         .hc-sheet { font-size: 10px; line-height: 1.35; color: #111; }
         .hc-sheet h1 { font-size: 16px; font-weight: 700; }
-        .hc-ur { font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif; display: block; text-align: right; line-height: 1.9; }
+        .hc-ur { font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif; display: block; text-align: right; line-height: 1.9; }
         .hc-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
         .hc-step { border: 1px solid #999; border-radius: 4px; padding: 6px 8px; break-inside: avoid; page-break-inside: avoid; }
         .hc-boxes { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; margin-top: 4px; }
