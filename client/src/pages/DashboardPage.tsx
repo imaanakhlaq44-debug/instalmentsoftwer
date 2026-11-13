@@ -104,7 +104,9 @@ export const DashboardPage: React.FC = () => {
   };
 
   const name = firstName(user?.name || dealer?.ownerName);
-  const target = charts?.monthlyTrends?.find((m: any) => m.target > 0)?.target ?? 0;
+  // The server sends six months, oldest first; the last one is this month.
+  const months: any[] = charts?.monthlyTrends ?? [];
+  const target = months[months.length - 1]?.target ?? 0;
   const collected = stats?.collectedThisMonth ?? 0;
   const targetPct = target > 0 ? Math.min(100, Math.round((collected / target) * 100)) : null;
 
