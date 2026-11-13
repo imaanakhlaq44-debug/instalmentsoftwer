@@ -220,7 +220,11 @@ customersRouter.get('/:id', asyncHandler(async (req, res) => {
       outstandingBalance: plans.reduce((s, p) => s + (p.remainingBalance || 0), 0),
       outstandingLateFees: plans.reduce((s, p) => s + (p.outstandingLateFees || 0), 0),
       creditBalance: plans.reduce((s, p) => s + (p.creditBalance || 0), 0),
-      totalPaid: payments.filter((p) => p.status === 'VERIFIED').reduce((s, p) => s + p.amount, 0),
+      // Money actually kept: a reversed payment stays VERIFIED on the row but its
+      // amount was clawed back, so it must not count (same rule as the ledger).
+      totalPaid: payments
+        .filter((p) => p.status === 'VERIFIED' && !p.reversedAt && !p.reversalOfPaymentId)
+        .reduce((s, p) => s + p.amount, 0),
       overdueInstallments: installments.filter((i) => i.status === 'OVERDUE').length,
     },
   });
