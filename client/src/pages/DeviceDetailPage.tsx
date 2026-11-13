@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext.js';
 import { EditDeviceModal } from '../components/modals/EditDeviceModal.js';
 import { GoogleIdGuideModal } from '../components/modals/GoogleIdGuideModal.js';
 import { FindPhoneCard } from '../components/devices/FindPhoneCard.js';
+import { RestructurePlanModal, WaiveLateFeeModal } from '../components/installments/PlanAdjustments.js';
 import { relativeTime } from '../utils/format.js';
 import {
   Smartphone,
@@ -64,6 +65,8 @@ export const DeviceDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   // Modal States
+  const [showRestructure, setShowRestructure] = useState(false);
+  const [waiveFor, setWaiveFor] = useState<any>(null);
   const [showLockModal, setShowLockModal] = useState(false);
   const [lockReason, setLockReason] = useState('Installment overdue per financing policy');
   const [showUnlockModal, setShowUnlockModal] = useState(false);
@@ -759,6 +762,12 @@ export const DeviceDetailPage: React.FC = () => {
                   </span>
                 </div>
               </div>
+              {/* Owners only: restructuring rewrites the signed figures. */}
+              {isDealerAdmin && device.plan.status !== 'COMPLETED' && device.plan.status !== 'CANCELLED' && (
+                <button type="button" onClick={() => setShowRestructure(true)} className="btn-secondary w-full">
+                  Restructure plan
+                </button>
+              )}
             </div>
           )}
 
@@ -848,6 +857,15 @@ export const DeviceDetailPage: React.FC = () => {
                           >
                             {inst.status}
                           </span>
+                          {isDealerAdmin && Number(inst.lateFee || 0) - Number(inst.lateFeePaid || 0) > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setWaiveFor(inst)}
+                              className="ms-2 rounded-md border-2 border-ink-900 bg-sun-200 px-2 py-0.5 text-micro font-extrabold text-ink-900 hover:bg-sun-400"
+                            >
+                              Waive late fee
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -1200,6 +1218,29 @@ export const DeviceDetailPage: React.FC = () => {
         onClose={() => setShowGoogleIdGuide(false)}
         onGoToSettings={isDealerAdmin ? () => navigate('/settings') : undefined}
       />
+      {showRestructure && device.plan && (
+        <RestructurePlanModal
+          plan={device.plan}
+          installments={device.installments ?? []}
+          onClose={() => setShowRestructure(false)}
+          onDone={(message) => {
+            setShowRestructure(false);
+            showToast(message, 'success');
+            loadDeviceDetail();
+          }}
+        />
+      )}
+      {waiveFor && (
+        <WaiveLateFeeModal
+          installment={waiveFor}
+          onClose={() => setWaiveFor(null)}
+          onDone={(message) => {
+            setWaiveFor(null);
+            showToast(message, 'success');
+            loadDeviceDetail();
+          }}
+        />
+      )}
     </div>
   );
 };

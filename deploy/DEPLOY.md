@@ -177,27 +177,127 @@ The provider's snapshots are not backups of your data. They restore a whole
 machine to a moment; they will not give you one customer's ledger back after a
 mistaken deletion, and they live in the same account you might one day lose.
 
+Three scripts, all run from `/opt/almas-sdm`:
+
+| Script | What it does |
+|---|---|
+| `deploy/backup.sh` | Dumps the database to `deploy/backups/almas-sdm-<date>.sql.gz`, checks the file, keeps the newest `BACKUP_KEEP_LOCAL` (default 30). |
+| `deploy/restore-drill.sh` | Restores a backup into a **throwaway** PostgreSQL container (no network, deleted afterwards), counts dealers, customers, devices and payments, prints `RESTORE DRILL: PASS` or `FAIL`. It never touches the live `db` service. |
+| `deploy/offsite-backup.sh` | Copies the backups off the machine with rclone (Google Drive, Backblaze, …), falling back to rsync over SSH; deletes remote copies older than `OFFSITE_KEEP_DAYS`. |
+
+### 6.1 First backup and a restore drill
+
+```bash
+cd /opt/almas-sdm
+./deploy/backup.sh
+./deploy/restore-drill.sh
+```
+
+The last line must say `RESTORE DRILL: PASS`. To drill a particular file:
+`./deploy/restore-drill.sh deploy/backups/almas-sdm-2026-11-13-0230.sql.gz`.
+On a brand-new install with no dealers yet, add `--allow-empty`.
+
+A backup nobody has ever restored is a hope, not a backup.
+
+### 6.2 Off-machine copies
+
+A dump on the same disk as the database survives a mistake but not a dead
+server. Pick **one** (or both — rsync is then the fallback).
+
+**Google Drive / Backblaze / any cloud, with rclone:**
+
+```bash
+sudo apt-get install -y rclone
+rclone config            # n = new remote, name it e.g. gdrive, follow the prompts
+                         # (on a server with no browser, answer "n" to auto config
+                         #  and paste the command it prints on your laptop)
+rclone mkdir gdrive:almas-backups
+```
+
+Recommended: in `rclone config` also create a `crypt` remote on top of it (for
+example `gdrive-crypt` → `gdrive:almas-backups`) and use that name, so the files
+are encrypted before they leave the server. Keep a copy of the crypt password
+somewhere safe that is **not** this server — without it the backups cannot be
+read.
+
+Then in `deploy/.env`:
+
+```bash
+OFFSITE_RCLONE_REMOTE=gdrive:almas-backups
+OFFSITE_KEEP_DAYS=30
+```
+
+**Another machine you control, with rsync over SSH:**
+
+```bash
+ssh-keygen -t ed25519 -N "" -f ~/.ssh/almas_backup
+ssh-copy-id -i ~/.ssh/almas_backup.pub backup@your-other-machine
+```
+
+```bash
+OFFSITE_RSYNC_TARGET=backup@your-other-machine:/home/backup/almas
+OFFSITE_SSH_KEY=/root/.ssh/almas_backup
+OFFSITE_KEEP_DAYS=30
+```
+
+Test it once by hand; it must end with `OFFSITE: OK`:
+
+```bash
+./deploy/offsite-backup.sh
+```
+
+### 6.3 Schedule it
+
 ```bash
 crontab -e
 ```
 
 ```cron
+# 02:30 daily: dump the database
 30 2 * * * cd /opt/almas-sdm && ./deploy/backup.sh >> /var/log/almas-backup.log 2>&1
+# 03:00 daily: copy the dumps off the machine
+0 3 * * * cd /opt/almas-sdm && ./deploy/offsite-backup.sh >> /var/log/almas-backup.log 2>&1
+# 04:00 every Sunday: prove the newest dump restores
+0 4 * * 0 cd /opt/almas-sdm && ./deploy/restore-drill.sh >> /var/log/almas-backup.log 2>&1
 ```
 
-Then **test a restore before you need one**:
+Look at the log once a week:
 
 ```bash
-gunzip -c deploy/backups/almas-sdm-<date>.sql.gz | \
-  docker compose -f deploy/docker-compose.yml --env-file deploy/.env \
-  exec -T db psql -U almas -d almas_sdm
+grep -E 'RESTORE DRILL|OFFSITE|Wrote|ERROR' /var/log/almas-backup.log | tail -n 20
 ```
 
-A backup nobody has ever restored is a hope, not a backup.
+You want a `Wrote` line for every day, `OFFSITE: OK` for every day and
+`RESTORE DRILL: PASS` for every Sunday. Anything else is a backup that is not
+happening.
 
-**Copy them off the machine.** A dump sitting on the same disk as the database
-survives a mistake but not a dead server. `rsync` them to a laptop, or to any
-storage you control, on the same schedule.
+### 6.4 Restoring for real
+
+Only when the live data really has to be replaced. This **overwrites** the live
+database with the backup, so take a fresh backup of the current state first:
+
+```bash
+./deploy/backup.sh
+docker compose -f deploy/docker-compose.yml --env-file deploy/.env stop server
+gunzip -c deploy/backups/almas-sdm-<date>.sql.gz | \
+  docker compose -f deploy/docker-compose.yml --env-file deploy/.env \
+  exec -T db sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+docker compose -f deploy/docker-compose.yml --env-file deploy/.env start server
+```
+
+To get a backup back from rclone first:
+`rclone copy gdrive:almas-backups/almas-sdm-<date>.sql.gz deploy/backups/`.
+
+### 6.5 Owner ke liye — Roman Urdu mein steps
+
+1. Server par login karein: `cd /opt/almas-sdm`
+2. Pehla backup banayein: `./deploy/backup.sh`
+3. Check karein ke backup sahi wapas aata hai: `./deploy/restore-drill.sh` — aakhir mein **`RESTORE DRILL: PASS`** likha aana chahiye.
+4. rclone install karein: `sudo apt-get install -y rclone`, phir `rclone config` chala kar apna Google Drive (ya Backblaze) jodein, naam `gdrive` rakhein.
+5. `nano deploy/.env` kholein aur likhein: `OFFSITE_RCLONE_REMOTE=gdrive:almas-backups`
+6. Ek dafa haath se chalayein: `./deploy/offsite-backup.sh` — aakhir mein **`OFFSITE: OK`** aana chahiye.
+7. `crontab -e` kholein aur upar (6.3) wali teen lines paste kar dein. Ab har raat backup banega, bahar copy hoga, aur har Itwaar test hoga.
+8. Har hafte log dekhein: `grep -E 'RESTORE DRILL|OFFSITE' /var/log/almas-backup.log | tail` — `FAIL` ya `FAILED` nazar aaye to foran developer ko batayein.
 
 ---
 

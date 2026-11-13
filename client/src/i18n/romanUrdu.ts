@@ -1313,6 +1313,30 @@ export const ROMAN_URDU: Record<string, string> = {
   "The customer has signed the agreement.": "Gahak ne agreement sign kar diya hai.",
   "Agreement not signed yet": "Agreement abhi sign nahin hua",
   "This phone cannot be locked until the customer signs. You can sign later from the customer's page.": "Gahak ke sign karne tak yeh phone lock nahin ho sakta. Baad mein gahak ke page se sign karwa sakte hain.",
+  // ------------------------------------- restructure plan / waive late fee
+  "Restructure plan": "Plan dobara banayein",
+  "Waive late fee": "Late fee maaf karein",
+  "Restructure this plan": "Yeh plan dobara banayein",
+  "Paid installments stay as they are. What is still owed is spread over new months.": "Ada shuda qistein waisi hi rahengi. Jo baqi hai woh naye mahinon mein baant diya jayega.",
+  "Still owed": "Baqi raqam",
+  "Number of new months": "Naye mahinon ki tadaad",
+  "First new due date": "Pehli nayi qist ki tareekh",
+  "Grace days": "Mohlat ke din",
+  "New schedule": "Naya schedule",
+  "Enter the months and the first due date to see the new schedule.": "Naya schedule dekhne ke liye mahine aur pehli tareekh likhein.",
+  "The signed agreement will no longer match.": "Sign shuda agreement ab match nahin karega.",
+  "Restructuring changes the figures the customer signed. Until a new agreement is signed, this phone cannot be locked.": "Plan badalne se woh raqam badal jati hai jis par gahak ne sign kiya tha. Naye agreement par sign hone tak yeh phone lock nahin ho sakta.",
+  "Reason (required)": "Wajah (zaroori)",
+  "Write at least 10 characters.": "Kam se kam 10 huroof likhein.",
+  "Why is this plan being restructured?": "Yeh plan kyun badla ja raha hai?",
+  "Confirm restructure": "Plan badalna pakka karein",
+  "Waive the late fee": "Late fee maaf karein",
+  "Late fee owed": "Baqi late fee",
+  "The installment itself is still owed. Only the late fee is removed.": "Qist abhi bhi baqi hai. Sirf late fee hatayi jayegi.",
+  "Why is this late fee being waived?": "Yeh late fee kyun maaf ki ja rahi hai?",
+  "Confirm waiver": "Maafi pakki karein",
+  "Late fee waived.": "Late fee maaf ho gayi.",
+  "Plan restructured.": "Plan dobara ban gaya.",
 };
 
 export const ROMAN_URDU_PATTERNS: Array<[RegExp, string]> = [
@@ -1365,4 +1389,6 @@ export const ROMAN_URDU_PATTERNS: Array<[RegExp, string]> = [
   [/^Note for (.+)$/, '$1 ka note'],
   [/^(\d+) locks$/, '$1 locks'],
   [/^This gives them (\d+) locks now and cannot be undone\.$/, 'Is se dukaan ko abhi $1 locks mil jayenge, aur yeh wapas nahin ho sakta.'],
+  // restructure plan / waive late fee
+  [/^Plan restructured into (\d+) new installment\(s\)\.$/, 'Plan $1 nayi qiston mein dobara ban gaya.'],
 ];
