@@ -455,8 +455,9 @@ still hold; add "IMEI" to the title:
 - [ ] Chapter timestamps checked against the final cut before pasting.
 - [ ] New file saved beside the old one — keep
       `videos/Almas SDM - Guide (Urdu).mp4` until the new one is published.
-- [ ] After publishing, update `data-yt` in `site/src/pages/index.html` to the
+- [x] After publishing, update `data-yt` in `site/src/pages/index.html` to the
       new video id; the home-page thumbnail follows it automatically.
+      Published as `l5WzGZtbbJI`.
 - [ ] `videos/` and `audios for guide video/` are untracked and live on one
       disk only — copy them somewhere else before re-editing.
 - [ ] Leave the 9×16 ad as it is.
