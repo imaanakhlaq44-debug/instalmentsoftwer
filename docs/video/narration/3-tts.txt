@@ -1,0 +1,37 @@
+अब वो सवाल जो हर दुकानदार पूछता है, और जिस का जवाब अक्सर कोई नहीं देता: IMEI change करा लिया तो?
+
+जवाब एक नहीं, चार हैं। चार अलग layers। और जो बंदा फ़ोन ले कर भागना चाहता है, उसे चारों layers तोड़नी पड़ेंगी।
+
+पहली layer: lock एक ही IMEI पर।
+
+जो IMEI आप ने sale के वक़्त register किया, lock उसी पर ख़र्च होता है। जब फ़ोन enroll होता है, server उस का बताया हुआ IMEI sale के record से match करता है।
+
+Match नहीं हुआ? फ़ोन enroll ही नहीं होता। न lock लगता है, न आप का licence ख़र्च होता है — और dashboard पर लिखा आता है कि कोशिश रोक दी गई, किस फ़ोन पर और कब। यानी दूसरे फ़ोन पर आप का lock चलाना शुरू से ही बंद है।
+
+दूसरी layer: हर पंद्रह मिनट बाद दोबारा check।
+
+Enroll होने के बाद बात ख़त्म नहीं होती। फ़ोन हर पंद्रह मिनट बाद अपना IMEI, अपना serial number और अपने hardware की report भेजता है।
+
+जिस दिन IMEI बदला, server उसी check-in पर पकड़ लेता है। दुकानदार को alert जाता है — देखिए, यहां, registered IMEI और reported IMEI साथ साथ लिखे हैं — और फ़ोन ख़ुद-ब-ख़ुद lock हो जाता है। किसी के button दबाने का इंतेज़ार नहीं।
+
+तीसरी layer, और यही सब से मज़बूत है: फ़ोन का secure chip ख़ुद गवाही देता है।
+
+Software का IMEI बदल देना एक बात है। फ़ोन के secure chip को झूट बुलवाना बिल्कुल दूसरी बात है।
+
+फ़ोन का chip अपने factory IMEI पर digital signature करता है — उसी challenge पर जो server ने ख़ुद चुना होता है। पहली दफ़ा enrollment code से बना challenge, उस के बाद रोज़ नया। फिर server उस signature को Google के root certificates से verify करता है: signature असली है या नहीं, chip असली है या नहीं, certificate revoke हुआ है या नहीं।
+
+Chip का IMEI registered IMEI से match न हुआ — alert। Signature जाली या कटा-फटा — alert। ये layer हमारी app पर भरोसा नहीं करती; hardware पर करती है।
+
+चौथी layer: app हटाना और reset करना, दोनों बंद।
+
+सोच ये होती है कि app हटा देंगे या factory reset मार देंगे। दोनों बंद हैं। App device owner होती है — गाहक उसे uninstall नहीं कर सकता, और reset की कोशिश रोक दी जाती है।
+
+और अगर किसी तरीक़े से फ़ोन wipe हो जाए, Factory Reset Protection की वजह से फ़ोन सिर्फ़ दुकान के Google account से चलता है। चोरी का फ़ोन किसी और के काम का नहीं रहता।
+
+और इन तीन चीज़ों पर भी नज़र है: app ने device owner खोया, bootloader खुला, या फ़ोन root हुआ — तीनों dashboard पर record होते हैं, और इन्हीं पर फ़ोन lock हो जाता है।
+
+तो जवाब ये है: चार layers, और हर layer अलग जगह पर पकड़ती है।
+
+मैं ये नहीं कहूंगा कि IMEI बदलना नामुमकिन है — कोई भी सच बोलने वाला ये नहीं कहेगा। मैं ये कह रहा हूं कि पकड़ा जाता है: enroll होते वक़्त, हर पंद्रह मिनट वाले check-in पर, chip की गवाही पर, और app हटाने की कोशिश पर।
+
+और एक बात जो आप को हर system में नहीं मिलेगी: ये system आप से झूट नहीं बोलता। जो फ़ोन lock नहीं हो सका, dashboard उसे "lock हो गया" नहीं दिखाता — "lock नहीं हुआ" ही दिखाता है, साफ़ साफ़। क्योंकि झूटा lock उस नुक़सान से ज़्यादा ख़तरनाक है जो आप को पता हो।
