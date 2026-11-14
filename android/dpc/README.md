@@ -8,8 +8,7 @@ tells the server the truth either way.
 Kotlin, minSdk 26, no Compose, no HTTP library. It talks to four endpoints and
 draws a handful of screens (status, lock, enrolment, released); anything larger
 would be weight carried on someone else's phone for no reason. Current version:
-**1.5.2** in the source (`versionCode` 9), not yet tagged; the latest published
-release is 1.5.1.
+**1.5.2** (`versionCode` 9), published as `dpc-v1.5.2` on 13 November 2026.
 
 ---
 
@@ -333,7 +332,7 @@ device owner survives until a factory reset — which the app then blocks.
 
    ```bash
    DPC_SERVER_URL=https://api.your-domain.pk/api/dpc
-   DPC_APK_URL=https://github.com/<owner>/<repo>/releases/download/dpc-v1.5.1/almas-sdm-dpc-v1.5.1.apk
+   DPC_APK_URL=https://github.com/<owner>/<repo>/releases/download/dpc-v1.5.2/almas-sdm-dpc-v1.5.2.apk
    DPC_APK_SIGNATURE_CHECKSUM=<base64url SHA-256 of the signing certificate>
    ```
 

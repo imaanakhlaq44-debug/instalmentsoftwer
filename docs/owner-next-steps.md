@@ -1,7 +1,10 @@
-# Baqi kaam — 13 Nov 2026
+# Baqi kaam — 14 Nov 2026
 
 `main` mein ab tak: ek-page sale form (#43), IMEI camera scan (#44), phone test checklist print (#45),
-sale page par hi contract sign (#46). Sab ke CI checks pass.
+sale page par hi contract sign (#46), backup ka restore drill aur offsite copies (#48),
+reschedule-plan aur waive-late-fee screens (#49), naye screens ka Urdu review (#50),
+client page tests (#51), reversed payment ko `totalPaid` se nikalna (#52). Sab ke CI checks pass.
+Koi PR khula nahi.
 
 ## 1. Pehle yeh (aap ke haath se)
 1. **Server update** (VPS par, apne computer par nahi — pehle `ssh root@VPS_IP`):
@@ -12,9 +15,9 @@ sale page par hi contract sign (#46). Sab ke CI checks pass.
    docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build
    ```
    Check: dashboard → Customers → "Add Customer & Device": IMEI ke saath "Scan" button, sale ke baad sign ka qadam.
-2. **Phone app v1.5.2 release**: GitHub → Releases → Draft a new release → tag `dpc-v1.5.2`
-   (Create new tag), target `main` → Publish. Actions mein "Release DPC" chalna chahiye.
-   (Claude session tag push nahi kar sakta — 403.)
+2. ~~**Phone app v1.5.2 release**~~ — **ho gaya** (13 Nov, `almas-sdm-dpc-v1.5.2.apk` release par maujood hai).
+   Agli dafa ka tareeqa: GitHub → Releases → Draft a new release → tag (Create new tag), target `main`
+   → Publish; Actions mein "Release DPC" chalta hai. (Claude session tag push nahi kar sakta — 403.)
 3. **Server ko nayi APK**: VPS par `deploy/.env` mein
    `DPC_APK_URL=https://github.com/imaanakhlaq44-debug/instalmentsoftwer/releases/download/dpc-v1.5.2/almas-sdm-dpc-v1.5.2.apk`
    phir `docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d`. Checksum wahi rahega.

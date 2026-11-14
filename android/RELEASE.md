@@ -2,7 +2,7 @@
 
 The app in [`dpc/`](dpc/) is the half of the lock that actually holds a handset.
 Signed builds are published as GitHub Releases — `dpc-v1.0.0` through
-`dpc-v1.5.1` so far, all signed with the same key. What is still missing is
+`dpc-v1.5.2` so far, all signed with the same key. What is still missing is
 step 6: a recorded pass on real handsets.
 
 This is the runbook. Steps 1–3 have been done once and must not be done again —
@@ -116,8 +116,8 @@ Raise `versionCode` and `versionName` in [`dpc/build.gradle.kts`](dpc/build.grad
 commit, then tag:
 
 ```bash
-git tag dpc-v1.5.2        # the next version; the latest published is dpc-v1.5.1
-git push origin dpc-v1.5.2
+git tag dpc-v1.5.3        # the next version; the latest published is dpc-v1.5.2
+git push origin dpc-v1.5.3
 ```
 
 `versionCode` must go **up** every time. Android refuses to install a build
@@ -158,7 +158,7 @@ cd android && ./gradlew :dpc:assembleRelease
 
 ```bash
 DPC_SERVER_URL=https://api.your-domain.pk/api/dpc
-DPC_APK_URL=https://github.com/<owner>/<repo>/releases/download/dpc-v1.5.1/almas-sdm-dpc-v1.5.1.apk
+DPC_APK_URL=https://github.com/<owner>/<repo>/releases/download/dpc-v1.5.2/almas-sdm-dpc-v1.5.2.apk
 DPC_APK_SIGNATURE_CHECKSUM=<from step 3>
 ```
 
