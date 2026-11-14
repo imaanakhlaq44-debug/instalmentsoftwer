@@ -9,9 +9,9 @@ layout: none
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Mobile Installment Software &amp; Phone Lock for Pakistani Shops · Almas SDM</title>
-<meta name="description" content="Instalment ledger, SIM reminders, a signed bilingual agreement and automatic phone lock and unlock for Pakistani mobile shops. No monthly fee — from Rs 600 per phone." />
-<meta name="keywords" content="mobile installment software, qist software, qiston wala software, mobile qist app, installment par mobile, phone lock software Pakistan, mobile shop khata app" />
+<title>Mobile Installment &amp; Phone Lock Software Pakistan · Almas SDM</title>
+<meta name="description" content="Instalment khata, SMS reminders from your own SIM, and automatic phone lock and unlock for Pakistani mobile shops. No monthly fee, from Rs 600 per phone." />
+<meta name="keywords" content="mobile installment software, qist software, qiston wala software, mobile qist app, installment par mobile, phone lock software Pakistan, mobile shop khata app, IMEI block Pakistan, qist na dene par phone block, installment defaulter phone block, PTA block vs phone lock, mobile block karwana qist" />
 {{seo}}
 <link rel="apple-touch-icon" href="/favicon.png" />
 <meta name="theme-color" content="#FFF6E0" />
@@ -241,6 +241,8 @@ layout: none
   .f.wide { grid-column: span 2; background: var(--sun); color: var(--ink); border: var(--b); display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center; }
   .f.wide p { color: var(--ink-2); }
   .f.wide .ic { background: #fff; }
+  .f.full { grid-column: 1 / -1; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 22px; align-items: center; }
+  .f.full .ic { margin-bottom: 0; }
   .mini-ledger { background: #fff; border: var(--b); border-radius: 14px; padding: 6px 12px; font-size: 14px; min-width: 230px; }
   .mini-ledger div { display: flex; justify-content: space-between; gap: 14px; padding: 7px 0; border-bottom: 1.5px dashed rgba(15,20,25,.2); font-weight: 700; }
   .mini-ledger div:last-child { border: 0; }
@@ -376,7 +378,8 @@ layout: none
     .stage-shell { justify-self: center; max-width: 560px; }
     .steps, .feats, .fair, .packs, .final-card { grid-template-columns: 1fr; }
     .step:not(:last-child)::after { top: auto; bottom: -27px; inset-inline-end: auto; left: 50%; transform: translateX(-50%) rotate(90deg); }
-    .f.wide { grid-column: auto; grid-template-columns: 1fr; }
+    .f.wide, .f.full { grid-column: auto; grid-template-columns: 1fr; }
+    .f.full { align-items: start; gap: 14px; }
     .mini-ledger { min-width: 0; }
     .tgrid { grid-template-columns: 1fr; gap: 28px; } .tq.big { grid-column: auto; }
     .voices::before { font-size: 260px; top: -60px; }
@@ -447,6 +450,7 @@ layout: none
         <a href="#how" data-ur="طریقہ">How it works</a>
         <a href="#features" data-ur="خصوصیات">Features</a>
         <a href="#price" data-ur="ریٹ">Rates</a>
+        <a href="/imei-block.html" data-ur="آئی ایم ای آئی بلاک">IMEI block</a>
         <a href="/dpc.html" data-ur="ہینڈسیٹ ایپ">Handset app</a>
         <a href="/rentwise/" data-ur="مفت ٹولز">Free tools</a>
       </div>
@@ -463,6 +467,7 @@ layout: none
       <a href="#how" data-ur="طریقہ">How it works</a>
       <a href="#features" data-ur="خصوصیات">Features</a>
       <a href="#price" data-ur="ریٹ">Rates</a>
+      <a href="/imei-block.html" data-ur="آئی ایم ای آئی بلاک">IMEI block</a>
       <a href="/dpc.html" data-ur="ہینڈسیٹ ایپ">Handset app</a>
       <a href="/rentwise/" data-ur="مفت ٹولز">Free tools</a>
     </div>
@@ -630,7 +635,10 @@ layout: none
         <div class="f"><div class="ic"><svg class="ico"><use href="#i-wifioff"/></svg></div><h3 data-ur="نیٹ بند؟ پھر بھی لاک">Data off? Still locks</h3><p data-ur="فون اپنا شیڈول خود یاد رکھتا ہے۔">The phone remembers its own schedule.</p></div>
         <div class="f"><div class="ic"><svg class="ico"><use href="#i-reset"/></svg></div><h3 data-ur="ری سیٹ کا راستہ بند">Reset is blocked</h3><p data-ur="سیٹنگز سے ری سیٹ نہیں۔ رقم باقی ہو تو وائپ کے بعد بھی آپ کا گوگل اکاؤنٹ چاہیے۔">No reset from Settings. While money is owed, even a wiped phone asks for your Google account.</p></div>
         <div class="f"><div class="ic"><svg class="ico"><use href="#i-pen"/></svg></div><h3 data-ur="اردو / انگریزی معاہدہ">Urdu / English contract</h3><p data-ur="اسکرین پر دستخط۔ دستخط نہیں تو لاک نہیں۔">Signed on screen. No signature, no lock.</p></div>
-        <div class="f"><div class="ic"><svg class="ico"><use href="#i-receipt"/></svg></div><h3 data-ur="رسید اور عملہ">Receipts &amp; staff</h3><p data-ur="80mm تھرمل رسید، ہر سیلز مین کا الگ لاگ اِن اور مکمل ریکارڈ۔">80mm thermal receipts, a login for every salesman and a full record.</p></div>
+        <div class="f full">
+          <div class="ic"><svg class="ico"><use href="#i-receipt"/></svg></div>
+          <div><h3 data-ur="رسید اور عملہ">Receipts &amp; staff</h3><p data-ur="80mm تھرمل رسید، ہر سیلز مین کا الگ لاگ اِن اور مکمل ریکارڈ۔">80mm thermal receipts, a login for every salesman and a full record.</p></div>
+        </div>
       </div>
     </div>
   </section>
@@ -773,7 +781,9 @@ layout: none
     <div class="wrap">
       <div class="sec-head"><div><span class="kicker"><i></i><span data-ur="سوالات">FAQ</span></span><h2 data-ur="عام سوالات">Common questions</h2></div></div>
       <div class="faq">
-        <details open><summary data-ur="اگر گاہک انٹرنیٹ بند کر دے تو؟">What if the customer turns off the internet?</summary><p data-ur="فون قسط کا شیڈول اپنے اندر رکھتا ہے۔ تاریخ گزر جائے تو نیٹ کے بغیر بھی لاک ہو جاتا ہے۔">The phone keeps the schedule on the device. Once the date passes, it locks even without data.</p></details>
+        <details open><summary data-ur="قسط نہ ملنے پر گاہک کا آئی ایم ای آئی بلاک کروا سکتا ہوں؟">Can I get a customer’s IMEI blocked when the instalments stop?</summary><p data-ur="نہیں۔ پی ٹی اے کا بلاک چوری اور گمشدہ فون کے لیے ہے، وصولی کے لیے نہیں۔ دکان کے لیے راستہ یہ ہے کہ فون خود لاک ہو جائے — اور یہ اجازت گاہک معاہدے میں خود دیتا ہے۔">No. A PTA block is for stolen and lost handsets, not for recovering money. The route open to a shop is a handset that locks itself — with the customer’s consent in the signed agreement.</p></details>
+        <details lang="ur-Latn"><summary data-ur="قسط نہ دینے پر فون بلاک ہو سکتا ہے؟">Qist na dene par phone block ho sakta hai?</summary><p data-ur="پی ٹی اے والا بلاک نہیں، مگر فون لاک ہو جاتا ہے — مہلت ختم ہوتے ہی خود، اور ادائیگی درج ہوتے ہی خود کھل بھی جاتا ہے۔">PTA wala block nahin, lekin phone lock ho jata hai — grace period khatam hote hi khud, aur payment darj hote hi khud khul bhi jata hai.</p></details>
+        <details><summary data-ur="اگر گاہک انٹرنیٹ بند کر دے تو؟">What if the customer turns off the internet?</summary><p data-ur="فون قسط کا شیڈول اپنے اندر رکھتا ہے۔ تاریخ گزر جائے تو نیٹ کے بغیر بھی لاک ہو جاتا ہے۔">The phone keeps the schedule on the device. Once the date passes, it locks even without data.</p></details>
         <details><summary data-ur="کیا گاہک فیکٹری ری سیٹ کر کے بچ سکتا ہے؟">Can the customer escape with a factory reset?</summary><p data-ur="سیٹنگز سے ری سیٹ بند ہے۔ اور جب تک رقم باقی ہے، ریکوری سے وائپ کرنے کے بعد بھی فون آپ کا گوگل اکاؤنٹ مانگتا ہے۔">Reset from Settings is blocked. And while money is owed, even a recovery-mode wipe still asks for your Google account.</p></details>
         <details><summary data-ur="ادائیگی کی رقم کہاں جاتی ہے؟">Where does the payment money go?</summary><p data-ur="سیدھی آپ کے پاس۔ ہم کوئی پیمنٹ گیٹ وے نہیں — آپ ادائیگی درج کرتے ہیں اور فون کھل جاتا ہے۔">Straight to you. We are not a payment gateway — you record the payment and the phone opens.</p></details>
         <details><summary data-ur="اگر لاک ختم ہو جائیں تو؟">What if I run out of locks?</summary><p data-ur="نئی قسط والی فروخت رجسٹر نہیں ہوگی — آپ کو کاؤنٹر پر ہی پتا چل جائے گا۔ نیا پیک لیں اور وہی QR مکمل ہو جائے گا۔">A new financed sale won't register — you find out at the counter, not later. Buy a pack and the same QR completes.</p></details>
@@ -781,6 +791,7 @@ layout: none
         <details lang="ur-Latn"><summary data-ur="قسط ادا ہونے پر موبائل کیسے کھلتا ہے؟">Qist ada hone par mobile kaise khulta hai?</summary><p data-ur="آپ ڈیش بورڈ پر ادائیگی درج کرتے ہیں اور فون اگلی بار نیٹ ملتے ہی خود کھل جاتا ہے۔ گاہک کو دکان آنے کی ضرورت نہیں۔">Aap dashboard par payment darj karte hain aur phone agli baar net milte hi khud khul jata hai. Customer ko dukaan aane ki zaroorat nahin.</p></details>
         <details lang="ur-Latn"><summary data-ur="کیا کوئی ماہانہ فیس ہے؟">Kya koi mahana fees hai?</summary><p data-ur="نہیں۔ آپ صرف لاک خریدتے ہیں — فی فون Rs 600 سے Rs 800 تک، پیک کے حساب سے۔ ایک فون کا لاک دوبارہ نہیں لگتا۔">Nahin. Aap sirf lock khareedte hain — Rs 600 se Rs 800 per phone, pack ke hisaab se. Ek phone ka lock dobara charge nahin hota.</p></details>
       </div>
+      <p style="margin-top:18px"><a class="faq-more" href="/imei-block.html" style="font-weight:800;color:var(--navy);text-decoration:underline" data-ur="آئی ایم ای آئی بلاک اور فون لاک میں فرق — پوری تفصیل ←">IMEI block vs a handset lock — the full answer →</a></p>
     </div>
   </section>
 
@@ -807,7 +818,7 @@ layout: none
         <a class="brand" href="/"><img src="/logo-mark.png" alt="" />ALMAS SDM</a>
         <p data-ur="پاکستانی موبائل دکانوں کے لیے قسط کھاتہ اور فون لاک۔">Instalment ledger and phone lock for Pakistani mobile shops.</p>
       </div>
-      <div><h4 data-ur="پروڈکٹ">Product</h4><a href="/how-it-works.html" data-ur="یہ کیسے چلتا ہے">How it works</a><a href="/pricing.html" data-ur="قیمت اور پیکجز">Pricing</a><a href="/dpc.html" data-ur="ہینڈسیٹ ایپ">Handset app</a></div>
+      <div><h4 data-ur="پروڈکٹ">Product</h4><a href="/how-it-works.html" data-ur="یہ کیسے چلتا ہے">How it works</a><a href="/pricing.html" data-ur="قیمت اور پیکجز">Pricing</a><a href="/dpc.html" data-ur="ہینڈسیٹ ایپ">Handset app</a><a href="/imei-block.html" data-ur="آئی ایم ای آئی بلاک">IMEI block</a></div>
       <div><h4 data-ur="مفت ٹولز">Free tools</h4><a href="/rentwise/tools/ai-lease-scanner/" data-ur="لیز کی شرائط چیکر">Lease Clause Checker (US/UK)</a><a href="/rentwise/" data-ur="کرایہ کیلکولیٹر">Rent &amp; move calculators</a></div>
       <div><h4 data-ur="رابطہ">Contact</h4><a href="https://wa.me/923211144477?text=Salam%2C%20Almas%20SDM%20ki%20detail%20chahiye" target="_blank" rel="noopener" data-ur="واٹس ایپ">WhatsApp</a><a href="tel:+923211144477" class="ltr">+92 321 1144477</a></div>
       <div><h4 data-ur="قانونی">Legal</h4><a href="/legal.html" data-ur="معاہدہ اور ڈیٹا">Contract &amp; data</a></div>
