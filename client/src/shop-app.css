@@ -1,0 +1,70 @@
+/* The chosen Bold Easy app theme. Browser/desktop styling stays independent. */
+@media screen {
+  html[data-shop-app="bold"] body { background:#fff8e8; background-image:none; }
+  html[data-shop-app="bold"] .surface { border-width:1.5px; border-radius:20px; box-shadow:none; }
+  html[data-shop-app="bold"] .btn-primary { border-radius:14px; background:#17375e; color:#fff; box-shadow:none; }
+  html[data-shop-app="bold"] .btn-secondary { border-width:1.5px; border-radius:14px; box-shadow:none; }
+  html[data-shop-app="bold"] .input { border-width:1.5px; border-radius:12px; }
+  .shop-app-shell { color:#17364e; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  .shop-app-main { width:100%; max-width:680px; margin:0 auto; padding:10px 21px 104px; min-width:0; }
+  .shop-app-header { width:100%; max-width:680px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:13px 21px 10px; background:#fff8e8; }
+  .shop-app-brand { display:flex; align-items:center; gap:10px; min-width:0; font-size:17px; font-weight:800; letter-spacing:-.4px; }
+  .shop-app-brand img { object-fit:contain; flex-shrink:0; }
+  .shop-app-icon { display:grid; place-items:center; position:relative; width:40px; height:40px; flex-shrink:0; border:0; background:transparent; color:#17364e; border-radius:50%; }
+  .shop-app-icon svg { width:21px; height:21px; stroke-width:1.7; }
+  .shop-app-bell { border:1.5px solid #1c2e3d; width:34px; height:34px; }
+  .shop-app-bell svg { width:18px; height:18px; }
+  .shop-app-notice { position:absolute; right:-5px; top:-5px; border-radius:20px; min-width:16px; padding:1px 4px; background:#ffd05b; color:#17375e; font-size:9px; font-weight:700; border:1px solid #fff8e8; }
+  .shop-app-bottom-nav { position:fixed; z-index:40; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:680px; display:flex; justify-content:space-around; background:#fffdf8; border-top:1px solid #e9deca; }
+  .shop-app-bottom-nav > a { padding:11px 0 10px; min-height:67px; gap:4px; font-size:10px; color:#8b969e; }
+  .shop-app-bottom-nav > a > span:first-child { padding:4px 13px; border-radius:22px; background:transparent; color:inherit; }
+  .shop-app-bottom-nav > a[aria-current="page"] { color:#17375e; }
+  .shop-app-bottom-nav > a[aria-current="page"] > span:first-child { background:#17375e; color:#fff; }
+  .shop-app-bottom-nav svg { width:20px; height:20px; }
+  .app-home { max-width:430px; margin:0 auto; }
+  .app-home-greeting { margin:13px 0 21px; }
+  .app-home-greeting > p { margin:0 0 5px; font-size:12px; line-height:1.5; color:#818891; }
+  .app-home-greeting h1 { margin:0; font-size:30px; line-height:1.25; letter-spacing:-1.2px; font-weight:750; color:#13283c; overflow-wrap:anywhere; }
+  .app-home-subtitle { display:flex; flex-wrap:wrap; gap:6px 8px; margin-top:8px; font-size:11px; color:#888271; line-height:1.5; }
+  .app-home-subtitle > span:empty { display:none; }
+  .app-home-subtitle > span + span:before { content:'·'; margin-inline-end:8px; }
+  .app-home-money { background:#ffd05b; border:1.5px solid #172c40; border-radius:22px; padding:19px 20px; box-shadow:3px 4px 0 #172c40; min-width:0; }
+  .app-home-money-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .app-home-money h2 { margin:0; font-size:10px; line-height:1.5; font-weight:800; text-transform:uppercase; letter-spacing:1.5px; }
+  .app-home-chip { display:inline-block; background:#fff4ce; color:#75602e; padding:5px 8px; border-radius:20px; font-size:10px; line-height:1.3; font-weight:700; text-align:center; flex-shrink:0; max-width:50%; overflow-wrap:anywhere; }
+  .app-home-amount { margin:9px 0 15px; font-size:clamp(28px,9vw,37px); font-weight:750; line-height:1.15; letter-spacing:-1.4px; color:#13283c; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
+  .app-home-money-details { display:grid; grid-template-columns:1fr 1fr; gap:12px; border-top:1px solid #b08a3550; padding-top:12px; }
+  .app-home-money-details > div { min-width:0; }
+  .app-home-money-details dt { font-size:10px; line-height:1.5; color:#7d6226; margin:0 0 6px; }
+  .app-home-money-details dd { margin:0; font-size:15px; line-height:1.4; font-weight:750; letter-spacing:-.25px; overflow-wrap:anywhere; }
+  .app-home-tiles { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:22px; }
+  .app-home-tile { display:flex; flex-direction:column; align-items:flex-start; justify-content:space-between; gap:12px; min-height:100px; border:1.5px solid #203244; border-radius:18px; padding:16px; text-align:start; font-size:13px; line-height:1.4; font-weight:700; color:#17364e; transition:transform .12s ease, filter .12s ease; min-width:0; }
+  .app-home-tile:active { transform:scale(.97); }
+  .app-home-tile:disabled { opacity:.5; cursor:not-allowed; }
+  .app-home-tile svg { width:24px; height:24px; stroke-width:1.7; flex-shrink:0; }
+  .app-home-tile:has(.app-home-tile-art) { position:relative; min-height:112px; padding:13px 16px 14px; gap:4px; }
+  .app-home-tile-art { width:58px; height:58px; object-fit:contain; flex-shrink:0; filter:drop-shadow(0 3px 3px #10283f15); }
+  .app-home-tile.navy { background:#17375e; color:white; }
+  .app-home-tile.paper { background:#fffef8; }
+  .app-home-tile.mint { background:#def3e7; }
+  .app-home-tile.peach { background:#f6e6db; }
+  .app-home-attention { display:flex; align-items:center; gap:12px; width:100%; text-align:start; background:#fffdf7; border:1px solid #e7ddc6; border-radius:18px; padding:15px; margin-top:22px; }
+  .app-home-count { display:grid; place-items:center; min-width:37px; min-height:37px; padding:4px; background:#fff0c0; color:#947016; border-radius:12px; font-size:17px; font-weight:800; flex-shrink:0; }
+  .app-home-attention strong { font-size:12px; line-height:1.4; display:block; }
+  .app-home-attention small { font-size:10px; line-height:1.5; display:block; color:#8d8b7e; margin-top:5px; }
+  .app-home-attention > svg { width:17px; height:17px; color:#b29253; flex-shrink:0; }
+  .app-home-footer { display:flex; flex-wrap:wrap; justify-content:center; gap:5px; margin:18px 0 0; font-size:10px; line-height:1.6; color:#928975; text-align:center; }
+  .app-home-footer i { font-style:normal; margin:0 3px; }
+  .app-home-inline-alert { display:flex; gap:10px; width:100%; align-items:center; padding:12px; border:1px solid #e6ddca; border-radius:14px; background:#fffdf7; margin-top:12px; text-align:start; font-size:11px; }
+  .app-home-inline-alert svg { width:17px; height:17px; flex-shrink:0; }
+  .app-home-inline-alert > span { flex:1; }
+  .app-home-inline-alert.critical { color:#b3301f; background:#fdf0ec; }
+  .app-home-error { border:1px solid #e0b3a6; border-radius:15px; padding:12px; margin-bottom:15px; background:#fff0eb; font-size:12px; }
+  .app-home-error button { display:flex; align-items:center; gap:6px; margin-top:8px; font-weight:700; }
+  @media(prefers-reduced-motion:reduce) { .app-home-tile { transition:none; } }
+}
+
+.app-home-money .app-home-greeting { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 16px; min-height:66px; }
+.app-home-money .app-home-greeting h1 { font-size:24px; line-height:1.3; letter-spacing:-.6px; }
+.app-home-hero-phone { width:66px; height:76px; object-fit:contain; transform:rotate(12deg); flex-shrink:0; filter:drop-shadow(3px 5px 3px #17364e25); }
+
