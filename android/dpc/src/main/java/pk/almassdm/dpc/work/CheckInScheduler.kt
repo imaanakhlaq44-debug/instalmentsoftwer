@@ -66,4 +66,3 @@ object CheckInScheduler {
         WorkManager.getInstance(context).cancelUniqueWork(ONE_SHOT_WORK)
     }
 }
-

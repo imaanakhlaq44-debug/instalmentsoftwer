@@ -145,7 +145,6 @@ const signupLimiter = rateLimit({
  * a token.
  */
 const dpcLimiter = rateLimit({
-  skip: req => req.path === '/wait' && req.method === 'GET',
   windowMs: 60_000,
   max: 240,
   standardHeaders: true,
@@ -162,11 +161,7 @@ const dpcEnrollLimiter = rateLimit({
   message: { error: 'Too many enrollment attempts. Please wait before trying again.', code: 'DPC_ENROLL_RATE_LIMITED' },
 });
 
-app.use('/api', (req, res, next) => {
-  if (req.path === '/dpc' || req.path.startsWith('/dpc/') ||
-      req.path === '/sms-relay' || req.path.startsWith('/sms-relay/')) return next();
-  return generalLimiter(req, res, next);
-});
+app.use('/api', generalLimiter);
 
 // ---------------------------------------------------------------------------
 // Request logging (skipped during tests to keep output readable)
@@ -335,4 +330,3 @@ if (!config.isTest) {
 }
 
 export { app };
-

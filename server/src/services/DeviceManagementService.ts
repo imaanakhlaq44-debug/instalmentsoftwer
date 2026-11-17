@@ -1,4 +1,3 @@
-import { deviceCommandSignal } from './DeviceCommandSignal.js';
 import { repo } from '../db/repositories/index.js';
 import { runInTransaction, Tx } from '../db/prisma.js';
 import { Device, DeviceStatus, DeviceActionLog, UserRole } from '../types/index.js';
@@ -206,7 +205,6 @@ export class MockDeviceManagementService implements IDeviceManagementService {
    */
   async lockDevice(params: ActorContext & { deviceId: string; reason: string; lockMessage?: string }): Promise<CommandResult> {
     const device = await this.requireDevice(params.deviceId);
-    const acknowledged = device.isOnline && !device.authTokenHash;
 
     if (device.status === 'LOCKED') {
       return { success: true, status: 'LOCKED', queued: false, message: 'This device is already in restricted mode.' };
@@ -244,7 +242,7 @@ export class MockDeviceManagementService implements IDeviceManagementService {
       });
     }
 
-    const targetStatus: DeviceStatus = acknowledged ? 'LOCKED' : 'LOCK_PENDING';
+    const targetStatus: DeviceStatus = device.isOnline ? 'LOCKED' : 'LOCK_PENDING';
     this.validateTransition(device.status, targetStatus);
 
     const lockMessage =
@@ -263,8 +261,8 @@ export class MockDeviceManagementService implements IDeviceManagementService {
           status: targetStatus,
           lockReason: params.reason,
           lockMessage,
-          pendingCommand: acknowledged ? undefined : 'LOCK',
-          pendingCommandAt: acknowledged ? undefined : nowIso,
+          pendingCommand: device.isOnline ? undefined : 'LOCK',
+          pendingCommandAt: device.isOnline ? undefined : nowIso,
           updatedAt: nowIso,
         },
         tx
@@ -282,7 +280,7 @@ export class MockDeviceManagementService implements IDeviceManagementService {
           newStatus: targetStatus,
           reason: params.reason,
           commandPayload: JSON.stringify({ mode: 'REMOTE_LOCK', emergencyCallAllowed: true, message: lockMessage }),
-          deviceAck: acknowledged,
+          deviceAck: device.isOnline,
           ipAddress: params.ipAddress,
         },
         tx
@@ -298,7 +296,7 @@ export class MockDeviceManagementService implements IDeviceManagementService {
           targetType: 'DEVICE',
           targetId: params.deviceId,
           details:
-            `Restricted lock ${acknowledged ? 'applied to' : 'queued for'} ${device.brand} ${device.model} ` +
+            `Restricted lock ${device.isOnline ? 'applied to' : 'queued for'} ${device.brand} ${device.model} ` +
             `(IMEI ${maskImei(device.imei)}). Reason: ${params.reason}`,
           ipAddress: params.ipAddress,
         },
@@ -306,20 +304,18 @@ export class MockDeviceManagementService implements IDeviceManagementService {
       );
     });
 
-    deviceCommandSignal.notify(params.deviceId);
     return {
       success: true,
       status: targetStatus,
-      queued: !acknowledged,
-      message: acknowledged
+      queued: !device.isOnline,
+      message: device.isOnline
         ? 'Lock command dispatched and acknowledged by the device.'
-        : 'Lock sent. Waiting for the handset to confirm it applied the restriction.',
+        : 'Device is offline. The lock is queued and will apply the moment it reconnects.',
     };
   }
 
   async unlockDevice(params: ActorContext & { deviceId: string; reason: string }): Promise<CommandResult> {
     const device = await this.requireDevice(params.deviceId);
-    const acknowledged = device.isOnline && !device.authTokenHash;
 
     if (device.status === 'ACTIVE') {
       return { success: true, status: 'ACTIVE', queued: false, message: 'This device is already active.' };
@@ -333,7 +329,7 @@ export class MockDeviceManagementService implements IDeviceManagementService {
       };
     }
 
-    const targetStatus: DeviceStatus = acknowledged ? 'ACTIVE' : 'UNLOCK_PENDING';
+    const targetStatus: DeviceStatus = device.isOnline ? 'ACTIVE' : 'UNLOCK_PENDING';
     this.validateTransition(device.status, targetStatus);
 
     const nowIso = new Date().toISOString();
@@ -343,10 +339,10 @@ export class MockDeviceManagementService implements IDeviceManagementService {
         params.deviceId,
         {
           status: targetStatus,
-          lockReason: acknowledged ? undefined : device.lockReason,
-          lockMessage: acknowledged ? undefined : device.lockMessage,
-          pendingCommand: acknowledged ? undefined : 'UNLOCK',
-          pendingCommandAt: acknowledged ? undefined : nowIso,
+          lockReason: device.isOnline ? undefined : device.lockReason,
+          lockMessage: device.isOnline ? undefined : device.lockMessage,
+          pendingCommand: device.isOnline ? undefined : 'UNLOCK',
+          pendingCommandAt: device.isOnline ? undefined : nowIso,
           updatedAt: nowIso,
         },
         tx
@@ -364,7 +360,7 @@ export class MockDeviceManagementService implements IDeviceManagementService {
           newStatus: targetStatus,
           reason: params.reason,
           commandPayload: JSON.stringify({ mode: 'RESTORE_ACTIVE' }),
-          deviceAck: acknowledged,
+          deviceAck: device.isOnline,
           ipAddress: params.ipAddress,
         },
         tx
@@ -379,21 +375,20 @@ export class MockDeviceManagementService implements IDeviceManagementService {
           action: 'DEVICE_UNLOCKED',
           targetType: 'DEVICE',
           targetId: params.deviceId,
-          details: `Access ${acknowledged ? 'restored for' : 'restore queued for'} ${device.brand} ${device.model}. Reason: ${params.reason}`,
+          details: `Access ${device.isOnline ? 'restored for' : 'restore queued for'} ${device.brand} ${device.model}. Reason: ${params.reason}`,
           ipAddress: params.ipAddress,
         },
         tx
       );
     });
 
-    deviceCommandSignal.notify(params.deviceId);
     return {
       success: true,
       status: targetStatus,
-      queued: !acknowledged,
-      message: acknowledged
+      queued: !device.isOnline,
+      message: device.isOnline
         ? 'Device unlocked successfully.'
-        : 'Unlock sent. Waiting for the handset to confirm access is restored.',
+        : 'Device is offline. The unlock is queued and will apply the moment it reconnects.',
     };
   }
 
@@ -575,4 +570,3 @@ export class SamsungKnoxService implements IDeviceManagementService {
 }
 
 export const deviceManagementService = new MockDeviceManagementService();
-

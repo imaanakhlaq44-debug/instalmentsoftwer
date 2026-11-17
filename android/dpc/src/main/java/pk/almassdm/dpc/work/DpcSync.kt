@@ -265,4 +265,3 @@ class DpcSync(context: Context) {
         private const val TAG = "DpcSync"
     }
 }
-

@@ -566,4 +566,3 @@ class LockController(context: Context) {
         private const val TAG = "LockController"
     }
 }
-

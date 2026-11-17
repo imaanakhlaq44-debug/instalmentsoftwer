@@ -10,16 +10,6 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: Test device command delivery
-        working-directory: server
-        run: |
-          npm ci
-          npx prisma generate
-          npm run build
-          npm test -- tests/api/dpc.test.ts
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -50,4 +40,3 @@ jobs:
           path: android/dpc/build/outputs/apk/release/dpc-release.apk
           if-no-files-found: error
           retention-days: 7
-

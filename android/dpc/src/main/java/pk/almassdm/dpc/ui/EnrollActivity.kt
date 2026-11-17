@@ -6,6 +6,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import pk.almassdm.dpc.net.IntakePendingException
+import pk.almassdm.dpc.net.IntakeCancelledException
 import kotlinx.coroutines.withContext
 import pk.almassdm.dpc.BuildConfig
 import pk.almassdm.dpc.R
@@ -55,16 +59,38 @@ class EnrollActivity : AppCompatActivity() {
 
     private fun enroll(code: String, serverUrl: String) {
         if (code.isBlank() || serverUrl.isBlank()) return
+        if (!binding.enrollButton.isEnabled) return
+        prefs.pendingEnrollmentToken = code.trim()
+        prefs.serverUrl = serverUrl.trim()
 
         setBusy(true)
         binding.enrollStatus.text = getString(R.string.enroll_working)
 
         lifecycleScope.launch {
+          val sync = DpcSync(applicationContext)
+          var waitingForSale = false
+          while (isActive) {
             val result = withContext(Dispatchers.IO) {
-                runCatching { DpcSync(applicationContext).enroll(code, serverUrl.trim()) }
+                runCatching { sync.enroll(code, serverUrl.trim()) }
+            }
+
+            if (result.exceptionOrNull() is IntakePendingException) {
+                waitingForSale = true
+                binding.enrollStatus.text = "Phone details received. Complete the customer and sale on your shop screen. This phone will connect automatically."
+                delay(5000)
+                continue
+            }
+            if (waitingForSale && (result.exceptionOrNull() as? DpcException)?.retryable == true) {
+                binding.enrollStatus.text = "Connection interrupted. Retrying your phone registration…"
+                delay(5000)
+                continue
             }
 
             setBusy(false)
+            if (result.exceptionOrNull() is IntakeCancelledException) {
+                goToStatus()
+                break
+            }
             result
                 .onSuccess {
                     binding.enrollStatus.text = getString(R.string.enroll_done)
@@ -74,6 +100,8 @@ class EnrollActivity : AppCompatActivity() {
                     val message = (error as? DpcException)?.message ?: getString(R.string.error_network)
                     binding.enrollStatus.text = getString(R.string.error_code_invalid, message)
                 }
+            break
+          }
         }
     }
 
