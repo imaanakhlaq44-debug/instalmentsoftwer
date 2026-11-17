@@ -74,6 +74,9 @@ class WelcomeActivityTest {
             assertEquals("image/png",image.mimeType)
             image.data.use { assertArrayEquals(byteArrayOf(-119,80,78,71,13,10,26,10),it.readBytes().take(8).toByteArray()) }
         }
+        val logo=activity.bundledImage(BuildConfig.APP_ORIGIN+"/logo-mark.webp")!!
+        assertEquals("image/webp",logo.mimeType)
+        logo.data.use { assertEquals("RIFF",String(it.readBytes().take(4).toByteArray())) }
         assertNull(activity.bundledImage("https://other.example/icons/3d/wallet.png"))
         assertNull(activity.bundledImage(BuildConfig.APP_ORIGIN+"/api/customers"))
         assertNull(activity.bundledImage(BuildConfig.APP_ORIGIN+"/icons/3d/../../secret.png"))

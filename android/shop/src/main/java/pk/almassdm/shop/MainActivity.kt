@@ -350,7 +350,7 @@ class MainActivity : AppCompatActivity() {
             val path=Uri.parse(url).path
             val name=path?.removePrefix("/icons/3d/")
             val image=when {
-                path=="/logo-mark.webp" -> "image/webp" to resources.openRawResource(R.drawable.brand_mark)
+                path=="/logo-mark.webp" -> "image/webp" to assets.open("brand-mark.webp")
                 path?.startsWith("/icons/3d/")==true && name in setOf("agreement.png","wallet.png","phone.png","customer.png") -> "image/png" to assets.open("home-icons/$name")
                 else -> return null
             }
