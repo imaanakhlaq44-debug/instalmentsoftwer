@@ -10,6 +10,15 @@
  * QR, IMEI, app, SMS, CNIC, JazzCash, Wi-Fi.
  */
 export const ROMAN_URDU: Record<string, string> = {
+  'Opening camera…': 'Camera khul raha hai…',
+  'More': 'Mazeed',
+  'All sections': 'Tamam sections',
+  'Privacy': 'Privacy',
+  'Delete account': 'Account delete karein',
+  'Create your account and manage your shop on the go.': 'Apna account banayein aur mobile par dukan ka kaam sambhalein.',
+  'Use your account to manage your shop. Available device licenses appear in your dashboard.': 'Apne account se dukan manage karein. Dastiyab device licenses dashboard par nazar aayenge.',
+  'Available and used device licenses for your shop.': 'Aap ki dukan ke dastiyab aur istemal shuda device licenses.',
+  'There are no available device licenses for this shop. Your shop administrator manages license availability.': 'Is dukan mein device licenses dastiyab nahin. Dukan ka administrator licenses manage karta hai.',
   'Cancelling releases this unassigned phone from setup. Starting phone management again requires Welcome-screen enrollment.': 'Cancel karne se yeh phone setup se release ho jayega. Dobara management ke liye Welcome screen se enrollment karna hoga.',
   'Your scanned phone is linked to this sale': 'Scan kiya hua phone is sale se jor diya gaya hai',
   'Keep the scanned phone online. It will finish enrollment automatically. No second QR or reset is needed.': 'Scan wala phone online rakhein. Enrollment khud pura ho jayega. Doosra QR ya reset zaruri nahin.',

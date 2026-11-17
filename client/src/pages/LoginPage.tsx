@@ -146,6 +146,7 @@ export const LoginPage: React.FC = () => {
         <Link to="/register" className="btn-secondary mt-5 w-full py-2.5">
           New shop? Register here
         </Link>
+        <div className="mt-5 flex justify-center gap-5 text-caption font-bold"><Link to="/privacy" className="underline">Privacy</Link><Link to="/account-deletion" className="underline">Delete account</Link></div>
 
         <p className="mt-6 text-center text-caption text-ink-400">
           Access is logged. Unauthorised use is prohibited.

@@ -19,6 +19,15 @@
  * Figures stay in Western digits, as they do on the site and on the receipts.
  */
 export const URDU: Record<string, string> = {
+  'Opening camera…': 'کیمرہ کھل رہا ہے…',
+  'More': 'مزید',
+  'All sections': 'تمام حصے',
+  'Privacy': 'رازداری',
+  'Delete account': 'اکاؤنٹ حذف کریں',
+  'Create your account and manage your shop on the go.': 'اپنا اکاؤنٹ بنائیں اور موبائل پر دکان کا کام سنبھالیں۔',
+  'Use your account to manage your shop. Available device licenses appear in your dashboard.': 'اپنے اکاؤنٹ سے دکان سنبھالیں۔ دستیاب ڈیوائس لائسنس ڈیش بورڈ پر نظر آئیں گے۔',
+  'Available and used device licenses for your shop.': 'آپ کی دکان کے دستیاب اور استعمال شدہ ڈیوائس لائسنس۔',
+  'There are no available device licenses for this shop. Your shop administrator manages license availability.': 'اس دکان میں ڈیوائس لائسنس دستیاب نہیں۔ دکان کا منتظم لائسنس سنبھالتا ہے۔',
   'Cancelling releases this unassigned phone from setup. Starting phone management again requires Welcome-screen enrollment.': 'منسوخ کرنے سے یہ فون سیٹ اپ سے ریلیز ہو جائے گا۔ دوبارہ مینجمنٹ کے لیے Welcome اسکرین سے اندراج کرنا ہوگا۔',
   'Your scanned phone is linked to this sale': 'اسکین کیا ہوا فون اس فروخت سے جوڑ دیا گیا ہے',
   'Keep the scanned phone online. It will finish enrollment automatically. No second QR or reset is needed.': 'اسکین والا فون آن لائن رکھیں۔ اندراج خود مکمل ہو جائے گا۔ دوسرا QR یا ری سیٹ ضروری نہیں۔',

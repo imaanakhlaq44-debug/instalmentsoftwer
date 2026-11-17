@@ -8,6 +8,8 @@ import { ErrorBoundary } from './components/ErrorBoundary.js';
 
 import { LoginPage } from './pages/LoginPage.js';
 import { RegisterPage } from './pages/RegisterPage.js';
+import { AccountPrivacyPage } from './pages/AccountPrivacyPage.js';
+import { isPlayStoreApp } from './utils/nativeApp.js';
 import { ChangePasswordPage } from './pages/ChangePasswordPage.js';
 import { DashboardPage } from './pages/DashboardPage.js';
 import { PlatformDashboardPage, PlatformOrdersPage, PlatformShopsPage } from './pages/PlatformDashboardPage.js';
@@ -72,6 +74,8 @@ export function App() {
             {/* Public */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/privacy" element={<AccountPrivacyPage />} />
+            <Route path="/account-deletion" element={<AccountPrivacyPage deletion />} />
 
             {/* Signed in, but outside the dashboard shell */}
             <Route
@@ -117,7 +121,7 @@ export function App() {
 
               <Route path="/licenses" element={<RequireRole roles={[...ADMIN]}><LicensesPage /></RequireRole>} />
               {/* Ordering is the shop owner's; the platform decides orders on /orders. */}
-              <Route path="/buy-locks" element={<RequireRole roles={['DEALER_ADMIN']}><BuyLocksPage /></RequireRole>} />
+              <Route path="/buy-locks" element={<RequireRole roles={['DEALER_ADMIN']}>{isPlayStoreApp() ? <Navigate to="/licenses" replace /> : <BuyLocksPage />}</RequireRole>} />
               <Route path="/audit-logs" element={<RequireRole roles={[...ADMIN]}><AuditLogsPage /></RequireRole>} />
               <Route path="/settings" element={<RequireRole roles={[...ADMIN]}><SettingsPage /></RequireRole>} />
 

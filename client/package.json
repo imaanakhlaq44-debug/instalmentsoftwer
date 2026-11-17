@@ -16,6 +16,7 @@
   "dependencies": {
     "@tesseract.js-data/eng": "^1.0.0",
     "@tesseract.js-data/urd": "^1.0.0",
+    "@zxing/browser": "^0.2.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.475.0",
     "qrcode.react": "^4.2.0",

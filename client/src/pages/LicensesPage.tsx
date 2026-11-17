@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { isPlayStoreApp } from '../utils/nativeApp.js';
 import { KeyRound, Lock, AlertTriangle, Check, ShoppingCart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { ApiService } from '../services/api.js';
@@ -181,8 +182,7 @@ export const LicensesPage: React.FC = () => {
         <div className="flex items-start gap-3 rounded-lg border border-critical-200 bg-critical-50 px-4 py-3">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-critical-600" aria-hidden="true" />
           <p className="text-body text-critical-700">
-            You have no locks left. New financed sales cannot be registered and no handset can be
-            enrolled until you buy a pack.
+            {isPlayStoreApp() ? 'There are no available device licenses for this shop. Your shop administrator manages license availability.' : 'You have no locks left. New financed sales cannot be registered and no handset can be enrolled until you buy a pack.'}
           </p>
         </div>
       )}
@@ -197,10 +197,10 @@ export const LicensesPage: React.FC = () => {
           hint={
             isSuperAdmin
               ? 'Pick the shop, then the pack. Issue after payment has cleared.'
-              : 'One lock per phone. Bigger packs cost less per phone.'
+              : isPlayStoreApp() ? 'Available and used device licenses for your shop.' : 'One lock per phone. Bigger packs cost less per phone.'
           }
           action={
-            role === 'DEALER_ADMIN' ? (
+            role === 'DEALER_ADMIN' && !isPlayStoreApp() ? (
               <Link to="/buy-locks" className="btn-primary py-1.5 text-caption">
                 <ShoppingCart className="h-4 w-4" aria-hidden="true" /> Buy locks
               </Link>
