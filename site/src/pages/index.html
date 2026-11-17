@@ -99,6 +99,9 @@ layout: none
   .lang-ur h1 .a + .q { margin-top: 12px; }
   .lang-ur h1 .hl { padding: .04em .28em .18em; transform: rotate(-.6deg); }
   .hero-sub { font-size: 18px; line-height: 1.6; color: var(--ink-2); max-width: 500px; margin: 0 0 26px; }
+  .app-download-primary { min-height: 70px; padding: 18px 30px; font-size: 21px; box-shadow: 6px 6px 0 var(--ink); }
+  .app-download-primary .ico { width: 28px; height: 28px; }
+  .stage-bar { justify-content: flex-end !important; }
   .cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
   .proof { display: flex; gap: 10px 20px; flex-wrap: wrap; margin-top: 24px; padding-top: 18px; border-top: 2px dashed rgba(15,20,25,.16); max-width: 520px; }
   .proof > span { display: inline-flex; align-items: center; gap: 7px; font-size: 14.5px; font-weight: 700; }
@@ -478,13 +481,10 @@ layout: none
 <main>
   <div class="wrap hero">
     <div class="hero-copy">
-      <span class="kicker"><i></i><span data-ur="پاکستانی موبائل دکانوں کے لیے">For Pakistani mobile shops</span></span>
-      <h1><span class="q" data-ur="قسط لیٹ؟">Late instalment?</span> <span class="a hl" data-ur="فون لاک۔">Phone locks.</span> <span class="q" data-ur="ادائیگی ہو گئی؟">Paid?</span> <span class="a ok" data-ur="فون آن۔">Phone opens.</span></h1>
+      <h1><span class="a hl" data-ur="فون لاک۔">Phone locks.</span> <span class="q" data-ur="ادائیگی ہو گئی؟">Paid?</span> <span class="a ok" data-ur="فون آن۔">Phone opens.</span></h1>
       <p class="hero-sub" data-ur="ڈیجیٹل کھاتہ، آپ کی اپنی سم سے SMS یاد دہانی، اور خودکار فون لاک و اَن لاک۔ گاہک کے پیچھے بھاگنا بند — ہر قسط وقت پر۔">Digital khata, reminders from your own SIM, and automatic phone lock &amp; unlock. Stop chasing customers — let the handset enforce every instalment.</p>
       <div class="cta-row">
-        <a class="btn btn-wa" href="https://wa.me/923211144477?text=Salam%2C%20Almas%20SDM%20ka%20demo%20chahiye" target="_blank" rel="noopener"><svg class="ico"><use href="#i-wa"/></svg><span data-ur="واٹس ایپ پر فری ڈیمو">Free demo on WhatsApp</span></a>
-        <a class="btn btn-sun" href="#price" data-ur="ریٹ دیکھیں">See rates</a>
-        <a data-app-download class="btn" href="https://app.almassdm.pro/download"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-ur="Android ایپ ڈاؤن لوڈ کریں">Download Android app</span></a>
+        <a data-app-download class="btn btn-sun app-download-primary" href="https://app.almassdm.pro/download"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-ur="Android ایپ ڈاؤن لوڈ کریں">Download Android app</span></a>
       </div>
       <div class="proof">
         <span><svg class="ico"><use href="#i-clock"/></svg><span data-ur="2 منٹ میں QR سیٹ اپ">2-min QR setup</span></span>
@@ -495,7 +495,6 @@ layout: none
 
     <div class="stage-shell">
       <div class="stage-bar">
-        <span class="stage-live"><i></i><span data-ur="لائیو کاؤنٹر ڈیمو">Live counter demo</span></span>
         <div class="stage-tabs" role="group" aria-label="Installment demo states">
           <button type="button" id="b-remind" data-mode="remind" aria-pressed="true" data-ur="یاد دہانی">Remind</button>
           <button type="button" id="b-late" data-mode="late" aria-pressed="false" data-ur="قسط لیٹ">Late · Lock</button>
@@ -1012,3 +1011,4 @@ layout: none
 <!-- /home-only -->
 </body>
 </html>
+
