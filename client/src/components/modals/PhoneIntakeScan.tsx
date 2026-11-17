@@ -5,8 +5,9 @@ import { ApiService } from '../../services/api.js';
 export type ScannedPhone = { brand: string; model: string; imeis?: string[]; serialNumber?: string; osVersion?: string };
 type Session = Awaited<ReturnType<typeof ApiService.createPhoneIntake>>;
 
-export function PhoneIntakeScan({ dealerId, disabled, onPhone, onPending, onClear }: {
+export function PhoneIntakeScan({ dealerId, disabled, onPhone, onPending, onClear, autoStart = false }: {
   dealerId?: string; disabled: boolean;
+  autoStart?: boolean;
   onPhone: (id: string, phone: ScannedPhone) => void;
   onPending: (pending: boolean) => void;
   onClear: () => void;
@@ -17,6 +18,8 @@ export function PhoneIntakeScan({ dealerId, disabled, onPhone, onPending, onClea
   const [busy, setBusy] = useState(false);
   const [full, setFull] = useState(false);
   const delivered = useRef(false);
+  const autoStarted = useRef(false);
+  const container = useRef<HTMLDivElement>(null);
   const callbacks = useRef({ onPhone, onPending, onClear });
   callbacks.current = { onPhone, onPending, onClear };
   useEffect(() => {
@@ -54,7 +57,7 @@ export function PhoneIntakeScan({ dealerId, disabled, onPhone, onPending, onClea
     finally { setBusy(false); }
   };
   const start = async () => {
-    if (busy) return;
+    if (busy || disabled) return;
     setBusy(true); setError('');
     try {
       const created = await ApiService.createPhoneIntake(dealerId);
@@ -63,7 +66,11 @@ export function PhoneIntakeScan({ dealerId, disabled, onPhone, onPending, onClea
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not create the phone QR.'); }
     finally { setBusy(false); }
   };
-  return <div className="rounded-xl border-2 border-ink-900 bg-mint-50 p-4">
+  useEffect(() => {
+    if (autoStart && !disabled && !autoStarted.current) { autoStarted.current = true; void start(); }
+  }, [autoStart, disabled]);
+  useEffect(() => { if (autoStart && session) container.current?.scrollIntoView?.({ block: 'center' }); }, [autoStart, session]);
+  return <div ref={container} className="rounded-xl border-2 border-ink-900 bg-mint-50 p-4">
     {!session && <button type="button" className="btn-secondary" disabled={disabled || busy} onClick={() => void start()}><QrCode className="h-4 w-4" /> {busy ? 'Preparing QR…' : 'Scan new phone from Welcome screen'}</button>}
     {error && <p role="alert" className="mt-2 text-caption text-critical-700">{error}</p>}
     {session && <>

@@ -44,6 +44,11 @@ dashboardRouter.get(
     const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
     const today = parseDateOnly(toDateOnly(now));
     const weekEnd = new Date(today.getTime() + 7 * 86_400_000);
+    // The counter operates in Pakistan; its day starts five hours before UTC.
+    const businessDate = new Date(now.getTime() + 5 * 3_600_000).toISOString().slice(0, 10);
+    const businessStart = new Date(`${businessDate}T00:00:00+05:00`);
+    const businessEnd = new Date(businessStart.getTime() + 86_400_000);
+    const scheduledDate = parseDateOnly(businessDate);
 
     /**
      * Every figure below is computed by the database. The previous version
@@ -62,6 +67,8 @@ dashboardRouter.get(
       pendingVerification,
       dueToDateSums,
       offlineDevices,
+      settledToday,
+      scheduledToday,
     ] = await Promise.all([
       // Phones sold without a lock sit in PENDING for good; counting them there
       // would show a QR backlog that can never clear.
@@ -87,6 +94,8 @@ dashboardRouter.get(
         _sum: { amountDue: true, amountPaid: true },
       }),
       prisma.device.count({ where: { ...where, isOnline: false, noLock: false, status: { not: 'REMOVED' } } }),
+      prisma.payment.aggregate({ where: { ...where, status: 'VERIFIED', reversedAt: null, createdAt: { gte: businessStart, lt: businessEnd } }, _sum: { amount: true } }),
+      prisma.installment.groupBy({ by: ['status'], where: { ...where, dueDate: scheduledDate }, _count: { _all: true } }),
     ]);
     const noLockDevices = await prisma.device.count({ where: { ...where, noLock: true, status: { not: 'REMOVED' } } });
     const silentCutoff = new Date(now.getTime() - 72 * 3_600_000);
@@ -154,6 +163,10 @@ dashboardRouter.get(
       dueThisWeekAmount: dueThisWeekRows.reduce((s: number, i: Installment) => s + amountOutstanding(i), 0),
 
       collectedThisMonth: sumOf(settledThisMonth, 'amount'),
+      collectedToday: sumOf(settledToday, 'amount'),
+      dueTodayCount: scheduledToday.reduce((sum, row) => sum + row._count._all, 0),
+      paidDueTodayCount: scheduledToday.filter(row => row.status === 'PAID').reduce((sum, row) => sum + row._count._all, 0),
+      businessDate,
       totalCollectedAllTime: sumOf(settledAllTime, 'amount'),
       pendingVerificationAmount: sumOf(pendingVerification, 'amount'),
 

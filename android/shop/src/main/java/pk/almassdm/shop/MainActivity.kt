@@ -230,6 +230,9 @@ class MainActivity : AppCompatActivity() {
                 return true
             }
             override fun onPageStarted(view:WebView,url:String?,icon:Bitmap?) {
+                // App pages draw their own Bold Easy header. Keep the native
+                // domain/back bar for external hosted payment pages.
+                toolbar.visibility=if(NavigationPolicy.isInternal(url)) View.GONE else View.VISIBLE
                 if(NavigationPolicy.isInternal(url)) {paymentFlow=false;currentUrl=url!!;pageTitle?.text="ALMAS SDM";CookieManager.getInstance().setAcceptThirdPartyCookies(view,false)}
                 else if(url!=null && NavigationPolicy.isSecureWebPage(url) && (paymentFlow || NavigationPolicy.isGateway(url))) {paymentFlow=true;currentUrl=url;pageTitle?.text=Uri.parse(url).host;pageTitle?.contentDescription="Payment page: ${Uri.parse(url).host}";CookieManager.getInstance().setAcceptThirdPartyCookies(view,true)}
                 else if(url!=null && url!="about:blank") {view.stopLoading();openExternal(url);return}
@@ -342,6 +345,7 @@ class MainActivity : AppCompatActivity() {
         runCatching {
             if(raw==null || raw.length>29_000_000)return
             val data=JSONObject(raw)
+            if(data.optString("action")=="menu") { showAppMenu(root);return }
             if(data.optString("action")=="print") { printPage();return }
             if(data.optString("action")=="copy") {
                 val requestId=data.optString("requestId").take(100);val text=data.optString("text")

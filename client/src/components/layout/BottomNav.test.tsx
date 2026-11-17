@@ -27,7 +27,9 @@ describe('mobile access to every permitted section', () => {
   it('keeps Play licensing informational while preserving operational sections', async () => {
     vi.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue('Android AlmasSDMShop/1.0.0 (Play)');
     mockApi({ role: 'DEALER_ADMIN' }); renderPage(<BottomNav />);
-    fireEvent.click(await screen.findByRole('button', { name: 'More' }));
+    await screen.findByRole('link', { name: 'Home' });
+    expect(within(screen.getByRole('navigation')).getAllByRole('link')).toHaveLength(4);
+    fireEvent(window, new Event('almas:open-sections'));
     const menu = screen.getByRole('dialog', { name: 'More sections' });
     expect(within(menu).queryByRole('link', { name: 'Buy locks' })).not.toBeInTheDocument();
     expect(within(menu).getByRole('link', { name: 'Device Locks' })).toBeInTheDocument();

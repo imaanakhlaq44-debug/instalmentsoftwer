@@ -9,7 +9,8 @@ import { ErrorBoundary } from './components/ErrorBoundary.js';
 import { LoginPage } from './pages/LoginPage.js';
 import { RegisterPage } from './pages/RegisterPage.js';
 import { AccountPrivacyPage } from './pages/AccountPrivacyPage.js';
-import { isPlayStoreApp } from './utils/nativeApp.js';
+import { isPlayStoreApp, isNativeShopApp } from './utils/nativeApp.js';
+import { ShopAppHomePage } from './pages/ShopAppHomePage.js';
 import { ChangePasswordPage } from './pages/ChangePasswordPage.js';
 import { DashboardPage } from './pages/DashboardPage.js';
 import { PlatformDashboardPage, PlatformOrdersPage, PlatformShopsPage } from './pages/PlatformDashboardPage.js';
@@ -21,6 +22,7 @@ import { useAuth } from './context/AuthContext.js';
  */
 const HomePage: React.FC = () => {
   const { role, selectedDealerId, setSelectedDealerId } = useAuth();
+  if (isNativeShopApp()) return <ShopAppHomePage />;
   if (role !== 'SUPER_ADMIN') return <DashboardPage />;
   if (!selectedDealerId) return <PlatformDashboardPage />;
   return (

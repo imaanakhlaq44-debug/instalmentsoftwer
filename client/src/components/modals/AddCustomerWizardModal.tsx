@@ -36,6 +36,7 @@ import { checkPhoneSupport, AndroidVersion } from '../../utils/phoneSupport.js';
 interface Props {
   onClose: () => void;
   onSuccess: () => void;
+  startWithPhoneScan?: boolean;
 }
 
 type RecentModel = { brand: string; model: string; ramStorage: string; price: number };
@@ -61,7 +62,7 @@ const inAMonth = () => new Date(Date.now() + 30 * 86400000).toISOString().split(
  * the customer is agreeing to stay in view the whole time, and one button
  * registers the sale.
  */
-export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) => {
+export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess, startWithPhoneScan = false }) => {
   const { selectedDealerId, showToast, isDealerAdmin, user } = useAuth();
   const navigate = useNavigate();
 
@@ -541,7 +542,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
             'The phone',
             'Tap a model you sold recently, or type it. Dial *#06# on the phone for the IMEI.',
             <div className="space-y-4">
-              <PhoneIntakeScan key={dealerParam || 'current'} dealerId={dealerParam} disabled={noDealer || submitting}
+              <PhoneIntakeScan key={dealerParam || 'current'} dealerId={dealerParam} disabled={noDealer || submitting} autoStart={startWithPhoneScan}
                 onPending={setPhoneScanPending}
                 onClear={() => { setPhoneIntakeId(undefined); setScannedOsVersion(undefined); }}
                 onPhone={(id, phone) => {
