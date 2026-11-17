@@ -287,6 +287,10 @@ export class ApiService {
     return this.request<any>('/customers', { method: 'POST', body: JSON.stringify(data) });
   }
 
+  static previewSaleAgreement(data: unknown) {
+    return this.request<any>('/customers/agreement-preview', { method: 'POST', body: JSON.stringify(data) });
+  }
+
   static updateCustomer(id: string, data: Record<string, unknown>) {
     return this.request<any>(`/customers/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
   }

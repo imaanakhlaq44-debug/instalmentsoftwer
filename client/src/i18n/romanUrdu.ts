@@ -10,6 +10,20 @@
  * QR, IMEI, app, SMS, CNIC, JazzCash, Wi-Fi.
  */
 export const ROMAN_URDU: Record<string, string> = {
+  "Customer signature": "Gahak ke dastakhat",
+  "Read agreement": "Agreement parhein",
+  "Save signed sale": "Sale mukammal karein",
+  "Save signed sale & show QR": "Sale save karein aur QR dikhayein",
+  "Saving sale…": "Sale save ho rahi hai…",
+  "Sale and signed agreement saved.": "Sale aur sign shuda agreement save ho gaye.",
+  "Your scanned phone is linked. Keep it online; no second QR is needed.": "Scan shuda phone link ho gaya. Internet chalu rakhein; doosra QR zaroori nahin.",
+  "Fill customer, phone and installment details to prepare the agreement.": "Agreement ke liye gahak, phone aur qiston ki tafseel bharein.",
+  "The customer has read the agreement and accepts it.": "Gahak ne agreement parh liya hai aur usay qabool karta hai.",
+  "Ask the customer to sign and accept the agreement in this card.": "Isi card mein gahak ke dastakhat lein aur agreement ki manzoori dein.",
+  "Retry agreement": "Agreement dobara load karein",
+  "Close QR": "QR band karein",
+  "On the new or already-reset phone, scan from the Welcome screen and complete Android setup.": "Naye ya pehle se reset phone ki Welcome screen par scan karein aur Android setup poora karein.",
+
   'Opening camera…': 'Camera khul raha hai…',
   'More': 'Mazeed',
   'All sections': 'Tamam sections',

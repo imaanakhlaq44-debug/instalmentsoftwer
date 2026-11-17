@@ -19,6 +19,20 @@
  * Figures stay in Western digits, as they do on the site and on the receipts.
  */
 export const URDU: Record<string, string> = {
+  "Customer signature": "گاہک کے دستخط",
+  "Read agreement": "معاہدہ پڑھیں",
+  "Save signed sale": "فروخت مکمل کریں",
+  "Save signed sale & show QR": "فروخت محفوظ کریں اور QR دکھائیں",
+  "Saving sale…": "فروخت محفوظ ہو رہی ہے…",
+  "Sale and signed agreement saved.": "فروخت اور دستخط شدہ معاہدہ محفوظ ہو گئے۔",
+  "Your scanned phone is linked. Keep it online; no second QR is needed.": "اسکین شدہ فون منسلک ہو گیا۔ انٹرنیٹ جاری رکھیں؛ دوسرے QR کی ضرورت نہیں۔",
+  "Fill customer, phone and installment details to prepare the agreement.": "معاہدے کے لیے گاہک، فون اور اقساط کی تفصیل درج کریں۔",
+  "The customer has read the agreement and accepts it.": "گاہک نے معاہدہ پڑھ لیا ہے اور اسے قبول کرتا ہے۔",
+  "Ask the customer to sign and accept the agreement in this card.": "اسی کارڈ میں گاہک کے دستخط لیں اور معاہدے کی منظوری دیں۔",
+  "Retry agreement": "معاہدہ دوبارہ لوڈ کریں",
+  "Close QR": "QR بند کریں",
+  "On the new or already-reset phone, scan from the Welcome screen and complete Android setup.": "نئے یا پہلے سے ری سیٹ فون کی Welcome اسکرین سے اسکین کریں اور Android سیٹ اپ مکمل کریں۔",
+
   'Opening camera…': 'کیمرہ کھل رہا ہے…',
   'More': 'مزید',
   'All sections': 'تمام حصے',

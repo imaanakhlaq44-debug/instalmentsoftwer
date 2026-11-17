@@ -14,6 +14,7 @@ import {
   declarationFor,
   renderClauses,
 } from './contractTerms.js';
+import { buildInstallmentSchedule } from './InstallmentMath.js';
 
 /**
  * The customer's consent, recorded.
@@ -73,6 +74,28 @@ function scheduleKey(rows: ContractSnapshot['schedule']): string {
 }
 
 export class ContractService {
+  /** The same document before a sale exists; reading it writes no records. */
+  public static async previewSale(params: {
+    dealerId: string;
+    customer: ContractSnapshot['customer'];
+    device: ContractSnapshot['device'] & { purchasePrice: number };
+    plan: { downPayment: number; totalInstallments: number; firstDueDate: string; gracePeriodDays: number };
+  }) {
+    const financedAmount = params.device.purchasePrice - params.plan.downPayment;
+    if (financedAmount <= 0) throw AppError.badRequest('Down payment must be less than the phone price.');
+    const schedule = buildInstallmentSchedule({ ...params.plan, financedAmount });
+    const snapshot = await this.buildSnapshot({ dealerId: params.dealerId, customerId: 'preview', deviceId: 'preview',
+      plan: { ...params.plan, totalAmount: params.device.purchasePrice, financedAmount, monthlyInstallment: schedule.baseInstallment } as InstallmentPlan,
+      installments: schedule.rows as Installment[],
+    }, undefined, params);
+    return { snapshot, termsVersion: CURRENT_TERMS_VERSION, fingerprint: this.fingerprint(snapshot, CURRENT_TERMS_VERSION),
+      clauses: renderClauses(snapshot), declaration: declarationFor() };
+  }
+
+  public static fingerprint(snapshot: ContractSnapshot, version: string): string {
+    const { preparedAt: _, ...facts } = snapshot;
+    return this.hash(version, JSON.stringify(facts));
+  }
   /**
    * Drafts the contract for a newly registered sale.
    *
@@ -416,12 +439,13 @@ export class ContractService {
       plan: InstallmentPlan;
       installments: Installment[];
     },
-    tx?: Tx
+    tx?: Tx,
+    preview?: { customer: ContractSnapshot['customer']; device: ContractSnapshot['device'] }
   ): Promise<ContractSnapshot> {
     const [dealer, customer, device, policy] = await Promise.all([
       repo.dealers.findById(params.dealerId, tx),
-      repo.customers.findById(params.customerId, tx),
-      repo.devices.findById(params.deviceId, tx),
+      preview?.customer ?? repo.customers.findById(params.customerId, tx),
+      preview?.device ?? repo.devices.findById(params.deviceId, tx),
       repo.devicePolicies.findByDealer(params.dealerId, tx),
     ]);
 

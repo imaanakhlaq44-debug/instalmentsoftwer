@@ -10,6 +10,7 @@ import {
 import { EnrollmentService } from '../services/EnrollmentService.js';
 import { PhoneIntakeService } from '../services/PhoneIntakeService.js';
 import { ContractService } from '../services/ContractService.js';
+import { CURRENT_TERMS_VERSION } from '../services/contractTerms.js';
 import { LicenseService } from '../services/LicenseService.js';
 import { AuditService } from '../services/AuditService.js';
 import { buildInstallmentSchedule } from '../services/InstallmentMath.js';
@@ -267,6 +268,13 @@ function comparableName(name: string): string {
 }
 
 const createSchema = z.object({
+  agreement: z.object({
+    signerName: z.string().trim().min(3).max(120),
+    signatureImage: z.string().trim().startsWith('data:image/png;base64,').max(400_000),
+    declarationAccepted: z.literal(true),
+    termsVersion: z.string().max(16),
+    fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+  }).optional(),
   phoneIntakeId: z.string().uuid().optional(),
   dealerId: z.string().trim().max(64).optional(),
   customer: z.object({
@@ -312,10 +320,27 @@ const createSchema = z.object({
   noLock: z.boolean().default(false),
 });
 
+customersRouter.post('/agreement-preview', requireDealerStaff, validateBody(createSchema.omit({ agreement: true })), asyncHandler(async (req, res) => {
+  const body = req.body as z.infer<typeof createSchema>;
+  const dealerId = await resolveWritableDealerId(req, body.dealerId);
+  if (!body.device || !body.plan) throw AppError.badRequest('Enter the phone and installment details first.');
+  const existing = await repo.customers.findFirst({ dealerId, cnic: { in: cnicForms(body.customer.cnic) } });
+  if (existing && comparableName(existing.name) !== comparableName(body.customer.name)) throw AppError.conflict('The customer name does not match the CNIC on file.');
+  if (!existing) {
+    const missing = newCustomerGaps(body.customer);
+    if (missing.length) throw AppError.unprocessable('Validation failed', missing);
+  }
+  res.setHeader('Cache-Control', 'no-store');
+  res.json(await ContractService.previewSale({ dealerId, device: body.device, plan: body.plan,
+    customer: existing ?? { name: body.customer.name, cnic: body.customer.cnic, phone: normalizePhone(body.customer.phone!), address: body.customer.address! },
+  }));
+}));
+
 customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncHandler(async (req, res) => {
   const user = getAuthUser(req);
   const body = req.body as z.infer<typeof createSchema>;
   const dealerId = await resolveWritableDealerId(req, body.dealerId);
+  if (body.agreement && (!body.device || !body.plan)) throw AppError.badRequest('A signed sale requires a phone and installment plan.');
 
   if (body.phoneIntakeId && (!body.device || body.noLock)) {
     throw AppError.badRequest('A scanned phone must be registered as a managed device.');
@@ -513,6 +538,14 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
         { dealerId, customerId: customer.id, deviceId: device.id, plan, installments },
         tx
       );
+      if (body.agreement) {
+        const agreement = body.agreement;
+        if (agreement.termsVersion !== CURRENT_TERMS_VERSION || agreement.fingerprint !== ContractService.fingerprint(JSON.parse(contract.snapshot), contract.termsVersion)) {
+          throw AppError.conflict('The agreement details changed. Review the updated agreement and sign again.');
+        }
+        contract = await ContractService.sign({ contractId: contract.id, signerName: agreement.signerName,
+          signatureImage: agreement.signatureImage, actor: { userId: user.userId, userName: user.name, userRole: user.role }, ipAddress: clientIp(req) }, tx);
+      }
 
       // The down payment is real money that changed hands — it belongs in the
       // ledger. The original code dropped it entirely.
@@ -550,7 +583,7 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
     const intakeToken = body.phoneIntakeId && device
       ? await PhoneIntakeService.attach(tx, body.phoneIntakeId, dealerId, device)
       : undefined;
-    return { customer, device, plan, installments, contractId: contract?.id, intakeToken };
+    return { customer, device, plan, installments, contractId: contract?.id, contractStatus: contract?.status, intakeToken };
   });
 
   /**
@@ -584,6 +617,7 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
     installments: result.installments,
     // So the sale screen can take the signature there and then.
     contractId: result.contractId,
+    contractStatus: result.contractStatus,
     enrollmentToken,
   });
 }));
