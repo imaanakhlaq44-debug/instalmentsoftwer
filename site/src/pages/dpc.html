@@ -3,9 +3,48 @@ title: The handset app
 titleUr: ہینڈسیٹ ایپ
 description: The Almas SDM device policy controller — what it is, what it can and cannot do, and where the signed APK and its checksum live for QR provisioning.
 page: dpc
+layout: home
 -->
 
-<section class="band pb-8">
+<style>
+.handset-page { max-width:1180px; margin:auto; padding:52px 24px 64px; }
+.handset-page section { padding:30px 0; }
+.handset-page section:first-of-type { padding-top:0; }
+.handset-page h1 { font-size:clamp(36px,5vw,68px); line-height:1.08; letter-spacing:-.045em; max-width:920px; margin:20px 0; }
+.handset-page h2 { font-size:clamp(26px,3vw,40px); line-height:1.15; margin:0 0 24px; }
+.handset-page p { margin:12px 0 0; }
+.handset-page .text-lede { font-size:20px; max-width:800px; color:var(--ink-2); }
+.handset-page .eyebrow { font-weight:900; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--navy); }
+.handset-page section:first-of-type .eyebrow { display:inline-block; border:var(--b); border-radius:99px; padding:6px 16px; background:var(--sun); }
+.handset-page .surface { padding:28px; background:var(--paper); border:var(--b); border-radius:22px; box-shadow:var(--sh); }
+.handset-page .surface > .flex { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:18px; }
+.handset-page .text-title { font-size:26px; font-weight:900; }
+.handset-page .text-caption { font-size:14px; color:var(--ink-2); }
+.handset-page .rounded-full { border:var(--b); background:var(--mint-soft); border-radius:99px; padding:6px 14px; font-size:13px; font-weight:800; }
+.handset-page .border-t { border-top:1px solid #d8d1bc; margin-top:24px; padding-top:14px; }
+.handset-page dl { margin:24px 0 0; display:grid; gap:18px; }
+.handset-page dd { margin:8px 0 0; padding:14px; background:var(--sun-soft); border-radius:12px; overflow-wrap:anywhere; font:13px/1.7 ui-monospace,monospace; direction:ltr; text-align:left; }
+.handset-page .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px; }
+.handset-page ul { list-style:none; margin:0; padding:24px; background:var(--mint-soft); border:var(--b); border-radius:20px; box-shadow:4px 4px 0 var(--ink); height:100%; }
+.handset-page .grid > div:nth-child(2) ul { background:var(--paper); }
+.handset-page ul li { display:flex; gap:12px; padding:12px 0; border-bottom:1px solid #d8d1bc; }
+.handset-page ul li:last-child { border:0; }
+.handset-page ul li > span:first-child { flex:none; width:10px; height:10px; border-radius:3px; background:var(--mint); margin-top:8px; }
+.handset-page ol { list-style:none; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px; padding:0; margin:24px 0; }
+.handset-page ol li { background:var(--paper); border:var(--b); border-radius:20px; padding:24px; box-shadow:4px 4px 0 var(--ink); }
+.handset-page ol li > span { display:grid; place-items:center; width:44px; height:44px; border:var(--b); border-radius:12px; background:var(--sun); font-weight:900; font-size:24px; }
+.handset-page .border-s-2 { border-inline-start:4px solid var(--mint); padding-inline-start:18px; }
+.handset-page .overflow-x-auto { overflow-x:auto; }
+.handset-page table { width:100%; border-collapse:collapse; min-width:450px; text-align:start; }
+.handset-page td,.handset-page th { padding:16px; text-align:start; border-bottom:1px solid #d8d1bc; }
+.handset-page th { background:var(--navy); color:white; }
+.handset-page section:last-child { padding:30px; border:var(--b); border-radius:22px; background:var(--sun-soft); margin-top:30px; }
+@media(max-width:760px) { .handset-page { padding:30px 20px 48px; } .handset-page .grid,.handset-page ol { grid-template-columns:1fr; } .handset-page .surface { padding:22px; } .handset-page section:last-child { padding:24px; } }
+</style>
+<div class="handset-page">
+
+
+<section class="handset-section pb-8">
   <p class="eyebrow reveal" data-ur="ہینڈسیٹ ایپ">Handset app</p>
   <h1 class="mt-2 max-w-2xl font-serif text-hero text-ink-900" data-ur="وہ ایپ جو گاہک کے فون پر رہتی ہے۔">
     The app that lives on the customer's phone.
@@ -18,7 +57,7 @@ page: dpc
 
 <!-- Provisioning is the one part of the product that cannot work without a
      public HTTPS URL, so it gets the top of the page rather than a footnote. -->
-<section class="band-tight pt-0">
+<section class="handset-section pt-0">
   <div class="surface p-6">
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div>
@@ -54,7 +93,7 @@ page: dpc
   </div>
 </section>
 
-<section class="band">
+<section class="handset-section">
   <h2 class="reveal font-serif text-section text-ink-900" data-ur="یہ ایپ کیا کر سکتی ہے">What the app can do</h2>
 
   <div class="reveal reveal-2 mt-6 grid gap-6 sm:grid-cols-2">
@@ -103,7 +142,7 @@ page: dpc
 </section>
 
 <section class="border-y border-paper-300 bg-paper-50">
-  <div class="band">
+  <div class="handset-section">
     <h2 class="reveal font-serif text-section text-ink-900" data-ur="فون کیسے جوڑا جاتا ہے">How a phone is enrolled</h2>
     <ol class="mt-6 space-y-4">
       <li class="flex gap-4">
@@ -146,7 +185,7 @@ page: dpc
      dashboard (a super admin publishes a phone test there); nothing is written
      here by hand. The section stays hidden until the list arrives with at least
      one phone in it, so an empty list shows nothing rather than a placeholder. -->
-<section class="band" id="tested-phones" hidden>
+<section class="handset-section" id="tested-phones" hidden>
   <h2 class="font-serif text-section text-ink-900" data-ur="آزمائے ہوئے فون">Tested phones</h2>
   <p class="mt-3 max-w-2xl text-lede text-ink-700" data-ur="یہ وہ فون ہیں جن پر لاک ایپ اصل میں چلا کر دیکھی گئی ہے: کیو آر سے سیٹ اپ، لاک، ان لاک، ری اسٹارٹ اور فیکٹری ری سیٹ۔ جو فون یہاں نہیں، وہ ابھی آزمایا نہیں گیا — اِس کا مطلب یہ نہیں کہ وہ نہیں چلتا۔">
     These are the phones the lock app has actually been run on: QR setup, lock, unlock, restart and
@@ -219,10 +258,13 @@ page: dpc
 </script>
 <!-- /tested-phones -->
 
-<section class="band">
+<section class="handset-section">
   <h2 class="reveal font-serif text-section text-ink-900" data-ur="دکان کے کاؤنٹر والا فون">The shop's own counter phone</h2>
   <p class="mt-3 max-w-2xl text-lede text-ink-700" data-ur="ایک دوسری، بہت چھوٹی ایپ ہے جو آپ اپنی دکان کے کسی فون پر لگاتے ہیں۔ یہ یاد دہانیوں کی قطار لے کر اُسی فون کی سم سے بھیجتی ہے۔ گاہک کے فون سے اس کا کوئی تعلق نہیں۔">
     A second, much smaller app runs on a phone of your own. It takes the queue of reminders and
     sends them from that handset's SIM. It has nothing to do with the customer's phone.
   </p>
 </section>
+
+</div>
+
