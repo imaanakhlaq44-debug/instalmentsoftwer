@@ -1,3 +1,4 @@
+import { saleDraftsRouter } from './routes/saleDrafts.routes.js';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -238,6 +239,7 @@ app.use('/api/public/testimonials', publicTestimonialsRouter);
 app.use('/api/dashboard', requireAuth, dashboardRouter);
 app.use('/api/devices', requireAuth, devicesRouter);
 app.use('/api/customers', requireAuth, customersRouter);
+app.use('/api/sale-drafts', requireAuth, saleDraftsRouter);
 app.use('/api/installments', requireAuth, installmentsRouter);
 app.use('/api/payments', requireAuth, paymentsRouter);
 app.use('/api/payment-gateway', requireAuth, paymentGatewayRouter);

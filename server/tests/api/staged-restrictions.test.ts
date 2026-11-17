@@ -64,6 +64,7 @@ async function signedEnrolledSale() {
   const qr = await as(ACCOUNTS.dealerStaff).post('/api/enrollment/generate').send({ deviceId, qrType: 'STANDARD' });
   const enrolled = await anonymous().post('/api/dpc/enroll').send({ token: qr.body.token.token, dpcVersion: '2.4.0' });
   expect(enrolled.status).toBe(201);
+  await anonymous().post('/api/dpc/check-in').set('Authorization', `Device ${enrolled.body.deviceId}.${enrolled.body.deviceToken}`).send({isDeviceOwner:true,setupComplete:true}).expect(200);
 
   return { deviceId, credential: `Device ${enrolled.body.deviceId}.${enrolled.body.deviceToken}` };
 }

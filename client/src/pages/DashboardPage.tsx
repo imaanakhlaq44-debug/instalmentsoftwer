@@ -1,3 +1,5 @@
+import { SimpleShopDashboard } from './SimpleShopDashboard.js';
+import { PendingWork } from '../components/dashboard/PendingWork.js';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, QrCode, RefreshCw, ArrowRight, BadgeCheck, Wallet, ShieldAlert, TrendingUp, AlertTriangle, HelpCircle } from 'lucide-react';
@@ -51,7 +53,9 @@ interface Stats {
   frpConfigured?: boolean | null;
 }
 
-export const DashboardPage: React.FC = () => {
+export const DashboardPage: React.FC = () => { const { isStaff } = useAuth(); return isStaff ? <SimpleShopDashboard /> : <CustomerDashboardPage />; };
+
+const CustomerDashboardPage: React.FC = () => {
   const { user, dealer, selectedDealerId, showToast, isStaff, isDealerAdmin } = useAuth();
   const navigate = useNavigate();
 
@@ -131,6 +135,7 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {isStaff&&<PendingWork/>}
       {/* ---------------------------------------------------------------- */}
       {/* Dateline and greeting. A person is being spoken to, so the        */}
       {/* greeting is set in the serif and the date is quiet above it.      */}

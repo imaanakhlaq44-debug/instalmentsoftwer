@@ -41,7 +41,7 @@ export interface ActorContext {
 
 export interface IDeviceManagementService {
   registerDevice(deviceData: Omit<Device, 'id' | 'createdAt' | 'updatedAt'>): Promise<Device>;
-  enrollDevice(deviceId: string, token: string, ipAddress?: string): Promise<{ success: boolean; device: Device }>;
+  enrollDevice(deviceId: string, token: string, ipAddress?: string, awaitConfirmation?: boolean): Promise<{ success: boolean; device: Device }>;
   getDeviceStatus(deviceId: string): Promise<DeviceStatus>;
   getDeviceHealth(deviceId: string): Promise<DeviceHealth>;
   getDeviceLocation(deviceId: string): Promise<DeviceLocation>;
@@ -108,7 +108,7 @@ export class MockDeviceManagementService implements IDeviceManagementService {
    * transition from PENDING to ACTIVE" and the whole feature was unusable.
    * The handshake now moves through ENROLLED as the state machine intends.
    */
-  async enrollDevice(deviceId: string, token: string, ipAddress?: string): Promise<{ success: boolean; device: Device }> {
+  async enrollDevice(deviceId: string, token: string, ipAddress?: string, awaitConfirmation = false): Promise<{ success: boolean; device: Device }> {
     const device = await repo.devices.findById(deviceId);
     if (!device) throw AppError.notFound('Device');
 
@@ -117,6 +117,15 @@ export class MockDeviceManagementService implements IDeviceManagementService {
     }
 
     const nowIso = new Date().toISOString();
+    if (awaitConfirmation) {
+      const pending = await runInTransaction(async tx => {
+        if (device.status !== 'ENROLLED') this.validateTransition(device.status, 'ENROLLED');
+        await tx.device.update({ where: { id: deviceId }, data: { status: 'ENROLLED', isOnline: false, lastCheckInAt: null, updatedAt: new Date(nowIso) } });
+        await this.recordAction({ deviceId, dealerId: device.dealerId, userId: 'system', userName: 'Enrollment Client', action: 'ENROLL', oldStatus: device.status, newStatus: 'ENROLLED', reason: 'Credentials issued; awaiting the handset setup confirmation.', deviceAck: false, ipAddress }, tx);
+        return (await repo.devices.findById(deviceId, tx))!;
+      });
+      return { success: true, device: pending };
+    }
 
     // Both steps and the log entry commit together: a device left stranded in
     // ENROLLED, with nothing recording why, is not a state worth persisting.
@@ -222,7 +231,7 @@ export class MockDeviceManagementService implements IDeviceManagementService {
     if (device.noLock) {
       throw AppError.badRequest('This phone was sold without a lock, so it cannot be locked.');
     }
-    if (device.status === 'REMOVED' || device.status === 'PENDING') {
+    if (device.status === 'REMOVED' || device.status === 'PENDING' || device.status === 'ENROLLED') {
       throw AppError.badRequest(
         `This device cannot be locked while its status is ${device.status}. It must be enrolled and active first.`
       );

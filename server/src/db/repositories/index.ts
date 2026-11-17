@@ -328,7 +328,7 @@ export const devices = {
     const where: Record<string, unknown> = { ...dealerScope(args.dealerId) };
 
     if (args.customerId) where.customerId = args.customerId;
-    if (args.status && args.status !== 'ALL') where.status = args.status;
+    if (args.status && args.status !== 'ALL') where.status = args.status === 'SETUP_PENDING' ? { in: ['PENDING','ENROLLED'] } : args.status;
     if (args.brand && args.brand !== 'ALL') where.brand = { equals: args.brand, mode: 'insensitive' };
     if (args.lockable !== undefined) where.noLock = !args.lockable;
     if (args.tamper !== undefined) {

@@ -235,6 +235,7 @@ enum ContractStatus {
 
 model Dealer {
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  saleDrafts SaleDraft[]
   id           String   @id
   name         String   @db.VarChar(120)
   code         String   @unique @db.VarChar(40)
@@ -394,6 +395,7 @@ model PlatformSetting {
 }
 
 model User {
+  saleDrafts SaleDraft[]
   id                  String    @id
   dealerId            String?   @map("dealer_id")
   customerId          String?   @map("customer_id")
@@ -456,6 +458,7 @@ model Customer {
 // ---------------------------------------------------------------------------
 
 model Device {
+  commandVersion Int @default(0) @map("command_version")
   id               String          @id
   dealerId         String          @map("dealer_id")
   customerId       String          @map("customer_id")
@@ -1142,4 +1145,20 @@ model HandsetTest {
   @@index([brand])
   @@index([published])
   @@map("handset_tests")
+}
+
+model SaleDraft {
+  id String @id @db.Uuid
+  dealerId String @map("dealer_id")
+  userId String @map("user_id")
+  data Json
+  version Int @default(1)
+  completedAt DateTime? @map("completed_at") @db.Timestamptz(3)
+  deviceId String? @map("device_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  dealer Dealer @relation(fields:[dealerId],references:[id],onDelete:Cascade)
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  @@index([dealerId, completedAt, updatedAt])
+  @@map("sale_drafts")
 }

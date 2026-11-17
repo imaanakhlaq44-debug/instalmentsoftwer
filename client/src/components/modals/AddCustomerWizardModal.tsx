@@ -1,3 +1,4 @@
+import type { SaleDraft, DraftForm } from '../../utils/saleDraft.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ApiError, ApiService } from '../../services/api.js';
@@ -37,6 +38,7 @@ interface Props {
   onClose: () => void;
   onSuccess: () => void;
   startWithPhoneScan?: boolean;
+  initialDraft?: SaleDraft;
 }
 
 type RecentModel = { brand: string; model: string; ramStorage: string; price: number };
@@ -62,7 +64,7 @@ const inAMonth = () => new Date(Date.now() + 30 * 86400000).toISOString().split(
  * the customer is agreeing to stay in view the whole time, and one button
  * registers the sale.
  */
-export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess, startWithPhoneScan = false }) => {
+export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess, startWithPhoneScan = false, initialDraft }) => {
   const { selectedDealerId, showToast, isDealerAdmin, user } = useAuth();
   const navigate = useNavigate();
 
@@ -83,13 +85,13 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess, st
   const [recentModels, setRecentModels] = useState<RecentModel[]>([]);
   const [returning, setReturning] = useState<Returning | null>(null);
   const [lookingUp, setLookingUp] = useState(false);
-  const [phoneIntakeId, setPhoneIntakeId] = useState<string>();
+  const [phoneIntakeId, setPhoneIntakeId] = useState<string | undefined>(initialDraft?.data.phoneIntakeId);
   const [phoneScanPending, setPhoneScanPending] = useState(false);
-  const [scannedOsVersion, setScannedOsVersion] = useState<string>();
+  const [scannedOsVersion, setScannedOsVersion] = useState<string | undefined>(initialDraft?.data.scannedOsVersion);
   // A typed advance is never silently replaced when the price changes.
-  const [advanceChoice, setAdvanceChoice] = useState<number | null>(25);
+  const [advanceChoice, setAdvanceChoice] = useState<number | null>(initialDraft?.data.advanceChoice === undefined ? 25 : initialDraft.data.advanceChoice);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<DraftForm>({
     customerName: '',
     customerPhone: '',
     customerCnic: '',
@@ -112,6 +114,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess, st
     firstDueDate: inAMonth(),
     gracePeriodDays: 3,
     qrType: 'STANDARD',
+    ...initialDraft?.data.form,
   });
 
   // Field-level problems, from the form check or from the server's 422 details.
@@ -120,7 +123,41 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess, st
   const noDealer = user?.role === 'SUPER_ADMIN' && !selectedDealerId;
   const dealerParam = selectedDealerId || undefined;
 
-  useEffect(() => { setPhoneIntakeId(undefined); setScannedOsVersion(undefined); setPhoneScanPending(false); }, [dealerParam]);
+  const previousDealer = useRef(dealerParam);
+  useEffect(() => { if(previousDealer.current !== dealerParam) {setPhoneIntakeId(undefined);setScannedOsVersion(undefined);setPhoneScanPending(false);previousDealer.current=dealerParam;} },[dealerParam]);
+  const draftId=useRef(initialDraft?.id ?? crypto.randomUUID());
+  const draftVersion=useRef(initialDraft?.version ?? 0);
+  const saveChain=useRef<Promise<unknown>>(Promise.resolve());
+  const savedSnapshot=useRef('');
+  const [draftStatus,setDraftStatus]=useState('');
+  const [savingPending,setSavingPending]=useState(false);
+  const [connectionConfirmed,setConnectionConfirmed]=useState(false);
+  const draftSnapshot=JSON.stringify({form:formData,phoneIntakeId,scannedOsVersion,advanceChoice});
+  const hasDraftContent=Boolean(formData.customerName||formData.customerCnic||formData.customerPhone||formData.model||formData.imei||formData.purchasePrice);
+  const persistDraft=(snapshot=draftSnapshot)=>{
+    const operation=saveChain.current.catch(()=>undefined).then(async()=>{
+      if(snapshot===savedSnapshot.current&&draftVersion.current>0)return;
+      setDraftStatus('Saving pending work…');
+      const saved=await ApiService.saveSaleDraft(draftId.current,{dealerId:dealerParam,expectedVersion:draftVersion.current,data:JSON.parse(snapshot)});
+      draftVersion.current=saved.version;savedSnapshot.current=snapshot;setDraftStatus('Pending work saved');
+    });saveChain.current=operation;return operation;
+  };
+  useEffect(()=>{
+    if(!hasDraftContent||noDealer||submitting||createdResult||savingPending)return;
+    const timer=setTimeout(()=>{void persistDraft(draftSnapshot).catch(()=>setDraftStatus('Could not save pending work. Keep this form open and retry.'));},1200);
+    return()=>clearTimeout(timer);
+  },[draftSnapshot,hasDraftContent,noDealer,submitting,createdResult,savingPending]);
+  const closeAndSave=async()=>{
+    if(submitting||savingPending)return;
+    if(createdResult||!hasDraftContent){onClose();return;}
+    setSavingPending(true);
+    try{await persistDraft();window.dispatchEvent(new Event('almas:pending-work-changed'));onClose();}
+    catch(error){setDraftStatus(error instanceof Error?error.message:'Could not save pending work.');setSavingPending(false);}
+  };
+  useEffect(()=>{
+    if(!createdResult?.device?.id||createdResult.device.noLock)return;
+    let live=true;const check=()=>{void ApiService.getDevice(createdResult.device.id).then(d=>{if(live)setConnectionConfirmed(!['PENDING','ENROLLED'].includes(d.status)&&!!d.lastCheckInAt);}).catch(()=>undefined);};check();const timer=setInterval(check,2500);return()=>{live=false;clearInterval(timer);};
+  },[createdResult]);
 
   useEffect(() => {
     let cancelled = false;
@@ -141,7 +178,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess, st
       .then((res) => {
         if (cancelled || !res) return;
         setRecentModels(res.recentModels ?? []);
-        if (Number.isInteger(res.gracePeriodDays)) {
+        if (!initialDraft && Number.isInteger(res.gracePeriodDays)) {
           setFormData((prev) => ({ ...prev, gracePeriodDays: res.gracePeriodDays }));
         }
       })
@@ -321,11 +358,13 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess, st
       setSubmitting(true);
 
 
-      const res = await ApiService.createCustomerWithDevice({ ...salePayload(), agreement: {
+      await saveChain.current.catch(()=>undefined);
+      const res = await ApiService.createCustomerWithDevice({ ...salePayload(), ...(draftVersion.current>0?{draftId:draftId.current}:{}), agreement: {
         signerName: formData.customerName.trim(), signatureImage: signature, declarationAccepted: true,
         termsVersion: agreement.termsVersion, fingerprint: agreement.fingerprint,
       } });
       setCreatedResult(res);
+      window.dispatchEvent(new Event('almas:pending-work-changed')); 
       showToast('Sale and signed agreement saved.', 'success');
     } catch (err: any) {
       if (err.message?.includes('agreement details changed')) setPreviewRefresh(value => value + 1);
@@ -393,12 +432,14 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess, st
             <p className="eyebrow">New sale</p>
             <h2 className="truncate font-display text-title font-black text-ink-900 sm:text-display">Sell a phone on installments</h2>
           </div>
-          <button type="button" onClick={onClose} className="btn-secondary px-2.5" aria-label="Close">
+          <div className="flex shrink-0 items-center gap-2">{!createdResult&&<button type="button" disabled={submitting||savingPending||!hasDraftContent||noDealer} className="btn-secondary text-caption" onClick={()=>void closeAndSave()}>Save pending</button>}
+          <button type="button" onClick={()=>void closeAndSave()} disabled={savingPending||submitting} className="btn-secondary px-2.5" aria-label="Close">
             <X className="h-5 w-5" />
-          </button>
+          </button></div>
         </div>
       </div>
 
+      {draftStatus&&!createdResult&&<p role="status" className="mx-auto max-w-6xl px-4 pt-3 text-caption">{draftStatus}</p>}
       <form
         noValidate
         onSubmit={handleCreate}
@@ -545,7 +586,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess, st
             'The phone',
             'Tap a model you sold recently, or type it. Dial *#06# on the phone for the IMEI.',
             <div className="space-y-4">
-              <PhoneIntakeScan key={dealerParam || 'current'} dealerId={dealerParam} disabled={noDealer || submitting} autoStart={startWithPhoneScan}
+              <PhoneIntakeScan key={dealerParam || 'current'} dealerId={dealerParam} disabled={noDealer || submitting} autoStart={startWithPhoneScan} initialSessionId={initialDraft?.data.phoneIntakeId} onSession={id=>setPhoneIntakeId(id??undefined)}
                 onPending={setPhoneScanPending}
                 onClear={() => { setPhoneIntakeId(undefined); setScannedOsVersion(undefined); }}
                 onPhone={(id, phone) => {
@@ -947,7 +988,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess, st
               {createdResult ? (
                 <div className="space-y-4" role="status">
                   <p className="flex items-center gap-2 font-bold text-positive-700"><CheckCircle2 className="h-5 w-5 shrink-0" /> Sale and signed agreement saved.</p>
-                  {phoneIntakeId && <p className="text-caption">Your scanned phone is linked. Keep it online; no second QR is needed.</p>}
+                  {phoneIntakeId && <p className="text-caption">{connectionConfirmed ? 'Phone connected and setup confirmed.' : 'Phone details saved. Finish Android setup on the phone; connection confirmation is pending.'}</p>}
                   {!phoneIntakeId && !noLock && <div className="space-y-3">
                     <p className="font-bold">Scan this QR on the customer's phone</p>
                     {createdResult.qrImageDataUrl && <button type="button" className="mx-auto block rounded-lg bg-white p-2" onClick={() => setQrFull(true)} aria-label="Show QR full screen"><img className="mx-auto aspect-square w-56 max-w-full" src={createdResult.qrImageDataUrl} alt="QR code to scan on the new phone" /><span className="mt-2 flex items-center justify-center gap-1 text-caption"><Maximize2 className="h-3 w-3" /> Full screen</span></button>}

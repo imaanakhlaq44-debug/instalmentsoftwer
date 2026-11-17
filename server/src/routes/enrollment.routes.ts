@@ -42,7 +42,8 @@ enrollmentRouter.get('/phone-intakes/:id', asyncHandler(async (req, res) => {
   assertDealerAccess(req, session.dealerId, 'phone scan');
   res.setHeader('Cache-Control', 'no-store');
   const expired = session.token.expiresAt <= new Date() || session.token.status === 'EXPIRED';
-  res.json({ id: session.id, status: expired ? 'EXPIRED' : session.deviceId ? 'ATTACHED' : session.report ? 'RECEIVED' : 'WAITING', report: expired ? null : session.report });
+  const qr = !expired && !session.deviceId && session.token.status === 'WAITING' ? await EnrollmentService.buildQrPayload({...session.token, expiresAt:session.token.expiresAt.toISOString(),createdAt:session.token.createdAt.toISOString()} as any) : null;
+  res.json({ tokenId:session.tokenId,expiresAt:session.token.expiresAt.toISOString(),qrImageDataUrl:qr?.imageDataUrl,id: session.id, status: expired ? 'EXPIRED' : session.deviceId ? 'ATTACHED' : session.report ? 'RECEIVED' : 'WAITING', report: expired ? null : session.report });
 }));
 
 const readinessQuerySchema = z.object({
@@ -106,7 +107,7 @@ enrollmentRouter.get(
     const enriched = page.data.map((t) => {
       const device = t.deviceId ? devicesById.get(t.deviceId) : undefined;
       const customer = t.customerId ? customersById.get(t.customerId) : undefined;
-      const expired = new Date(t.expiresAt) < now;
+      const expired = t.status !== 'VERIFYING' && new Date(t.expiresAt) < now;
 
       return {
         ...t,

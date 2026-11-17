@@ -219,7 +219,7 @@ export const URDU: Record<string, string> = {
   Inactive: 'بند',
   RELEASED: 'آزاد',
   'NO LOCK': 'بغیر لاک',
-  ENROLLED: 'جڑ گیا',
+  ENROLLED: 'سیٹ اپ باقی',
   LOCK_PENDING: 'لاک ہو رہا ہے',
   UNLOCK_PENDING: 'اَن لاک ہو رہا ہے',
   REMOVED: 'ہٹا دیا',

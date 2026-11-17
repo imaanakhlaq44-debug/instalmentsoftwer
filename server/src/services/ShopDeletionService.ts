@@ -15,6 +15,7 @@ export class ShopDeletionService {
       const now = new Date();
       await tx.dealer.update({ where: { id }, data: { active: false, deletedAt: now, requestedPackSize: null } });
       const phones = await tx.device.findMany({ where: { dealerId: id, status: { not: 'REMOVED' } }, select: { id: true } });
+      await tx.saleDraft.deleteMany({ where: { dealerId: id } });
       await tx.user.updateMany({ where: { dealerId: id }, data: { active: false, sessionVersion: { increment: 1 } } });
       const licenses = await tx.deviceLicense.updateMany({ where: { dealerId: id, status: { not: 'VOID' } }, data: { status: 'VOID' } });
       // Keep the valid handset credential: requireDevice returns 403 for REMOVED,

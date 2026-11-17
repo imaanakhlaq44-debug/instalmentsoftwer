@@ -1,3 +1,4 @@
+import { PendingWork } from '../components/dashboard/PendingWork.js';
 import { useEffect, useState } from 'react';
 import { ArrowRight, CalendarDays, ClipboardList, KeyRound, Plus, RefreshCw, ShieldAlert, Smartphone, Store, Users, Wallet } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -70,6 +71,7 @@ function PortfolioHome() {
       <dl className="app-home-money-details"><div><dt>Total outstanding</dt><dd data-i18n-skip>{amount(stats?.outstandingAmount)}</dd></div><div><dt>Collected this month</dt><dd data-i18n-skip>{amount(stats?.collectedThisMonth)}</dd></div></dl>
     </section>
     <Tiles items={items} />
+    {isStaff&&<div className="mt-4"><PendingWork disabled={viewOnly}/></div>}
     {stats && <>
       <button type="button" className="app-home-attention" onClick={() => navigate(`/installments${stats.overdueInstallmentsCount ? '?status=OVERDUE' : ''}`)}>
         <span className="app-home-count">{stats.overdueInstallmentsCount}</span><span className="min-w-0 flex-1"><strong>{stats.overdueInstallmentsCount ? 'Installments past due' : 'No overdue installments'}</strong><small>{stats.overdueInstallmentsCount ? 'Open the list and follow up' : 'View your installment schedule'}</small></span><ArrowRight className="rtl:rotate-180" />

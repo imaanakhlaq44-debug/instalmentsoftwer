@@ -347,7 +347,7 @@ describe('the sale form — sending it', () => {
     expect(screen.queryByAltText('QR code to scan on the new phone')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Open QR page' })).not.toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: 'New sale' })).toBeInTheDocument();
-    expect(screen.getByText(/no second QR is needed/)).toBeInTheDocument();
+    expect(screen.getByText(/Finish Android setup on the phone/)).toBeInTheDocument();
   });
 
   it('sends the customer, phone and plan exactly as entered and shows the QR', async () => {
@@ -497,3 +497,4 @@ describe('automatic plan and single phone QR', () => {
     expect(screen.getByLabelText('IMEI (15 digits)')).toHaveValue(VALID_IMEI);
   });
 });
+

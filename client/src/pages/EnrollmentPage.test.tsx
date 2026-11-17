@@ -56,7 +56,7 @@ describe('showing a phone its QR', () => {
     expect(screen.queryByAltText(QR_ALT)).not.toBeInTheDocument();
 
     const asked = api.to('GET /devices')[0].query;
-    expect(asked.get('status')).toBe('PENDING');
+    expect(asked.get('status')).toBe('SETUP_PENDING');
     expect(asked.get('lockable')).toBe('true');
     expect(api.to('POST /enrollment/generate')).toHaveLength(0);
   });

@@ -33,6 +33,8 @@ describe('mobile access to every permitted section', () => {
     const menu = screen.getByRole('dialog', { name: 'More sections' });
     expect(within(menu).queryByRole('link', { name: 'Buy locks' })).not.toBeInTheDocument();
     expect(within(menu).getByRole('link', { name: 'Device Locks' })).toBeInTheDocument();
-    expect(within(menu).getByRole('link', { name: 'QR Enrollment' })).toBeInTheDocument();
+    expect(within(menu).queryByRole('link', { name: 'QR Enrollment' })).not.toBeInTheDocument();
+    for (const text of ['Overview','Portfolio','Operations']) expect(within(menu).queryByText(text)).not.toBeInTheDocument();
+    expect(within(menu).getByText('Administration')).toBeInTheDocument();
   });
 });

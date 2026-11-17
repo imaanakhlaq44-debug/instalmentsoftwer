@@ -5,9 +5,11 @@ import { ApiService } from '../../services/api.js';
 export type ScannedPhone = { brand: string; model: string; imeis?: string[]; serialNumber?: string; osVersion?: string };
 type Session = Awaited<ReturnType<typeof ApiService.createPhoneIntake>>;
 
-export function PhoneIntakeScan({ dealerId, disabled, onPhone, onPending, onClear, autoStart = false }: {
+export function PhoneIntakeScan({ dealerId, disabled, onPhone, onPending, onClear, autoStart = false, initialSessionId, onSession }: {
   dealerId?: string; disabled: boolean;
   autoStart?: boolean;
+  initialSessionId?: string;
+  onSession?: (id:string|null)=>void;
   onPhone: (id: string, phone: ScannedPhone) => void;
   onPending: (pending: boolean) => void;
   onClear: () => void;
@@ -46,12 +48,20 @@ export function PhoneIntakeScan({ dealerId, disabled, onPhone, onPending, onClea
     return () => { cancelled = true; clearTimeout(timer); };
   }, [session]);
 
+  useEffect(()=>{
+    if(!initialSessionId)return;let live=true;onPending(true);
+    void ApiService.getPhoneIntake(initialSessionId).then(result=>{
+      if(!live)return;
+      if(result.status==='EXPIRED'||result.status==='ATTACHED'){setError('This phone scan is no longer available. Your typed details are kept; prepare a new QR.');callbacks.current.onPending(false);callbacks.current.onClear();return;}
+      if(result.tokenId&&result.expiresAt)setSession({id:initialSessionId,tokenId:result.tokenId,expiresAt:result.expiresAt,qrImageDataUrl:result.qrImageDataUrl??''});
+    }).catch(()=>{if(live){setError('Could not restore this phone scan. Please retry.');callbacks.current.onPending(false);callbacks.current.onClear();}});return()=>{live=false;};
+  },[initialSessionId]);
   const cancel = async () => {
     if (!session || busy || disabled) return;
     setBusy(true);
     try {
       await ApiService.revokeEnrollmentToken(session.tokenId);
-      setSession(null); setFull(false); setError(''); setStatus('');
+      setSession(null); onSession?.(null); setFull(false); setError(''); setStatus('');
       callbacks.current.onClear(); callbacks.current.onPending(false);
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not cancel the scan. Try again.'); }
     finally { setBusy(false); }
@@ -61,7 +71,7 @@ export function PhoneIntakeScan({ dealerId, disabled, onPhone, onPending, onClea
     setBusy(true); setError('');
     try {
       const created = await ApiService.createPhoneIntake(dealerId);
-      delivered.current = false; setSession(created); setStatus('WAITING');
+      delivered.current = false; onSession?.(created.id); setSession(created); setStatus('WAITING');
       callbacks.current.onPending(true);
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not create the phone QR.'); }
     finally { setBusy(false); }

@@ -1,3 +1,4 @@
+import { deviceCommandSignal } from '../../src/services/DeviceCommandSignal.js';
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 
 import { as, anonymous, reseed, repo, ACCOUNTS } from '../helpers.js';
@@ -29,7 +30,7 @@ async function pendingDeviceWithToken() {
 }
 
 /** Runs enrollment and returns the credential the handset would keep. */
-async function enrolledDevice() {
+async function enrolledDevice(complete = true) {
   const { device, enrollmentToken } = await pendingDeviceWithToken();
 
   const res = await anonymous()
@@ -37,6 +38,7 @@ async function enrolledDevice() {
     .send({ token: enrollmentToken, dpcVersion: '2.4.0' });
 
   expect(res.status).toBe(201);
+  if(complete) expect((await anonymous().post('/api/dpc/check-in').set('Authorization',`Device ${res.body.deviceId}.${res.body.deviceToken}`).send({isDeviceOwner:true,setupComplete:true})).status).toBe(200);
   return {
     deviceId: device.id,
     credential: `Device ${res.body.deviceId}.${res.body.deviceToken}`,
@@ -77,7 +79,7 @@ describe('POST /api/dpc/enroll', () => {
 
     const second = await anonymous().post('/api/dpc/enroll').send({ token: enrollmentToken });
     expect(second.status).toBe(400);
-    expect(second.body.error).toMatch(/already been used/i);
+    expect(second.body.error).toMatch(/already been used|pending/i);
   });
 
   it('refuses an invented code', async () => {
@@ -451,3 +453,51 @@ describe('the enrollment QR a factory-reset phone scans', () => {
     expect(res.body.qrWarning).toMatch(/DPC_APK_URL/);
   });
 });
+
+
+describe('live command wake-up', () => {
+  it('requires the handset credential', async () => {
+    expect((await anonymous().get('/api/dpc/wait')).status).toBe(401);
+  });
+  it('wakes an online enrolled phone immediately but waits for its actual lock acknowledgement', async () => {
+    const { deviceId, credential } = await enrolledDevice();
+    const initial = await anonymous().get('/api/dpc/wait').set('Authorization', credential);
+    expect(initial.status).toBe(200);
+    const started = Date.now();
+    const waiting = anonymous().get('/api/dpc/wait').query({ after: initial.body.state }).set('Authorization', credential).then(r => r);
+    await new Promise(resolve => setTimeout(resolve, 150));
+    const lock = await as(ACCOUNTS.dealerAdmin).post('/api/devices/' + deviceId + '/lock').send({ reason: 'Customer-approved integration test' });
+    expect(lock.status).toBe(200);
+    expect(lock.body.status).toBe('LOCK_PENDING');
+    const response = await waiting;
+    expect(response.status).toBe(200);
+    expect(response.body.state).toContain('LOCK_PENDING|LOCK|');
+    expect(Date.now() - started).toBeLessThan(3000);
+    expect((await repo.devices.findById(deviceId))?.status).toBe('LOCK_PENDING');
+  });
+  it('ends a waiting connection when the handset is released', async () => {
+    const { deviceId, credential } = await enrolledDevice();
+    const initial = await anonymous().get('/api/dpc/wait').set('Authorization', credential);
+    const waiting = anonymous().get('/api/dpc/wait').query({ after: initial.body.state }).set('Authorization', credential).then(r => r);
+    await new Promise(resolve => setTimeout(resolve, 150));
+    await repo.devices.update(deviceId, { status: 'REMOVED' });
+    deviceCommandSignal.notify(deviceId);
+    expect((await waiting).status).toBe(403);
+  });
+});
+
+ describe('actual setup confirmation',()=>{
+ it('keeps credentials-issued phones pending until both owner and completed setup are reported',async()=>{
+ const {deviceId,credential}=await enrolledDevice(false);
+ expect((await repo.devices.findById(deviceId))?.status).toBe('ENROLLED');
+ expect((await repo.devices.findById(deviceId))?.lastCheckInAt).toBeFalsy();
+ for(const report of [{},{isDeviceOwner:true},{setupComplete:true},{isDeviceOwner:false,setupComplete:true}]){
+ const response=await anonymous().post('/api/dpc/check-in').set('Authorization',credential).send(report);
+ expect(response.status).toBe(200);expect(response.body.status).toBe('ENROLLED');expect(response.body.policy.setupPending).toBe(true);
+ expect(response.body.policy.restrictionLevel).toBe(0);expect((await repo.devices.findById(deviceId))?.isOnline).toBe(false);
+ }
+ const result=await anonymous().post('/api/dpc/check-in').set('Authorization',credential).send({isDeviceOwner:true,setupComplete:true});
+ expect(result.status).toBe(200);expect(result.body.status).toBe('ACTIVE');expect((await repo.devices.findById(deviceId))?.lastCheckInAt).toBeTruthy();
+ });
+ it('does not allow a pending handset to be locked',async()=>{const {deviceId}=await enrolledDevice(false);expect((await as(ACCOUNTS.dealerAdmin).post('/api/devices/'+deviceId+'/lock').send({reason:'Testing pending handset guard'})).status).toBe(400);});
+ });

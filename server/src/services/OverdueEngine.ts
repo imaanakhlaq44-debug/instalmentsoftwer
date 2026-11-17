@@ -164,7 +164,7 @@ export class OverdueEngine {
           // A phone sold without a lock has nothing to lock (and stays PENDING,
           // so the flagging branch below skips it too). The overdue notice
           // above still goes out and the plan still shows as overdue.
-          if (!device.noLock && policy.autoLockEnabled && lockNow && device.status !== 'LOCKED' && device.status !== 'LOCK_PENDING') {
+          if (!device.noLock && !['PENDING','ENROLLED'].includes(device.status) && policy.autoLockEnabled && lockNow && device.status !== 'LOCKED' && device.status !== 'LOCK_PENDING') {
             try {
               await deviceManagementService.lockDevice({
                 deviceId: device.id,
@@ -181,7 +181,7 @@ export class OverdueEngine {
               // One un-lockable device must not abort the whole nightly run.
               console.error(`[overdue] Failed to auto-lock device ${device.id}:`, err);
             }
-          } else if (device.status === 'ACTIVE' || device.status === 'ENROLLED') {
+          } else if (device.status === 'ACTIVE') {
             await repo.devices.update(device.id, {
               status: 'OVERDUE',
               lockReason: `Installment #${inst.installmentNumber} overdue by ${daysLate} day(s).`,

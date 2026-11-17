@@ -1,3 +1,4 @@
+import { InstallmentGraceService } from '../services/InstallmentGraceService.js';
 import { Router } from 'express';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
@@ -444,3 +445,5 @@ installmentsRouter.get('/plans/:id/payoff-quote', asyncHandler(async (req, res) 
     note: 'This quote settles the plan in full. Verify with the customer before recording the payment.',
   });
 }));
+
+installmentsRouter.post('/:id/extend-grace',requireDealerAdmin,validateBody(z.object({graceDate:isoDateSchema,reason:z.string().trim().min(5).max(500)}).strict()),asyncHandler(async(req,res)=>{const u=getAuthUser(req);res.json(await InstallmentGraceService.extend(routeParam(req,'id'),req.body.graceDate,req.body.reason,{userId:u.userId,name:u.name,role:u.role,dealerId:u.dealerId},clientIp(req)));}));

@@ -275,6 +275,7 @@ const createSchema = z.object({
     termsVersion: z.string().max(16),
     fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
   }).optional(),
+  draftId: z.string().uuid().optional(),
   phoneIntakeId: z.string().uuid().optional(),
   dealerId: z.string().trim().max(64).optional(),
   customer: z.object({
@@ -422,6 +423,11 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
   // device and no schedule — a financed phone nobody was billed for.
   const result = await runInTransaction(async (tx: Tx) => {
     const nowIso = new Date().toISOString();
+    if (body.draftId) {
+      const draft = await tx.saleDraft.findUnique({where:{id:body.draftId}});
+      if (!draft || draft.dealerId !== dealerId || user.role === 'DEALER_STAFF' && draft.userId !== user.userId) throw AppError.notFound('Pending sale');
+      if (draft.completedAt) throw AppError.conflict('This pending sale has already been completed.');
+    }
 
     const customer = returningCustomer
       ? returningCustomer.active
@@ -583,6 +589,7 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
     const intakeToken = body.phoneIntakeId && device
       ? await PhoneIntakeService.attach(tx, body.phoneIntakeId, dealerId, device)
       : undefined;
+    if (body.draftId) await tx.saleDraft.update({where:{id:body.draftId},data:{completedAt:new Date(),deviceId:device?.id??null}});
     return { customer, device, plan, installments, contractId: contract?.id, contractStatus: contract?.status, intakeToken };
   });
 

@@ -322,6 +322,8 @@ export class ApiService {
     });
   }
 
+  static extendGrace(id:string,graceDate:string,reason:string) { return this.request<any>(`/installments/${id}/extend-grace`,{method:'POST',body:JSON.stringify({graceDate,reason})}); }
+
   static waiveLateFee(installmentId: string, reason: string) {
     return this.request<any>(`/installments/${installmentId}/waive-late-fee`, {
       method: 'POST',
@@ -422,7 +424,7 @@ export class ApiService {
   }
 
   static getPhoneIntake(id: string) {
-    return this.request<{ status: string; report: { brand: string; model: string; imeis?: string[]; serialNumber?: string; osVersion?: string } | null }>(`/enrollment/phone-intakes/${encodeURIComponent(id)}`);
+    return this.request<{ tokenId?:string;expiresAt?:string;qrImageDataUrl?:string;status: string; report: { brand: string; model: string; imeis?: string[]; serialNumber?: string; osVersion?: string } | null }>(`/enrollment/phone-intakes/${encodeURIComponent(id)}`);
   }
 
   static getEnrollmentReadiness(dealerId?: string) {
@@ -452,6 +454,9 @@ export class ApiService {
     return this.request<{ success: boolean; releasedPhones: number; voidedLocks: number }>(`/platform/shops/${encodeURIComponent(id)}`, { method: 'DELETE', body: JSON.stringify({ confirmationName }) });
   }
 
+  static getPendingWork(dealerId?: string) { return this.request<any>(`/sale-drafts${buildQuery({dealerId})}`); }
+  static saveSaleDraft(id:string, body:unknown) { return this.request<any>(`/sale-drafts/${id}`, {method:'PUT',body:JSON.stringify(body)}); }
+  static discardSaleDraft(id:string) { return this.request<any>(`/sale-drafts/${id}`, {method:'DELETE'}); }
   static getPlatformOverview() {
     return this.request<any>('/platform/overview');
   }

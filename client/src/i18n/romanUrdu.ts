@@ -10,6 +10,20 @@
  * QR, IMEI, app, SMS, CNIC, JazzCash, Wi-Fi.
  */
 export const ROMAN_URDU: Record<string, string> = {
+ "Pending work": "Adhure kaam",
+ "Save pending": "Adhura kaam save karein",
+ "Saved sale forms": "Save kiye hue sale forms",
+ "No saved sale forms.": "Koi adhura sale form nahi.",
+ "Continue sale": "Sale mukammal karein",
+ "Discard saved form": "Adhura form hata dein",
+ "Phones awaiting setup": "Jin phones ka setup baqi hai",
+ "No phones awaiting setup.": "Kisi phone ka setup baqi nahi.",
+ "Setup pending": "Setup baqi",
+ "Continue setup": "Setup mukammal karein",
+ "Refresh dashboard": "Dashboard dobara load karein",
+ "Choose locks now (optional)": "Abhi locks chunein (ikhtiyari)",
+ "8 or more characters, including a letter and a number.": "Kam az kam 8 characters, jis mein ek English harf aur ek number ho.",
+
   "Plan price (Rs)": "Phone ki qeemat (Rs)",
   "Filled from the phone price above.": "Upar phone ki qeemat se khud bhar jata hai.",
   "Remaining amount (Rs)": "Baqi raqam (Rs)",
@@ -210,7 +224,7 @@ export const ROMAN_URDU: Record<string, string> = {
   Inactive: 'Band',
   RELEASED: 'AZAAD',
   'NO LOCK': 'BINA LOCK',
-  ENROLLED: 'JUR GAYA',
+  ENROLLED: 'SETUP BAQI',
   LOCK_PENDING: 'LOCK HO RAHA HAI',
   UNLOCK_PENDING: 'UNLOCK HO RAHA HAI',
   REMOVED: 'HATA DIYA',

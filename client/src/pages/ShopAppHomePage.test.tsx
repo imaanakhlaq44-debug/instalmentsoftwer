@@ -11,7 +11,7 @@ describe('Bold Easy app home', () => {
     open(); expect(await screen.findByText(/42,000/)).toBeInTheDocument();
     expect(screen.getByText(/1,24,500|124,500/)).toBeInTheDocument();
     expect(screen.getByText('12 / 18')).toBeInTheDocument();
-    for (const name of ['New sale', 'Record payment', 'Scan new phone', 'Customer list']) expect(screen.getByRole('button', { name })).toBeInTheDocument();
+    for (const name of ['New sale', 'Record payment', 'Installments', 'Customer list']) expect(screen.getByRole('button', { name })).toBeInTheDocument();
   });
   it('opens customer and overdue lists from real home actions', async () => {
     open(); fireEvent.click(await screen.findByRole('button', { name: /Installments past due/ }));
@@ -22,14 +22,11 @@ describe('Bold Easy app home', () => {
     expect(await screen.findByRole('dialog', { name: 'New sale' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save signed sale & show QR' })).toBeInTheDocument();
   });
-  it('prepares the first phone QR directly from the scan tile once', async () => {
-    const api = open('DEALER_ADMIN', {
-      'POST /enrollment/phone-intakes': { id: 'intake-1', tokenId: 'token-1', qrImageDataUrl: 'data:image/png;base64,test' },
-      'GET /enrollment/phone-intakes/intake-1': { status: 'WAITING' },
-    });
-    fireEvent.click(await screen.findByRole('button', { name: 'Scan new phone' }));
-    expect(await screen.findByAltText('Welcome-screen phone enrollment QR')).toBeInTheDocument();
-    await waitFor(() => expect(api.to('POST /enrollment/phone-intakes')).toHaveLength(1));
+  it('keeps one sale entry point and links directly to installments', async () => {
+    open(); await screen.findByText(/42,000/);
+    expect(screen.queryByRole('button', { name: 'Scan new phone' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Installments' }));
+    expect(await screen.findByText('Went to /installments')).toBeInTheDocument();
   });
   it('does not show shop sales or customer actions to a customer', async () => {
     open('CUSTOMER'); await screen.findByText(/42,000/);

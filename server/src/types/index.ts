@@ -117,6 +117,7 @@ export interface Customer {
 }
 
 export interface Device {
+  commandVersion?: number;
   id: string;
   dealerId: string;
   customerId: string;
