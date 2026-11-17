@@ -1,6 +1,6 @@
 # Audit fixes — release notes (17 November 2026)
 
-Apply after a verified backup and a successful restore rehearsal. This change has not been deployed to a live database or physical handset.
+Apply after a verified backup and a successful restore rehearsal. Deployed to https://app.almassdm.pro on 17 November 2026 after an isolated PostgreSQL 16 restore, staging checks and rollback preparation. Actual physical-handset acceptance remains pending; no handset was reset, updated or locked during this deployment.
 
 ## Database migration
 
@@ -26,7 +26,7 @@ Multi-record transactions take a PostgreSQL transaction advisory lock before rea
 
 ## Enforcement and deployment
 
-Dealer-triggered overdue evaluation is dealer-scoped. Nightly dates use Asia/Karachi. Already-overdue installments retry enforcement. Fleet requests have a separate rate budget. Android normal check-ins now answer recovery location requests. FTPS failures stop deployment; plaintext FTP fallback is removed.
+Dealer-triggered overdue evaluation is dealer-scoped. Nightly dates use Asia/Karachi; database sessions use UTC so SQL leases and retry windows remain consistent. Already-overdue installments retry enforcement. Fleet requests have a separate rate budget. Android normal check-ins now answer recovery location requests. FTPS failures stop deployment; plaintext FTP fallback is removed.
 
 Backups check pg_dump independently, compress a private temporary dump, validate gzip, and publish only after all steps succeed. Perform an actual isolated PostgreSQL restore before relying on the backup in production.
 
