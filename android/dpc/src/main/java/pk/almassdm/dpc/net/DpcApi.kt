@@ -50,6 +50,9 @@ class DpcApi(private val baseUrl: String, private val credential: String? = null
         attestation?.let { body.put("attestation", it.toJson()) }
 
         val json = request("POST", "enroll", body, authenticated = false)
+        if (json.optBoolean("intakeCancelled", false)) {
+            throw IntakeCancelledException()
+        }
         if (json.optBoolean("intakePending", false)) {
             throw IntakePendingException()
         }
@@ -183,3 +186,4 @@ class DpcApi(private val baseUrl: String, private val credential: String? = null
 
 /** The welcome-screen scan succeeded; no financial sale has been attached yet. */
 class IntakePendingException : Exception("Phone details received. Complete the sale at the counter.")
+class IntakeCancelledException : Exception("Phone scan cancelled. This unassigned phone is released from management.")

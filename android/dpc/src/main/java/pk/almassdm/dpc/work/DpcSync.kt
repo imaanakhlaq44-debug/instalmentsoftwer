@@ -13,6 +13,7 @@ import pk.almassdm.dpc.data.PolicyView
 import pk.almassdm.dpc.data.Prefs
 import pk.almassdm.dpc.net.DpcApi
 import pk.almassdm.dpc.net.DpcException
+import pk.almassdm.dpc.net.IntakeCancelledException
 import pk.almassdm.dpc.net.Telemetry
 
 /**
@@ -48,13 +49,20 @@ class DpcSync(context: Context) {
         val attestation = if (enrollmentAttestation?.first == code) enrollmentAttestation?.second else runCatching {
             KeyAttestor.attest(appContext, AttestationChallenge.forEnrollment(code))
         }.getOrNull().also { enrollmentAttestation = code to it }
-        val result = api.enroll(
+        val result = try { api.enroll(
             enrollmentToken = code.trim(),
             deviceId = null,
             dpcVersion = BuildConfig.VERSION_NAME,
             hardware = hardware,
             attestation = attestation,
-        )
+        ) } catch (cancelled: IntakeCancelledException) {
+            if (!prefs.isEnrolled) {
+                lockController.releaseFromManagement()
+                prefs.clear()
+                prefs.released = true
+            }
+            throw cancelled
+        }
 
         if (result.deviceId.isBlank() || result.deviceToken.isBlank()) {
             throw DpcException("The server did not return device credentials.", retryable = false)

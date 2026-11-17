@@ -9,6 +9,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import pk.almassdm.dpc.net.IntakePendingException
+import pk.almassdm.dpc.net.IntakeCancelledException
 import kotlinx.coroutines.withContext
 import pk.almassdm.dpc.BuildConfig
 import pk.almassdm.dpc.R
@@ -86,6 +87,10 @@ class EnrollActivity : AppCompatActivity() {
             }
 
             setBusy(false)
+            if (result.exceptionOrNull() is IntakeCancelledException) {
+                goToStatus()
+                break
+            }
             result
                 .onSuccess {
                     binding.enrollStatus.text = getString(R.string.enroll_done)
