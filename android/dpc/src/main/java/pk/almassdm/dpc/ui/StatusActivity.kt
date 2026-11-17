@@ -66,7 +66,7 @@ class StatusActivity : AppCompatActivity() {
     }
 
     private fun render(policy: PolicyView) {
-        binding.statusLine.text = getString(R.string.status_registered)
+        binding.statusLine.text = if (policy.setupPending) "Setup pending — finish Android setup and check again" else getString(R.string.status_registered)
         binding.amountDue.text = if (policy.amountDue <= 0.0) {
             getString(R.string.status_no_dues)
         } else {

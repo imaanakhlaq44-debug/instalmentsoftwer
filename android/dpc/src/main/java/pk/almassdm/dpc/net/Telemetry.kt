@@ -48,6 +48,7 @@ data class Telemetry(
     val imeis: List<String> = emptyList(),
     val serialNumber: String? = null,
     val isDeviceOwner: Boolean? = null,
+    val setupComplete: Boolean? = null,
     val integrity: DeviceIntegrity.Report? = null,
     /** Secure-chip attestation, only in the check-in that answers a server challenge. */
     val attestation: AttestationReport? = null,
@@ -78,6 +79,7 @@ data class Telemetry(
         }
         serialNumber?.takeIf { it.isNotBlank() }?.let { json.put("serialNumber", it) }
         isDeviceOwner?.let { json.put("isDeviceOwner", it) }
+        setupComplete?.let { json.put("setupComplete", it) }
         integrity?.let { json.put("integrity", it.toJson()) }
         attestation?.let { json.put("attestation", it.toJson()) }
         frp?.let { json.put("frp", it.toJson()) }
@@ -126,6 +128,7 @@ data class Telemetry(
                 imeis = hardware?.imeis.orEmpty(),
                 serialNumber = hardware?.serialNumber,
                 isDeviceOwner = hardware?.isDeviceOwner,
+                setupComplete = SetupReadiness.collect(context),
                 integrity = hardware?.integrity,
                 frp = prefs.cachedFrpReport(),
             )

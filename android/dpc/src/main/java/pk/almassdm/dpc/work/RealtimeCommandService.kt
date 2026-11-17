@@ -40,15 +40,18 @@ class RealtimeCommandService : Service() {
         if (loop?.isActive != true) loop = scope.launch {
             var state = ""
             var lastSync = 0L
+            var confirmedSetup = false
             var backoff = 2000L
             while (isActive && prefs.isEnrolled) {
                 try {
-                    val next = DpcApi(prefs).waitForCommand(state)
+                    val setupReady = pk.almassdm.dpc.net.SetupReadiness.collect(this@RealtimeCommandService)
+                    val next = if (state.startsWith("ENROLLED") && !confirmedSetup) { delay(1500); state } else DpcApi(prefs).waitForCommand(state)
                     ensureActive()
-                    if (next != state || android.os.SystemClock.elapsedRealtime() - lastSync > 300000) {
+                    if (next != state || setupReady && !confirmedSetup || android.os.SystemClock.elapsedRealtime() - lastSync > 300000) {
                         val result = DpcSync(this@RealtimeCommandService).syncOnce()
                         if (result is DpcSync.Outcome.Released || result is DpcSync.Outcome.NotEnrolled) break
                         if (result is DpcSync.Outcome.Failed) { if (!result.retryable) break; retryAfter(backoff); backoff = (backoff * 2).coerceAtMost(60000); continue }
+                        confirmedSetup = setupReady
                         lastSync = android.os.SystemClock.elapsedRealtime()
                     }
                     state = next; backoff = 2000L
