@@ -23,3 +23,4 @@ rootProject.name = "Almas SDM Android"
 // never end up installed on a financed phone, nor the DPC on the counter's.
 include(":dpc")
 include(":sms-relay")
+include(":shop")
