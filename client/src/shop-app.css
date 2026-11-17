@@ -63,3 +63,7 @@
   .app-home-error button { display:flex; align-items:center; gap:6px; margin-top:8px; font-weight:700; }
   @media(prefers-reduced-motion:reduce) { .app-home-tile { transition:none; } }
 }
+
+.app-home-money .app-home-greeting { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 16px; min-height:66px; }
+.app-home-money .app-home-greeting h1 { font-size:24px; line-height:1.3; letter-spacing:-.6px; }
+.app-home-hero-phone { width:66px; height:76px; object-fit:contain; transform:rotate(12deg); flex-shrink:0; filter:drop-shadow(3px 5px 3px #17364e25); }

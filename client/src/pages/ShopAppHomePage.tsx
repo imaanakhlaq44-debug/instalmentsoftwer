@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, CalendarDays, ClipboardList, KeyRound, Plus, QrCode, RefreshCw, ShieldAlert, Smartphone, Store, Users, Wallet } from 'lucide-react';
+import { ArrowRight, CalendarDays, ClipboardList, KeyRound, Plus, RefreshCw, ShieldAlert, Smartphone, Store, Users, Wallet } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.js';
 import { ApiService } from '../services/api.js';
@@ -20,15 +20,11 @@ const TILE_ART: Record<string, string> = {
 };
 const amount = (value?: number) => value == null ? '—' : money(value);
 
-function Greeting({ platform = false }: { platform?: boolean }) {
-  const { user, dealer, selectedDealerId } = useAuth();
-  const date = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', timeZone: 'Asia/Karachi' }).format(new Date());
-  return <div className="app-home-greeting">
-    <p>{platform ? 'Your platform, your control.' : 'Your shop, your control.'}</p>
-    <h1><span>Salam,</span> <span data-i18n-skip>{firstName(user?.name || dealer?.ownerName)}</span> <span aria-hidden="true">👋</span></h1>
-    <div className="app-home-subtitle"><span data-i18n-skip>{dealer?.name || (selectedDealerId ? 'ALMAS SDM' : '')}</span><span>{date}</span></div>
-  </div>;
+function Greeting() {
+  const { user, dealer } = useAuth();
+  return <div className="app-home-greeting"><h1><span>Salam,</span> <span data-i18n-skip>{firstName(user?.name || dealer?.ownerName)}</span> <span aria-hidden="true">👋</span></h1><img className="app-home-hero-phone" src="/icons/3d/phone.png" alt="" width="70" height="82" aria-hidden="true" /></div>;
 }
+
 function Tiles({ items }: { items: Tile[] }) {
   return <div className="app-home-tiles">{items.map(({ icon: Icon, ...item }) => <button type="button" key={item.label} className={`app-home-tile ${item.tone}`} onClick={item.action} disabled={item.disabled}>{TILE_ART[item.label] ? <img className="app-home-tile-art" src={`/icons/3d/${TILE_ART[item.label]}.png`} alt="" width="64" height="64" aria-hidden="true" /> : <Icon aria-hidden="true" />}<span>{item.label}</span></button>)}</div>;
 }
@@ -47,18 +43,17 @@ function PortfolioHome() {
   const [failed, setFailed] = useState(false);
   const [reload, setReload] = useState(0);
   const [saleOpen, setSaleOpen] = useState(false);
-  const [scanFirst, setScanFirst] = useState(false);
   const viewOnly = role === 'SUPER_ADMIN' && !shopEditMode;
   useEffect(() => {
     let live = true; setStats(null); setFailed(false);
     ApiService.getDashboardStats(selectedDealerId).then(data => { if (live) setStats(data); }).catch(() => { if (live) setFailed(true); });
     return () => { live = false; };
   }, [selectedDealerId, reload]);
-  const openSale = (scan: boolean) => { setScanFirst(scan); setSaleOpen(true); };
+  const openSale = () => setSaleOpen(true);
   const items: Tile[] = isStaff ? [
-    { label: 'New sale', icon: Plus, action: () => openSale(false), tone: 'navy', disabled: viewOnly },
+    { label: 'New sale', icon: Plus, action: () => openSale(), tone: 'navy', disabled: viewOnly },
     { label: 'Record payment', icon: Wallet, action: () => navigate('/payments'), tone: 'paper' },
-    { label: 'Scan new phone', icon: QrCode, action: () => openSale(true), tone: 'mint', disabled: viewOnly },
+    { label: 'Installments', icon: CalendarDays, action: () => navigate('/installments'), tone: 'mint' },
     { label: 'Customer list', icon: Users, action: () => navigate('/customers'), tone: 'peach' },
   ] : [
     { label: 'My phones', icon: Smartphone, action: () => navigate('/devices'), tone: 'navy' },
@@ -67,9 +62,9 @@ function PortfolioHome() {
     { label: 'Notifications', icon: ClipboardList, action: () => navigate('/notifications'), tone: 'peach' },
   ];
   return <div className="app-home" aria-label="Shop app home">
-    <Greeting />
     {failed && <Failure retry={() => setReload(n => n + 1)} />}
     <section className="app-home-money" aria-label="Collection overview" aria-busy={!stats && !failed}>
+      <Greeting />
       <div className="app-home-money-top"><h2>Today's collection</h2>{stats && <span className="app-home-chip" aria-label="Today's scheduled installments paid">{stats.dueTodayCount ? <>{stats.paidDueTodayCount} / {stats.dueTodayCount} <span>paid</span></> : <span>No dues today</span>}</span>}</div>
       <p className="app-home-amount" data-i18n-skip>{amount(stats?.collectedToday)}</p>
       <dl className="app-home-money-details"><div><dt>Total outstanding</dt><dd data-i18n-skip>{amount(stats?.outstandingAmount)}</dd></div><div><dt>Collected this month</dt><dd data-i18n-skip>{amount(stats?.collectedThisMonth)}</dd></div></dl>
@@ -83,7 +78,7 @@ function PortfolioHome() {
       {isStaff && (stats.tamperAlertDevices ?? 0) > 0 && <button type="button" className="app-home-inline-alert critical" onClick={() => navigate('/devices?tamper=true')}><ShieldAlert /><span>{stats.tamperAlertDevices} <span>Phones need inspection</span></span><ArrowRight /></button>}
       <p className="app-home-footer"><span>{stats.totalDevices} <span>phones</span></span><i>·</i><span>{stats.totalCustomers} <span>customers</span></span><i>·</i><span>One place</span></p>
     </>}
-    {saleOpen && <AddCustomerWizardModal startWithPhoneScan={scanFirst} onClose={() => setSaleOpen(false)} onSuccess={() => setReload(n => n + 1)} />}
+    {saleOpen && <AddCustomerWizardModal onClose={() => setSaleOpen(false)} onSuccess={() => setReload(n => n + 1)} />}
   </div>;
 }
 
@@ -99,7 +94,7 @@ function PlatformHome() {
   }, [reload]);
   const totals = data?.totals;
   const orders = data ? data.awaitingPayment.length + (data.totals.ordersToCheck ?? 0) : null;
-  return <div className="app-home" aria-label="Platform app home"><Greeting platform />
+  return <div className="app-home" aria-label="Platform app home">
     {failed && <Failure retry={() => setReload(n => n + 1)} />}
     <section className="app-home-money" aria-label="Platform earnings" aria-busy={!data && !failed}>
       <div className="app-home-money-top"><h2>Earned this month</h2>{totals && <span className="app-home-chip">{totals.shops} <span>shops</span></span>}</div>

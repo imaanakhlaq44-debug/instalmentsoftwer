@@ -85,10 +85,10 @@ export const BottomNav: React.FC = () => {
     </nav>
     {moreOpen && createPortal(<div className={`fixed inset-0 z-[90] flex items-end bg-ink-900/50 ${native ? '' : 'lg:hidden'}`} onClick={close}>
       <section data-app-sections role="dialog" aria-modal="true" aria-label="More sections" onClick={e => e.stopPropagation()} className="max-h-[88dvh] w-full overflow-y-auto rounded-t-3xl border-2 border-ink-900 bg-paper-100 p-5 pb-8" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
-        <header className="mb-5 flex items-center justify-between"><div><p className="eyebrow">ALMAS SDM</p><h2 className="text-title font-black">All sections</h2></div><button ref={closeButton} type="button" aria-label="Close more sections" className="btn-secondary p-2.5" onClick={close}><X className="h-5 w-5" /></button></header>
+        <header className="mb-5 flex items-center justify-between"><div><p className="eyebrow">ALMAS SDM</p><h2 className="text-title font-black">{native ? 'App settings' : 'All sections'}</h2></div><button ref={closeButton} type="button" aria-label="Close more sections" className="btn-secondary p-2.5" onClick={close}><X className="h-5 w-5" /></button></header>
         {native && <AppAccountMenu close={close} />}
         {NAV_GROUPS.map(group => {
-          const links = allowed.filter(item => item.group === group);
+          const links = allowed.filter(item => item.group === group && (!native || !['Overview', 'Portfolio', 'Operations'].includes(group)));
           return links.length ? <div key={group} className="mb-5"><h3 className="eyebrow mb-2">{group}</h3><div className="surface divide-y divide-paper-300 overflow-hidden">{links.map(item => { const Icon = item.icon; return <NavLink key={item.to} to={item.to} end={item.to === '/'} onClick={close} className={({isActive}) => `flex min-h-12 items-center gap-3 px-4 py-3 text-body font-bold ${isActive ? 'bg-sun-200 text-ink-900' : 'hover:bg-paper-200'}`}><Icon className="h-5 w-5" /><span className="flex-1">{item.label}</span><ChevronRight className="h-4 w-4" /></NavLink>; })}</div></div> : null;
         })}
         <div className="grid gap-2 sm:grid-cols-2"><Link className="btn-secondary justify-start" to="/privacy" onClick={close}><ShieldCheck className="h-4 w-4" />Privacy</Link><Link className="btn-secondary justify-start" to="/account-deletion" onClick={close}><UserRoundMinus className="h-4 w-4" />Delete account</Link></div>
