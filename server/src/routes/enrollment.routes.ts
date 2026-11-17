@@ -5,6 +5,8 @@ import { config } from '../config.js';
 import { repo, indexBy, dealerScope } from '../db/repositories/index.js';
 import { Device, Customer } from '../types/index.js';
 import { EnrollmentService } from '../services/EnrollmentService.js';
+import { prisma } from '../db/prisma.js';
+import { randomUUID } from 'node:crypto';
 import {
   requireDealerStaff, getAuthUser, resolveDealerScope, resolveWritableDealerId,
   assertDealerAccess, clientIp,
@@ -19,6 +21,29 @@ export const enrollmentRouter = Router();
 
 // Enrollment is a counter operation; customers have no business here.
 enrollmentRouter.use(requireDealerStaff);
+
+enrollmentRouter.post('/phone-intakes', validateBody(z.object({ dealerId: z.string().max(64).optional() })), asyncHandler(async (req, res) => {
+  const dealerId = await resolveWritableDealerId(req, req.body.dealerId);
+  const user = getAuthUser(req);
+  const token = await EnrollmentService.generateToken({ dealerId, qrType: 'STANDARD', expiresInMinutes: 60,
+    actor: { userId: user.userId, userName: user.name, userRole: user.role }, ipAddress: clientIp(req) });
+  const qr = await EnrollmentService.buildQrPayload(token);
+  if (!qr.provisioningReady) {
+    await repo.enrollmentTokens.update(token.id, { status: 'EXPIRED' });
+    throw AppError.badRequest('Welcome-screen provisioning is not configured. Contact your administrator.');
+  }
+  const session = await prisma.phoneIntake.create({ data: { id: randomUUID(), dealerId, tokenId: token.id } });
+  res.status(201).json({ id: session.id, tokenId: token.id, expiresAt: token.expiresAt, qrImageDataUrl: qr.imageDataUrl });
+}));
+
+enrollmentRouter.get('/phone-intakes/:id', asyncHandler(async (req, res) => {
+  const session = await prisma.phoneIntake.findUnique({ where: { id: routeParam(req, 'id') }, include: { token: true } });
+  if (!session) throw AppError.notFound('Phone scan');
+  assertDealerAccess(req, session.dealerId, 'phone scan');
+  res.setHeader('Cache-Control', 'no-store');
+  const expired = session.token.expiresAt <= new Date() || session.token.status === 'EXPIRED';
+  res.json({ id: session.id, status: expired ? 'EXPIRED' : session.deviceId ? 'ATTACHED' : session.report ? 'RECEIVED' : 'WAITING', report: expired ? null : session.report });
+}));
 
 const readinessQuerySchema = z.object({
   dealerId: z.string().trim().max(64).optional(),

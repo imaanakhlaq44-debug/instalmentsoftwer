@@ -266,6 +266,7 @@ model Dealer {
   contracts        Contract[]
   testimonial      Testimonial?
   handsetTests     HandsetTest[]
+  phoneIntakes     PhoneIntake[]
 
   @@index([active])
   @@map("dealers")
@@ -562,6 +563,7 @@ model Device {
   enrollmentTokens EnrollmentToken[]
   notifications    Notification[]
   contract         Contract?
+  phoneIntake      PhoneIntake?
 
   @@index([dealerId])
   @@index([dealerId, status])
@@ -598,6 +600,7 @@ model DeviceActionLog {
 }
 
 model EnrollmentToken {
+  phoneIntake PhoneIntake?
   id         String                @id
   dealerId   String                @map("dealer_id")
   deviceId   String?               @map("device_id")
@@ -615,6 +618,23 @@ model EnrollmentToken {
   @@index([dealerId, createdAt(sort: Desc)])
   @@index([status, expiresAt])
   @@map("enrollment_tokens")
+}
+
+/// A welcome-screen phone scan waiting for the counter to register its sale.
+model PhoneIntake {
+  id String @id
+  dealerId String @map("dealer_id")
+  tokenId String @unique @map("token_id")
+  report Json?
+  identityHash String? @map("identity_hash") @db.VarChar(64)
+  deviceId String? @unique @map("device_id")
+  reportedAt DateTime? @map("reported_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  dealer Dealer @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  token EnrollmentToken @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+  device Device? @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+  @@index([dealerId, createdAt])
+  @@map("phone_intakes")
 }
 
 // ---------------------------------------------------------------------------

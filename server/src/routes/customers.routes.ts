@@ -8,6 +8,7 @@ import {
   Contract, Customer, Device, InstallmentPlan, Installment, Payment,
 } from '../types/index.js';
 import { EnrollmentService } from '../services/EnrollmentService.js';
+import { PhoneIntakeService } from '../services/PhoneIntakeService.js';
 import { ContractService } from '../services/ContractService.js';
 import { LicenseService } from '../services/LicenseService.js';
 import { AuditService } from '../services/AuditService.js';
@@ -266,6 +267,7 @@ function comparableName(name: string): string {
 }
 
 const createSchema = z.object({
+  phoneIntakeId: z.string().uuid().optional(),
   dealerId: z.string().trim().max(64).optional(),
   customer: z.object({
     name: z.string().trim().min(3, 'Customer name must be at least 3 characters.').max(120),
@@ -314,6 +316,10 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
   const user = getAuthUser(req);
   const body = req.body as z.infer<typeof createSchema>;
   const dealerId = await resolveWritableDealerId(req, body.dealerId);
+
+  if (body.phoneIntakeId && (!body.device || body.noLock)) {
+    throw AppError.badRequest('A scanned phone must be registered as a managed device.');
+  }
 
   // A device may not be financed without a plan, and vice versa.
   if (body.device && !body.plan) {
@@ -541,7 +547,10 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
       ipAddress: clientIp(req),
     }, tx);
 
-    return { customer, device, plan, installments, contractId: contract?.id };
+    const intakeToken = body.phoneIntakeId && device
+      ? await PhoneIntakeService.attach(tx, body.phoneIntakeId, dealerId, device)
+      : undefined;
+    return { customer, device, plan, installments, contractId: contract?.id, intakeToken };
   });
 
   /**
@@ -551,7 +560,7 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
    * has no nested interactive transactions. Issuing it second is also the right
    * order: a QR must never exist for a device the registration failed to write.
    */
-  const enrollmentToken = result.device && !result.device.noLock
+  const enrollmentToken = result.intakeToken ?? (result.device && !result.device.noLock
     ? await EnrollmentService.generateToken({
         dealerId,
         deviceId: result.device.id,
@@ -559,7 +568,7 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
         qrType: body.qrType,
         actor: { userId: user.userId, userName: user.name, userRole: user.role },
       })
-    : undefined;
+    : undefined);
 
   // The real QR, so the sale screen can show it straight away. It used to show
   // a QR-shaped icon there, which a phone's scanner reads as nothing at all.

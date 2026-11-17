@@ -12,6 +12,8 @@ import { useAuth } from '../../context/AuthContext.js';
 import { GoogleIdGuideModal } from './GoogleIdGuideModal.js';
 import { SaleSignStep, SaleSignState } from '../contract/SaleSignStep.js';
 import { ImeiScanButton } from './ImeiScanButton.js';
+import { CnicScanButton } from './CnicScanButton.js';
+import { PhoneIntakeScan } from './PhoneIntakeScan.js';
 import {
   X,
   User,
@@ -78,6 +80,9 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
   const [recentModels, setRecentModels] = useState<RecentModel[]>([]);
   const [returning, setReturning] = useState<Returning | null>(null);
   const [lookingUp, setLookingUp] = useState(false);
+  const [phoneIntakeId, setPhoneIntakeId] = useState<string>();
+  const [phoneScanPending, setPhoneScanPending] = useState(false);
+  const [scannedOsVersion, setScannedOsVersion] = useState<string>();
 
   const [formData, setFormData] = useState({
     customerName: '',
@@ -109,6 +114,8 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
 
   const noDealer = user?.role === 'SUPER_ADMIN' && !selectedDealerId;
   const dealerParam = selectedDealerId || undefined;
+
+  useEffect(() => { setPhoneIntakeId(undefined); setScannedOsVersion(undefined); setPhoneScanPending(false); }, [dealerParam]);
 
   useEffect(() => {
     let cancelled = false;
@@ -241,6 +248,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
   const handleCreate = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (inFlight.current) return;
+    if (phoneScanPending) { showToast('Wait for the phone details or cancel the phone scan before registering.', 'error'); return; }
     const problems = validateSale(formData, { returningCustomer: !!returning });
     if (Object.keys(problems).length > 0) {
       showProblems(problems);
@@ -250,6 +258,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
       inFlight.current = true;
       setSubmitting(true);
       const payload = {
+        phoneIntakeId,
         // A super admin works inside the shop picked at the top; without this the
         // server cannot tell which shop the sale belongs to and refuses it.
         dealerId: dealerParam,
@@ -270,6 +279,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
           imei: formData.imei.replace(/\D/g, ''),
           serialNumber: formData.serialNumber,
           purchasePrice: formData.purchasePrice,
+          ...(scannedOsVersion ? { osVersion: scannedOsVersion } : {}),
           ...(formData.color.trim() ? { color: formData.color.trim() } : {}),
           ...(formData.ramStorage.trim() ? { ramStorage: formData.ramStorage.trim() } : {}),
         },
@@ -350,7 +360,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
   if (createdResult) {
     // The QR waits for the signature (or a deliberate "Sign later"): a phone
     // enrolled with an unsigned agreement is a phone the shop cannot lock.
-    const showQr = !createdResult.contractId || signState === 'signed' || signState === 'later';
+    const showQr = !phoneIntakeId && (!createdResult.contractId || signState === 'signed' || signState === 'later');
     const signStep = createdResult.contractId ? (
       <SaleSignStep contractId={createdResult.contractId} onStateChange={setSignState} />
     ) : null;
@@ -396,13 +406,19 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
             <div className="surface space-y-6 p-6 sm:p-8">
               <div className="text-center">
                 <p className="eyebrow">Sale registered</p>
-                <h2 className="mt-1 font-display text-display font-black text-ink-900">Scan this QR on the customer's phone</h2>
+                <h2 className="mt-1 font-display text-display font-black text-ink-900">{phoneIntakeId ? 'Your scanned phone is linked to this sale' : "Scan this QR on the customer's phone"}</h2>
                 <p className="mt-1 text-body text-ink-500">
                   {formData.brand} {formData.model} for {formData.customerName}. Valid for 1 hour, this phone only.
                 </p>
               </div>
 
               {signStep}
+
+              {phoneIntakeId && <div className="rounded-lg border-2 border-ink-900 bg-mint-100 p-4 text-center">
+                <p>Keep the scanned phone online. It will finish enrollment automatically. No second QR or reset is needed.</p>
+                <p className="mt-2 text-caption">Complete the customer agreement, then check the phone status on the Devices page.</p>
+                <button type="button" className="btn-primary mt-4" onClick={() => { onSuccess(); onClose(); navigate(`/devices/${createdResult.device?.id}`); }}>View phone status</button>
+              </div>}
 
               {showQr && (
               <>
@@ -595,7 +611,16 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
             'Start with the CNIC. A customer who bought from you before fills in by itself.',
             <div className="space-y-4">
               <div>
-                <label htmlFor="sale-customerCnic" className="field-label">CNIC number</label>
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <label htmlFor="sale-customerCnic" className="field-label">CNIC number</label>
+                    <CnicScanButton onApply={fields => {
+                      setFormData(prev => ({ ...prev, customerCnic: fields.cnic,
+                        ...(fields.name ? { customerName: fields.name } : {}),
+                        ...(fields.address ? { customerAddress: fields.address } : {}),
+                      }));
+                      setErrors(prev => { const next = { ...prev }; delete next.customerCnic; if (fields.name) delete next.customerName; if (fields.address) delete next.customerAddress; return next; });
+                    }} />
+                  </div>
                 <input
                   id="sale-customerCnic"
                   inputMode="numeric"
@@ -718,6 +743,20 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
             'The phone',
             'Tap a model you sold recently, or type it. Dial *#06# on the phone for the IMEI.',
             <div className="space-y-4">
+              <PhoneIntakeScan key={dealerParam || 'current'} dealerId={dealerParam} disabled={noDealer || submitting}
+                onPending={setPhoneScanPending}
+                onClear={() => { setPhoneIntakeId(undefined); setScannedOsVersion(undefined); }}
+                onPhone={(id, phone) => {
+                  const brand = PHONE_BRANDS.find(b => b.value.toLowerCase() === phone.brand.toLowerCase())?.value || phone.brand;
+                  const version = Number.parseInt(phone.osVersion || '', 10);
+                  setPhoneIntakeId(id); setScannedOsVersion(phone.osVersion);
+                  setFormData(prev => ({ ...prev, brand, model: phone.model,
+                    imei: phone.imeis?.[0] || '', serialNumber: phone.serialNumber || '',
+                    android: Number.isFinite(version) ? version >= 11 ? '11+' : version >= 8 ? '8-10' : '7-' : prev.android,
+                  }));
+                  setErrors(prev => { const next = { ...prev }; delete next.model; delete next.imei; return next; });
+                  showToast('Phone details received. Review the IMEI and serial before registering.', 'success');
+                }} />
               {recentModels.length > 0 && (
                 <div>
                   <p className="field-label">Sold recently</p>
@@ -753,6 +792,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                     {PHONE_BRANDS.map((b) => (
                       <option key={b.value} value={b.value}>{b.label}</option>
                     ))}
+                    {!PHONE_BRANDS.some(b => b.value === formData.brand) && <option value={formData.brand}>{formData.brand}</option>}
                   </select>
                 </div>
 

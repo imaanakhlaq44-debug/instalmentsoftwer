@@ -158,6 +158,9 @@ const frpSchema = z
   .optional();
 
 const enrollSchema = z.object({
+  brand: z.string().trim().min(1).max(40).optional(),
+  model: z.string().trim().min(1).max(60).optional(),
+  osVersion: z.string().trim().max(40).optional(),
   token: z.string().trim().min(8, 'Enrollment code is required.').max(120),
   /** Only needed for a token issued without a device attached. */
   deviceId: z.string().trim().max(64).optional(),
@@ -175,6 +178,20 @@ dpcRouter.post(
   validateBody(enrollSchema),
   asyncHandler(async (req, res) => {
     const body = req.body as z.infer<typeof enrollSchema>;
+
+    const { PhoneIntakeService } = await import('../services/PhoneIntakeService.js');
+    const intake = await PhoneIntakeService.receive(body.token, {
+      brand: body.brand || 'Unknown', model: body.model || 'Unknown', osVersion: body.osVersion,
+      imeis: body.imeis, serialNumber: body.serialNumber, isDeviceOwner: body.isDeviceOwner,
+    });
+    if (intake?.cancelled) {
+      res.json({ intakeCancelled: true });
+      return;
+    }
+    if (intake?.pending) {
+      res.status(202).json({ intakePending: true, message: 'Phone details received. Complete the sale at the counter.' });
+      return;
+    }
 
     const result = await EnrollmentService.verifyAndEnroll({
       token: body.token,

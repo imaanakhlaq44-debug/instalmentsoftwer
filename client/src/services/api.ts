@@ -413,6 +413,14 @@ export class ApiService {
     return this.request<Paged<any>>(`/enrollment/tokens${buildQuery(params)}`);
   }
 
+  static createPhoneIntake(dealerId?: string) {
+    return this.request<{ id: string; tokenId: string; expiresAt: string; qrImageDataUrl: string }>('/enrollment/phone-intakes', { method: 'POST', body: JSON.stringify({ dealerId }) });
+  }
+
+  static getPhoneIntake(id: string) {
+    return this.request<{ status: string; report: { brand: string; model: string; imeis?: string[]; serialNumber?: string; osVersion?: string } | null }>(`/enrollment/phone-intakes/${encodeURIComponent(id)}`);
+  }
+
   static getEnrollmentReadiness(dealerId?: string) {
     return this.request<{ frpConfigured: boolean | null; frpAccountsCount: number; provisioningReady: boolean }>(
       `/enrollment/readiness${buildQuery({ dealerId })}`

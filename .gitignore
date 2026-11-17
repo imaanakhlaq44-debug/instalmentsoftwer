@@ -57,3 +57,12 @@ deploy/backups/
 
 # Local environment backup files contain credentials
 **/.env.bak*
+
+# Rebuilt from pinned OCR packages before client builds.
+/client/public/ocr/
+/client/public/downloads/*.apk
+/phone-scan-signed/
+/phone-scan-signed.zip
+/cnic-synthetic-test.png
+/phone-scan-*.png
+/phone-scan-browser.cjs
