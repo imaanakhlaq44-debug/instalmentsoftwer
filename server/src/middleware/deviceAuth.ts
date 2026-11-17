@@ -51,6 +51,9 @@ export const requireDevice = asyncHandler(async (req: Request, _res: Response, n
     return next(AppError.forbidden('This device is no longer under management.'));
   }
 
+  const dealer = await repo.dealers.findById(device.dealerId);
+  if (dealer?.deletedAt) return next(AppError.forbidden('This device is no longer under management.'));
+
   req.device = device;
   next();
 });

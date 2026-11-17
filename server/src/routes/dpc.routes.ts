@@ -1,3 +1,5 @@
+import rateLimit from 'express-rate-limit';
+import { deviceCommandSignal } from '../services/DeviceCommandSignal.js';
 import { config } from '../config.js';
 import { Router } from 'express';
 import { z } from 'zod';
@@ -36,6 +38,36 @@ import { Device, DevicePolicy } from '../types/index.js';
  *     acknowledges that it applied the restriction.
  */
 export const dpcRouter = Router();
+
+// One authenticated, bounded long poll per phone. This carries no executable command:
+// waking the phone only asks it to run the existing check-in/consent/ack protocol.
+const waitIpLimiter = rateLimit({ windowMs: 60000, max: 2400, standardHeaders: true, legacyHeaders: false });
+const waitLimiter = rateLimit({ windowMs: 60000, max: 60, keyGenerator: req => getDevice(req).id, standardHeaders: true, legacyHeaders: false });
+dpcRouter.get('/wait', waitIpLimiter, requireDevice, waitLimiter, asyncHandler(async (req, res) => {
+  const id = getDevice(req).id;
+  const after = typeof req.query.after === 'string' ? req.query.after.slice(0, 200) : '';
+  await new Promise<void>((resolve, reject) => {
+    let finished = false, timer: ReturnType<typeof setTimeout> | undefined;
+    const cleanup = () => { if (timer) clearTimeout(timer); unsubscribe(); res.off('close', closed); };
+    const closed = () => { if (!finished) { finished = true; cleanup(); resolve(); } };
+    const check = async (force = false) => {
+      try {
+        const device = await repo.devices.findById(id);
+        if (finished) return;
+        if (!device || ['INACTIVE','REMOVED'].includes(device.status) || device.authTokenHash !== getDevice(req).authTokenHash) {
+          finished = true; cleanup(); res.status(403).json({ error: 'This device is no longer under management.' }); resolve(); return;
+        }
+        const state = [device.status, device.pendingCommand ?? '', device.pendingCommandAt ?? ''].join('|');
+        if (force || state !== after) { finished = true; cleanup(); res.setHeader('Cache-Control','no-store'); res.json({ state }); resolve(); }
+      } catch (error) { if (!finished) { finished = true; cleanup(); reject(error); } }
+    };
+    const unsubscribe = deviceCommandSignal.subscribe(id, () => { void check(); });
+    res.on('close', closed);
+    timer = setTimeout(() => { void check(true); }, 25000);
+    void check();
+  });
+}));
+
 
 /** What the phone is told about its own lock state. */
 interface DevicePolicyView {

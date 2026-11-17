@@ -1,7 +1,8 @@
+import { DeleteShopDialog } from '../components/platform/DeleteShopDialog.js';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
-  AlertTriangle, ArrowRight, CheckCircle2, ClipboardList, Clock, KeyRound, MessageCircle, Phone, Store, WifiOff,
+  AlertTriangle, ArrowRight, CheckCircle2, ClipboardList, Clock, KeyRound, MessageCircle, Phone, Store, WifiOff, Trash2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { ApiService } from '../services/api.js';
@@ -464,6 +465,7 @@ export const PlatformOrdersPage: React.FC = () => {
 // ---------------------------------------------------------------------------
 
 export const PlatformShopsPage: React.FC = () => {
+  const [deletingShop, setDeletingShop] = useState<Shop | null>(null);
   const { data, failed, load } = usePlatformOverview();
   const openShop = useOpenShop();
 
@@ -529,6 +531,7 @@ export const PlatformShopsPage: React.FC = () => {
                         <button type="button" className="btn-secondary py-1 text-caption" onClick={() => openShop(s.dealerId)}>
                           Open shop <ArrowRight className="rtl:rotate-180 h-3.5 w-3.5" aria-hidden="true" />
                         </button>
+                        <button type="button" className="btn-ghost px-2 py-1 text-caption text-critical-700" aria-label={`Delete ${s.name}`} onClick={() => setDeletingShop(s)}><Trash2 className="h-4 w-4" />Delete shop</button>
                       </span>
                     </td>
                   </tr>
@@ -547,6 +550,7 @@ export const PlatformShopsPage: React.FC = () => {
         </p>
       )}
 
+      {deletingShop && <DeleteShopDialog shop={deletingShop} onClose={() => setDeletingShop(null)} onDeleted={() => { setDeletingShop(null); void load(); }} />}
       {failed && <RetryLine onRetry={load} />}
     </div>
   );

@@ -1,3 +1,7 @@
+import { z } from 'zod';
+import { validateBody } from '../middleware/validate.js';
+import { getAuthUser, clientIp, routeParam } from '../middleware/auth.js';
+import { ShopDeletionService } from '../services/ShopDeletionService.js';
 import { Router } from 'express';
 
 import { prisma } from '../db/prisma.js';
@@ -33,7 +37,7 @@ platformRouter.get(
     const staleBefore = new Date(now.getTime() - STALE_DAYS * 24 * 60 * 60 * 1000);
 
     const [dealers, packs, licenceCounts, deviceCounts, staleDevices, pendingOrders] = await Promise.all([
-      prisma.dealer.findMany({ orderBy: { createdAt: 'desc' } }),
+      prisma.dealer.findMany({ where: { deletedAt: null }, orderBy: { createdAt: 'desc' } }),
       prisma.licensePack.findMany({
         select: { dealerId: true, size: true, totalPrice: true, createdAt: true },
       }),
@@ -121,3 +125,9 @@ platformRouter.get(
     });
   })
 );
+
+platformRouter.delete('/shops/:id', validateBody(z.object({ confirmationName: z.string().trim().min(1).max(120) }).strict()), asyncHandler(async (req,res) => {
+  const actor = getAuthUser(req);
+  const result = await ShopDeletionService.remove(routeParam(req,'id'),req.body.confirmationName,{ userId: actor.userId, actorName: actor.name, actorRole: actor.role, ipAddress: clientIp(req) });
+  res.json({ success: true, ...result });
+}));

@@ -448,6 +448,10 @@ export class ApiService {
   // -------------------------------------------------------------------------
 
   /** The super admin's platform dashboard: shops, sales and the fleet. */
+  static deleteShop(id: string, confirmationName: string) {
+    return this.request<{ success: boolean; releasedPhones: number; voidedLocks: number }>(`/platform/shops/${encodeURIComponent(id)}`, { method: 'DELETE', body: JSON.stringify({ confirmationName }) });
+  }
+
   static getPlatformOverview() {
     return this.request<any>('/platform/overview');
   }

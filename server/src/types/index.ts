@@ -53,6 +53,7 @@ export type EnrollmentTokenStatus =
   | 'FAILED';
 
 export interface Dealer {
+  deletedAt?: string | null;
   id: string;
   name: string;
   code: string;

@@ -145,6 +145,7 @@ const signupLimiter = rateLimit({
  * a token.
  */
 const dpcLimiter = rateLimit({
+  skip: req => req.path === '/wait' && req.method === 'GET',
   windowMs: 60_000,
   max: 240,
   standardHeaders: true,
