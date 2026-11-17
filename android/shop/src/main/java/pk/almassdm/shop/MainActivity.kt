@@ -221,6 +221,8 @@ class MainActivity : AppCompatActivity() {
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)
         CookieManager.getInstance().setAcceptThirdPartyCookies(web,false)
         web.webViewClient=object:WebViewClient() {
+            override fun shouldInterceptRequest(view:WebView,request:WebResourceRequest):WebResourceResponse? =
+                if(request.method=="GET") bundledImage(request.url.toString()) else null
             override fun shouldOverrideUrlLoading(view:WebView,request:WebResourceRequest):Boolean {
                 val url=request.url.toString()
                 if (NavigationPolicy.isInternal(url)) return false
@@ -341,6 +343,21 @@ class MainActivity : AppCompatActivity() {
         else message("Use Save / print page in the app menu for this document.")
     }
     private fun printPage() { runCatching { browser?.let { (getSystemService(PRINT_SERVICE) as PrintManager).print("Almas SDM document",it.createPrintDocumentAdapter("Almas SDM"),null) } }.onFailure { message("Printing is not available. Save the document instead.") } }
+    /** Serve only these public brand images locally, without changing API traffic. */
+    internal fun bundledImage(url:String?):WebResourceResponse? {
+        if(!NavigationPolicy.isInternal(url))return null
+        return runCatching {
+            val path=Uri.parse(url).path
+            val name=path?.removePrefix("/icons/3d/")
+            val image=when {
+                path=="/logo-mark.webp" -> "image/webp" to resources.openRawResource(R.drawable.brand_mark)
+                path?.startsWith("/icons/3d/")==true && name in setOf("agreement.png","wallet.png","phone.png","customer.png") -> "image/png" to assets.open("home-icons/$name")
+                else -> return null
+            }
+            WebResourceResponse(image.first,null,image.second).apply { responseHeaders=mapOf("Cache-Control" to "public, max-age=86400") }
+        }.getOrNull()
+    }
+
     internal fun receiveDocument(raw:String?, reply:((String)->Unit)?=null) {
         runCatching {
             if(raw==null || raw.length>29_000_000)return

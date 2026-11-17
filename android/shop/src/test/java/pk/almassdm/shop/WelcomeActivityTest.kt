@@ -67,6 +67,18 @@ class WelcomeActivityTest {
         assertEquals("receipt.csv",picker.getStringExtra(android.content.Intent.EXTRA_TITLE))
         controller.pause().stop().destroy()
     }
+    @Test fun bundledIconsLoadLocallyOnlyOnTheExactAppOrigin() {
+        val controller=Robolectric.buildActivity(MainActivity::class.java).setup();val activity=controller.get()
+        for(name in listOf("agreement","wallet","phone","customer")) {
+            val image=activity.bundledImage(BuildConfig.APP_ORIGIN+"/icons/3d/$name.png")!!
+            assertEquals("image/png",image.mimeType)
+            image.data.use { assertArrayEquals(byteArrayOf(-119,80,78,71,13,10,26,10),it.readBytes().take(8).toByteArray()) }
+        }
+        assertNull(activity.bundledImage("https://other.example/icons/3d/wallet.png"))
+        assertNull(activity.bundledImage(BuildConfig.APP_ORIGIN+"/api/customers"))
+        assertNull(activity.bundledImage(BuildConfig.APP_ORIGIN+"/icons/3d/../../secret.png"))
+        controller.pause().stop().destroy()
+    }
     @Test fun copyWritesOnlyTheRequestedTextToTheSystemClipboard() {
         val controller=Robolectric.buildActivity(MainActivity::class.java).setup();val activity=controller.get()
         var response=""

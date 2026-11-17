@@ -5,7 +5,7 @@ Source: https://3dicons.co/
 License: CC0 1.0 Universal. The official website states that the free icons may be used in personal and commercial projects without required attribution. Checked 18 November 2026.
 Official license copy: client/public/icons/3d/LICENSE-CC0.txt, from https://github.com/realvjy/3dicons/blob/develop/LICENSE
 
-The app self-hosts these original transparent 400px PNG exports from the author's V1 library; it does not hotlink a third-party image service at runtime. The four files total approximately 279 KiB. Button text remains accessible, while the illustrations are decorative.
+The app self-hosts these original transparent 400px PNG exports from the author's V1 library; it does not hotlink a third-party image service at runtime. The Android APK also bundles the same four images and their license for instant loading. Its WebView serves only these whitelisted image paths on the exact app origin from local assets; other requests still reach the server. The four files total approximately 279 KiB. Button text remains accessible, while the illustrations are decorative.
 
 | Local file | Original download |
 | --- | --- |
