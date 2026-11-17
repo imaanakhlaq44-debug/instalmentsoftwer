@@ -55,6 +55,8 @@ class MainActivity : AppCompatActivity() {
     private var pendingDocument: ByteArray? = null
     private var pendingBlobNonce: String? = null
     private var splashAnimator: ValueAnimator? = null
+    private var paymentFlow=false
+    private var pageTitle:TextView?=null
     private val preferences by lazy { getSharedPreferences("shop_navigation", MODE_PRIVATE) }
 
     private val cameraPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -138,6 +140,7 @@ class MainActivity : AppCompatActivity() {
         typeface = Typeface.create("sans-serif", Typeface.BOLD); setOnClickListener { action() }
     }
     private fun clearScreen() {
+        paymentFlow=false;pageTitle=null
         pendingBlobNonce=null
         splashAnimator?.cancel(); splashAnimator = null
         fileCallback?.onReceiveValue(null); fileCallback = null
@@ -195,7 +198,8 @@ class MainActivity : AppCompatActivity() {
         val layout=vertical()
         val toolbar=LinearLayout(this).apply { gravity=Gravity.CENTER_VERTICAL; setPadding(dp(7),0,dp(7),0); setBackgroundColor(cream) }
         toolbar.addView(label("‹",32f,ink,true).apply { gravity=Gravity.CENTER; contentDescription="Go back"; setOnClickListener { onBackPressedDispatcher.onBackPressed() } },LinearLayout.LayoutParams(dp(44),dp(48)))
-        toolbar.addView(label("ALMAS SDM",15f,navy,true),LinearLayout.LayoutParams(0,-2,1f))
+        pageTitle=label("ALMAS SDM",15f,navy,true).apply { maxLines=1;ellipsize=android.text.TextUtils.TruncateAt.END }
+        toolbar.addView(pageTitle,LinearLayout.LayoutParams(0,-2,1f))
         toolbar.addView(label("⋮",28f,ink,true).apply { gravity=Gravity.CENTER; contentDescription="App menu"; setOnClickListener { showAppMenu(it) } },LinearLayout.LayoutParams(dp(44),dp(48)))
         layout.addView(toolbar,LinearLayout.LayoutParams(-1,dp(49)))
         val frame=FrameLayout(this)
@@ -220,13 +224,23 @@ class MainActivity : AppCompatActivity() {
             override fun shouldOverrideUrlLoading(view:WebView,request:WebResourceRequest):Boolean {
                 val url=request.url.toString()
                 if (NavigationPolicy.isInternal(url)) return false
+                if (request.isForMainFrame && NavigationPolicy.isGateway(url)) { paymentFlow=true;return false }
+                if (request.isForMainFrame && paymentFlow && NavigationPolicy.isSecureWebPage(url)) return false
                 if (request.isForMainFrame && request.hasGesture()) openExternal(url)
                 return true
             }
-            override fun onPageStarted(view:WebView,url:String?,icon:Bitmap?) { if (NavigationPolicy.isInternal(url)) currentUrl=url!!; offline?.visibility=View.GONE; progress?.visibility=View.VISIBLE }
+            override fun onPageStarted(view:WebView,url:String?,icon:Bitmap?) {
+                if(NavigationPolicy.isInternal(url)) {paymentFlow=false;currentUrl=url!!;pageTitle?.text="ALMAS SDM";CookieManager.getInstance().setAcceptThirdPartyCookies(view,false)}
+                else if(url!=null && NavigationPolicy.isSecureWebPage(url) && (paymentFlow || NavigationPolicy.isGateway(url))) {paymentFlow=true;currentUrl=url;pageTitle?.text=Uri.parse(url).host;pageTitle?.contentDescription="Payment page: ${Uri.parse(url).host}";CookieManager.getInstance().setAcceptThirdPartyCookies(view,true)}
+                else if(url!=null && url!="about:blank") {view.stopLoading();openExternal(url);return}
+                offline?.visibility=View.GONE;progress?.visibility=View.VISIBLE
+            }
             override fun onPageFinished(view:WebView,url:String?) {
                 progress?.visibility=View.GONE; CookieManager.getInstance().flush(); rememberRoute(url)
-                if(NavigationPolicy.isInternal(url))view.evaluateJavascript("""if(!window.__almasDownloadHook){window.__almasDownloadHook=true;document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('a[download]');if(a)window.__almasDownloadName=a.download;},true)}""",null)
+                if(NavigationPolicy.isInternal(url) && WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
+                    val bridge=assets.open("native_bridge.js").bufferedReader().use { it.readText() }
+                    view.evaluateJavascript(bridge,null)
+                }
             }
             override fun doUpdateVisitedHistory(view:WebView,url:String?,isReload:Boolean) { rememberRoute(url) }
             override fun onReceivedError(view:WebView,request:WebResourceRequest,error:WebResourceError) { if(request.isForMainFrame) showOffline() }
@@ -252,8 +266,8 @@ class MainActivity : AppCompatActivity() {
             override fun onPermissionRequestCanceled(request:PermissionRequest) { if(webPermission===request)webPermission=null }
         }
         if(WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
-            WebViewCompat.addWebMessageListener(web,"AlmasDocument",setOf(BuildConfig.APP_ORIGIN)) { _,message,origin,mainFrame,_ ->
-                if(mainFrame && NavigationPolicy.isInternal(origin.toString()) && message.type==WebMessageCompat.TYPE_STRING) receiveDocument(message.data)
+            WebViewCompat.addWebMessageListener(web,"AlmasDocument",setOf(BuildConfig.APP_ORIGIN)) { _,message,origin,mainFrame,reply ->
+                if(mainFrame && NavigationPolicy.isInternal(origin.toString()) && message.type==WebMessageCompat.TYPE_STRING) receiveDocument(message.data) { reply.postMessage(it) }
             }
         }
         web.setDownloadListener { url,_,disposition,mime,_ -> download(url,URLUtil.guessFileName(url,disposition,mime),mime) }
@@ -263,7 +277,7 @@ class MainActivity : AppCompatActivity() {
         layout.addView(frame,LinearLayout.LayoutParams(-1,0,1f));root.addView(layout,FrameLayout.LayoutParams(-1,-1))
         web.loadUrl(currentUrl)
     }
-    private fun rememberRoute(url:String?) { NavigationPolicy.safeRoute(url)?.let { preferences.edit().putString("last_route",it).apply() } }
+    private fun rememberRoute(url:String?) { NavigationPolicy.safeRoute(url)?.takeUnless { it.startsWith("/api/") || it.startsWith("/downloads/") || it.startsWith("/ocr/") }?.let { preferences.edit().putString("last_route",it).apply() } }
     private fun showOffline() {
         progress?.visibility=View.GONE
         if(offline!=null){offline?.visibility=View.VISIBLE;return}
@@ -286,7 +300,7 @@ class MainActivity : AppCompatActivity() {
                 when(item.itemId) {
                     0 -> browser?.loadUrl(BuildConfig.APP_ORIGIN+"/")
                     1 -> AlertDialog.Builder(this@MainActivity).setTitle("Refresh this page?").setMessage("Unsaved changes on this screen may be lost.").setNegativeButton("Cancel",null).setPositiveButton("Refresh") { _,_->browser?.reload() }.show()
-                    2 -> runCatching { browser?.let { (getSystemService(PRINT_SERVICE) as PrintManager).print("Almas SDM document",it.createPrintDocumentAdapter("Almas SDM"),null) } }.onFailure { message("Printing is not available. Save the document instead.") }
+                    2 -> printPage()
                     3 -> openExternal(currentUrl)
                     4 -> browser?.loadUrl(BuildConfig.APP_ORIGIN+"/privacy")
                     5 -> browser?.loadUrl(BuildConfig.APP_ORIGIN+"/account-deletion")
@@ -323,10 +337,34 @@ class MainActivity : AppCompatActivity() {
         } else if(NavigationPolicy.externalAllowed(url)) openExternal(url)
         else message("Use Save / print page in the app menu for this document.")
     }
-    private fun receiveDocument(raw:String?) {
+    private fun printPage() { runCatching { browser?.let { (getSystemService(PRINT_SERVICE) as PrintManager).print("Almas SDM document",it.createPrintDocumentAdapter("Almas SDM"),null) } }.onFailure { message("Printing is not available. Save the document instead.") } }
+    internal fun receiveDocument(raw:String?, reply:((String)->Unit)?=null) {
         runCatching {
             if(raw==null || raw.length>29_000_000)return
-            val data=JSONObject(raw);val nonce=data.optString("nonce")
+            val data=JSONObject(raw)
+            if(data.optString("action")=="print") { printPage();return }
+            if(data.optString("action")=="copy") {
+                val requestId=data.optString("requestId").take(100);val text=data.optString("text")
+                if(reply==null || requestId.isBlank() || text.length>100000)return
+                val result=runCatching {
+                    val clip=android.content.ClipData.newPlainText("Almas SDM",text)
+                    if(android.os.Build.VERSION.SDK_INT>=33)clip.description.extras=android.os.PersistableBundle().apply {putBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE,true)}
+                    (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(clip)
+                }
+                val response=JSONObject().put("requestId",requestId).put("copied",result.isSuccess)
+                if(result.isFailure)response.put("error","Could not copy this text. Try selecting it manually.")
+                reply(response.toString());return
+            }
+            if(data.optString("action")=="requestDownload") {
+                val requestId=data.optString("requestId").take(100)
+                if(reply==null || requestId.isBlank())return
+                if(pendingDocument!=null || pendingBlobNonce!=null) {reply(JSONObject().put("requestId",requestId).put("error","Finish saving the current document first.").toString());return}
+                val issued=UUID.randomUUID().toString();pendingBlobNonce=issued
+                reply(JSONObject().put("requestId",requestId).put("nonce",issued).toString())
+                root.postDelayed({if(pendingBlobNonce==issued){pendingBlobNonce=null;message("The download timed out. Try again.")}},30000)
+                return
+            }
+            val nonce=data.optString("nonce")
             if(nonce.isBlank() || nonce!=pendingBlobNonce)return
             pendingBlobNonce=null
             if(data.has("error")){message(data.optString("error"));return}

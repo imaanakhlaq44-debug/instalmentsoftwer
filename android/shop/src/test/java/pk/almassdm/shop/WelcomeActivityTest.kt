@@ -53,6 +53,29 @@ class WelcomeActivityTest {
         assertTrue(web.settings.userAgentString.contains(if(BuildConfig.PLAY_STORE)"(Play)"else"(Direct)"))
         controller.pause().stop().destroy()
     }
+    @Test fun documentSavingRequiresItsOwnNonceAndUsesTheSystemFilePicker() {
+        val controller=Robolectric.buildActivity(MainActivity::class.java).setup();val activity=controller.get()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1300))
+        activity.receiveDocument("""{"nonce":"unsolicited","name":"bad.txt","data":"data:text/plain;base64,SGVsbG8="}""")
+        assertNull(shadowOf(activity).nextStartedActivity)
+        var nonce=""
+        activity.receiveDocument("""{"action":"requestDownload","requestId":"receipt-1"}""") { nonce=org.json.JSONObject(it).getString("nonce") }
+        assertTrue(nonce.length>30)
+        activity.receiveDocument(org.json.JSONObject().put("nonce",nonce).put("name","../../receipt.csv").put("mime","text/csv").put("data","data:text/csv;base64,SGVsbG8=").toString())
+        val picker=shadowOf(activity).nextStartedActivity
+        assertEquals(android.content.Intent.ACTION_CREATE_DOCUMENT,picker.action)
+        assertEquals("receipt.csv",picker.getStringExtra(android.content.Intent.EXTRA_TITLE))
+        controller.pause().stop().destroy()
+    }
+    @Test fun copyWritesOnlyTheRequestedTextToTheSystemClipboard() {
+        val controller=Robolectric.buildActivity(MainActivity::class.java).setup();val activity=controller.get()
+        var response=""
+        activity.receiveDocument("""{"action":"copy","requestId":"copy-1","text":"Enrollment test code"}""") { response=it }
+        assertTrue(org.json.JSONObject(response).getBoolean("copied"))
+        val clipboard=activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        assertEquals("Enrollment test code",clipboard.primaryClip!!.getItemAt(0).text.toString())
+        controller.pause().stop().destroy()
+    }
     @Test @GraphicsMode(GraphicsMode.Mode.NATIVE) @Config(qualifiers="w393dp-h851dp-xhdpi")
     fun renderTheActualNativeWelcomeAndSplash() {
         org.robolectric.util.ReflectionHelpers.callStaticMethod<Any>(android.animation.ValueAnimator::class.java,"setDurationScale",org.robolectric.util.ReflectionHelpers.ClassParameter.from(java.lang.Float.TYPE,1f))

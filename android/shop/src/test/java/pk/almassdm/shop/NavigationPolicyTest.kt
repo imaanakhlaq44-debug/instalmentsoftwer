@@ -15,5 +15,6 @@ class NavigationPolicyTest {
     }
     @Test fun downloadsCannotSupplyAPath() { assertEquals("receipt.pdf", NavigationPolicy.safeFileName("../../receipt.pdf")); assertEquals("receipt.pdf", NavigationPolicy.safeFileName("C:\\private\\receipt.pdf")) }
     @Test fun cameraPickerUnderstandsTheCnicFormsCommaSeparatedTypes() { assertArrayEquals(arrayOf("image/jpeg","image/png","image/webp"),NavigationPolicy.acceptedMimeTypes(arrayOf("image/jpeg,image/png,image/webp"))); assertTrue(NavigationPolicy.acceptedMimeTypes(arrayOf("text/html","application/javascript")).isEmpty()) }
+    @Test fun hostedCheckoutStartsOnlyOnKnownHttpsGatewayOrigins() { assertTrue(NavigationPolicy.isGateway("https://payments.jazzcash.com.pk/CustomerPortal/transactionmanagement/merchantform/"));assertFalse(NavigationPolicy.isGateway("http://payments.jazzcash.com.pk/"));assertFalse(NavigationPolicy.isGateway("https://payments.jazzcash.com.pk.evil.test/"));assertFalse(internal("https://payments.jazzcash.com.pk/")) }
     @Test fun savedRoutesStayOnTheApplication() { assertEquals("/payments", NavigationPolicy.safeRoute("https://app.almassdm.pro/payments?token=secret", NavigationPolicy.ORIGIN)); assertNull(NavigationPolicy.safeRoute("https://evil.test/payments", NavigationPolicy.ORIGIN)) }
 }

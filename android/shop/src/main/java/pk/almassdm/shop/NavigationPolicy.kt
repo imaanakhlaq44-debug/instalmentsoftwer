@@ -17,6 +17,8 @@ object NavigationPolicy {
     }.getOrDefault(false)
     fun acceptedMimeTypes(raw: Array<String>): Array<String> = raw.flatMap { it.split(',') }.map { it.trim() }
         .filter { it.matches(Regex("image/(?:jpeg|png|webp|\\*)")) || it == "application/pdf" }.distinct().toTypedArray()
+    fun isGateway(url: String?): Boolean = runCatching { val uri=URI(url ?: ""); uri.scheme.equals("https",true) && uri.userInfo==null && (uri.port == -1 || uri.port == 443) && uri.host?.lowercase() in setOf("sandbox.jazzcash.com.pk","payments.jazzcash.com.pk") }.getOrDefault(false)
+    fun isSecureWebPage(url: String): Boolean = externalAllowed(url) && runCatching { URI(url).scheme.equals("https",true) }.getOrDefault(false)
     fun safeFileName(raw: String): String = raw.substringAfterLast('/').substringAfterLast('\\')
         .replace(Regex("[^\\p{L}\\p{N}._ -]"), "_").trim().take(100).ifBlank { "Almas-SDM-document.pdf" }
     fun safeRoute(url: String?, origin: String = BuildConfig.APP_ORIGIN): String? = if (isInternal(url,origin)) runCatching { URI(url).rawPath?.takeIf { it.startsWith('/') && !it.startsWith("//") } }.getOrNull() else null
