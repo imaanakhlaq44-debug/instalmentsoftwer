@@ -24,6 +24,7 @@ object CheckInScheduler {
      * silently ignored. The server currently asks for exactly that.
      */
     fun schedule(context: Context, intervalSeconds: Int) {
+        RealtimeCommandService.ensureStarted(context)
         val interval = intervalSeconds.coerceAtLeast(Prefs.MIN_INTERVAL_SECONDS).toLong()
 
         val request = PeriodicWorkRequestBuilder<CheckInWorker>(interval, TimeUnit.SECONDS)
@@ -65,3 +66,4 @@ object CheckInScheduler {
         WorkManager.getInstance(context).cancelUniqueWork(ONE_SHOT_WORK)
     }
 }
+

@@ -1,3 +1,4 @@
+import { deviceCommandSignal } from '../../src/services/DeviceCommandSignal.js';
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 
 import { as, anonymous, reseed, repo, ACCOUNTS } from '../helpers.js';
@@ -451,3 +452,36 @@ describe('the enrollment QR a factory-reset phone scans', () => {
     expect(res.body.qrWarning).toMatch(/DPC_APK_URL/);
   });
 });
+
+
+describe('live command wake-up', () => {
+  it('requires the handset credential', async () => {
+    expect((await anonymous().get('/api/dpc/wait')).status).toBe(401);
+  });
+  it('wakes an online enrolled phone immediately but waits for its actual lock acknowledgement', async () => {
+    const { deviceId, credential } = await enrolledDevice();
+    const initial = await anonymous().get('/api/dpc/wait').set('Authorization', credential);
+    expect(initial.status).toBe(200);
+    const started = Date.now();
+    const waiting = anonymous().get('/api/dpc/wait').query({ after: initial.body.state }).set('Authorization', credential).then(r => r);
+    await new Promise(resolve => setTimeout(resolve, 150));
+    const lock = await as(ACCOUNTS.dealerAdmin).post('/api/devices/' + deviceId + '/lock').send({ reason: 'Customer-approved integration test' });
+    expect(lock.status).toBe(200);
+    expect(lock.body.status).toBe('LOCK_PENDING');
+    const response = await waiting;
+    expect(response.status).toBe(200);
+    expect(response.body.state).toContain('LOCK_PENDING|LOCK|');
+    expect(Date.now() - started).toBeLessThan(3000);
+    expect((await repo.devices.findById(deviceId))?.status).toBe('LOCK_PENDING');
+  });
+  it('ends a waiting connection when the handset is released', async () => {
+    const { deviceId, credential } = await enrolledDevice();
+    const initial = await anonymous().get('/api/dpc/wait').set('Authorization', credential);
+    const waiting = anonymous().get('/api/dpc/wait').query({ after: initial.body.state }).set('Authorization', credential).then(r => r);
+    await new Promise(resolve => setTimeout(resolve, 150));
+    await repo.devices.update(deviceId, { status: 'REMOVED' });
+    deviceCommandSignal.notify(deviceId);
+    expect((await waiting).status).toBe(403);
+  });
+});
+

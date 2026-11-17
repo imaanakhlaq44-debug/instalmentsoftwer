@@ -58,8 +58,8 @@ android {
         applicationId = "pk.almassdm.dpc"
         minSdk = 26
         targetSdk = 36
-        versionCode = 9
-        versionName = "1.5.2"
+        versionCode = 11
+        versionName = "1.7.0"
 
         buildConfigField(
             "String",
@@ -211,3 +211,4 @@ dependencies {
     // makes the parsing tests exercise the parser rather than a mock.
     testImplementation("org.json:json:20240303")
 }
+

@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import pk.almassdm.dpc.BuildConfig
 import pk.almassdm.dpc.admin.AttestationChallenge
+import pk.almassdm.dpc.admin.AttestationReport
 import pk.almassdm.dpc.admin.DeviceIntegrityCollector
 import pk.almassdm.dpc.admin.KeyAttestor
 import pk.almassdm.dpc.admin.LockController
@@ -12,6 +13,7 @@ import pk.almassdm.dpc.data.PolicyView
 import pk.almassdm.dpc.data.Prefs
 import pk.almassdm.dpc.net.DpcApi
 import pk.almassdm.dpc.net.DpcException
+import pk.almassdm.dpc.net.IntakeCancelledException
 import pk.almassdm.dpc.net.Telemetry
 
 /**
@@ -27,6 +29,7 @@ class DpcSync(context: Context) {
     private val appContext = context.applicationContext
     private val prefs = Prefs(appContext)
     private val lockController = LockController(appContext)
+    private var enrollmentAttestation: Pair<String, AttestationReport?>? = null
 
     sealed interface Outcome {
         data class Synced(val policy: PolicyView, val commandApplied: String?) : Outcome
@@ -43,16 +46,23 @@ class DpcSync(context: Context) {
         val hardware = DeviceIntegrityCollector.collect(appContext)
         // The secure chip's own word on which phone this is, signed over a
         // challenge bound to this enrollment code.
-        val attestation = runCatching {
+        val attestation = if (enrollmentAttestation?.first == code) enrollmentAttestation?.second else runCatching {
             KeyAttestor.attest(appContext, AttestationChallenge.forEnrollment(code))
-        }.getOrNull()
-        val result = api.enroll(
+        }.getOrNull().also { enrollmentAttestation = code to it }
+        val result = try { api.enroll(
             enrollmentToken = code.trim(),
             deviceId = null,
             dpcVersion = BuildConfig.VERSION_NAME,
             hardware = hardware,
             attestation = attestation,
-        )
+        ) } catch (cancelled: IntakeCancelledException) {
+            if (!prefs.isEnrolled) {
+                lockController.releaseFromManagement()
+                prefs.clear()
+                prefs.released = true
+            }
+            throw cancelled
+        }
 
         if (result.deviceId.isBlank() || result.deviceToken.isBlank()) {
             throw DpcException("The server did not return device credentials.", retryable = false)
@@ -86,7 +96,9 @@ class DpcSync(context: Context) {
         return result.policy
     }
 
-    fun syncOnce(): Outcome {
+    fun syncOnce(): Outcome = synchronized(SYNC_LOCK) { syncOnceLocked() }
+
+    private fun syncOnceLocked(): Outcome {
         if (!prefs.isEnrolled) return Outcome.NotEnrolled
 
         val api = DpcApi(prefs)
@@ -249,6 +261,8 @@ class DpcSync(context: Context) {
     }
 
     companion object {
+        private val SYNC_LOCK = Any()
         private const val TAG = "DpcSync"
     }
 }
+
