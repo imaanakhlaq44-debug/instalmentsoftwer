@@ -64,6 +64,7 @@ layout: none
   .top b { color: var(--sun); }
   header { position: sticky; top: 0; z-index: 30; background: rgba(255,248,232,.92); backdrop-filter: blur(10px); border-bottom: 2px solid rgba(15,20,25,.1); }
   nav { display: flex; justify-content: space-between; align-items: center; height: 70px; gap: 12px; }
+  .nav-app-download { background:var(--sun); border:var(--b); border-radius:12px; padding:8px 14px; box-shadow:3px 3px 0 var(--ink); font-weight:900; }
   .brand { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 19px; letter-spacing: -.01em; white-space: nowrap; font-family: Archivo, system-ui, sans-serif !important; }
   nav .btn, .lang { white-space: nowrap; }
   @media (max-width: 420px) { nav { height: 60px; } nav .brand { font-size: 16px; gap: 8px; } nav .brand img { width: 30px; height: 24px; } .nav-r { gap: 6px; } }
@@ -450,9 +451,7 @@ layout: none
     <nav>
       <a class="brand" href="/"><img src="/logo-mark.png" alt="" />ALMAS SDM</a>
       <div class="links">
-        <a href="#how" data-ur="طریقہ">How it works</a>
-        <a href="#features" data-ur="خصوصیات">Features</a>
-        <a href="#price" data-ur="ریٹ">Rates</a>
+        <a class="nav-app-download" href="https://app.almassdm.pro/download" data-ur="ایپ ڈاؤن لوڈ کریں">Download app</a>
         <a href="/imei-block.html" data-ur="آئی ایم ای آئی بلاک">IMEI block</a>
         <a href="/dpc.html" data-ur="ہینڈسیٹ ایپ">Handset app</a>
         <a href="/rentwise/" data-ur="مفت ٹولز">Free tools</a>
@@ -467,9 +466,7 @@ layout: none
   </div>
   <div class="mob-drawer" id="mob-drawer" hidden>
     <div class="mob-links">
-      <a href="#how" data-ur="طریقہ">How it works</a>
-      <a href="#features" data-ur="خصوصیات">Features</a>
-      <a href="#price" data-ur="ریٹ">Rates</a>
+      <a href="https://app.almassdm.pro/download" data-ur="ایپ ڈاؤن لوڈ کریں">Download app</a>
       <a href="/imei-block.html" data-ur="آئی ایم ای آئی بلاک">IMEI block</a>
       <a href="/dpc.html" data-ur="ہینڈسیٹ ایپ">Handset app</a>
       <a href="/rentwise/" data-ur="مفت ٹولز">Free tools</a>
