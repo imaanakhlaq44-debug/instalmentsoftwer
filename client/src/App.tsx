@@ -9,6 +9,7 @@ import { ErrorBoundary } from './components/ErrorBoundary.js';
 import { LoginPage } from './pages/LoginPage.js';
 import { RegisterPage } from './pages/RegisterPage.js';
 import { AccountPrivacyPage } from './pages/AccountPrivacyPage.js';
+import { ShopAppDownloadPage } from './pages/ShopAppDownloadPage.js';
 import { isPlayStoreApp, isNativeShopApp } from './utils/nativeApp.js';
 import { ShopAppHomePage } from './pages/ShopAppHomePage.js';
 import { ChangePasswordPage } from './pages/ChangePasswordPage.js';
@@ -78,6 +79,7 @@ export function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/privacy" element={<AccountPrivacyPage />} />
             <Route path="/account-deletion" element={<AccountPrivacyPage deletion />} />
+            <Route path="/download" element={<ShopAppDownloadPage />} />
 
             {/* Signed in, but outside the dashboard shell */}
             <Route

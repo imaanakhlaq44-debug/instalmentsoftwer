@@ -465,57 +465,35 @@ describe('the sale form — sending it', () => {
   });
 });
 
-describe('scanning the IMEI barcode off the box', () => {
-  const stopTrack = vi.fn();
-  const stubCamera = (codes: string[][]) => {
-    let call = 0;
-    class FakeDetector {
-      async detect() {
-        const values = codes[Math.min(call++, codes.length - 1)];
-        return values.map((rawValue) => ({ rawValue }));
-      }
-    }
-    vi.stubGlobal('BarcodeDetector', FakeDetector);
-    Object.defineProperty(navigator, 'mediaDevices', {
-      configurable: true,
-      value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop: stopTrack }] }) },
-    });
-  };
-
-  beforeEach(() => {
-    stopTrack.mockClear();
-    vi.unstubAllGlobals();
-    Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: undefined });
+describe('automatic plan and single phone QR', () => {
+  it('fills the plan from the phone price before customer details are entered', async () => {
+    open(); await screen.findByText('Sell a phone on installments');
+    fill(screen.getByLabelText('Phone price (Rs)'), '60000');
+    expect(screen.getByLabelText('Plan price (Rs)')).toHaveValue(60000);
+    expect(screen.getByLabelText('Advance (Rs)')).toHaveValue(15000);
+    expect(screen.getByLabelText('Remaining amount (Rs)')).toHaveValue(45000);
+    expect(screen.getByLabelText('Monthly installment (Rs)')).toHaveValue(7500);
+    expect(screen.getByLabelText('Plan price (Rs)')).toHaveAttribute('readonly');
   });
-
-  it('fills the IMEI box from the first valid barcode and turns the camera off', async () => {
-    stubCamera([['8806094123456'], ['123456789012345', VALID_IMEI]]);
-    open();
-    await screen.findByText('Sell a phone on installments');
-    fireEvent.click(screen.getByRole('button', { name: 'Scan the IMEI barcode on the box' }));
-    await waitFor(() => expect(screen.getByPlaceholderText('15-digit IMEI')).toHaveValue(VALID_IMEI));
-    expect(stopTrack).toHaveBeenCalled();
-    expect(screen.queryByText(/Point the camera/)).not.toBeInTheDocument();
+  it('recalculates the exact plan and preserves a manually typed advance when price changes', async () => {
+    open(); await screen.findByText('Sell a phone on installments');
+    fill(screen.getByLabelText('Phone price (Rs)'), '60000');
+    fill(screen.getByLabelText('Advance (Rs)'), '10000');
+    expect(screen.getByLabelText('Remaining amount (Rs)')).toHaveValue(50000);
+    expect(screen.getByLabelText('Monthly installment (Rs)')).toHaveValue(8333);
+    expect(screen.getByLabelText('Final installment (Rs)')).toHaveValue(8335);
+    fill(screen.getByLabelText('Phone price (Rs)'), '65000');
+    expect(screen.getByLabelText('Advance (Rs)')).toHaveValue(10000);
+    expect(screen.getByLabelText('Remaining amount (Rs)')).toHaveValue(55000);
+    fireEvent.click(screen.getByRole('button', { name: /^12\s*months$/ }));
+    expect(screen.getByLabelText('Monthly installment (Rs)')).toHaveValue(4583);
+    expect(screen.getByLabelText('Final installment (Rs)')).toHaveValue(4587);
   });
-
-  it('ignores barcodes that are not a valid IMEI', async () => {
-    stubCamera([['123456789012345', '8806094123456']]);
-    open();
-    await screen.findByText('Sell a phone on installments');
-    fireEvent.click(screen.getByRole('button', { name: 'Scan the IMEI barcode on the box' }));
-    expect(await screen.findByText(/Point the camera at the IMEI barcode/)).toBeInTheDocument();
-    await new Promise((r) => setTimeout(r, 600));
-    expect(screen.getByPlaceholderText('15-digit IMEI')).toHaveValue('');
-    fireEvent.click(screen.getByRole('button', { name: 'Close camera' }));
-    expect(stopTrack).toHaveBeenCalled();
-  });
-
-  it('says so when the camera scan is not available, and typing still works', async () => {
-    open();
-    await screen.findByText('Sell a phone on installments');
-    fireEvent.click(screen.getByRole('button', { name: 'Scan the IMEI barcode on the box' }));
-    expect(await screen.findByText(/Camera scan does not work on this device/)).toBeInTheDocument();
-    fill(screen.getByPlaceholderText('15-digit IMEI'), VALID_IMEI);
-    expect(screen.getByPlaceholderText('15-digit IMEI')).toHaveValue(VALID_IMEI);
+  it('keeps the Welcome-screen QR and manual IMEI but removes the extra IMEI scanner', async () => {
+    open(); await screen.findByText('Sell a phone on installments');
+    expect(screen.getByRole('button', { name: 'Scan new phone from Welcome screen' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Scan the IMEI barcode on the box' })).not.toBeInTheDocument();
+    fill(screen.getByLabelText('IMEI (15 digits)'), VALID_IMEI);
+    expect(screen.getByLabelText('IMEI (15 digits)')).toHaveValue(VALID_IMEI);
   });
 });

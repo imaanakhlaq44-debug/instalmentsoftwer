@@ -19,6 +19,23 @@
  * Figures stay in Western digits, as they do on the site and on the receipts.
  */
 export const URDU: Record<string, string> = {
+  "Plan price (Rs)": "فون کی قیمت (روپے)",
+  "Filled from the phone price above.": "اوپر فون کی قیمت سے خود بھر جاتا ہے۔",
+  "Remaining amount (Rs)": "باقی رقم (روپے)",
+  "Monthly installment (Rs)": "ماہانہ قسط (روپے)",
+  "Final installment (Rs)": "آخری قسط (روپے)",
+  "The final installment includes the rounding difference so the total stays exact.": "حساب کا معمولی فرق آخری قسط میں شامل ہے تاکہ کل رقم درست رہے۔",
+  "Download Android app": "Android ایپ ڈاؤن لوڈ کریں",
+  "Your shop, now on your phone.": "آپ کی دکان، اب آپ کے موبائل پر۔",
+  "Android app": "Android ایپ",
+  "Customers, installments, payments and phone setup — with your existing ALMAS SDM account.": "گاہک، اقساط، ادائیگیاں اور فون سیٹ اپ — اپنے موجودہ ALMAS SDM اکاؤنٹ سے۔",
+  "Start in three steps": "تین آسان مرحلے",
+  "Download the APK and open it on your Android phone.": "APK ڈاؤن لوڈ کر کے اپنے Android فون پر کھولیں۔",
+  "If Android asks, allow installation from this download source.": "اگر Android پوچھے تو اس ڈاؤن لوڈ سورس سے انسٹالیشن کی اجازت دیں۔",
+  "Sign in with your existing account, or register your shop.": "اپنے موجودہ اکاؤنٹ سے Sign in کریں یا اپنی دکان رجسٹر کریں۔",
+  "Your saved shop records stay in your online account. Use the same account on the website or app.": "آپ کے محفوظ ریکارڈ آپ کے آن لائن اکاؤنٹ میں رہتے ہیں۔ ویب سائٹ اور ایپ پر وہی اکاؤنٹ استعمال کریں۔",
+  "This is the shop-management app. It does not lock the phone you install it on. Customer-phone management is enrolled separately.": "یہ دکان چلانے کی ایپ ہے؛ آپ کے اپنے فون کو لاک نہیں کرتی۔ گاہک کے فون کی مینجمنٹ الگ اندراج کی جاتی ہے۔",
+
   'No dues today': 'آج کوئی قسط نہیں',
   "Your shop, your control.": "آپ کی دکان، آپ کا اختیار۔",
   "Your platform, your control.": "آپ کا پلیٹ فارم، آپ کا اختیار۔",

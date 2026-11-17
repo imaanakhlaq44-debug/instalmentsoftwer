@@ -10,6 +10,23 @@
  * QR, IMEI, app, SMS, CNIC, JazzCash, Wi-Fi.
  */
 export const ROMAN_URDU: Record<string, string> = {
+  "Plan price (Rs)": "Phone ki qeemat (Rs)",
+  "Filled from the phone price above.": "Upar phone ki qeemat se khud bhar jata hai.",
+  "Remaining amount (Rs)": "Baqi raqam (Rs)",
+  "Monthly installment (Rs)": "Mahana qist (Rs)",
+  "Final installment (Rs)": "Aakhri qist (Rs)",
+  "The final installment includes the rounding difference so the total stays exact.": "Rounding ka farq aakhri qist mein shamil hai, taake kul raqam durust rahe.",
+  "Download Android app": "Android app download karein",
+  "Your shop, now on your phone.": "Aapki dukan, ab aapke mobile par.",
+  "Android app": "Android app",
+  "Customers, installments, payments and phone setup — with your existing ALMAS SDM account.": "Gahak, qistein, payments aur phone setup — apne mojooda ALMAS SDM account se.",
+  "Start in three steps": "Teen asaan qadam",
+  "Download the APK and open it on your Android phone.": "APK download karke apne Android phone par kholein.",
+  "If Android asks, allow installation from this download source.": "Android pooche to is download source se installation ki ijazat dein.",
+  "Sign in with your existing account, or register your shop.": "Apne mojooda account se Sign in karein, ya apni dukan register karein.",
+  "Your saved shop records stay in your online account. Use the same account on the website or app.": "Aapke save kiye hue records aapke online account mein rehte hain. Website aur app par wohi account istemal karein.",
+  "This is the shop-management app. It does not lock the phone you install it on. Customer-phone management is enrolled separately.": "Yeh dukan chalane ki app hai; aapke apne phone ko lock nahin karti. Gahak ke phone ka management alag enroll hota hai.",
+
   'No dues today': 'Aaj qist nahin',
   "Your shop, your control.": "Aapki dukan, aapka control.",
   "Your platform, your control.": "Aapka platform, aapka control.",

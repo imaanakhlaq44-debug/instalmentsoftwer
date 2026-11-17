@@ -11,7 +11,7 @@ import {
 import { useAuth } from '../../context/AuthContext.js';
 import { GoogleIdGuideModal } from './GoogleIdGuideModal.js';
 import { SignaturePad } from '../contract/SignaturePad.js';
-import { ImeiScanButton } from './ImeiScanButton.js';
+import { installmentPreview } from '../../utils/installmentPreview.js';
 import { CnicScanButton } from './CnicScanButton.js';
 import { PhoneIntakeScan } from './PhoneIntakeScan.js';
 import {
@@ -86,6 +86,8 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess, st
   const [phoneIntakeId, setPhoneIntakeId] = useState<string>();
   const [phoneScanPending, setPhoneScanPending] = useState(false);
   const [scannedOsVersion, setScannedOsVersion] = useState<string>();
+  // A typed advance is never silently replaced when the price changes.
+  const [advanceChoice, setAdvanceChoice] = useState<number | null>(25);
 
   const [formData, setFormData] = useState({
     customerName: '',
@@ -201,11 +203,11 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess, st
     }
   };
 
-  /** A new price keeps the same share as the advance the shop had chosen. */
+  /** Price fills the plan immediately; a manually entered advance stays intact. */
   const setPrice = (price: number) => {
-    const percent = formData.purchasePrice > 0 ? (formData.downPayment / formData.purchasePrice) * 100 : 25;
-    setField('purchasePrice', price);
-    setField('downPayment', price > 0 ? advanceFor(price, ADVANCE_CHOICES.includes(Math.round(percent)) ? Math.round(percent) : 25) : 0);
+    setFormData(prev => ({ ...prev, purchasePrice: price,
+      downPayment: advanceChoice === null ? prev.downPayment : price > 0 ? advanceFor(price, advanceChoice) : 0 }));
+    setErrors(prev => { const next = { ...prev }; delete next.purchasePrice; delete next.downPayment; return next; });
   };
 
   const pickModel = (m: RecentModel) => {
@@ -215,7 +217,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess, st
       model: m.model,
       ramStorage: m.ramStorage || prev.ramStorage,
       purchasePrice: m.price,
-      downPayment: advanceFor(m.price, 25),
+      downPayment: advanceChoice === null ? prev.downPayment : advanceFor(m.price, advanceChoice),
     }));
     setErrors((prev) => {
       const next = { ...prev };
@@ -227,7 +229,8 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess, st
   };
 
   const financedAmount = formData.purchasePrice - formData.downPayment;
-  const monthlyAmount = createdResult?.plan?.monthlyInstallment ?? agreement?.snapshot?.plan?.monthlyInstallment ?? Math.round(financedAmount / (formData.totalInstallments || 1));
+  const planPreview = installmentPreview(formData.purchasePrice, formData.downPayment, formData.totalInstallments);
+  const monthlyAmount = createdResult?.plan?.monthlyInstallment ?? planPreview?.monthlyInstallment ?? 0;
   const advancePercent =
     formData.purchasePrice > 0 ? Math.round((formData.downPayment / formData.purchasePrice) * 100) : 0;
 
@@ -621,7 +624,6 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess, st
                       aria-invalid={!!errors.imei}
                       className={inputClass('imei', 'font-mono tracking-wide min-w-0 flex-1')}
                     />
-                    <ImeiScanButton onScan={(imei) => setField('imei', imei)} />
                   </div>
                   {fieldError('imei')}
                 </div>
@@ -802,6 +804,11 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess, st
             'Tap the advance and the months. The monthly amount works itself out.',
             <div className="space-y-5">
               <div>
+                <label htmlFor="plan-price" className="field-label">Plan price (Rs)</label>
+                <input id="plan-price" type="number" readOnly value={formData.purchasePrice || ''} placeholder="0" className="input bg-paper-100 font-bold" />
+                <p className="mt-1 text-caption text-ink-500">Filled from the phone price above.</p>
+              </div>
+              <div>
                 <label htmlFor="sale-downPayment" className="field-label">Advance (Rs)</label>
                 <div className="flex flex-wrap items-center gap-2">
                   {ADVANCE_CHOICES.map((p) => (
@@ -809,9 +816,9 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess, st
                       key={p}
                       type="button"
                       disabled={!formData.purchasePrice}
-                      aria-pressed={formData.purchasePrice > 0 && formData.downPayment === advanceFor(formData.purchasePrice, p)}
-                      onClick={() => setField('downPayment', advanceFor(formData.purchasePrice, p))}
-                      className={`${chip(formData.purchasePrice > 0 && formData.downPayment === advanceFor(formData.purchasePrice, p))} disabled:opacity-40`}
+                      aria-pressed={advanceChoice === p && formData.purchasePrice > 0}
+                      onClick={() => { setAdvanceChoice(p); setField('downPayment', advanceFor(formData.purchasePrice, p)); }}
+                      className={`${chip(advanceChoice === p && formData.purchasePrice > 0)} disabled:opacity-40`}
                     >
                       {p}%
                     </button>
@@ -823,7 +830,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess, st
                     min={0}
                     value={formData.downPayment || ''}
                     placeholder="0"
-                    onChange={(e) => setField('downPayment', Number(e.target.value))}
+                    onChange={(e) => { setAdvanceChoice(null); setField('downPayment', Number(e.target.value)); }}
                     aria-invalid={!!errors.downPayment}
                     className={inputClass('downPayment', 'w-40 font-black')}
                   />
@@ -848,6 +855,12 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess, st
                 </div>
                 {fieldError('totalInstallments')}
               </div>
+
+              <div className="grid gap-4 sm:grid-cols-2" aria-live="polite">
+                <div><label htmlFor="plan-remaining" className="field-label">Remaining amount (Rs)</label><input id="plan-remaining" type="number" readOnly value={planPreview?.financedAmount ?? ''} placeholder="0" className="input bg-paper-100 font-bold" /></div>
+                <div><label htmlFor="plan-monthly" className="field-label">Monthly installment (Rs)</label><input id="plan-monthly" type="number" readOnly value={planPreview?.monthlyInstallment ?? ''} placeholder="0" className="input bg-paper-100 font-bold" /></div>
+              </div>
+              {planPreview && planPreview.finalInstallment !== planPreview.monthlyInstallment && <div><label htmlFor="plan-final" className="field-label">Final installment (Rs)</label><input id="plan-final" type="number" readOnly value={planPreview.finalInstallment} className="input bg-paper-100 font-bold" /><p className="mt-1 text-caption text-ink-500">The final installment includes the rounding difference so the total stays exact.</p></div>}
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
