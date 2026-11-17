@@ -66,8 +66,11 @@ class WelcomeActivityTest {
             view.draw(android.graphics.Canvas(bitmap))
             java.io.File(output,"$name-${if(BuildConfig.PLAY_STORE)"play"else"direct"}.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it) }
         }
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(700));capture("splash")
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600));capture("welcome")
+        (view as ViewGroup).getChildAt(0).let { it as ViewGroup; it.removeAllViews() }
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Any>(activity,"showSplash")
+        content(activity).filterIsInstance<android.widget.ImageView>().forEach { it.animate().cancel(); it.alpha=1f; it.scaleX=1f; it.scaleY=1f }
+        capture("splash")
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1300));capture("welcome")
         assertTrue(content(activity).filterIsInstance<TextView>().any { it.text.toString()=="Create your account" })
         controller.pause().stop().destroy()
     }

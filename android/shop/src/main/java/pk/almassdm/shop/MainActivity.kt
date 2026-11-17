@@ -76,6 +76,7 @@ class MainActivity : AppCompatActivity() {
     private val saveDocument = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val data = pendingDocument; pendingDocument = null
         val uri = result.data?.data
+        if(result.resultCode == RESULT_OK && uri != null && data == null) message("Please download this document again to finish saving it.")
         if (result.resultCode == RESULT_OK && uri != null && data != null) lifecycleScope.launch {
             val saved = withContext(Dispatchers.IO) { runCatching { contentResolver.openOutputStream(uri)?.use { it.write(data) } ?: error("No file destination") }.isSuccess }
             message(if (saved) "Document saved." else "Could not save this document. Try again.")
