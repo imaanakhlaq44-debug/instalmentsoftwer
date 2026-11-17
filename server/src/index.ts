@@ -161,7 +161,11 @@ const dpcEnrollLimiter = rateLimit({
   message: { error: 'Too many enrollment attempts. Please wait before trying again.', code: 'DPC_ENROLL_RATE_LIMITED' },
 });
 
-app.use('/api', generalLimiter);
+app.use('/api', (req, res, next) => {
+  if (req.path === '/dpc' || req.path.startsWith('/dpc/') ||
+      req.path === '/sms-relay' || req.path.startsWith('/sms-relay/')) return next();
+  return generalLimiter(req, res, next);
+});
 
 // ---------------------------------------------------------------------------
 // Request logging (skipped during tests to keep output readable)

@@ -64,7 +64,8 @@ describe('temporary password', () => {
       .send({ currentPassword: TEMP, newPassword: NEW });
     expect(changed.status).toBe(200);
 
-    expect((await anonymous().get('/api/devices').set(auth)).status).toBe(200);
+    expect((await anonymous().get('/api/devices').set(auth)).status).toBe(401);
+    expect((await anonymous().get('/api/devices').set({ Authorization: `Bearer ${changed.body.session.token}` })).status).toBe(200);
   });
 
   it('leaves normal accounts untouched', async () => {

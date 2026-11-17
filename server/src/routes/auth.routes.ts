@@ -195,12 +195,12 @@ authRouter.post(
       newPassword,
       ipAddress: clientIp(req),
     });
-    res.json(result);
+    res.json({ ...result, session: await AuthService.getSession(getAuthUser(req).userId) });
   })
 );
 
 /**
- * Logout is client-side (the token is simply discarded), but we record it so the
+ * Logout revokes the account session version and records the event so the
  * audit trail shows a complete session history.
  */
 authRouter.post(
@@ -219,6 +219,8 @@ authRouter.post(
       details: `${user.name} signed out.`,
       ipAddress: clientIp(req),
     });
+    const account = await repo.users.findById(user.userId);
+    if (account) await repo.users.update(account.id, { sessionVersion: (account.sessionVersion ?? 0) + 1 });
     res.json({ success: true, message: 'Signed out successfully.' });
   })
 );

@@ -405,6 +405,7 @@ model User {
   failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
   lockedUntil         DateTime? @map("locked_until") @db.Timestamptz(3)
   mustChangePassword  Boolean   @default(false) @map("must_change_password")
+  sessionVersion      Int       @default(0) @map("session_version")
   passwordChangedAt   DateTime? @map("password_changed_at") @db.Timestamptz(3)
   createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
@@ -705,6 +706,7 @@ model Payment {
   reversedBy          String?       @map("reversed_by") @db.VarChar(64)
   reversalReason      String?       @map("reversal_reason") @db.VarChar(500)
   reversalOfPaymentId String?       @map("reversal_of_payment_id") @db.VarChar(64)
+  allocationJson      String?       @map("allocation_json") @db.Text
   lateFeePortion      Int           @default(0) @map("late_fee_portion")
   receiptNumber       String?       @map("receipt_number") @db.VarChar(40)
   recordedBy          String?       @map("recorded_by") @db.VarChar(64)
@@ -731,6 +733,7 @@ model Payment {
   // Blocks the double-submit at the counter at the database level, not just in
   // application code — two concurrent requests cannot both win.
   @@unique([dealerId, referenceNumber], name: "payment_dealer_reference")
+  @@unique([dealerId, receiptNumber], name: "payment_dealer_receipt")
   @@index([dealerId, createdAt(sort: Desc)])
   @@index([customerId, createdAt(sort: Desc)])
   /** The verification queue: one dealership's unverified customer submissions. */

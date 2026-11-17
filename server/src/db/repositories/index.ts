@@ -669,7 +669,12 @@ export const transactions = {
     tx?: Tx
   ): Promise<{ count: number; inflow: number; outflow: number; net: number }> {
     const d = delegate('transaction', tx);
-    const completed = { ...where, status: 'COMPLETED' };
+    const completed = { AND: [where, {
+      OR: [
+        { status: { in: ['COMPLETED', 'REVERSED'] }, type: { in: ['DOWN_PAYMENT', 'MONTHLY_INSTALLMENT'] } },
+        { status: 'COMPLETED', type: 'REVERSAL' },
+      ],
+    }] };
 
     const [count, credits, debits] = await Promise.all([
       d.count({ where }),

@@ -7,6 +7,9 @@ import { runInTransaction } from '../db/prisma.js';
 import {
   Installment, InstallmentPlan, Customer, Device, Transaction, DevicePolicy,
 } from '../types/index.js';
+import { PaymentService } from '../services/PaymentService.js';
+import { deviceManagementService } from '../services/DeviceManagementService.js';
+import { DeviceReleaseService } from '../services/DeviceReleaseService.js';
 import { OverdueEngine } from '../services/OverdueEngine.js';
 import { buildInstallmentSchedule, amountOutstanding, DEFAULT_POLICY, parseDateOnly } from '../services/InstallmentMath.js';
 import { AuditService } from '../services/AuditService.js';
@@ -17,7 +20,7 @@ import {
 import { validateBody, validateQuery, getQuery } from '../middleware/validate.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { AppError } from '../utils/AppError.js';
-import { maskImei } from '../utils/mask.js';
+import { sanitizeCustomer, sanitizeDevice, maskImei } from '../utils/mask.js';
 import { isoDateSchema, paginationSchema, pageEnvelope } from '../utils/validators.js';
 
 export const installmentsRouter = Router();
@@ -106,8 +109,8 @@ installmentsRouter.get('/plans/:id', asyncHandler(async (req, res) => {
   res.json({
     plan,
     installments,
-    customer: customer ?? null,
-    device: device ?? null,
+    customer: customer ? sanitizeCustomer(customer, user.role, user.customerId) : null,
+    device: device ? sanitizeDevice(device, user.role) : null,
     payoff: {
       amount: payoffAmount,
       remainingInstallments: unpaid.length,
@@ -179,7 +182,7 @@ installmentsRouter.post(
       throw AppError.forbidden('Only a super admin may run the overdue evaluation against a custom date.');
     }
 
-    const result = await OverdueEngine.runEvaluation(body.referenceDate);
+    const result = await OverdueEngine.runEvaluation(body.referenceDate, user.role === 'SUPER_ADMIN' ? undefined : user.dealerId);
 
     res.json({
       success: true,
@@ -217,7 +220,12 @@ installmentsRouter.post('/:id/waive-late-fee', requireDealerAdmin, validateBody(
   // The waiver, its ledger entry and the plan total move together — a waiver
   // recorded without the matching contra-entry would leave the books wrong.
   await runInTransaction(async (tx) => {
+    const current = await repo.installments.findById(inst.id, tx);
+    if (!current || current.amountPaid !== inst.amountPaid || current.lateFee !== inst.lateFee || current.lateFeePaid !== inst.lateFeePaid) {
+      throw AppError.conflict('The installment changed. Reload and try again.');
+    }
     await repo.installments.update(inst.id, {
+      ...(inst.amountPaid >= inst.amountDue ? { status: 'PAID' as const, paidAt: nowIso } : {}),
       lateFee: inst.lateFeePaid ?? 0,
       lateFeeWaivedAt: nowIso,
       lateFeeWaivedBy: user.userId,
@@ -241,6 +249,17 @@ installmentsRouter.post('/:id/waive-late-fee', requireDealerAdmin, validateBody(
       0
     );
     await repo.installmentPlans.update(inst.planId, { outstandingLateFees: remaining }, tx);
+    const summary = await PaymentService.recalculatePlan(inst.planId, tx);
+    if (summary.allPaid) {
+      const plan = await repo.installmentPlans.findById(inst.planId, tx);
+      const device = plan ? await repo.devices.findById(plan.deviceId, tx) : undefined;
+      if (device && DeviceReleaseService.RELEASABLE.has(device.status)) {
+        await DeviceReleaseService.release(device, {
+          actor: { userId: user.userId, userName: user.name, userRole: user.role, ipAddress: clientIp(req) },
+          reason: 'All obligations settled after late-fee waiver.', automatic: true,
+        }, tx);
+      }
+    }
   });
 
   await AuditService.log({
@@ -255,6 +274,25 @@ installmentsRouter.post('/:id/waive-late-fee', requireDealerAdmin, validateBody(
     ipAddress: clientIp(req),
   });
 
+  const refreshedPlan = await repo.installmentPlans.findById(inst.planId);
+  if (refreshedPlan && refreshedPlan.status !== 'OVERDUE' && refreshedPlan.status !== 'COMPLETED') {
+    const device = await repo.devices.findById(refreshedPlan.deviceId);
+    const policy = await repo.devicePolicies.findByDealer(inst.dealerId);
+    if (device && (policy?.autoUnlockEnabled ?? DEFAULT_POLICY.autoUnlockEnabled)) {
+      if (device.status === 'OVERDUE') {
+        await repo.devices.update(device.id, { status: 'ACTIVE', lockReason: undefined });
+      } else if (device.status === 'LOCKED' || device.status === 'LOCK_PENDING') {
+        try {
+          await deviceManagementService.unlockDevice({ deviceId: device.id, userId: user.userId,
+            userName: user.name, userRole: user.role, reason: 'Overdue balance cleared by late-fee waiver.', ipAddress: clientIp(req) });
+        } catch (error) {
+          console.error('[waiver] Automatic unlock failed:', error);
+          return res.json({ success: true, waivedAmount: outstandingFee,
+            message: 'Late fee waived. Automatic unlock failed; unlock the device manually.' });
+        }
+      }
+    }
+  }
   res.json({ success: true, waivedAmount: outstandingFee, message: 'Late fee waived.' });
 }));
 
@@ -282,8 +320,6 @@ installmentsRouter.post('/plans/:id/reschedule', requireDealerAdmin, validateBod
 
   const body = req.body as z.infer<typeof rescheduleSchema>;
   const existing = await repo.installments.findByPlan(plan.id);
-  const paidRows = existing.filter((i) => i.amountPaid > 0 || i.status === 'PAID');
-  const unpaidRows = existing.filter((i) => i.amountPaid === 0 && i.status !== 'PAID');
 
   const principalPaid = existing.reduce((s, i) => s + i.amountPaid, 0);
   const outstandingPrincipal = Math.max(0, plan.financedAmount - principalPaid);
@@ -302,13 +338,21 @@ installmentsRouter.post('/plans/:id/reschedule', requireDealerAdmin, validateBod
 
   const nowIso = new Date().toISOString();
 
-  // Deleting the old rows, writing the new schedule and updating the plan are
-  // one unit: a plan left with its old rows deleted and none written would
-  // erase a customer's remaining balance.
+  // Preserve the historical rows and move remaining principal exactly once.
   const created = await runInTransaction(async (tx) => {
-    // Paid and partially-paid rows are history and stay exactly as they are.
-    for (const row of unpaidRows) {
-      await repo.installments.delete(row.id, tx);
+    const currentRows = await repo.installments.findByPlan(plan.id, tx);
+    if (JSON.stringify(currentRows) !== JSON.stringify(existing)) {
+      throw AppError.conflict('The schedule changed while you were editing. Reload and try again.');
+    }
+    // Retain linked historical rows and settle only the principal moved to the new schedule.
+    for (const row of existing) {
+      if (row.status === 'PAID') continue;
+      const feeOwed = Math.max(0, (row.lateFee || 0) - (row.lateFeePaid || 0));
+      await repo.installments.update(row.id, {
+        amountDue: row.amountPaid,
+        status: feeOwed > 0 ? row.status : 'PAID',
+        paidAt: feeOwed > 0 ? undefined : nowIso,
+      }, tx);
     }
 
     const rows = [];
@@ -318,7 +362,7 @@ installmentsRouter.post('/plans/:id/reschedule', requireDealerAdmin, validateBod
         planId: plan.id,
         dealerId: plan.dealerId,
         customerId: plan.customerId,
-        installmentNumber: paidRows.length + row.installmentNumber,
+        installmentNumber: Math.max(0, ...existing.map(i => i.installmentNumber)) + row.installmentNumber,
         amountDue: row.amountDue,
         amountPaid: 0,
         dueDate: row.dueDate,
@@ -331,12 +375,13 @@ installmentsRouter.post('/plans/:id/reschedule', requireDealerAdmin, validateBod
     }
 
     await repo.installmentPlans.update(plan.id, {
-      totalInstallments: paidRows.length + body.totalInstallments,
+      totalInstallments: existing.length + body.totalInstallments,
       monthlyInstallment: schedule.baseInstallment,
       firstDueDate: body.firstDueDate,
       gracePeriodDays: grace,
       status: 'CURRENT',
     }, tx);
+    await PaymentService.recalculatePlan(plan.id, tx);
 
     return rows;
   });

@@ -7,7 +7,7 @@ import {
 import { deviceManagementService } from './DeviceManagementService.js';
 import { DeviceIntegrityService } from './DeviceIntegrityService.js';
 import { AuditService } from './AuditService.js';
-import { calculateLateFee, daysBetween, DEFAULT_POLICY, toDateOnly } from './InstallmentMath.js';
+import { calculateLateFee, daysBetween, DEFAULT_POLICY, toDateOnly, toBusinessDate } from './InstallmentMath.js';
 import { stagedFullLockDue } from './StagedRestrictions.js';
 import { WhatsAppDispatchService } from './whatsapp/WhatsAppDispatchService.js';
 
@@ -31,12 +31,12 @@ export class OverdueEngine {
    * running it twice — or catching up after downtime — cannot double-charge or
    * spam a customer.
    */
-  public static async runEvaluation(currentDateStr?: string): Promise<OverdueEvaluationResult> {
+  public static async runEvaluation(currentDateStr?: string, dealerId?: string): Promise<OverdueEvaluationResult> {
     const today = currentDateStr ? new Date(currentDateStr) : new Date();
-    const todayStr = toDateOnly(today);
+    const todayStr = currentDateStr ? toDateOnly(today) : toBusinessDate(today);
 
     try {
-      await DeviceIntegrityService.flagSilentDevices(today);
+      if (!dealerId) await DeviceIntegrityService.flagSilentDevices(today);
     } catch (err) {
       console.error('[overdue] Silent-device check failed:', err);
     }
@@ -53,7 +53,7 @@ export class OverdueEngine {
     };
 
     const openInstallments = await repo.installments.findMany({
-      where: { status: { not: 'PAID' } },
+      where: { status: { not: 'PAID' }, ...(dealerId ? { dealerId } : {}) },
       orderBy: { dueDate: 'asc' },
     });
     result.evaluatedCount = openInstallments.length;
@@ -130,11 +130,13 @@ export class OverdueEngine {
       // ---------------------------------------------------------------------
       // Status transitions
       // ---------------------------------------------------------------------
-      if (pastGrace && inst.status !== 'OVERDUE') {
-        await repo.installments.update(inst.id, { status: 'OVERDUE' });
-        await repo.installmentPlans.update(plan.id, { status: 'OVERDUE' });
-        result.newlyOverdueCount++;
-        affectedPlans.add(plan.id);
+      if (pastGrace) {
+        if (inst.status !== 'OVERDUE') {
+          await repo.installments.update(inst.id, { status: 'OVERDUE' });
+          await repo.installmentPlans.update(plan.id, { status: 'OVERDUE' });
+          result.newlyOverdueCount++;
+          affectedPlans.add(plan.id);
+        }
 
         if (device) {
           const daysLate = daysBetween(inst.dueDate, todayStr);

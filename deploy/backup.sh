@@ -33,13 +33,21 @@ case "$KEEP" in ''|*[!0-9]*|0) echo "BACKUP_KEEP_LOCAL must be a whole number ab
 # pg_dump runs inside the database container, so no PostgreSQL client is needed
 # on the host and the password never appears in a host process list.
 $COMPOSE exec -T db sh -c \
-  "pg_dump -U '${POSTGRES_USER}' -d '${POSTGRES_DB}' --clean --if-exists | gzip -9 > '${PART}'"
+  'set -eu
+  umask 077
+  tmp=$(mktemp /backups/.dump-XXXXXX)
+  trap "rm -f \"$tmp\" \"$tmp.gz\"" EXIT HUP INT TERM
+  pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists > "$tmp"
+  test -s "$tmp"
+  gzip -9 "$tmp"
+  gzip -t "$tmp.gz"
+  mv "$tmp.gz" "$1"' sh "${OUT}"
+
+echo "Wrote deploy/backups/almas-sdm-${STAMP}.sql.gz"
 
 # A dump that cannot be read is not a backup. gzip -t costs a second and catches
 # a truncated write — which is what a full disk produces, silently.
-$COMPOSE exec -T db sh -c "gzip -t '${PART}' && mv '${PART}' '${OUT}'"
-
-echo "Wrote deploy/backups/almas-sdm-${STAMP}.sql.gz"
+$COMPOSE exec -T db sh -c "gzip -t '${OUT}'"
 
 # Keep the newest $KEEP by name (the timestamp sorts), delete the rest. Counting
 # files rather than days means a month of failed backups never deletes the last

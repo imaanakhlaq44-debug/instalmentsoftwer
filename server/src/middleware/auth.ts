@@ -72,6 +72,9 @@ export const requireAuth = asyncHandler(async (req: Request, _res: Response, nex
   if (!user) {
     return next(AppError.unauthorized('Account no longer exists.'));
   }
+  if ((decoded.sessionVersion ?? 0) !== (user.sessionVersion ?? 0)) {
+    return next(AppError.unauthorized('Session revoked. Please sign in again.'));
+  }
   if (!user.active) {
     return next(AppError.forbidden('This account has been deactivated.'));
   }

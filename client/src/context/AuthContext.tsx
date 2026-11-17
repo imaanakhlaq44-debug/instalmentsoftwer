@@ -169,11 +169,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const changePassword = useCallback(
     async (currentPassword: string, newPassword: string) => {
-      await ApiService.changePassword(currentPassword, newPassword);
+      const result = await ApiService.changePassword(currentPassword, newPassword);
+      if (result.session) applySession(result.session);
       setUser((prev) => (prev ? { ...prev, mustChangePassword: false } : prev));
       showToast('Password updated successfully.', 'success');
     },
-    [showToast]
+    [showToast, applySession]
   );
 
   const refreshSession = useCallback(async () => {
