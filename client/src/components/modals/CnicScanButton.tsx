@@ -82,10 +82,14 @@ export function CnicScanButton({ onScan }: { onScan: (card: CnicScan) => void })
   const [card, setCard] = useState<CnicScan | null>(null);
   const onScanRef = useRef(onScan);
   onScanRef.current = onScan;
+  // Only an answer to this button's own request is used.
+  const asked = useRef(false);
 
   useEffect(() => {
     if (!bridge) return;
     bridge.onmessage = (event) => {
+      if (!asked.current) return;
+      asked.current = false;
       const reply = parseScanReply(event.data);
       if (reply.ok) {
         setCard(reply.card);
@@ -105,6 +109,7 @@ export function CnicScanButton({ onScan }: { onScan: (card: CnicScan) => void })
   const start = () => {
     setCard(null);
     setStatus('waiting');
+    asked.current = true;
     bridge.postMessage('scan');
   };
 

@@ -244,7 +244,8 @@ class MainActivity : AppCompatActivity() {
                 progress?.visibility=View.GONE; CookieManager.getInstance().flush(); rememberRoute(url)
                 if(NavigationPolicy.isInternal(url) && WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
                     // A missing script costs print/download help on this page, never the whole app.
-                    runCatching { assets.open("native_bridge.js").bufferedReader().use { it.readText() } }.getOrNull()?.let { view.evaluateJavascript(it,null) }
+                    for(script in listOf("native_bridge.js","cnic_shim.js"))
+                        runCatching { assets.open(script).bufferedReader().use { it.readText() } }.getOrNull()?.let { view.evaluateJavascript(it,null) }
                 }
             }
             override fun doUpdateVisitedHistory(view:WebView,url:String?,isReload:Boolean) { rememberRoute(url) }
