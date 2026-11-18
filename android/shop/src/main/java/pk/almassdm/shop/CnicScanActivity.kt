@@ -253,6 +253,14 @@ class CnicScanActivity : AppCompatActivity() {
         runOnUiThread {
             if (success) { guide.state = CardGuide.State.LOCKED; buzz() }
             setResult(RESULT_OK, Intent().putExtra(EXTRA_JSON, json))
+            // Test builds opened straight from adb have no page to answer: show what was read instead.
+            if (BuildConfig.DEBUG && callingActivity == null) {
+                android.util.Log.i("CnicScan", "frames=${vote.frames} ms=${SystemClock.elapsedRealtime() - started} $json")
+                androidx.appcompat.app.AlertDialog.Builder(this).setTitle("CNIC scan result")
+                    .setMessage(runCatching { org.json.JSONObject(json).toString(2) }.getOrDefault(json))
+                    .setPositiveButton("OK") { _, _ -> finish() }.setOnCancelListener { finish() }.show()
+                return@runOnUiThread
+            }
             finish()
         }
     }
