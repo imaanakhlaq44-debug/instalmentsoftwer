@@ -82,7 +82,8 @@ object CnicCardReader {
             // Mostly digits already; a token that is mostly letters is a word, not a number.
             if (raw.joinToString("").count { it.isDigit() } < 11) continue
             val parts = raw.map { digits(it) }
-            if (parts.all { p -> p.all { it.isDigit() } }) return "${parts[0]}-${parts[1]}-${parts[2]}"
+            // The first digit is the province code, 1 (KP) to 7 (GB/AJK); anything else is a misread.
+            if (parts.all { p -> p.all { it.isDigit() } } && parts[0][0] in '1'..'7') return "${parts[0]}-${parts[1]}-${parts[2]}"
         }
         return null
     }

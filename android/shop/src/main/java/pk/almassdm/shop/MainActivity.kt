@@ -277,7 +277,7 @@ class MainActivity : AppCompatActivity() {
             }
             // The sale form's "Scan CNIC card" button. Only the shop's own pages can ask.
             WebViewCompat.addWebMessageListener(web,"AlmasCnic",setOf(BuildConfig.APP_ORIGIN)) { _,message,origin,mainFrame,reply ->
-                if(mainFrame && NavigationPolicy.isInternal(origin.toString()) && NavigationPolicy.isInternal(browser?.url) && message.type==WebMessageCompat.TYPE_STRING && message.data=="scan") startCnicScan { reply.postMessage(it) }
+                if(mainFrame && NavigationPolicy.isInternal(origin.toString()) && NavigationPolicy.isInternal(browser?.url) && message.type==WebMessageCompat.TYPE_STRING && (message.data=="scan" || message.data?.startsWith("scan:")==true)) startCnicScan(message.data!!.substringAfter(":","ru")) { reply.postMessage(it) }
             }
         }
         web.setDownloadListener { url,_,disposition,mime,_ -> download(url,URLUtil.guessFileName(url,disposition,mime),mime) }
@@ -316,7 +316,7 @@ class MainActivity : AppCompatActivity() {
                     3 -> openExternal(currentUrl)
                     4 -> browser?.loadUrl(BuildConfig.APP_ORIGIN+"/privacy")
                     5 -> browser?.loadUrl(BuildConfig.APP_ORIGIN+"/account-deletion")
-                    6 -> startCnicScan { json -> AlertDialog.Builder(this@MainActivity).setTitle("CNIC scan result").setMessage(runCatching { JSONObject(json).toString(2) }.getOrDefault(json)).setPositiveButton("OK",null).show() }
+                    6 -> startCnicScan("ru") { json -> AlertDialog.Builder(this@MainActivity).setTitle("CNIC scan result").setMessage(runCatching { JSONObject(json).toString(2) }.getOrDefault(json)).setPositiveButton("OK",null).show() }
                 };true
             };show()
         }
@@ -420,7 +420,16 @@ class MainActivity : AppCompatActivity() {
     private var cnicReply: ((String) -> Unit)? = null
     private var cnicPhoto: File? = null
     private val cnicCameraPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) openCnicCamera() else finishCnicScan("""{"ok":false,"reason":"permission"}""")
+        if (granted) openCnicScanner() else finishCnicScan("""{"ok":false,"reason":"permission"}""")
+    }
+    private var cnicLang = "ru"
+    /** The live in-app scanner. If this phone's camera cannot be driven directly, its own camera app takes one photo instead. */
+    private val cnicScanner = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val json = result.data?.getStringExtra(CnicScanActivity.EXTRA_JSON) ?: """{"ok":false,"reason":"cancelled"}"""
+        if (runCatching { JSONObject(json).optString("reason") }.getOrNull() == "fallback") openCnicCamera() else finishCnicScan(json)
+    }
+    private fun openCnicScanner() {
+        runCatching { cnicScanner.launch(CnicScanActivity.intent(this, cnicLang)) }.onFailure { openCnicCamera() }
     }
     private val cnicCapture = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val photo = cnicPhoto
@@ -432,10 +441,10 @@ class MainActivity : AppCompatActivity() {
             finishCnicScan(answer?.takeIf { it.cnic != null || it.name != null }?.toJson()?.toString() ?: """{"ok":false,"reason":"unreadable"}""")
         }
     }
-    private fun startCnicScan(reply: (String) -> Unit) {
+    private fun startCnicScan(lang: String, reply: (String) -> Unit) {
         if (cnicReply != null) { reply("""{"ok":false,"reason":"busy"}"""); return }
-        cnicReply = reply
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) openCnicCamera()
+        cnicReply = reply; cnicLang = lang
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) openCnicScanner()
         else cnicCameraPermission.launch(Manifest.permission.CAMERA)
     }
     private fun openCnicCamera() {

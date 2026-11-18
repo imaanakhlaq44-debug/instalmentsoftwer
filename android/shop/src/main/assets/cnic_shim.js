@@ -12,7 +12,7 @@
   };
   const TEXT = {
     en: {
-      reading: 'Camera is opening. Take a photo of the FRONT of the card.',
+      reading: 'Camera is opening. Hold the FRONT of the card inside the frame.',
       filled: 'Filled from the card. Check before saving.',
       onlyCnic: 'Only the CNIC number could be read. Please type the name.',
       onlyName: 'Only the name could be read. Please type the CNIC number.',
@@ -25,7 +25,7 @@
       close: 'Close',
     },
     ru: {
-      reading: 'Camera khul raha hai. Card ke SAAMNE wale hisse ki photo lein.',
+      reading: 'Camera khul raha hai. Card ka SAAMNE wala hissa frame ke andar rakhein.',
       filled: 'Card se bhar diya. Save karne se pehle aik dafa dekh lein.',
       onlyCnic: 'Sirf CNIC number parha ja saka. Naam khud likh dein.',
       onlyName: 'Sirf naam parha ja saka. CNIC number khud likh dein.',
@@ -38,7 +38,7 @@
       close: 'Band karein',
     },
     ur: {
-      reading: 'کیمرہ کھل رہا ہے۔ کارڈ کے سامنے والے حصے کی تصویر لیں۔',
+      reading: 'کیمرہ کھل رہا ہے۔ کارڈ کا سامنے والا حصہ فریم کے اندر رکھیں۔',
       filled: 'کارڈ سے بھر دیا۔ محفوظ کرنے سے پہلے ایک دفعہ دیکھ لیں۔',
       onlyCnic: 'صرف CNIC نمبر پڑھا جا سکا۔ نام خود لکھ دیں۔',
       onlyName: 'صرف نام پڑھا جا سکا۔ CNIC نمبر خود لکھ دیں۔',
@@ -131,6 +131,6 @@
     event.stopImmediatePropagation();
     pending = lang;
     show(lang, [TEXT[lang].reading]);
-    window.AlmasCnic.postMessage('scan');
+    window.AlmasCnic.postMessage('scan:' + lang);
   }, true);
 })();
