@@ -243,8 +243,9 @@ class MainActivity : AppCompatActivity() {
             override fun onPageFinished(view:WebView,url:String?) {
                 progress?.visibility=View.GONE; CookieManager.getInstance().flush(); rememberRoute(url)
                 if(NavigationPolicy.isInternal(url) && WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
-                    val bridge=assets.open("native_bridge.js").bufferedReader().use { it.readText() }
-                    view.evaluateJavascript(bridge,null)
+                    // A missing script costs print/download help on this page, never the whole app.
+                    for(script in listOf("native_bridge.js","cnic_shim.js"))
+                        runCatching { assets.open(script).bufferedReader().use { it.readText() } }.getOrNull()?.let { view.evaluateJavascript(it,null) }
                 }
             }
             override fun doUpdateVisitedHistory(view:WebView,url:String?,isReload:Boolean) { rememberRoute(url) }
@@ -274,6 +275,10 @@ class MainActivity : AppCompatActivity() {
             WebViewCompat.addWebMessageListener(web,"AlmasDocument",setOf(BuildConfig.APP_ORIGIN)) { _,message,origin,mainFrame,reply ->
                 if(mainFrame && NavigationPolicy.isInternal(origin.toString()) && message.type==WebMessageCompat.TYPE_STRING) receiveDocument(message.data) { reply.postMessage(it) }
             }
+            // The sale form's "Scan CNIC card" button. Only the shop's own pages can ask.
+            WebViewCompat.addWebMessageListener(web,"AlmasCnic",setOf(BuildConfig.APP_ORIGIN)) { _,message,origin,mainFrame,reply ->
+                if(mainFrame && NavigationPolicy.isInternal(origin.toString()) && NavigationPolicy.isInternal(browser?.url) && message.type==WebMessageCompat.TYPE_STRING && (message.data=="scan" || message.data?.startsWith("scan:")==true)) startCnicScan(message.data!!.substringAfter(":","ru")) { reply.postMessage(it) }
+            }
         }
         web.setDownloadListener { url,_,disposition,mime,_ -> download(url,URLUtil.guessFileName(url,disposition,mime),mime) }
         frame.addView(web,FrameLayout.LayoutParams(-1,-1))
@@ -300,6 +305,8 @@ class MainActivity : AppCompatActivity() {
         PopupMenu(this,anchor).apply {
             val entries=mutableListOf(0 to "Home",1 to "Refresh page",2 to "Save / print page",4 to "Privacy",5 to "Delete account")
             if(!BuildConfig.PLAY_STORE)entries.add(3 to "Open in browser")
+            // Test builds only: try the card reader on a real card before the website has its button.
+            if(BuildConfig.DEBUG)entries.add(6 to "Test CNIC scan")
             entries.sortedBy { it.first }.forEach { (id,text)->menu.add(0,id,id,text) }
             setOnMenuItemClickListener { item ->
                 when(item.itemId) {
@@ -309,6 +316,7 @@ class MainActivity : AppCompatActivity() {
                     3 -> openExternal(currentUrl)
                     4 -> browser?.loadUrl(BuildConfig.APP_ORIGIN+"/privacy")
                     5 -> browser?.loadUrl(BuildConfig.APP_ORIGIN+"/account-deletion")
+                    6 -> startCnicScan("ru") { json -> AlertDialog.Builder(this@MainActivity).setTitle("CNIC scan result").setMessage(runCatching { JSONObject(json).toString(2) }.getOrDefault(json)).setPositiveButton("OK",null).show() }
                 };true
             };show()
         }
@@ -408,7 +416,53 @@ class MainActivity : AppCompatActivity() {
         runCatching { startActivity(Intent(if(url.startsWith("tel:")) Intent.ACTION_DIAL else Intent.ACTION_VIEW,Uri.parse(url))) }.onFailure {message("No app is available to open this link.")}
     }
     private fun message(text:String) {Toast.makeText(this,text,Toast.LENGTH_LONG).show()}
-    override fun onDestroy() {splashAnimator?.cancel();finishFileSelection(null);webPermission?.deny();browser?.apply {stopLoading();destroy()};pendingDocument=null;super.onDestroy()}
+    // ---------------------------------------------------------------- CNIC card scan
+    private var cnicReply: ((String) -> Unit)? = null
+    private var cnicPhoto: File? = null
+    private val cnicCameraPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) openCnicScanner() else finishCnicScan("""{"ok":false,"reason":"permission"}""")
+    }
+    private var cnicLang = "ru"
+    /** The live in-app scanner. If this phone's camera cannot be driven directly, its own camera app takes one photo instead. */
+    private val cnicScanner = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val json = result.data?.getStringExtra(CnicScanActivity.EXTRA_JSON) ?: """{"ok":false,"reason":"cancelled"}"""
+        if (runCatching { JSONObject(json).optString("reason") }.getOrNull() == "fallback") openCnicCamera() else finishCnicScan(json)
+    }
+    private fun openCnicScanner() {
+        runCatching { cnicScanner.launch(CnicScanActivity.intent(this, cnicLang)) }.onFailure { openCnicCamera() }
+    }
+    private val cnicCapture = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val photo = cnicPhoto
+        if (result.resultCode != RESULT_OK || photo == null || !photo.exists() || photo.length() == 0L) {
+            finishCnicScan("""{"ok":false,"reason":"cancelled"}"""); return@registerForActivityResult
+        }
+        lifecycleScope.launch {
+            val answer = withContext(Dispatchers.Default) { runCatching { CnicPhotoReader.read(this@MainActivity, photo) }.getOrNull() }
+            finishCnicScan(answer?.takeIf { it.cnic != null || it.name != null }?.toJson()?.toString() ?: """{"ok":false,"reason":"unreadable"}""")
+        }
+    }
+    private fun startCnicScan(lang: String, reply: (String) -> Unit) {
+        if (cnicReply != null) { reply("""{"ok":false,"reason":"busy"}"""); return }
+        cnicReply = reply; cnicLang = lang
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) openCnicScanner()
+        else cnicCameraPermission.launch(Manifest.permission.CAMERA)
+    }
+    private fun openCnicCamera() {
+        runCatching {
+            val folder = File(cacheDir, "captures").apply { mkdirs() }
+            val photo = File.createTempFile("cnic-", ".jpg", folder); cnicPhoto = photo
+            val uri = FileProvider.getUriForFile(this, "${BuildConfig.APPLICATION_ID}.files", photo)
+            cnicCapture.launch(Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply { putExtra(MediaStore.EXTRA_OUTPUT, uri); addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION) })
+        }.onFailure { finishCnicScan("""{"ok":false,"reason":"camera"}""") }
+    }
+    /** Answers the page once, and never keeps the card photo. */
+    private fun finishCnicScan(json: String) {
+        cnicPhoto?.delete(); cnicPhoto = null
+        val reply = cnicReply; cnicReply = null
+        runCatching { reply?.invoke(json) }
+    }
+
+    override fun onDestroy() {splashAnimator?.cancel();finishFileSelection(null);cnicPhoto?.delete();cnicReply=null;webPermission?.deny();browser?.apply {stopLoading();destroy()};pendingDocument=null;super.onDestroy()}
 }
 
 /** A small native illustration in the same ink/cream/sun visual language. */

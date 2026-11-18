@@ -114,12 +114,15 @@ jobs:
       # a build that stops compiling is a fleet that stops being enrollable.
       - name: Test and assemble
         working-directory: android
-        run: ./gradlew --no-daemon testDebugUnitTest assembleDebug
+        # The shop app has direct/play flavors, so its tests are named per flavor.
+        run: ./gradlew --no-daemon testDebugUnitTest :shop:testDirectDebugUnitTest assembleDebug
 
       - uses: actions/upload-artifact@v4
         with:
           name: almas-sdm-android-debug
-          path: android/*/build/outputs/apk/debug/*.apk
+          path: |
+            android/*/build/outputs/apk/debug/*.apk
+            android/shop/build/outputs/apk/direct/debug/*.apk
           if-no-files-found: error
 
   site:

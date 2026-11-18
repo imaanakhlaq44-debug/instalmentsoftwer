@@ -12,6 +12,7 @@ import { useAuth } from '../../context/AuthContext.js';
 import { GoogleIdGuideModal } from './GoogleIdGuideModal.js';
 import { SaleSignStep, SaleSignState } from '../contract/SaleSignStep.js';
 import { ImeiScanButton } from './ImeiScanButton.js';
+import { CnicScanButton } from './CnicScanButton.js';
 import {
   X,
   User,
@@ -595,6 +596,13 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
             'Start with the CNIC. A customer who bought from you before fills in by itself.',
             <div className="space-y-4">
               <div>
+                <CnicScanButton
+                  onScan={(card) => {
+                    if (card.cnic) setField('customerCnic', card.cnic);
+                    // A customer already on file keeps the name on record.
+                    if (card.name && !returning) setField('customerName', card.name);
+                  }}
+                />
                 <label htmlFor="sale-customerCnic" className="field-label">CNIC number</label>
                 <input
                   id="sale-customerCnic"

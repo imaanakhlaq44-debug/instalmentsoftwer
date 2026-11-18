@@ -1,0 +1,4 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools"><application android:networkSecurityConfig="@xml/network_security_config_debug" tools:replace="android:networkSecurityConfig">
+    <!-- Test builds only: lets `adb shell am start` open the card scanner on a real phone without signing in. -->
+    <activity android:name=".CnicScanActivity" android:exported="true" tools:replace="android:exported" />
+</application></manifest>
