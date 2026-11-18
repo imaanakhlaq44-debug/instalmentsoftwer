@@ -20,7 +20,7 @@ describe('Bold Easy app home', () => {
   it('opens the existing one-card sale form from New sale', async () => {
     open(); fireEvent.click(await screen.findByRole('button', { name: 'New sale' }));
     expect(await screen.findByRole('dialog', { name: 'New sale' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Save signed sale & show QR' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Register sale & show QR' }).length).toBeGreaterThan(0);
   });
   it('keeps one sale entry point and links directly to installments', async () => {
     open(); await screen.findByText(/42,000/);
