@@ -22,25 +22,40 @@ jobs:
         with:
           packages: platform-tools
       - uses: gradle/actions/setup-gradle@v4
-      - name: Restore the company signing key
+      # Two keys, on purpose. Google Play only accepts the shop app's own upload
+      # key (SHA1 B6:66:55:…:B1:EE); the direct-download APK keeps the company key.
+      - name: Restore both signing keys
         env:
           KEYSTORE_BASE64: ${{ secrets.ALMAS_KEYSTORE_BASE64 }}
+          SHOP_UPLOAD_BASE64: ${{ secrets.ALMAS_SHOP_UPLOAD_KEYSTORE_BASE64 }}
         run: |
-          test -n "$KEYSTORE_BASE64"
+          test -n "$KEYSTORE_BASE64" || { echo "::error::Secret ALMAS_KEYSTORE_BASE64 is missing"; exit 1; }
+          test -n "$SHOP_UPLOAD_BASE64" || { echo "::error::Secret ALMAS_SHOP_UPLOAD_KEYSTORE_BASE64 is missing (see android/RELEASE.md)"; exit 1; }
           printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
-      - name: Test and sign the shop app
+          printf '%s' "$SHOP_UPLOAD_BASE64" | base64 -d > "$RUNNER_TEMP/shop-upload.p12"
+      - name: Test, and sign the Play bundle with the shop upload key
+        working-directory: android
+        env:
+          ALMAS_KEYSTORE_FILE: ${{ runner.temp }}/shop-upload.p12
+          ALMAS_KEYSTORE_PASSWORD: ${{ secrets.ALMAS_SHOP_UPLOAD_PASSWORD }}
+          ALMAS_KEY_ALIAS: ${{ secrets.ALMAS_SHOP_UPLOAD_ALIAS }}
+          ALMAS_KEY_PASSWORD: ${{ secrets.ALMAS_SHOP_UPLOAD_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon :shop:testPlayDebugUnitTest :shop:bundlePlayRelease
+          keytool -printcert -jarfile shop/build/outputs/bundle/playRelease/shop-play-release.aab | grep -q "B6:66:55:C1:08:1A:BF:00:EB:C8:0D:A6:E8:53:B8:F3:43:FA:B1:EE" \
+            || { echo "::error::The Play bundle is not signed with the shop upload key Play expects"; exit 1; }
+      - name: Sign the direct-download APK with the company key
         working-directory: android
         env:
           ALMAS_KEYSTORE_FILE: ${{ runner.temp }}/release.jks
           ALMAS_KEYSTORE_PASSWORD: ${{ secrets.ALMAS_KEYSTORE_PASSWORD }}
           ALMAS_KEY_ALIAS: ${{ secrets.ALMAS_KEY_ALIAS }}
           ALMAS_KEY_PASSWORD: ${{ secrets.ALMAS_KEY_PASSWORD }}
-        run: |
-          chmod +x gradlew
-          ./gradlew --no-daemon :shop:testPlayDebugUnitTest :shop:bundlePlayRelease :shop:assembleDirectRelease
-      - name: Remove the signing key
+        run: ./gradlew --no-daemon :shop:assembleDirectRelease
+      - name: Remove the signing keys
         if: always()
-        run: rm -f "$RUNNER_TEMP/release.jks"
+        run: rm -f "$RUNNER_TEMP/release.jks" "$RUNNER_TEMP/shop-upload.p12"
       - uses: actions/upload-artifact@v4
         with:
           name: almas-sdm-shop-signed
