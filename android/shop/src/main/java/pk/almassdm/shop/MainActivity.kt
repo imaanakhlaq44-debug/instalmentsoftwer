@@ -243,8 +243,8 @@ class MainActivity : AppCompatActivity() {
             override fun onPageFinished(view:WebView,url:String?) {
                 progress?.visibility=View.GONE; CookieManager.getInstance().flush(); rememberRoute(url)
                 if(NavigationPolicy.isInternal(url) && WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
-                    val bridge=assets.open("native_bridge.js").bufferedReader().use { it.readText() }
-                    view.evaluateJavascript(bridge,null)
+                    // A missing script costs print/download help on this page, never the whole app.
+                    runCatching { assets.open("native_bridge.js").bufferedReader().use { it.readText() } }.getOrNull()?.let { view.evaluateJavascript(it,null) }
                 }
             }
             override fun doUpdateVisitedHistory(view:WebView,url:String?,isReload:Boolean) { rememberRoute(url) }
