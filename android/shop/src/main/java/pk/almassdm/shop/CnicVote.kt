@@ -32,6 +32,11 @@ class CnicVote(private val agree: Int = 2) {
     /** Number and name both confirmed: nothing more the camera needs to wait for. */
     val complete @Synchronized get() = cnicConfirmed && names.values.any { it >= agree }
 
+    /** Every field on the card agreed, so there is no reason to keep the shop waiting at all. */
+    val everything @Synchronized get() = complete &&
+        fathers.values.any { it >= agree } && births.values.any { it >= agree } &&
+        (expiries.values.any { it >= agree } || lifetimeVotes >= agree)
+
     /** Something worth showing the shop while it holds the card still. */
     val seenAnything @Synchronized get() = cnics.isNotEmpty() || names.isNotEmpty()
 

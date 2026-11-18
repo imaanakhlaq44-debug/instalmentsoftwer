@@ -52,6 +52,17 @@ class CnicVoteTest {
         assertNull(vote.result().name)
     }
 
+    @Test fun waitsForTheFatherAndDatesBeforeCallingItEverything() {
+        val vote = CnicVote()
+        repeat(2) { vote.add(card("35202-1234567-1", "Muhammad Aslam")) }
+        assertTrue(vote.complete)
+        assertFalse(vote.everything)
+        val full = CnicCard("35202-1234567-1", "Muhammad Aslam", "Muhammad Akram", LocalDate.of(1990, 1, 1), LocalDate.of(2030, 3, 15), false)
+        repeat(2) { vote.add(full) }
+        assertTrue(vote.everything)
+        assertEquals("Muhammad Akram", vote.result().fatherName)
+    }
+
     @Test fun aNumberWithAnImpossibleProvinceDigitIsIgnored() {
         assertNull(CnicCardReader.cnic("95202-1234567-1"))
         assertNull(CnicCardReader.cnic("05202-1234567-1"))

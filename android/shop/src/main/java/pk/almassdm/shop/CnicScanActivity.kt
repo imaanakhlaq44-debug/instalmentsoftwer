@@ -60,6 +60,8 @@ class CnicScanActivity : AppCompatActivity() {
         const val EXTRA_JSON = "json"
         /** After this long, whatever was read is good enough to hand back for checking. */
         private const val SETTLE_MS = 9_000L
+        /** Once number and name agree, how long to keep reading for the father's name and the dates. */
+        private const val EXTRAS_MS = 1_500L
         fun intent(context: Context, lang: String) = Intent(context, CnicScanActivity::class.java).putExtra(EXTRA_LANG, lang)
     }
 
@@ -82,6 +84,8 @@ class CnicScanActivity : AppCompatActivity() {
     private val vote = CnicVote()
     private val done = AtomicBoolean(false)
     private var started = 0L
+    private var firstSeen = 0L
+    private var completeAt = 0L
     private var torchOn = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -181,11 +185,17 @@ class CnicScanActivity : AppCompatActivity() {
         if (done.get()) return
         val inside = insideGuide(lines, upright)
         if (inside.isNotEmpty()) vote.add(CnicCardReader.read(inside))
-        val elapsed = SystemClock.elapsedRealtime() - started
+        val now = SystemClock.elapsedRealtime()
+        val elapsed = now - started
+        // The time limits count from when a card was first seen, not from when the camera opened.
+        if (firstSeen == 0L && vote.seenAnything) firstSeen = now
+        if (completeAt == 0L && vote.complete) completeAt = now
         runOnUiThread { showProgress(inside.isNotEmpty(), elapsed) }
         when {
-            vote.complete -> finishWith(vote.result().toJson().toString(), success = true)
-            elapsed > SETTLE_MS && vote.cnicConfirmed -> finishWith(vote.result(final = true).toJson().toString(), success = true)
+            vote.everything -> finishWith(vote.result().toJson().toString(), success = true)
+            // Number and name agreed: a moment more for the father's name and dates, then go.
+            completeAt != 0L && now - completeAt > EXTRAS_MS -> finishWith(vote.result().toJson().toString(), success = true)
+            firstSeen != 0L && now - firstSeen > SETTLE_MS && vote.cnicConfirmed -> finishWith(vote.result(final = true).toJson().toString(), success = true)
         }
     }
 
