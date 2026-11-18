@@ -15,6 +15,17 @@ object NavigationPolicy {
         val uri = URI(url)
         when (uri.scheme?.lowercase()) { "https" -> !uri.host.isNullOrBlank() && uri.userInfo == null; "tel", "mailto" -> uri.schemeSpecificPart.isNotBlank(); else -> false }
     }.getOrDefault(false)
+    /** Hosted payment pages the shop is sent to from the app (JazzCash, live and sandbox). */
+    private val GATEWAYS = setOf("payments.jazzcash.com.pk", "sandbox.jazzcash.com.pk")
+    fun isGateway(url: String?): Boolean = runCatching {
+        val uri = URI(url ?: "")
+        uri.scheme.equals("https", true) && uri.userInfo == null && uri.host?.lowercase() in GATEWAYS
+    }.getOrDefault(false)
+    /** Any plain https page: where a payment page may hand on to its bank's 3-D Secure step. */
+    fun isSecureWebPage(url: String?): Boolean = runCatching {
+        val uri = URI(url ?: "")
+        uri.scheme.equals("https", true) && !uri.host.isNullOrBlank() && uri.userInfo == null
+    }.getOrDefault(false)
     fun acceptedMimeTypes(raw: Array<String>): Array<String> = raw.flatMap { it.split(',') }.map { it.trim() }
         .filter { it.matches(Regex("image/(?:jpeg|png|webp|\\*)")) || it == "application/pdf" }.distinct().toTypedArray()
     fun safeFileName(raw: String): String = raw.substringAfterLast('/').substringAfterLast('\\')
