@@ -42,6 +42,8 @@ enum UserRole {
   SUPER_ADMIN
   DEALER_ADMIN
   DEALER_STAFF
+  /// Shop staff who may look at the shop's records but never change them.
+  DEALER_VIEWER
   CUSTOMER
 }
 

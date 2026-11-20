@@ -52,7 +52,7 @@ interface Stats {
 }
 
 export const DashboardPage: React.FC = () => {
-  const { user, dealer, selectedDealerId, showToast, isStaff, isDealerAdmin } = useAuth();
+  const { user, dealer, selectedDealerId, showToast, isStaff, isShopTeam, isDealerAdmin } = useAuth();
   const navigate = useNavigate();
 
   const [stats, setStats] = useState<Stats | null>(null);
@@ -74,7 +74,7 @@ export const DashboardPage: React.FC = () => {
       setCharts(chartsData);
 
       // Only staff may ask who is behind, so a customer never triggers a 403.
-      if (isStaff) {
+      if (isShopTeam) {
         const attention = await ApiService.getAttentionList(selectedDealerId);
         setOverdueRows(attention.overdueInstallments ?? []);
       }
@@ -256,7 +256,7 @@ export const DashboardPage: React.FC = () => {
 
       {/* A customer has reported a transfer and is waiting on a human. This
           only appears when there is genuinely something to confirm. */}
-      {isStaff && (stats?.pendingVerificationAmount ?? 0) > 0 && (
+      {isShopTeam && (stats?.pendingVerificationAmount ?? 0) > 0 && (
         <button
           type="button"
           onClick={() => navigate('/payments?status=PENDING')}
@@ -271,7 +271,7 @@ export const DashboardPage: React.FC = () => {
         </button>
       )}
 
-      {isStaff && (stats?.tamperAlertDevices ?? 0) > 0 && (
+      {isShopTeam && (stats?.tamperAlertDevices ?? 0) > 0 && (
         <button
           type="button"
           onClick={() => navigate('/devices?tamper=true')}
@@ -285,7 +285,7 @@ export const DashboardPage: React.FC = () => {
         </button>
       )}
 
-      {isStaff && (stats?.silentDevices ?? 0) > 0 && (
+      {isShopTeam && (stats?.silentDevices ?? 0) > 0 && (
         <button
           type="button"
           onClick={() => navigate('/notifications')}
@@ -333,7 +333,7 @@ export const DashboardPage: React.FC = () => {
         </div>
       )}
 
-      {isStaff && (stats?.frpRefusedDevices ?? 0) > 0 && (
+      {isShopTeam && (stats?.frpRefusedDevices ?? 0) > 0 && (
         <button
           type="button"
           onClick={() => navigate('/devices?frp=refused')}
@@ -355,7 +355,7 @@ export const DashboardPage: React.FC = () => {
           {/* ------------------------------------------------------------ */}
           {/* Today's work. The whole point of the page.                    */}
           {/* ------------------------------------------------------------ */}
-          {isStaff && (
+          {isShopTeam && (
             <Card>
               <CardHeader
                 title="Who to chase today"

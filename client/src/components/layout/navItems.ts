@@ -1,6 +1,7 @@
 import {
   LayoutDashboard, Smartphone, Users, CalendarDays, CreditCard, QrCode,
   KeyRound, Bell, FileSpreadsheet, Settings, Activity, ClipboardList, Store, ShoppingCart, MessageSquareQuote, ClipboardCheck,
+  UserCog,
 } from 'lucide-react';
 import { UserRole } from '../../types/index.js';
 
@@ -22,8 +23,10 @@ export interface NavItem {
 export const NAV_GROUPS = ['Platform', 'Overview', 'Portfolio', 'Operations', 'Administration', 'Tools'] as const;
 export type NavGroup = (typeof NAV_GROUPS)[number];
 
-const ALL: UserRole[] = ['SUPER_ADMIN', 'DEALER_ADMIN', 'DEALER_STAFF', 'CUSTOMER'];
+const ALL: UserRole[] = ['SUPER_ADMIN', 'DEALER_ADMIN', 'DEALER_STAFF', 'DEALER_VIEWER', 'CUSTOMER'];
 const STAFF: UserRole[] = ['SUPER_ADMIN', 'DEALER_ADMIN', 'DEALER_STAFF'];
+/** STAFF plus view-only staff: pages that only show the shop's records. */
+const TEAM: UserRole[] = [...STAFF, 'DEALER_VIEWER'];
 const ADMIN: UserRole[] = ['SUPER_ADMIN', 'DEALER_ADMIN'];
 
 /**
@@ -36,15 +39,16 @@ const ADMIN: UserRole[] = ['SUPER_ADMIN', 'DEALER_ADMIN'];
 export const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ALL, group: 'Overview' },
   { to: '/devices', label: 'Devices', icon: Smartphone, roles: ALL, group: 'Portfolio' },
-  { to: '/customers', label: 'Customers', icon: Users, roles: STAFF, group: 'Portfolio' },
+  { to: '/customers', label: 'Customers', icon: Users, roles: TEAM, group: 'Portfolio' },
   { to: '/installments', label: 'Installments', icon: CalendarDays, roles: ALL, group: 'Portfolio' },
   { to: '/payments', label: 'Payments', icon: CreditCard, roles: ALL, group: 'Portfolio' },
   { to: '/enrollment', label: 'QR Enrollment', icon: QrCode, roles: STAFF, group: 'Operations' },
-  { to: '/transactions', label: 'Transactions', icon: FileSpreadsheet, roles: STAFF, group: 'Operations' },
+  { to: '/transactions', label: 'Transactions', icon: FileSpreadsheet, roles: TEAM, group: 'Operations' },
   { to: '/handset-tests', label: 'Phone tests', icon: ClipboardCheck, roles: STAFF, group: 'Operations' },
   { to: '/licenses', label: 'Device Locks', icon: KeyRound, roles: ADMIN, group: 'Administration' },
   { to: '/buy-locks', label: 'Buy locks', icon: ShoppingCart, roles: ['DEALER_ADMIN'], group: 'Administration' },
   { to: '/notifications', label: 'Notifications', icon: Bell, roles: ALL, group: 'Operations' },
+  { to: '/staff', label: 'Staff', icon: UserCog, roles: ADMIN, group: 'Administration' },
   { to: '/audit-logs', label: 'Audit Logs', icon: Activity, roles: ADMIN, group: 'Administration' },
   { to: '/settings', label: 'Settings', icon: Settings, roles: ADMIN, group: 'Administration' },
   // The owner's alone: it puts the shop's name on the public website.

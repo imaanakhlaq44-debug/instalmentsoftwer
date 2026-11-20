@@ -10,6 +10,7 @@ import { LocationService } from '../services/LocationService.js';
 import {
   requireDealerAdmin,
   requireDealerStaff,
+  requireShopTeam,
   getAuthUser,
   resolveDealerScope,
   assertDealerAccess,
@@ -576,7 +577,7 @@ devicesRouter.get(
   })
 );
 
-devicesRouter.get('/:id/actions', requireDealerStaff, asyncHandler(async (req, res) => {
+devicesRouter.get('/:id/actions', requireShopTeam, asyncHandler(async (req, res) => {
   const device = await repo.devices.findById(routeParam(req, 'id'));
   if (!device) throw AppError.notFound('Device');
   assertDealerAccess(req, device.dealerId, 'device');

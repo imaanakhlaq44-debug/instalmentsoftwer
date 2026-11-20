@@ -47,6 +47,7 @@ import { HandsetTestsPage } from './pages/HandsetTestsPage.js';
 import { NotificationsPage } from './pages/NotificationsPage.js';
 import { AuditLogsPage } from './pages/AuditLogsPage.js';
 import { SettingsPage } from './pages/SettingsPage.js';
+import { StaffPage } from './pages/StaffPage.js';
 import { FeedbackPage } from './pages/FeedbackPage.js';
 import { ShopFeedbackPage } from './pages/ShopFeedbackPage.js';
 
@@ -57,9 +58,11 @@ const Languages: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 /** Everyone signed in. */
-const ALL = ['SUPER_ADMIN', 'DEALER_ADMIN', 'DEALER_STAFF', 'CUSTOMER'] as const;
+const ALL = ['SUPER_ADMIN', 'DEALER_ADMIN', 'DEALER_STAFF', 'DEALER_VIEWER', 'CUSTOMER'] as const;
 /** Shop-side users; excludes customers. */
 const STAFF = ['SUPER_ADMIN', 'DEALER_ADMIN', 'DEALER_STAFF'] as const;
+/** STAFF plus view-only staff, for pages that only show the shop's records. */
+const TEAM = [...STAFF, 'DEALER_VIEWER'] as const;
 /** Owners and above — enforcement, money movement, audit, licensing. */
 const ADMIN = ['SUPER_ADMIN', 'DEALER_ADMIN'] as const;
 
@@ -98,12 +101,12 @@ export function App() {
               <Route path="/devices" element={<RequireRole roles={[...ALL]}><DevicesPage /></RequireRole>} />
               <Route path="/devices/:id" element={<RequireRole roles={[...ALL]}><DeviceDetailPage /></RequireRole>} />
 
-              <Route path="/customers" element={<RequireRole roles={[...STAFF]}><CustomersPage /></RequireRole>} />
-              <Route path="/customers/:id" element={<RequireRole roles={[...STAFF]}><CustomerDetailPage /></RequireRole>} />
+              <Route path="/customers" element={<RequireRole roles={[...TEAM]}><CustomersPage /></RequireRole>} />
+              <Route path="/customers/:id" element={<RequireRole roles={[...TEAM]}><CustomerDetailPage /></RequireRole>} />
 
               <Route path="/installments" element={<RequireRole roles={[...ALL]}><InstallmentsPage /></RequireRole>} />
               <Route path="/payments" element={<RequireRole roles={[...ALL]}><PaymentsPage /></RequireRole>} />
-              <Route path="/transactions" element={<RequireRole roles={[...STAFF]}><TransactionsPage /></RequireRole>} />
+              <Route path="/transactions" element={<RequireRole roles={[...TEAM]}><TransactionsPage /></RequireRole>} />
               <Route path="/notifications" element={<RequireRole roles={[...ALL]}><NotificationsPage /></RequireRole>} />
 
               <Route path="/orders" element={<RequireRole roles={["SUPER_ADMIN"]}><PlatformOrdersPage /></RequireRole>} />
@@ -120,6 +123,7 @@ export function App() {
               <Route path="/licenses" element={<RequireRole roles={[...ADMIN]}><LicensesPage /></RequireRole>} />
               {/* Ordering is the shop owner's; the platform decides orders on /orders. */}
               <Route path="/buy-locks" element={<RequireRole roles={['DEALER_ADMIN']}><BuyLocksPage /></RequireRole>} />
+              <Route path="/staff" element={<RequireRole roles={[...ADMIN]}><StaffPage /></RequireRole>} />
               <Route path="/audit-logs" element={<RequireRole roles={[...ADMIN]}><AuditLogsPage /></RequireRole>} />
               <Route path="/settings" element={<RequireRole roles={[...ADMIN]}><SettingsPage /></RequireRole>} />
 

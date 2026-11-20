@@ -9,13 +9,15 @@ interface Props {
   customerId: string;
   customerName: string;
   hasPhoto: boolean;
+  /** View-only staff see the photo but get no add, retake or remove. */
+  readOnly?: boolean;
 }
 
 /**
  * The customer's photo on their page: a thumbnail that opens full size, and
  * for shop staff a way to add, retake or remove it.
  */
-export const CustomerPhotoCard: React.FC<Props> = ({ customerId, customerName, hasPhoto }) => {
+export const CustomerPhotoCard: React.FC<Props> = ({ customerId, customerName, hasPhoto, readOnly = false }) => {
   const { showToast } = useAuth();
   const [photo, setPhoto] = useState<string | null>(null);
   const [loading, setLoading] = useState(hasPhoto);
@@ -66,9 +68,12 @@ export const CustomerPhotoCard: React.FC<Props> = ({ customerId, customerName, h
       <div className="relative shrink-0">
         <button
           type="button"
-          onClick={() => (photo ? setZoomed(true) : setEditing(true))}
+          onClick={() => (photo ? setZoomed(true) : !readOnly && setEditing(true))}
+          disabled={readOnly && !photo && !loading}
           className="block h-16 w-16 overflow-hidden rounded-xl border border-slate-300 bg-slate-100 sm:h-20 sm:w-20"
-          aria-label={photo ? `Show ${customerName}'s photo` : `Add ${customerName}'s photo`}
+          aria-label={
+            photo ? `Show ${customerName}'s photo` : readOnly ? `No photo of ${customerName}` : `Add ${customerName}'s photo`
+          }
         >
           {loading ? (
             <span className="grid h-full w-full place-items-center">
@@ -82,15 +87,17 @@ export const CustomerPhotoCard: React.FC<Props> = ({ customerId, customerName, h
             </span>
           )}
         </button>
-        <button
-          type="button"
-          onClick={() => setEditing(true)}
-          className="absolute -bottom-1.5 -end-1.5 grid h-7 w-7 place-items-center rounded-full border border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
-          aria-label={photo ? 'Change photo' : 'Add photo'}
-          title={photo ? 'Change photo' : 'Add photo'}
-        >
-          <Camera className="h-3.5 w-3.5" aria-hidden="true" />
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="absolute -bottom-1.5 -end-1.5 grid h-7 w-7 place-items-center rounded-full border border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
+            aria-label={photo ? 'Change photo' : 'Add photo'}
+            title={photo ? 'Change photo' : 'Add photo'}
+          >
+            <Camera className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        )}
       </div>
 
       {editing &&

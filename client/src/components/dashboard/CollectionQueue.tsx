@@ -4,6 +4,7 @@ import { Phone, ChevronRight, PartyPopper, Lock } from 'lucide-react';
 import { money, overdueLabel } from '../../utils/format.js';
 import { EmptyState, Rows } from '../ui/Card.js';
 import { WhatsAppButton } from '../whatsapp/WhatsAppButton.js';
+import { useAuth } from '../../context/AuthContext.js';
 
 /**
  * Who to call today.
@@ -90,6 +91,8 @@ export const CollectionQueue: React.FC<{ rows: OverdueRow[]; limit?: number }> =
   limit = 6,
 }) => {
   const navigate = useNavigate();
+  // View-only staff call; sending a WhatsApp reminder is left to counter staff and the owner.
+  const { isStaff } = useAuth();
   const chases = toChaseList(rows);
 
   if (!chases.length) {
@@ -148,12 +151,14 @@ export const CollectionQueue: React.FC<{ rows: OverdueRow[]; limit?: number }> =
             >
               <Phone className="h-4 w-4" aria-hidden="true" />
             </a>
+            {isStaff && (
             <WhatsAppButton
               variant="icon"
               customerId={c.customerId}
               customerName={c.customerName}
               kind="OVERDUE"
             />
+            )}
             <button
               type="button"
               onClick={() => navigate(`/devices/${c.deviceId}`)}

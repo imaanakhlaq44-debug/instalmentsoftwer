@@ -23,6 +23,7 @@ const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: 'Super admin',
   DEALER_ADMIN: 'Shop owner',
   DEALER_STAFF: 'Counter staff',
+  DEALER_VIEWER: 'View-only staff',
   CUSTOMER: 'Customer',
 };
 

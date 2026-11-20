@@ -54,7 +54,7 @@ const StatTile: React.FC<{ label: string; value: string; icon: React.ElementType
 export const CustomerDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { showToast, isDealerAdmin, isStaff } = useAuth();
+  const { showToast, isDealerAdmin, isStaff, isShopTeam, isViewer } = useAuth();
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -117,8 +117,8 @@ export const CustomerDetailPage: React.FC = () => {
           >
             <ArrowLeft className="rtl:rotate-180 w-4 h-4" />
           </button>
-          {isStaff && (
-            <CustomerPhotoCard customerId={customer.id} customerName={customer.name} hasPhoto={!!customer.hasPhoto} />
+          {isShopTeam && (
+            <CustomerPhotoCard customerId={customer.id} customerName={customer.name} hasPhoto={!!customer.hasPhoto} readOnly={isViewer} />
           )}
           <div>
             <div className="flex items-center gap-2.5">

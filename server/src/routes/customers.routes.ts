@@ -14,7 +14,7 @@ import { AuditService } from '../services/AuditService.js';
 import { CustomerPhotoService, customerPhotoSchema } from '../services/CustomerPhotoService.js';
 import { buildInstallmentSchedule } from '../services/InstallmentMath.js';
 import {
-  requireDealerStaff, requireDealerAdmin, getAuthUser, resolveDealerScope,
+  requireDealerStaff, requireDealerAdmin, requireShopTeam, getAuthUser, resolveDealerScope,
   resolveWritableDealerId, assertDealerAccess, clientIp,
   routeParam,
 } from '../middleware/auth.js';
@@ -603,7 +603,7 @@ async function customerForStaff(req: Request): Promise<Customer> {
   return customer;
 }
 
-customersRouter.get('/:id/photo', requireDealerStaff, asyncHandler(async (req, res) => {
+customersRouter.get('/:id/photo', requireShopTeam, asyncHandler(async (req, res) => {
   const customer = await customerForStaff(req);
   const photo = await CustomerPhotoService.find(customer.id);
   if (!photo) throw AppError.notFound('Customer photo');
