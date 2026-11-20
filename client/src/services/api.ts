@@ -306,6 +306,10 @@ export class ApiService {
     return this.request<any>('/customers', { method: 'POST', body: JSON.stringify(data) });
   }
 
+  static previewSaleAgreement(data: unknown) {
+    return this.request<any>('/customers/agreement-preview', { method: 'POST', body: JSON.stringify(data) });
+  }
+
   static updateCustomer(id: string, data: Record<string, unknown>) {
     return this.request<any>(`/customers/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
   }
@@ -352,6 +356,8 @@ export class ApiService {
       body: JSON.stringify(referenceDate ? { referenceDate } : {}),
     });
   }
+
+  static extendGrace(id:string,graceDate:string,reason:string) { return this.request<any>(`/installments/${id}/extend-grace`,{method:'POST',body:JSON.stringify({graceDate,reason})}); }
 
   static waiveLateFee(installmentId: string, reason: string) {
     return this.request<any>(`/installments/${installmentId}/waive-late-fee`, {
@@ -448,6 +454,14 @@ export class ApiService {
     return this.request<Paged<any>>(`/enrollment/tokens${buildQuery(params)}`);
   }
 
+  static createPhoneIntake(dealerId?: string) {
+    return this.request<{ id: string; tokenId: string; expiresAt: string; qrImageDataUrl: string }>('/enrollment/phone-intakes', { method: 'POST', body: JSON.stringify({ dealerId }) });
+  }
+
+  static getPhoneIntake(id: string) {
+    return this.request<{ tokenId?:string;expiresAt?:string;qrImageDataUrl?:string;status: string; report: { brand: string; model: string; imeis?: string[]; serialNumber?: string; osVersion?: string } | null }>(`/enrollment/phone-intakes/${encodeURIComponent(id)}`);
+  }
+
   static getEnrollmentReadiness(dealerId?: string) {
     return this.request<{ frpConfigured: boolean | null; frpAccountsCount: number; provisioningReady: boolean }>(
       `/enrollment/readiness${buildQuery({ dealerId })}`
@@ -471,6 +485,13 @@ export class ApiService {
   // -------------------------------------------------------------------------
 
   /** The super admin's platform dashboard: shops, sales and the fleet. */
+  static deleteShop(id: string, confirmationName: string) {
+    return this.request<{ success: boolean; releasedPhones: number; voidedLocks: number }>(`/platform/shops/${encodeURIComponent(id)}`, { method: 'DELETE', body: JSON.stringify({ confirmationName }) });
+  }
+
+  static getPendingWork(dealerId?: string) { return this.request<any>(`/sale-drafts${buildQuery({dealerId})}`); }
+  static saveSaleDraft(id:string, body:unknown) { return this.request<any>(`/sale-drafts/${id}`, {method:'PUT',body:JSON.stringify(body)}); }
+  static discardSaleDraft(id:string) { return this.request<any>(`/sale-drafts/${id}`, {method:'DELETE'}); }
   static getPlatformOverview() {
     return this.request<any>('/platform/overview');
   }

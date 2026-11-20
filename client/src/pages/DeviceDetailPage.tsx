@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext.js';
 import { EditDeviceModal } from '../components/modals/EditDeviceModal.js';
 import { GoogleIdGuideModal } from '../components/modals/GoogleIdGuideModal.js';
 import { FindPhoneCard } from '../components/devices/FindPhoneCard.js';
-import { RestructurePlanModal, WaiveLateFeeModal } from '../components/installments/PlanAdjustments.js';
+import { RestructurePlanModal, WaiveLateFeeModal, ExtendGraceModal } from '../components/installments/PlanAdjustments.js';
 import { relativeTime } from '../utils/format.js';
 import {
   Smartphone,
@@ -66,6 +66,7 @@ export const DeviceDetailPage: React.FC = () => {
 
   // Modal States
   const [showRestructure, setShowRestructure] = useState(false);
+  const [graceFor, setGraceFor] = useState<any>(null);
   const [waiveFor, setWaiveFor] = useState<any>(null);
   const [showLockModal, setShowLockModal] = useState(false);
   const [lockReason, setLockReason] = useState('Installment overdue per financing policy');
@@ -233,7 +234,7 @@ export const DeviceDetailPage: React.FC = () => {
 
   const isLocked = device.status === 'LOCKED' || device.status === 'LOCK_PENDING';
   const isOverdue = device.status === 'OVERDUE';
-  const isPending = device.status === 'PENDING';
+  const isPending = device.status === 'PENDING' || device.status === 'ENROLLED';
   /** Handed back to its owner: paid off, or released by the shop. */
   const isReleased = device.status === 'INACTIVE';
 
@@ -299,7 +300,7 @@ export const DeviceDetailPage: React.FC = () => {
                 }`}
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                {device.noLock ? 'NO LOCK' : isReleased ? 'RELEASED' : device.status}
+                {device.noLock ? 'NO LOCK' : isReleased ? 'RELEASED' : device.status === 'ENROLLED' ? 'Setup pending' : device.status}
               </span>
             </div>
             <p className="text-xs text-slate-500 font-mono mt-0.5">
@@ -597,7 +598,7 @@ export const DeviceDetailPage: React.FC = () => {
           <p className="text-sm font-extrabold text-slate-900 mt-2">
             {device.isOnline ? 'Online (Connected)' : 'Offline'}
           </p>
-          <span className="text-micro text-slate-400 font-mono">{device.simCarrier || 'Jazz 4G'}</span>
+          <span className="text-micro text-slate-400 font-mono">{device.lastCheckInAt ? device.simCarrier || '—' : 'Awaiting phone connection'}</span>
         </div>
 
         {/* Battery */}
@@ -606,8 +607,8 @@ export const DeviceDetailPage: React.FC = () => {
             <span>Battery Level</span>
             <Battery className="w-4 h-4 text-blue-500" />
           </div>
-          <p className="text-sm font-extrabold text-slate-900 mt-2">{device.batteryLevel}%</p>
-          <span className="text-micro text-slate-400">Health Normal</span>
+          <p className="text-sm font-extrabold text-slate-900 mt-2">{device.lastCheckInAt && device.batteryLevel != null ? `${device.batteryLevel}%` : '—'}</p>
+          <span className="text-micro text-slate-400">{device.lastCheckInAt ? 'Last reported battery' : 'Awaiting phone connection'}</span>
         </div>
 
         {/* Last Seen */}
@@ -844,7 +845,7 @@ export const DeviceDetailPage: React.FC = () => {
                         <td className="py-2 font-bold text-slate-700">#{inst.installmentNumber}</td>
                         <td className="py-2 text-slate-700">{inst.dueDate}</td>
                         <td className="py-2 font-bold text-slate-900">Rs. {Number(inst.amountDue).toLocaleString()}</td>
-                        <td className="py-2 text-slate-500">{inst.graceDate}</td>
+                        <td className="py-2 text-slate-500">{inst.graceDate}{isDealerAdmin && inst.status !== 'PAID' && <button type="button" className="btn-ghost ms-2 text-xs underline" onClick={()=>setGraceFor(inst)}>Muhlat dein</button>}</td>
                         <td className="py-2">
                           <span
                             className={`status-pill text-micro ${
@@ -1230,6 +1231,7 @@ export const DeviceDetailPage: React.FC = () => {
           }}
         />
       )}
+      {graceFor && <ExtendGraceModal installment={graceFor} onClose={()=>setGraceFor(null)} onDone={message=>{setGraceFor(null);showToast(message,'success');loadDeviceDetail();}} />}
       {waiveFor && (
         <WaiveLateFeeModal
           installment={waiveFor}

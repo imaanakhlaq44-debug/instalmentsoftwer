@@ -347,7 +347,7 @@ describe('reversePayment', () => {
     });
 
     expect((await plan()).remainingBalance).toBe(balanceAfterPayment + MONTHLY);
-    expect((await installments())[2].status).toBe('PENDING');
+    expect((await installments())[2].status).toBe('OVERDUE');
     expect((await installments())[2].amountPaid).toBe(0);
     expect((await repo.payments.findById(outcome.payment.id))!.status).toBe('REFUNDED');
   });

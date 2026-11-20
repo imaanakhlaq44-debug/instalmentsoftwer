@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 
-import { as, anonymous, reseed, repo, ACCOUNTS } from '../helpers.js';
+import { as, anonymous, reseed, repo, ACCOUNTS, confirmHandsetSetup } from '../helpers.js';
 import { disconnectDatabase } from '../../src/db/prisma.js';
 import {
   CURRENT_TERMS_VERSION,
@@ -54,7 +54,7 @@ const clause4 = (version: string, snap: ContractSnapshot = snapshot) =>
   renderClauses(snap, version).find((c) => c.heading.startsWith('4.'))!;
 
 /** An enrolled handset whose agreement is signed under the current terms. */
-async function enrolledHandset() {
+async function enrolledHandset(confirmSetup = true) {
   const device = (await repo.devices.findFirst({ dealerId: 'dealer-1', status: 'PENDING', noLock: false }))!;
   const qr = await as(ACCOUNTS.dealerStaff)
     .post('/api/enrollment/generate')
@@ -65,12 +65,13 @@ async function enrolledHandset() {
     .post('/api/dpc/enroll')
     .send({ token: qr.body.token.token, dpcVersion: '1.5.1', imeis: [device.imei], serialNumber: 'SN-GATE-01' });
   expect(res.status).toBe(201);
+  if (confirmSetup) await confirmHandsetSetup(res.body);
 
   const contract = (await repo.contracts.findByDevice(device.id))!;
   expect(contract.status).toBe('SIGNED');
   expect(contract.termsVersion).toBe(CURRENT_TERMS_VERSION);
 
-  return { device, contract, credential: `Device ${res.body.deviceId}.${res.body.deviceToken}` };
+  return { device, contract, enrolled: res.body, credential: `Device ${res.body.deviceId}.${res.body.deviceToken}` };
 }
 
 /**
@@ -198,8 +199,9 @@ describe('hardware checks and the tamper lock', () => {
     expect((await checkIn(current.credential)).attestationChallenge).toEqual(expect.any(String));
 
     await reseed();
-    const older = await enrolledHandset();
+    const older = await enrolledHandset(false);
     await signedUnder(older.contract.id, '1.3');
+    await confirmHandsetSetup(older.enrolled);
     expect((await checkIn(older.credential)).attestationChallenge).toBeUndefined();
     expect((await repo.devices.findById(older.device.id))!.attestationChallenge).toBeFalsy();
   });

@@ -16,6 +16,8 @@ function createClient(): PrismaClient {
 
   const adapter = new PrismaPg({
     connectionString,
+    // Keep database timestamp comparisons independent of the server/session timezone.
+    options: '-c timezone=UTC',
     /**
      * Pool size.
      *
@@ -76,10 +78,16 @@ export type Tx = Omit<
 >;
 
 export function runInTransaction<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
-  return prisma.$transaction(fn, {
+  return prisma.$transaction(async (tx) => {
+    // All multi-record mutations share one lock until resource-level locking is introduced.
+    // Taking it before any reads prevents stale financial snapshots across workers.
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(167026, 1)::text`;
+    return fn(tx);
+  }, {
     // Financial writes must not interleave with a concurrent read-modify-write
     // on the same plan.
     isolationLevel: 'ReadCommitted',
     timeout: 15_000,
   });
 }
+

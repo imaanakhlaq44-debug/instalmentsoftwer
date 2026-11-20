@@ -67,3 +67,16 @@ export function as(userId: string) {
 }
 
 export const anonymous = () => request(app);
+
+/**
+ * The handset's first check-in after enrollment, reporting that it is Device
+ * Owner and Android setup is finished. Only then does the server treat the
+ * phone as ACTIVE (until then it stays ENROLLED).
+ */
+export async function confirmHandsetSetup(enrolled: { deviceId: string; deviceToken: string }): Promise<void> {
+  const res = await request(app)
+    .post('/api/dpc/check-in')
+    .set('Authorization', `Device ${enrolled.deviceId}.${enrolled.deviceToken}`)
+    .send({ isDeviceOwner: true, setupComplete: true });
+  if (res.status !== 200) throw new Error(`Setup confirmation check-in failed: ${res.status} ${JSON.stringify(res.body)}`);
+}

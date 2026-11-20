@@ -1,3 +1,4 @@
+import type { SaleDraft, DraftForm } from '../../utils/saleDraft.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ApiError, ApiService } from '../../services/api.js';
@@ -10,9 +11,11 @@ import {
 } from '../../utils/saleValidation.js';
 import { useAuth } from '../../context/AuthContext.js';
 import { GoogleIdGuideModal } from './GoogleIdGuideModal.js';
-import { SaleSignStep, SaleSignState } from '../contract/SaleSignStep.js';
-import { ImeiScanButton } from './ImeiScanButton.js';
-import { CnicScanButton } from './CnicScanButton.js';
+import { SignaturePad } from '../contract/SignaturePad.js';
+import { installmentPreview } from '../../utils/installmentPreview.js';
+import { CnicScanButton, cnicBridge } from './CnicScanButton.js';
+import { CnicOcrButton } from './CnicOcrButton.js';
+import { PhoneIntakeScan } from './PhoneIntakeScan.js';
 import { CustomerPhotoPicker } from '../customers/CustomerPhotoPicker.js';
 import {
   X,
@@ -20,15 +23,12 @@ import {
   Smartphone,
   CalendarDays,
   CheckCircle2,
-  Copy,
   Maximize2,
-  Wifi,
-  Hand,
-  RotateCcw,
   AlertTriangle,
   HelpCircle,
   UserCheck,
   Lock,
+  FileText,
   ChevronDown,
   ShieldCheck,
 } from 'lucide-react';
@@ -39,6 +39,8 @@ import { checkPhoneSupport, AndroidVersion } from '../../utils/phoneSupport.js';
 interface Props {
   onClose: () => void;
   onSuccess: () => void;
+  startWithPhoneScan?: boolean;
+  initialDraft?: SaleDraft;
 }
 
 type RecentModel = { brand: string; model: string; ramStorage: string; price: number };
@@ -64,7 +66,7 @@ const inAMonth = () => new Date(Date.now() + 30 * 86400000).toISOString().split(
  * the customer is agreeing to stay in view the whole time, and one button
  * registers the sale.
  */
-export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) => {
+export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess, startWithPhoneScan = false, initialDraft }) => {
   const { selectedDealerId, showToast, isDealerAdmin, user } = useAuth();
   const navigate = useNavigate();
 
@@ -74,7 +76,12 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
   const [createdResult, setCreatedResult] = useState<any>(null);
   // An older phone cannot read a small QR off a laptop screen.
   const [qrFull, setQrFull] = useState(false);
-  const [signState, setSignState] = useState<SaleSignState>('loading');
+  const [agreement, setAgreement] = useState<any>(null);
+  const [agreementError, setAgreementError] = useState('');
+  const [signature, setSignature] = useState<string | null>(null);
+  const [accepted, setAccepted] = useState(false);
+  const [readAgreement, setReadAgreement] = useState(false);
+  const [previewRefresh, setPreviewRefresh] = useState(0);
   const [frpConfigured, setFrpConfigured] = useState<boolean | null>(null);
   const [showGoogleIdGuide, setShowGoogleIdGuide] = useState(false);
   const [recentModels, setRecentModels] = useState<RecentModel[]>([]);
@@ -82,8 +89,13 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
   const [lookingUp, setLookingUp] = useState(false);
   // The customer's photo, as a shrunk JPEG data URL. Optional.
   const [photo, setPhoto] = useState<string | null>(null);
+  const [phoneIntakeId, setPhoneIntakeId] = useState<string | undefined>(initialDraft?.data.phoneIntakeId);
+  const [phoneScanPending, setPhoneScanPending] = useState(false);
+  const [scannedOsVersion, setScannedOsVersion] = useState<string | undefined>(initialDraft?.data.scannedOsVersion);
+  // A typed advance is never silently replaced when the price changes.
+  const [advanceChoice, setAdvanceChoice] = useState<number | null>(initialDraft?.data.advanceChoice === undefined ? 25 : initialDraft.data.advanceChoice);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<DraftForm>({
     customerName: '',
     customerPhone: '',
     customerCnic: '',
@@ -106,6 +118,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
     firstDueDate: inAMonth(),
     gracePeriodDays: 3,
     qrType: 'STANDARD',
+    ...initialDraft?.data.form,
   });
 
   // Field-level problems, from the form check or from the server's 422 details.
@@ -113,6 +126,42 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
 
   const noDealer = user?.role === 'SUPER_ADMIN' && !selectedDealerId;
   const dealerParam = selectedDealerId || undefined;
+
+  const previousDealer = useRef(dealerParam);
+  useEffect(() => { if(previousDealer.current !== dealerParam) {setPhoneIntakeId(undefined);setScannedOsVersion(undefined);setPhoneScanPending(false);previousDealer.current=dealerParam;} },[dealerParam]);
+  const draftId=useRef(initialDraft?.id ?? crypto.randomUUID());
+  const draftVersion=useRef(initialDraft?.version ?? 0);
+  const saveChain=useRef<Promise<unknown>>(Promise.resolve());
+  const savedSnapshot=useRef('');
+  const [draftStatus,setDraftStatus]=useState('');
+  const [savingPending,setSavingPending]=useState(false);
+  const [connectionConfirmed,setConnectionConfirmed]=useState(false);
+  const draftSnapshot=JSON.stringify({form:formData,phoneIntakeId,scannedOsVersion,advanceChoice});
+  const hasDraftContent=Boolean(formData.customerName||formData.customerCnic||formData.customerPhone||formData.model||formData.imei||formData.purchasePrice);
+  const persistDraft=(snapshot=draftSnapshot)=>{
+    const operation=saveChain.current.catch(()=>undefined).then(async()=>{
+      if(snapshot===savedSnapshot.current&&draftVersion.current>0)return;
+      setDraftStatus('Saving pending work…');
+      const saved=await ApiService.saveSaleDraft(draftId.current,{dealerId:dealerParam,expectedVersion:draftVersion.current,data:JSON.parse(snapshot)});
+      draftVersion.current=saved.version;savedSnapshot.current=snapshot;setDraftStatus('Pending work saved');
+    });saveChain.current=operation;return operation;
+  };
+  useEffect(()=>{
+    if(!hasDraftContent||noDealer||submitting||createdResult||savingPending)return;
+    const timer=setTimeout(()=>{void persistDraft(draftSnapshot).catch(()=>setDraftStatus('Could not save pending work. Keep this form open and retry.'));},1200);
+    return()=>clearTimeout(timer);
+  },[draftSnapshot,hasDraftContent,noDealer,submitting,createdResult,savingPending]);
+  const closeAndSave=async()=>{
+    if(submitting||savingPending)return;
+    if(createdResult||!hasDraftContent){onClose();return;}
+    setSavingPending(true);
+    try{await persistDraft();window.dispatchEvent(new Event('almas:pending-work-changed'));onClose();}
+    catch(error){setDraftStatus(error instanceof Error?error.message:'Could not save pending work.');setSavingPending(false);}
+  };
+  useEffect(()=>{
+    if(!createdResult?.device?.id||createdResult.device.noLock)return;
+    let live=true;const check=()=>{void ApiService.getDevice(createdResult.device.id).then(d=>{if(live)setConnectionConfirmed(!['PENDING','ENROLLED'].includes(d.status)&&!!d.lastCheckInAt);}).catch(()=>undefined);};check();const timer=setInterval(check,2500);return()=>{live=false;clearInterval(timer);};
+  },[createdResult]);
 
   useEffect(() => {
     let cancelled = false;
@@ -133,7 +182,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
       .then((res) => {
         if (cancelled || !res) return;
         setRecentModels(res.recentModels ?? []);
-        if (Number.isInteger(res.gracePeriodDays)) {
+        if (!initialDraft && Number.isInteger(res.gracePeriodDays)) {
           setFormData((prev) => ({ ...prev, gracePeriodDays: res.gracePeriodDays }));
         }
       })
@@ -195,11 +244,11 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
     }
   };
 
-  /** A new price keeps the same share as the advance the shop had chosen. */
+  /** Price fills the plan immediately; a manually entered advance stays intact. */
   const setPrice = (price: number) => {
-    const percent = formData.purchasePrice > 0 ? (formData.downPayment / formData.purchasePrice) * 100 : 25;
-    setField('purchasePrice', price);
-    setField('downPayment', price > 0 ? advanceFor(price, ADVANCE_CHOICES.includes(Math.round(percent)) ? Math.round(percent) : 25) : 0);
+    setFormData(prev => ({ ...prev, purchasePrice: price,
+      downPayment: advanceChoice === null ? prev.downPayment : price > 0 ? advanceFor(price, advanceChoice) : 0 }));
+    setErrors(prev => { const next = { ...prev }; delete next.purchasePrice; delete next.downPayment; return next; });
   };
 
   const pickModel = (m: RecentModel) => {
@@ -209,7 +258,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
       model: m.model,
       ramStorage: m.ramStorage || prev.ramStorage,
       purchasePrice: m.price,
-      downPayment: advanceFor(m.price, 25),
+      downPayment: advanceChoice === null ? prev.downPayment : advanceFor(m.price, advanceChoice),
     }));
     setErrors((prev) => {
       const next = { ...prev };
@@ -221,7 +270,8 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
   };
 
   const financedAmount = formData.purchasePrice - formData.downPayment;
-  const monthlyAmount = Math.round(financedAmount / (formData.totalInstallments || 1));
+  const planPreview = installmentPreview(formData.purchasePrice, formData.downPayment, formData.totalInstallments);
+  const monthlyAmount = createdResult?.plan?.monthlyInstallment ?? planPreview?.monthlyInstallment ?? 0;
   const advancePercent =
     formData.purchasePrice > 0 ? Math.round((formData.downPayment / formData.purchasePrice) * 100) : 0;
 
@@ -242,18 +292,9 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
     }
   };
 
-  const handleCreate = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (inFlight.current) return;
-    const problems = validateSale(formData, { returningCustomer: !!returning });
-    if (Object.keys(problems).length > 0) {
-      showProblems(problems);
-      return;
-    }
-    try {
-      inFlight.current = true;
-      setSubmitting(true);
-      const payload = {
+
+  const salePayload = () => ({
+        phoneIntakeId,
         // A super admin works inside the shop picked at the top; without this the
         // server cannot tell which shop the sale belongs to and refuses it.
         dealerId: dealerParam,
@@ -278,6 +319,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
           imei: formData.imei.replace(/\D/g, ''),
           serialNumber: formData.serialNumber,
           purchasePrice: formData.purchasePrice,
+          ...(scannedOsVersion ? { osVersion: scannedOsVersion } : {}),
           ...(formData.color.trim() ? { color: formData.color.trim() } : {}),
           ...(formData.ramStorage.trim() ? { ramStorage: formData.ramStorage.trim() } : {}),
         },
@@ -289,12 +331,51 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
         },
         qrType: formData.qrType,
         noLock,
-      };
+  });
+  const previewInput = JSON.stringify(salePayload());
+  const previewReady = !noDealer && !phoneScanPending && Object.keys(validateSale(formData, { returningCustomer: !!returning })).length === 0;
+  useEffect(() => {
+    if (createdResult) return;
+    let cancelled = false;
+    setAgreement(null); setSignature(null); setAccepted(false); setAgreementError('');
+    if (!previewReady) return;
+    const timer = setTimeout(() => {
+      ApiService.previewSaleAgreement(JSON.parse(previewInput)).then(doc => {
+        if (!cancelled) setAgreement({ ...doc, input: previewInput });
+      }).catch(error => { if (!cancelled) setAgreementError(error.message || 'Could not load the agreement.'); });
+    }, 300);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [previewInput, previewReady, previewRefresh, createdResult]);
 
-      const res = await ApiService.createCustomerWithDevice(payload);
+  const handleCreate = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (inFlight.current || createdResult) return;
+    if (phoneScanPending) { showToast('Wait for the phone details or cancel the phone scan before registering.', 'error'); return; }
+    const problems = validateSale(formData, { returningCustomer: !!returning });
+    if (Object.keys(problems).length > 0) {
+      showProblems(problems);
+      return;
+    }
+    if (!agreement || agreement.input !== previewInput || !signature || !accepted) {
+      showToast('Ask the customer to sign and accept the agreement in this card.', 'error');
+      document.getElementById('sale-agreement')?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    try {
+      inFlight.current = true;
+      setSubmitting(true);
+
+
+      await saveChain.current.catch(()=>undefined);
+      const res = await ApiService.createCustomerWithDevice({ ...salePayload(), ...(draftVersion.current>0?{draftId:draftId.current}:{}), agreement: {
+        signerName: formData.customerName.trim(), signatureImage: signature, declarationAccepted: true,
+        termsVersion: agreement.termsVersion, fingerprint: agreement.fingerprint,
+      } });
       setCreatedResult(res);
-      showToast(noLock ? 'Sale registered without a lock.' : 'Sale registered. Scan the QR on the phone.', 'success');
+      window.dispatchEvent(new Event('almas:pending-work-changed')); 
+      showToast('Sale and signed agreement saved.', 'success');
     } catch (err: any) {
+      if (err.message?.includes('agreement details changed')) setPreviewRefresh(value => value + 1);
       // A 422 names each bad field: mark it and take the shop to it, instead of
       // a bare "not valid" that points nowhere.
       const serverErrors = err instanceof ApiError ? fieldsFromServer(err.details) : {};
@@ -307,13 +388,6 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
     } finally {
       inFlight.current = false;
       setSubmitting(false);
-    }
-  };
-
-  const copyTokenToClipboard = () => {
-    if (createdResult?.enrollmentToken?.token) {
-      navigator.clipboard.writeText(createdResult.enrollmentToken.token);
-      showToast('Enrollment code copied to clipboard!', 'info');
     }
   };
 
@@ -353,226 +427,9 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
     </section>
   );
 
-  // --------------------------------------------------------------- done
-
-  if (createdResult) {
-    // The QR waits for the signature (or a deliberate "Sign later"): a phone
-    // enrolled with an unsigned agreement is a phone the shop cannot lock.
-    const showQr = !createdResult.contractId || signState === 'signed' || signState === 'later';
-    const signStep = createdResult.contractId ? (
-      <SaleSignStep contractId={createdResult.contractId} onStateChange={setSignState} />
-    ) : null;
-
-    return createPortal(
-      <div className="fixed inset-0 z-50 overflow-y-auto bg-paper-100 animate-fade-in">
-        <div className="mx-auto max-w-3xl px-4 py-8">
-          {!createdResult.enrollmentToken ? (
-            <div className="surface p-6 text-center sm:p-8">
-              <div className="mx-auto grid h-14 w-14 place-items-center rounded-full border-2 border-ink-900 bg-mint-100">
-                <CheckCircle2 className="h-7 w-7 text-positive-700" />
-              </div>
-              <h2 className="mt-4 font-display text-display font-black text-ink-900">Sale registered without a lock</h2>
-              <p className="mx-auto mt-2 max-w-md text-body text-ink-500">
-                No QR is needed for this phone. Get the agreement signed from the customer's page; installments and
-                reminders run as usual.
-              </p>
-              {signStep && <div className="mt-6 text-start">{signStep}</div>}
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    onSuccess();
-                    navigate(`/customers/${createdResult.customer?.id}`);
-                  }}
-                  className="btn-primary"
-                >
-                  Open customer
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onSuccess();
-                    onClose();
-                  }}
-                  className="btn-secondary"
-                >
-                  Done
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="surface space-y-6 p-6 sm:p-8">
-              <div className="text-center">
-                <p className="eyebrow">Sale registered</p>
-                <h2 className="mt-1 font-display text-display font-black text-ink-900">Scan this QR on the customer's phone</h2>
-                <p className="mt-1 text-body text-ink-500">
-                  {formData.brand} {formData.model} for {formData.customerName}. Valid for 1 hour, this phone only.
-                </p>
-              </div>
-
-              {signStep}
-
-              {showQr && (
-              <>
-
-              <div className="grid items-center gap-6 sm:grid-cols-[auto,1fr]">
-                {/* The real code: the server renders it, the dashboard never draws one */}
-                <div className="mx-auto">
-                  {createdResult.qrImageDataUrl ? (
-                    <button
-                      type="button"
-                      onClick={() => setQrFull(true)}
-                      title="Show full screen"
-                      className="block rounded-lg border-2 border-ink-900 bg-white p-2 shadow-raised transition-transform hover:-translate-y-0.5"
-                    >
-                      <img
-                        src={createdResult.qrImageDataUrl}
-                        alt="QR code to scan on the new phone"
-                        className="h-56 w-56 [image-rendering:pixelated]"
-                      />
-                    </button>
-                  ) : (
-                    <div className="well grid h-56 w-56 place-items-center p-4 text-center text-caption text-ink-500">
-                      Open the QR Enrollment page to show this phone's QR.
-                    </div>
-                  )}
-                </div>
-
-                <ol className="space-y-4 text-body">
-                  {[
-                    { icon: <RotateCcw className="h-4 w-4" />, title: 'Factory reset the phone', hint: 'Stop on the first Welcome screen.' },
-                    { icon: <Hand className="h-4 w-4" />, title: 'Tap 6 times on one blank spot', hint: 'Away from the Start button. A QR scanner opens.' },
-                    { icon: <Wifi className="h-4 w-4" />, title: 'Connect Wi-Fi, then scan', hint: 'Show the QR full screen, brightness up, phone 20 to 30 cm away.' },
-                  ].map((s) => (
-                    <li key={s.title} className="flex gap-3">
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md border-2 border-ink-900 bg-sun-200 text-ink-900">
-                        {s.icon}
-                      </span>
-                      <span>
-                        <strong className="block text-ink-900">{s.title}</strong>
-                        <span className="text-caption text-ink-500">{s.hint}</span>
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-
-              {createdResult.qrProvisioningReady === false && (
-                <div className="flex gap-2 rounded-md border-2 border-critical-200 bg-critical-50 p-3 text-caption text-critical-700">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>The app download is not set up on this server, so this QR cannot install the app yet.</span>
-                </div>
-              )}
-
-              {frpConfigured === false && (
-                <div className="flex flex-col justify-between gap-2 rounded-md border-2 border-caution-200 bg-caution-50 p-3 text-caption text-caution-700 sm:flex-row sm:items-center">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                    <span>
-                      <strong>Factory Reset Protection is off:</strong> add your shop&apos;s Google Account ID in Settings
-                      before handing over this phone.
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowGoogleIdGuide(true)}
-                    className="btn-secondary shrink-0 self-start px-2.5 py-1 text-caption sm:self-auto"
-                  >
-                    <HelpCircle className="h-3.5 w-3.5" aria-hidden="true" />
-                    <span>How to get Google Account ID</span>
-                  </button>
-                </div>
-              )}
-
-              <div className="flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
-                {createdResult.qrImageDataUrl && (
-                  <button type="button" onClick={() => setQrFull(true)} className="btn-primary">
-                    <Maximize2 className="h-4 w-4" /> Show QR full screen
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    onSuccess();
-                    navigate(`/enrollment?device=${createdResult.device?.id}`);
-                  }}
-                  className="btn-secondary"
-                >
-                  Open QR page
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onSuccess();
-                    onClose();
-                  }}
-                  className="btn-ghost"
-                >
-                  Done
-                </button>
-              </div>
-
-              <button
-                type="button"
-                onClick={copyTokenToClipboard}
-                className="mx-auto flex items-center gap-2 font-mono text-caption text-ink-500 hover:text-ink-900"
-                title="Copy the code, for typing in by hand"
-              >
-                Code: {createdResult.enrollmentToken?.token} <Copy className="h-3.5 w-3.5" />
-              </button>
-              </>
-              )}
-            </div>
-          )}
-        </div>
-
-        {qrFull && createdResult.qrImageDataUrl && (
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="QR code, full screen"
-            className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-white p-4"
-            onClick={() => setQrFull(false)}
-          >
-            <img
-              src={createdResult.qrImageDataUrl}
-              alt="QR code to scan on the new phone"
-              className="aspect-square w-[min(92vw,82vh)] [image-rendering:pixelated]"
-            />
-            <p className="text-center text-body font-bold text-ink-900">
-              Brightness up. Hold the phone 20 to 30 cm away, straight on. Tap anywhere to close.
-            </p>
-            <button
-              type="button"
-              className="absolute end-4 top-4 rounded-full border-2 border-ink-900 bg-white p-2"
-              aria-label="Close full screen QR"
-              onClick={() => setQrFull(false)}
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        )}
-
-        <GoogleIdGuideModal
-          isOpen={showGoogleIdGuide}
-          onClose={() => setShowGoogleIdGuide(false)}
-          onGoToSettings={
-            isDealerAdmin
-              ? () => {
-                  onClose();
-                  navigate('/settings');
-                }
-              : undefined
-          }
-        />
-      </div>,
-      document.body
-    );
-  }
-
   // --------------------------------------------------------------- the form
 
-  const submitLabel = submitting ? 'Registering…' : noLock ? 'Register sale' : 'Register sale & show QR';
+  const submitLabel = submitting ? 'Saving sale…' : phoneIntakeId || noLock ? 'Save signed sale' : 'Save signed sale & show QR';
 
   return createPortal(
     <div className="fixed inset-0 z-50 overflow-y-auto bg-paper-100 animate-fade-in" role="dialog" aria-modal="true" aria-label="New sale">
@@ -583,18 +440,20 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
             <p className="eyebrow">New sale</p>
             <h2 className="truncate font-display text-title font-black text-ink-900 sm:text-display">Sell a phone on installments</h2>
           </div>
-          <button type="button" onClick={onClose} className="btn-secondary px-2.5" aria-label="Close">
+          <div className="flex shrink-0 items-center gap-2">{!createdResult&&<button type="button" disabled={submitting||savingPending||!hasDraftContent||noDealer} className="btn-secondary text-caption" onClick={()=>void closeAndSave()}>Save pending</button>}
+          <button type="button" onClick={()=>void closeAndSave()} disabled={savingPending||submitting} className="btn-secondary px-2.5" aria-label="Close">
             <X className="h-5 w-5" />
-          </button>
+          </button></div>
         </div>
       </div>
 
+      {draftStatus&&!createdResult&&<p role="status" className="mx-auto max-w-6xl px-4 pt-3 text-caption">{draftStatus}</p>}
       <form
         noValidate
         onSubmit={handleCreate}
-        className="mx-auto grid max-w-6xl gap-6 px-4 pb-32 pt-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:pb-10"
+        className="mx-auto grid max-w-6xl gap-6 px-4 pb-10 pt-6 lg:grid-cols-[minmax(0,1fr)_380px]"
       >
-        <div className="space-y-6">
+        <fieldset disabled={submitting || !!createdResult} className="min-w-0 space-y-6">
           {/* 1 — Customer */}
           {section(
             1,
@@ -603,14 +462,28 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
             'Start with the CNIC. A customer who bought from you before fills in by itself.',
             <div className="space-y-4">
               <div>
-                <CnicScanButton
-                  onScan={(card) => {
-                    if (card.cnic) setField('customerCnic', card.cnic);
-                    // A customer already on file keeps the name on record.
-                    if (card.name && !returning) setField('customerName', card.name);
-                  }}
-                />
-                <label htmlFor="sale-customerCnic" className="field-label">CNIC number</label>
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <label htmlFor="sale-customerCnic" className="field-label">CNIC number</label>
+                    {/* Inside the shop app the phone's own card reader; in a browser, OCR with a review step. */}
+                    {cnicBridge() ? (
+                      <CnicScanButton onScan={card => {
+                        setFormData(prev => ({ ...prev,
+                          ...(card.cnic ? { customerCnic: card.cnic } : {}),
+                          // A customer already on file keeps the name on record.
+                          ...(card.name && !returning ? { customerName: card.name } : {}),
+                        }));
+                        setErrors(prev => { const next = { ...prev }; if (card.cnic) delete next.customerCnic; if (card.name && !returning) delete next.customerName; return next; });
+                      }} />
+                    ) : (
+                      <CnicOcrButton onApply={fields => {
+                        setFormData(prev => ({ ...prev, customerCnic: fields.cnic,
+                          ...(fields.name ? { customerName: fields.name } : {}),
+                          ...(fields.address ? { customerAddress: fields.address } : {}),
+                        }));
+                        setErrors(prev => { const next = { ...prev }; delete next.customerCnic; if (fields.name) delete next.customerName; if (fields.address) delete next.customerAddress; return next; });
+                      }} />
+                    )}
+                  </div>
                 <input
                   id="sale-customerCnic"
                   inputMode="numeric"
@@ -747,6 +620,20 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
             'The phone',
             'Tap a model you sold recently, or type it. Dial *#06# on the phone for the IMEI.',
             <div className="space-y-4">
+              <PhoneIntakeScan key={dealerParam || 'current'} dealerId={dealerParam} disabled={noDealer || submitting} autoStart={startWithPhoneScan} initialSessionId={initialDraft?.data.phoneIntakeId} onSession={id=>setPhoneIntakeId(id??undefined)}
+                onPending={setPhoneScanPending}
+                onClear={() => { setPhoneIntakeId(undefined); setScannedOsVersion(undefined); }}
+                onPhone={(id, phone) => {
+                  const brand = PHONE_BRANDS.find(b => b.value.toLowerCase() === phone.brand.toLowerCase())?.value || phone.brand;
+                  const version = Number.parseInt(phone.osVersion || '', 10);
+                  setPhoneIntakeId(id); setScannedOsVersion(phone.osVersion);
+                  setFormData(prev => ({ ...prev, brand, model: phone.model,
+                    imei: phone.imeis?.[0] || '', serialNumber: phone.serialNumber || '',
+                    android: Number.isFinite(version) ? version >= 11 ? '11+' : version >= 8 ? '8-10' : '7-' : prev.android,
+                  }));
+                  setErrors(prev => { const next = { ...prev }; delete next.model; delete next.imei; return next; });
+                  showToast('Phone details received. Review the IMEI and serial before registering.', 'success');
+                }} />
               {recentModels.length > 0 && (
                 <div>
                   <p className="field-label">Sold recently</p>
@@ -782,6 +669,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                     {PHONE_BRANDS.map((b) => (
                       <option key={b.value} value={b.value}>{b.label}</option>
                     ))}
+                    {!PHONE_BRANDS.some(b => b.value === formData.brand) && <option value={formData.brand}>{formData.brand}</option>}
                   </select>
                 </div>
 
@@ -811,7 +699,6 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                       aria-invalid={!!errors.imei}
                       className={inputClass('imei', 'font-mono tracking-wide min-w-0 flex-1')}
                     />
-                    <ImeiScanButton onScan={(imei) => setField('imei', imei)} />
                   </div>
                   {fieldError('imei')}
                 </div>
@@ -992,6 +879,11 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
             'Tap the advance and the months. The monthly amount works itself out.',
             <div className="space-y-5">
               <div>
+                <label htmlFor="plan-price" className="field-label">Plan price (Rs)</label>
+                <input id="plan-price" type="number" readOnly value={formData.purchasePrice || ''} placeholder="0" className="input bg-paper-100 font-bold" />
+                <p className="mt-1 text-caption text-ink-500">Filled from the phone price above.</p>
+              </div>
+              <div>
                 <label htmlFor="sale-downPayment" className="field-label">Advance (Rs)</label>
                 <div className="flex flex-wrap items-center gap-2">
                   {ADVANCE_CHOICES.map((p) => (
@@ -999,9 +891,9 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                       key={p}
                       type="button"
                       disabled={!formData.purchasePrice}
-                      aria-pressed={formData.purchasePrice > 0 && formData.downPayment === advanceFor(formData.purchasePrice, p)}
-                      onClick={() => setField('downPayment', advanceFor(formData.purchasePrice, p))}
-                      className={`${chip(formData.purchasePrice > 0 && formData.downPayment === advanceFor(formData.purchasePrice, p))} disabled:opacity-40`}
+                      aria-pressed={advanceChoice === p && formData.purchasePrice > 0}
+                      onClick={() => { setAdvanceChoice(p); setField('downPayment', advanceFor(formData.purchasePrice, p)); }}
+                      className={`${chip(advanceChoice === p && formData.purchasePrice > 0)} disabled:opacity-40`}
                     >
                       {p}%
                     </button>
@@ -1013,7 +905,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                     min={0}
                     value={formData.downPayment || ''}
                     placeholder="0"
-                    onChange={(e) => setField('downPayment', Number(e.target.value))}
+                    onChange={(e) => { setAdvanceChoice(null); setField('downPayment', Number(e.target.value)); }}
                     aria-invalid={!!errors.downPayment}
                     className={inputClass('downPayment', 'w-40 font-black')}
                   />
@@ -1038,6 +930,12 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                 </div>
                 {fieldError('totalInstallments')}
               </div>
+
+              <div className="grid gap-4 sm:grid-cols-2" aria-live="polite">
+                <div><label htmlFor="plan-remaining" className="field-label">Remaining amount (Rs)</label><input id="plan-remaining" type="number" readOnly value={planPreview?.financedAmount ?? ''} placeholder="0" className="input bg-paper-100 font-bold" /></div>
+                <div><label htmlFor="plan-monthly" className="field-label">Monthly installment (Rs)</label><input id="plan-monthly" type="number" readOnly value={planPreview?.monthlyInstallment ?? ''} placeholder="0" className="input bg-paper-100 font-bold" /></div>
+              </div>
+              {planPreview && planPreview.finalInstallment !== planPreview.monthlyInstallment && <div><label htmlFor="plan-final" className="field-label">Final installment (Rs)</label><input id="plan-final" type="number" readOnly value={planPreview.finalInstallment} className="input bg-paper-100 font-bold" /><p className="mt-1 text-caption text-ink-500">The final installment includes the rounding difference so the total stays exact.</p></div>}
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
@@ -1070,10 +968,10 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
               </div>
             </div>
           )}
-        </div>
+        </fieldset>
 
-        {/* Summary — what the customer is agreeing to, always in view */}
-        <aside className="lg:sticky lg:top-24 lg:self-start">
+        {/* Summary, signature and completion stay together in this card. */}
+        <aside className="min-w-0 lg:self-start">
           <div className="surface overflow-hidden">
             <div className="border-b-2 border-ink-900 bg-accent-800 px-5 py-4 text-white">
               <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-sun-200">Monthly installment</p>
@@ -1121,9 +1019,39 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                 {noLock ? <ShieldCheck className="h-4 w-4" aria-hidden="true" /> : <Lock className="h-4 w-4" aria-hidden="true" />}
                 <span>{noLock ? 'Sold without a lock' : 'Phone lock: on, with a signed agreement'}</span>
               </p>
-              <button type="submit" disabled={submitting} className="btn-primary hidden w-full py-3 text-lede lg:inline-flex">
-                {submitLabel}
-              </button>
+              {createdResult ? (
+                <div className="space-y-4" role="status">
+                  <p className="flex items-center gap-2 font-bold text-positive-700"><CheckCircle2 className="h-5 w-5 shrink-0" /> Sale and signed agreement saved.</p>
+                  {phoneIntakeId && <p className="text-caption">{connectionConfirmed ? 'Phone connected and setup confirmed.' : 'Phone details saved. Finish Android setup on the phone; connection confirmation is pending.'}</p>}
+                  {!phoneIntakeId && !noLock && <div className="space-y-3">
+                    <p className="font-bold">Scan this QR on the customer's phone</p>
+                    {createdResult.qrImageDataUrl && <button type="button" className="mx-auto block rounded-lg bg-white p-2" onClick={() => setQrFull(true)} aria-label="Show QR full screen"><img className="mx-auto aspect-square w-56 max-w-full" src={createdResult.qrImageDataUrl} alt="QR code to scan on the new phone" /><span className="mt-2 flex items-center justify-center gap-1 text-caption"><Maximize2 className="h-3 w-3" /> Full screen</span></button>}
+                    {createdResult.qrProvisioningReady === false && <p role="alert" className="text-caption text-critical-700">The app download is not set up on this server, so this QR cannot install the app yet.</p>}
+                    <p className="text-caption">On the new or already-reset phone, scan from the Welcome screen and complete Android setup.</p>
+                  </div>}
+                  <button type="button" className="btn-primary w-full" onClick={() => { onSuccess(); onClose(); }}>Done</button>
+                </div>
+              ) : <div id="sale-agreement" className="space-y-3 border-t-2 border-paper-300 pt-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="font-bold text-ink-900">Customer signature</h3>
+                  <button type="button" disabled={!agreement || submitting} className="inline-flex items-center gap-1 text-caption font-bold underline disabled:opacity-40" onClick={() => setReadAgreement(value => !value)} aria-expanded={readAgreement}><FileText className="h-4 w-4" /> Read agreement</button>
+                </div>
+                {!agreement && <p className="text-caption text-ink-500">{agreementError || (previewReady ? 'Loading agreement…' : 'Fill customer, phone and installment details to prepare the agreement.')}</p>}
+                {agreementError && <button type="button" className="btn-secondary" onClick={() => setPreviewRefresh(value => value + 1)}>Retry agreement</button>}
+                {agreement && <>
+                  {readAgreement && <div className="max-h-96 space-y-4 overflow-y-auto rounded-md border border-paper-300 bg-white p-3 text-caption" data-i18n-skip>
+                    <h4 className="font-bold">Installment Financing Agreement · v{agreement.termsVersion}</h4>
+                    <p>{agreement.snapshot?.customer?.name} · {agreement.snapshot?.device?.brand} {agreement.snapshot?.device?.model}</p>
+                    {agreement.clauses.map((clause: any) => <div key={clause.heading}><h5 className="font-bold">{clause.heading}</h5><p className="whitespace-pre-line leading-relaxed">{clause.body}</p><h5 dir="rtl" lang="ur" className="mt-2 font-bold">{clause.headingUr}</h5><p dir="rtl" lang="ur" className="whitespace-pre-line leading-relaxed">{clause.bodyUr}</p></div>)}
+                    <h5 className="font-bold">Repayment schedule</h5>
+                    {agreement.snapshot.schedule.map((row: any) => <p key={row.installmentNumber}>{row.installmentNumber}. {row.dueDate} — {rupees(row.amountDue)}</p>)}
+                  </div>}
+                  <div data-i18n-skip className="space-y-2 text-caption leading-relaxed"><p>{agreement.declaration.en}</p><p dir="rtl" lang="ur">{agreement.declaration.ur}</p></div>
+                  <SignaturePad key={agreement.fingerprint} onChange={setSignature} disabled={submitting} />
+                  <label className="flex items-start gap-2 text-caption"><input type="checkbox" className="mt-1" checked={accepted} disabled={submitting} onChange={event => setAccepted(event.target.checked)} /><span>The customer has read the agreement and accepts it.</span></label>
+                </>}
+                <button type="submit" disabled={submitting || phoneScanPending} className="btn-primary w-full py-3">{submitLabel}</button>
+              </div>}
               <p className="mt-3 text-micro leading-relaxed text-ink-400">
                 {noLock
                   ? 'The plan, reminders and the signed agreement apply as usual.'
@@ -1133,20 +1061,9 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
           </div>
         </aside>
 
-        {/* Phones and tablets: the total and the button stay at the bottom of the screen */}
-        <div className="fixed inset-x-0 bottom-0 z-10 border-t-2 border-ink-900 bg-paper-50 px-4 py-3 lg:hidden">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="eyebrow">Monthly</p>
-              <p className="font-display text-title font-black text-ink-900">{rupees(monthlyAmount)}</p>
-            </div>
-            <button type="submit" disabled={submitting} className="btn-primary py-2.5">
-              {submitLabel}
-            </button>
-          </div>
-        </div>
       </form>
 
+      {qrFull && !phoneIntakeId && createdResult?.qrImageDataUrl && <div role="dialog" aria-label="QR code, full screen" aria-modal="true" className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-white p-4"><img src={createdResult.qrImageDataUrl} alt="QR code to scan on the new phone, full screen" className="aspect-square w-[min(90vw,80vh)]" /><button type="button" className="btn-secondary" onClick={() => setQrFull(false)}>Close QR</button></div>}
       <GoogleIdGuideModal
         isOpen={showGoogleIdGuide}
         onClose={() => setShowGoogleIdGuide(false)}

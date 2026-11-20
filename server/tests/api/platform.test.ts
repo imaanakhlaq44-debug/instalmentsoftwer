@@ -1,3 +1,4 @@
+import { hashDeviceToken } from '../../src/utils/deviceToken.js';
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 
 import { as, anonymous, reseed, repo, ACCOUNTS } from '../helpers.js';
@@ -67,3 +68,36 @@ describe('GET /api/platform/overview', () => {
     expect(typeof res.body.fleet.stale).toBe('number');
   });
 });
+
+
+describe('DELETE /api/platform/shops/:id', () => {
+  it('is restricted to the super admin and requires the exact confirmation name', async () => {
+    const dealer=(await repo.dealers.findById('dealer-1'))!;
+    expect((await as(ACCOUNTS.dealerAdmin).delete('/api/platform/shops/dealer-1').send({confirmationName:dealer.name})).status).toBe(403);
+    expect((await as(ACCOUNTS.superAdmin).delete('/api/platform/shops/dealer-1').send({confirmationName:'wrong'})).status).toBe(400);
+    expect((await repo.dealers.findById('dealer-1'))?.active).toBe(true);
+  });
+  it('revokes access and locks, releases phones, retains records, and leaves other shops untouched', async () => {
+    const dealer=(await repo.dealers.findById('dealer-1'))!;
+    const device=(await repo.devices.findFirst({dealerId:'dealer-1'}))!;
+    const token='private-test-phone-credential-123456789';
+    await repo.devices.update(device.id,{authTokenHash:hashDeviceToken(token)});
+    const other=await repo.deviceLicenses.countByStatus('dealer-2','AVAILABLE');
+    const payments=await repo.payments.count({dealerId:'dealer-1'});
+    const response=await as(ACCOUNTS.superAdmin).delete('/api/platform/shops/dealer-1').send({confirmationName:dealer.name});
+    expect(response.status).toBe(200);
+    expect((await repo.dealers.findById(dealer.id))?.active).toBe(false);
+    expect(await repo.deviceLicenses.countByStatus(dealer.id,'AVAILABLE')).toBe(0);
+    expect(await repo.deviceLicenses.countByStatus(dealer.id,'CONSUMED')).toBe(0);
+    expect((await repo.devices.findById(device.id))?.status).toBe('REMOVED');
+    expect((await as(ACCOUNTS.dealerAdmin).get('/api/dashboard/stats')).status).toBe(401);
+    expect((await anonymous().post('/api/dpc/check-in').set('Authorization','Device '+device.id+'.'+token).send({})).status).toBe(403);
+    expect(await repo.payments.count({dealerId:dealer.id})).toBe(payments);
+    expect(await repo.deviceLicenses.countByStatus('dealer-2','AVAILABLE')).toBe(other);
+    const overview=await as(ACCOUNTS.superAdmin).get('/api/platform/overview');
+    expect(overview.body.shops.some((s:any)=>s.dealerId===dealer.id)).toBe(false);
+    expect((await as(ACCOUNTS.superAdmin).post('/api/licenses/packs').send({dealerId:dealer.id,size:10})).status).toBe(403);
+    expect((await as(ACCOUNTS.superAdmin).delete('/api/platform/shops/dealer-1').send({confirmationName:dealer.name})).body.alreadyDeleted).toBe(true);
+  });
+});
+

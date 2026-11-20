@@ -8,8 +8,6 @@ import { ShopModeBanner } from './ShopModeBanner.js';
 import { isNativeShopApp } from '../../utils/nativeApp.js';
 
 export const AppLayout: React.FC = () => {
-  // Inside the Android shop app: the app's own top bar and a phone-width page,
-  // no website sidebar or navbar. On the website: the full dashboard shell.
   const native = isNativeShopApp();
   return (
     <div className={`flex min-h-screen bg-paper-100 ${native ? 'shop-app-shell' : ''}`}>

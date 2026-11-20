@@ -107,26 +107,12 @@ jobs:
 
       - name: Upload (FTPS)
         id: upload-ftps
-        continue-on-error: true
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.SITE_FTP_SERVER }}
           username: ${{ secrets.SITE_FTP_USERNAME }}
           password: ${{ secrets.SITE_FTP_PASSWORD }}
           protocol: ftps
-          port: 21
-          local-dir: ./site/dist/
-          server-dir: ${{ vars.SITE_FTP_DIR || '/public_html/' }}
-          dangerous-clean-slate: false
-
-      - name: Fallback Upload (standard FTP)
-        if: steps.upload-ftps.outcome == 'failure'
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.SITE_FTP_SERVER }}
-          username: ${{ secrets.SITE_FTP_USERNAME }}
-          password: ${{ secrets.SITE_FTP_PASSWORD }}
-          protocol: ftp
           port: 21
           local-dir: ./site/dist/
           server-dir: ${{ vars.SITE_FTP_DIR || '/public_html/' }}

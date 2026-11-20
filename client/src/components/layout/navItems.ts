@@ -4,6 +4,7 @@ import {
   UserCog,
 } from 'lucide-react';
 import { UserRole } from '../../types/index.js';
+import { isPlayStoreApp } from '../../utils/nativeApp.js';
 
 export interface NavItem {
   to: string;
@@ -80,5 +81,5 @@ export const PLATFORM_NAV_ITEMS: NavItem[] = [
 export function navItemsForRole(role: UserRole | null, viewingShop = false): NavItem[] {
   if (!role) return [];
   if (role === 'SUPER_ADMIN' && !viewingShop) return PLATFORM_NAV_ITEMS;
-  return NAV_ITEMS.filter((item) => item.roles.includes(role));
+  return NAV_ITEMS.filter((item) => item.roles.includes(role) && !(isPlayStoreApp() && item.to === '/buy-locks'));
 }

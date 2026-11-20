@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach } from 'vitest';
 
-import { as, anonymous, reseed, repo, ACCOUNTS } from '../helpers.js';
+import { as, anonymous, reseed, repo, ACCOUNTS, confirmHandsetSetup } from '../helpers.js';
 import { disconnectDatabase } from '../../src/db/prisma.js';
 import {
   enrollmentChallenge,
@@ -122,6 +122,7 @@ async function enrollAttested(serial = 'R58N12ABCDE') {
       attestation: { chain, idsAttested: true },
     });
   expect(res.status).toBe(201);
+  await confirmHandsetSetup(res.body);
   return { device, credential: `Device ${res.body.deviceId}.${res.body.deviceToken}` };
 }
 
@@ -203,6 +204,7 @@ describe('Serial-number pinning and daily attestation on check-in', () => {
     const { token } = await pendingDeviceWithToken();
     const enrolled = await anonymous().post('/api/dpc/enroll').send({ token, dpcVersion: '1.3.0' });
     expect(enrolled.status).toBe(201);
+    await confirmHandsetSetup(enrolled.body);
     const credential = `Device ${enrolled.body.deviceId}.${enrolled.body.deviceToken}`;
 
     const res = await anonymous()

@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { ApiError } from '../services/api.js';
+import { isNativeShopApp } from '../utils/nativeApp.js';
 
 /**
  * Sign-in.
@@ -157,6 +158,8 @@ export const LoginPage: React.FC = () => {
         <Link to="/register" className="btn-secondary mt-5 w-full py-2.5">
           New shop? Register here
         </Link>
+        {!isNativeShopApp() && <Link to="/download" className="btn-secondary mt-3 w-full py-2.5">Download Android app</Link>}
+        <div className="mt-5 flex justify-center gap-5 text-caption font-bold"><Link to="/privacy" className="underline">Privacy</Link><Link to="/account-deletion" className="underline">Delete account</Link></div>
 
         <p className="mt-6 text-center text-caption text-ink-400">
           Access is logged. Unauthorised use is prohibited.

@@ -1,3 +1,4 @@
+import { deviceCommandSignal } from './DeviceCommandSignal.js';
 import { repo } from '../db/repositories/index.js';
 import { runInTransaction, Tx } from '../db/prisma.js';
 import { Device, DeviceStatus, DeviceActionLog, UserRole } from '../types/index.js';
@@ -40,7 +41,7 @@ export interface ActorContext {
 
 export interface IDeviceManagementService {
   registerDevice(deviceData: Omit<Device, 'id' | 'createdAt' | 'updatedAt'>): Promise<Device>;
-  enrollDevice(deviceId: string, token: string, ipAddress?: string): Promise<{ success: boolean; device: Device }>;
+  enrollDevice(deviceId: string, token: string, ipAddress?: string, awaitConfirmation?: boolean): Promise<{ success: boolean; device: Device }>;
   getDeviceStatus(deviceId: string): Promise<DeviceStatus>;
   getDeviceHealth(deviceId: string): Promise<DeviceHealth>;
   getDeviceLocation(deviceId: string): Promise<DeviceLocation>;
@@ -107,7 +108,7 @@ export class MockDeviceManagementService implements IDeviceManagementService {
    * transition from PENDING to ACTIVE" and the whole feature was unusable.
    * The handshake now moves through ENROLLED as the state machine intends.
    */
-  async enrollDevice(deviceId: string, token: string, ipAddress?: string): Promise<{ success: boolean; device: Device }> {
+  async enrollDevice(deviceId: string, token: string, ipAddress?: string, awaitConfirmation = false): Promise<{ success: boolean; device: Device }> {
     const device = await repo.devices.findById(deviceId);
     if (!device) throw AppError.notFound('Device');
 
@@ -116,6 +117,15 @@ export class MockDeviceManagementService implements IDeviceManagementService {
     }
 
     const nowIso = new Date().toISOString();
+    if (awaitConfirmation) {
+      const pending = await runInTransaction(async tx => {
+        if (device.status !== 'ENROLLED') this.validateTransition(device.status, 'ENROLLED');
+        await tx.device.update({ where: { id: deviceId }, data: { status: 'ENROLLED', isOnline: false, lastCheckInAt: null, updatedAt: new Date(nowIso) } });
+        await this.recordAction({ deviceId, dealerId: device.dealerId, userId: 'system', userName: 'Enrollment Client', action: 'ENROLL', oldStatus: device.status, newStatus: 'ENROLLED', reason: 'Credentials issued; awaiting the handset setup confirmation.', deviceAck: false, ipAddress }, tx);
+        return (await repo.devices.findById(deviceId, tx))!;
+      });
+      return { success: true, device: pending };
+    }
 
     // Both steps and the log entry commit together: a device left stranded in
     // ENROLLED, with nothing recording why, is not a state worth persisting.
@@ -205,6 +215,7 @@ export class MockDeviceManagementService implements IDeviceManagementService {
    */
   async lockDevice(params: ActorContext & { deviceId: string; reason: string; lockMessage?: string }): Promise<CommandResult> {
     const device = await this.requireDevice(params.deviceId);
+    const acknowledged = device.isOnline && !device.authTokenHash;
 
     if (device.status === 'LOCKED') {
       return { success: true, status: 'LOCKED', queued: false, message: 'This device is already in restricted mode.' };
@@ -220,7 +231,7 @@ export class MockDeviceManagementService implements IDeviceManagementService {
     if (device.noLock) {
       throw AppError.badRequest('This phone was sold without a lock, so it cannot be locked.');
     }
-    if (device.status === 'REMOVED' || device.status === 'PENDING') {
+    if (device.status === 'REMOVED' || device.status === 'PENDING' || device.status === 'ENROLLED') {
       throw AppError.badRequest(
         `This device cannot be locked while its status is ${device.status}. It must be enrolled and active first.`
       );
@@ -242,7 +253,7 @@ export class MockDeviceManagementService implements IDeviceManagementService {
       });
     }
 
-    const targetStatus: DeviceStatus = device.isOnline ? 'LOCKED' : 'LOCK_PENDING';
+    const targetStatus: DeviceStatus = acknowledged ? 'LOCKED' : 'LOCK_PENDING';
     this.validateTransition(device.status, targetStatus);
 
     const lockMessage =
@@ -255,14 +266,17 @@ export class MockDeviceManagementService implements IDeviceManagementService {
     // unit: an audit trail claiming a lock that was never written would be
     // worse than no trail at all.
     await runInTransaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM dealers WHERE id = ${device.dealerId} FOR UPDATE`;
+      const shop = await tx.dealer.findUnique({ where: { id: device.dealerId } });
+      if (!shop?.active || shop.deletedAt) throw AppError.forbidden('This shop is no longer active.');
       const updated = await repo.devices.update(
         params.deviceId,
         {
           status: targetStatus,
           lockReason: params.reason,
           lockMessage,
-          pendingCommand: device.isOnline ? undefined : 'LOCK',
-          pendingCommandAt: device.isOnline ? undefined : nowIso,
+          pendingCommand: acknowledged ? undefined : 'LOCK',
+          pendingCommandAt: acknowledged ? undefined : nowIso,
           updatedAt: nowIso,
         },
         tx
@@ -280,7 +294,7 @@ export class MockDeviceManagementService implements IDeviceManagementService {
           newStatus: targetStatus,
           reason: params.reason,
           commandPayload: JSON.stringify({ mode: 'REMOTE_LOCK', emergencyCallAllowed: true, message: lockMessage }),
-          deviceAck: device.isOnline,
+          deviceAck: acknowledged,
           ipAddress: params.ipAddress,
         },
         tx
@@ -296,7 +310,7 @@ export class MockDeviceManagementService implements IDeviceManagementService {
           targetType: 'DEVICE',
           targetId: params.deviceId,
           details:
-            `Restricted lock ${device.isOnline ? 'applied to' : 'queued for'} ${device.brand} ${device.model} ` +
+            `Restricted lock ${acknowledged ? 'applied to' : 'queued for'} ${device.brand} ${device.model} ` +
             `(IMEI ${maskImei(device.imei)}). Reason: ${params.reason}`,
           ipAddress: params.ipAddress,
         },
@@ -304,18 +318,20 @@ export class MockDeviceManagementService implements IDeviceManagementService {
       );
     });
 
+    deviceCommandSignal.notify(params.deviceId);
     return {
       success: true,
       status: targetStatus,
-      queued: !device.isOnline,
-      message: device.isOnline
+      queued: !acknowledged,
+      message: acknowledged
         ? 'Lock command dispatched and acknowledged by the device.'
-        : 'Device is offline. The lock is queued and will apply the moment it reconnects.',
+        : 'Lock sent. Waiting for the handset to confirm it applied the restriction.',
     };
   }
 
   async unlockDevice(params: ActorContext & { deviceId: string; reason: string }): Promise<CommandResult> {
     const device = await this.requireDevice(params.deviceId);
+    const acknowledged = device.isOnline && !device.authTokenHash;
 
     if (device.status === 'ACTIVE') {
       return { success: true, status: 'ACTIVE', queued: false, message: 'This device is already active.' };
@@ -329,20 +345,23 @@ export class MockDeviceManagementService implements IDeviceManagementService {
       };
     }
 
-    const targetStatus: DeviceStatus = device.isOnline ? 'ACTIVE' : 'UNLOCK_PENDING';
+    const targetStatus: DeviceStatus = acknowledged ? 'ACTIVE' : 'UNLOCK_PENDING';
     this.validateTransition(device.status, targetStatus);
 
     const nowIso = new Date().toISOString();
 
     await runInTransaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM dealers WHERE id = ${device.dealerId} FOR UPDATE`;
+      const shop = await tx.dealer.findUnique({ where: { id: device.dealerId } });
+      if (!shop?.active || shop.deletedAt) throw AppError.forbidden('This shop is no longer active.');
       const updated = await repo.devices.update(
         params.deviceId,
         {
           status: targetStatus,
-          lockReason: device.isOnline ? undefined : device.lockReason,
-          lockMessage: device.isOnline ? undefined : device.lockMessage,
-          pendingCommand: device.isOnline ? undefined : 'UNLOCK',
-          pendingCommandAt: device.isOnline ? undefined : nowIso,
+          lockReason: acknowledged ? undefined : device.lockReason,
+          lockMessage: acknowledged ? undefined : device.lockMessage,
+          pendingCommand: acknowledged ? undefined : 'UNLOCK',
+          pendingCommandAt: acknowledged ? undefined : nowIso,
           updatedAt: nowIso,
         },
         tx
@@ -360,7 +379,7 @@ export class MockDeviceManagementService implements IDeviceManagementService {
           newStatus: targetStatus,
           reason: params.reason,
           commandPayload: JSON.stringify({ mode: 'RESTORE_ACTIVE' }),
-          deviceAck: device.isOnline,
+          deviceAck: acknowledged,
           ipAddress: params.ipAddress,
         },
         tx
@@ -375,20 +394,21 @@ export class MockDeviceManagementService implements IDeviceManagementService {
           action: 'DEVICE_UNLOCKED',
           targetType: 'DEVICE',
           targetId: params.deviceId,
-          details: `Access ${device.isOnline ? 'restored for' : 'restore queued for'} ${device.brand} ${device.model}. Reason: ${params.reason}`,
+          details: `Access ${acknowledged ? 'restored for' : 'restore queued for'} ${device.brand} ${device.model}. Reason: ${params.reason}`,
           ipAddress: params.ipAddress,
         },
         tx
       );
     });
 
+    deviceCommandSignal.notify(params.deviceId);
     return {
       success: true,
       status: targetStatus,
-      queued: !device.isOnline,
-      message: device.isOnline
+      queued: !acknowledged,
+      message: acknowledged
         ? 'Device unlocked successfully.'
-        : 'Device is offline. The unlock is queued and will apply the moment it reconnects.',
+        : 'Unlock sent. Waiting for the handset to confirm access is restored.',
     };
   }
 

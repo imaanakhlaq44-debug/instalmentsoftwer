@@ -1,3 +1,5 @@
+import { SimpleShopDashboard } from './SimpleShopDashboard.js';
+import { PendingWork } from '../components/dashboard/PendingWork.js';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, QrCode, RefreshCw, ArrowRight, BadgeCheck, Wallet, ShieldAlert, TrendingUp, AlertTriangle, HelpCircle } from 'lucide-react';
@@ -51,7 +53,9 @@ interface Stats {
   frpConfigured?: boolean | null;
 }
 
-export const DashboardPage: React.FC = () => {
+export const DashboardPage: React.FC = () => { const { isShopTeam } = useAuth(); return isShopTeam ? <SimpleShopDashboard /> : <CustomerDashboardPage />; };
+
+const CustomerDashboardPage: React.FC = () => {
   const { user, dealer, selectedDealerId, showToast, isStaff, isShopTeam, isDealerAdmin } = useAuth();
   const navigate = useNavigate();
 
@@ -131,6 +135,7 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {isStaff&&<PendingWork/>}
       {/* ---------------------------------------------------------------- */}
       {/* Dateline and greeting. A person is being spoken to, so the        */}
       {/* greeting is set in the serif and the date is quiet above it.      */}
@@ -183,7 +188,7 @@ export const DashboardPage: React.FC = () => {
       {/* ---------------------------------------------------------------- */}
       <Card flush>
         <div className="grid divide-y divide-paper-300 sm:grid-cols-3 sm:divide-x rtl:divide-x-reverse sm:divide-y-0">
-          <div className="p-5.5 hover:bg-paper-100/50 transition-colors">
+          <div className="min-w-0 p-5 sm:p-6 hover:bg-paper-100/50 transition-colors">
             <div className="flex items-center justify-between">
               <p className="eyebrow">Outstanding</p>
               <span className="flex h-6 w-6 items-center justify-center rounded-md bg-accent-50 text-accent-700">
@@ -193,14 +198,14 @@ export const DashboardPage: React.FC = () => {
             {loading && !stats ? (
               <Skeleton className="mt-2 h-9 w-40" />
             ) : (
-              <p className="figure mt-2 text-2xl font-bold tracking-tight text-ink-900">{money(stats?.outstandingAmount)}</p>
+              <p className="figure mt-2 break-words text-2xl font-bold tracking-tight text-ink-900">{money(stats?.outstandingAmount)}</p>
             )}
             <p className="mt-1.5 text-caption text-ink-400">
               Financed balance still to be recovered
             </p>
           </div>
 
-          <div className="p-5.5 hover:bg-paper-100/50 transition-colors">
+          <div className="min-w-0 p-5 sm:p-6 hover:bg-paper-100/50 transition-colors">
             <div className="flex items-center justify-between">
               <p className="eyebrow">At risk</p>
               <span className={`flex h-6 w-6 items-center justify-center rounded-md ${stats?.overdueInstallmentsCount ? 'bg-critical-50 text-critical-700' : 'bg-positive-50 text-positive-700'}`}>
@@ -210,7 +215,7 @@ export const DashboardPage: React.FC = () => {
             {loading && !stats ? (
               <Skeleton className="mt-2 h-9 w-32" />
             ) : (
-              <p className="figure mt-2 text-2xl font-bold tracking-tight text-ink-900">{money(stats?.overdueAmount)}</p>
+              <p className="figure mt-2 break-words text-2xl font-bold tracking-tight text-ink-900">{money(stats?.overdueAmount)}</p>
             )}
             <p className="mt-1.5 text-caption">
               {stats?.overdueInstallmentsCount ? (
@@ -223,7 +228,7 @@ export const DashboardPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="p-5.5 hover:bg-paper-100/50 transition-colors">
+          <div className="min-w-0 p-5 sm:p-6 hover:bg-paper-100/50 transition-colors">
             <div className="flex items-center justify-between">
               <p className="eyebrow">Collected this month</p>
               <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-50 text-emerald-700">
@@ -233,7 +238,7 @@ export const DashboardPage: React.FC = () => {
             {loading && !stats ? (
               <Skeleton className="mt-2 h-9 w-32" />
             ) : (
-              <p className="figure mt-2 text-2xl font-bold tracking-tight text-ink-900">{money(collected)}</p>
+              <p className="figure mt-2 break-words text-2xl font-bold tracking-tight text-ink-900">{money(collected)}</p>
             )}
             {targetPct !== null ? (
               <div className="mt-2.5">

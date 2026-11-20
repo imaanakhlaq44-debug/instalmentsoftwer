@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 
-import { as, anonymous, reseed, repo, ACCOUNTS } from '../helpers.js';
+import { as, anonymous, reseed, repo, ACCOUNTS, confirmHandsetSetup } from '../helpers.js';
 import { disconnectDatabase } from '../../src/db/prisma.js';
 import { DeviceIntegrityService } from '../../src/services/DeviceIntegrityService.js';
 import { OverdueEngine } from '../../src/services/OverdueEngine.js';
@@ -45,6 +45,7 @@ async function enrollWithDualSim(serialNumber = 'SN-DUALSIM-01') {
     });
 
   expect(res.status).toBe(201);
+  await confirmHandsetSetup(res.body);
   return {
     device,
     slot1,
@@ -110,6 +111,7 @@ describe('Hardware identity verification during DPC enrollment', () => {
       .send({ token: enrollmentToken, dpcVersion: '1.3.0' });
 
     expect(res.status).toBe(201);
+    await confirmHandsetSetup(res.body);
     const stored = (await repo.devices.findById(device.id))!;
     expect(stored.status).toBe('ACTIVE');
     expect(stored.tamperFlags).toEqual([]);

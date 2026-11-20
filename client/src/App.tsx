@@ -8,13 +8,15 @@ import { ErrorBoundary } from './components/ErrorBoundary.js';
 
 import { LoginPage } from './pages/LoginPage.js';
 import { RegisterPage } from './pages/RegisterPage.js';
+import { AccountPrivacyPage } from './pages/AccountPrivacyPage.js';
+import { ShopAppDownloadPage } from './pages/ShopAppDownloadPage.js';
+import { isPlayStoreApp, isNativeShopApp } from './utils/nativeApp.js';
+import { ShopAppHomePage } from './pages/ShopAppHomePage.js';
 import { ChangePasswordPage } from './pages/ChangePasswordPage.js';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage.js';
 import { DashboardPage } from './pages/DashboardPage.js';
 import { PlatformDashboardPage, PlatformOrdersPage, PlatformShopsPage } from './pages/PlatformDashboardPage.js';
-import { ShopAppHomePage } from './pages/ShopAppHomePage.js';
 import { useAuth } from './context/AuthContext.js';
-import { isNativeShopApp } from './utils/nativeApp.js';
 
 /**
  * Home. Inside the Android shop app it is the app's own home screen. On the
@@ -81,6 +83,9 @@ export function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/privacy" element={<AccountPrivacyPage />} />
+            <Route path="/account-deletion" element={<AccountPrivacyPage deletion />} />
+            <Route path="/download" element={<ShopAppDownloadPage />} />
 
             {/* Signed in, but outside the dashboard shell */}
             <Route
@@ -126,7 +131,7 @@ export function App() {
 
               <Route path="/licenses" element={<RequireRole roles={[...ADMIN]}><LicensesPage /></RequireRole>} />
               {/* Ordering is the shop owner's; the platform decides orders on /orders. */}
-              <Route path="/buy-locks" element={<RequireRole roles={['DEALER_ADMIN']}><BuyLocksPage /></RequireRole>} />
+              <Route path="/buy-locks" element={<RequireRole roles={['DEALER_ADMIN']}>{isPlayStoreApp() ? <Navigate to="/licenses" replace /> : <BuyLocksPage />}</RequireRole>} />
               <Route path="/staff" element={<RequireRole roles={[...ADMIN]}><StaffPage /></RequireRole>} />
               <Route path="/audit-logs" element={<RequireRole roles={[...ADMIN]}><AuditLogsPage /></RequireRole>} />
               <Route path="/settings" element={<RequireRole roles={[...ADMIN]}><SettingsPage /></RequireRole>} />

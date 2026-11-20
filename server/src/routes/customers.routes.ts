@@ -8,7 +8,9 @@ import {
   Contract, Customer, Device, InstallmentPlan, Installment, Payment,
 } from '../types/index.js';
 import { EnrollmentService } from '../services/EnrollmentService.js';
+import { PhoneIntakeService } from '../services/PhoneIntakeService.js';
 import { ContractService } from '../services/ContractService.js';
+import { CURRENT_TERMS_VERSION } from '../services/contractTerms.js';
 import { LicenseService } from '../services/LicenseService.js';
 import { AuditService } from '../services/AuditService.js';
 import { CustomerPhotoService, customerPhotoSchema } from '../services/CustomerPhotoService.js';
@@ -269,6 +271,15 @@ function comparableName(name: string): string {
 }
 
 const createSchema = z.object({
+  agreement: z.object({
+    signerName: z.string().trim().min(3).max(120),
+    signatureImage: z.string().trim().startsWith('data:image/png;base64,').max(400_000),
+    declarationAccepted: z.literal(true),
+    termsVersion: z.string().max(16),
+    fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+  }).optional(),
+  draftId: z.string().uuid().optional(),
+  phoneIntakeId: z.string().uuid().optional(),
   dealerId: z.string().trim().max(64).optional(),
   customer: z.object({
     name: z.string().trim().min(3, 'Customer name must be at least 3 characters.').max(120),
@@ -318,10 +329,31 @@ const createSchema = z.object({
   noLock: z.boolean().default(false),
 });
 
+customersRouter.post('/agreement-preview', requireDealerStaff, validateBody(createSchema.omit({ agreement: true })), asyncHandler(async (req, res) => {
+  const body = req.body as z.infer<typeof createSchema>;
+  const dealerId = await resolveWritableDealerId(req, body.dealerId);
+  if (!body.device || !body.plan) throw AppError.badRequest('Enter the phone and installment details first.');
+  const existing = await repo.customers.findFirst({ dealerId, cnic: { in: cnicForms(body.customer.cnic) } });
+  if (existing && comparableName(existing.name) !== comparableName(body.customer.name)) throw AppError.conflict('The customer name does not match the CNIC on file.');
+  if (!existing) {
+    const missing = newCustomerGaps(body.customer);
+    if (missing.length) throw AppError.unprocessable('Validation failed', missing);
+  }
+  res.setHeader('Cache-Control', 'no-store');
+  res.json(await ContractService.previewSale({ dealerId, device: body.device, plan: body.plan,
+    customer: existing ?? { name: body.customer.name, cnic: body.customer.cnic, phone: normalizePhone(body.customer.phone!), address: body.customer.address! },
+  }));
+}));
+
 customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncHandler(async (req, res) => {
   const user = getAuthUser(req);
   const body = req.body as z.infer<typeof createSchema>;
   const dealerId = await resolveWritableDealerId(req, body.dealerId);
+  if (body.agreement && (!body.device || !body.plan)) throw AppError.badRequest('A signed sale requires a phone and installment plan.');
+
+  if (body.phoneIntakeId && (!body.device || body.noLock)) {
+    throw AppError.badRequest('A scanned phone must be registered as a managed device.');
+  }
 
   // A device may not be financed without a plan, and vice versa.
   if (body.device && !body.plan) {
@@ -399,6 +431,11 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
   // device and no schedule — a financed phone nobody was billed for.
   const result = await runInTransaction(async (tx: Tx) => {
     const nowIso = new Date().toISOString();
+    if (body.draftId) {
+      const draft = await tx.saleDraft.findUnique({where:{id:body.draftId}});
+      if (!draft || draft.dealerId !== dealerId || user.role === 'DEALER_STAFF' && draft.userId !== user.userId) throw AppError.notFound('Pending sale');
+      if (draft.completedAt) throw AppError.conflict('This pending sale has already been completed.');
+    }
 
     const customer = returningCustomer
       ? returningCustomer.active
@@ -519,6 +556,14 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
         { dealerId, customerId: customer.id, deviceId: device.id, plan, installments },
         tx
       );
+      if (body.agreement) {
+        const agreement = body.agreement;
+        if (agreement.termsVersion !== CURRENT_TERMS_VERSION || agreement.fingerprint !== ContractService.fingerprint(JSON.parse(contract.snapshot), contract.termsVersion)) {
+          throw AppError.conflict('The agreement details changed. Review the updated agreement and sign again.');
+        }
+        contract = await ContractService.sign({ contractId: contract.id, signerName: agreement.signerName,
+          signatureImage: agreement.signatureImage, actor: { userId: user.userId, userName: user.name, userRole: user.role }, ipAddress: clientIp(req) }, tx);
+      }
 
       // The down payment is real money that changed hands — it belongs in the
       // ledger. The original code dropped it entirely.
@@ -553,7 +598,11 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
       ipAddress: clientIp(req),
     }, tx);
 
-    return { customer, device, plan, installments, contractId: contract?.id };
+    const intakeToken = body.phoneIntakeId && device
+      ? await PhoneIntakeService.attach(tx, body.phoneIntakeId, dealerId, device)
+      : undefined;
+    if (body.draftId) await tx.saleDraft.update({where:{id:body.draftId},data:{completedAt:new Date(),deviceId:device?.id??null}});
+    return { customer, device, plan, installments, contractId: contract?.id, contractStatus: contract?.status, intakeToken };
   });
 
   /**
@@ -563,7 +612,7 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
    * has no nested interactive transactions. Issuing it second is also the right
    * order: a QR must never exist for a device the registration failed to write.
    */
-  const enrollmentToken = result.device && !result.device.noLock
+  const enrollmentToken = result.intakeToken ?? (result.device && !result.device.noLock
     ? await EnrollmentService.generateToken({
         dealerId,
         deviceId: result.device.id,
@@ -571,7 +620,7 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
         qrType: body.qrType,
         actor: { userId: user.userId, userName: user.name, userRole: user.role },
       })
-    : undefined;
+    : undefined);
 
   // The real QR, so the sale screen can show it straight away. It used to show
   // a QR-shaped icon there, which a phone's scanner reads as nothing at all.
@@ -587,6 +636,7 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
     installments: result.installments,
     // So the sale screen can take the signature there and then.
     contractId: result.contractId,
+    contractStatus: result.contractStatus,
     enrollmentToken,
   });
 }));

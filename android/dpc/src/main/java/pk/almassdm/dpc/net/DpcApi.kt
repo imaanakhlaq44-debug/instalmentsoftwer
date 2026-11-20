@@ -42,11 +42,20 @@ class DpcApi(private val baseUrl: String, private val credential: String? = null
         val body = JSONObject()
             .put("token", enrollmentToken)
             .put("dpcVersion", dpcVersion)
+            .put("brand", android.os.Build.MANUFACTURER.take(40))
+            .put("model", android.os.Build.MODEL.take(60))
+            .put("osVersion", android.os.Build.VERSION.RELEASE.take(40))
         if (!deviceId.isNullOrBlank()) body.put("deviceId", deviceId)
         hardware?.appendToJson(body)
         attestation?.let { body.put("attestation", it.toJson()) }
 
         val json = request("POST", "enroll", body, authenticated = false)
+        if (json.optBoolean("intakeCancelled", false)) {
+            throw IntakeCancelledException()
+        }
+        if (json.optBoolean("intakePending", false)) {
+            throw IntakePendingException()
+        }
         return EnrollResult(
             deviceId = json.optString("deviceId"),
             deviceToken = json.optString("deviceToken"),
@@ -174,3 +183,7 @@ class DpcApi(private val baseUrl: String, private val credential: String? = null
             baseUrl.trim().trimEnd('/') + "/" + path.trimStart('/')
     }
 }
+
+/** The welcome-screen scan succeeded; no financial sale has been attached yet. */
+class IntakePendingException : Exception("Phone details received. Complete the sale at the counter.")
+class IntakeCancelledException : Exception("Phone scan cancelled. This unassigned phone is released from management.")

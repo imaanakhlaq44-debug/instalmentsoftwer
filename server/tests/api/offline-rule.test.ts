@@ -108,6 +108,7 @@ async function enrolledDevice(deviceId?: string) {
     .send({ token: qr.body.token.token, dpcVersion: '2.4.0' });
   expect(res.status).toBe(201);
 
+  await anonymous().post('/api/dpc/check-in').set('Authorization', `Device ${res.body.deviceId}.${res.body.deviceToken}`).send({isDeviceOwner:true,setupComplete:true}).expect(200);
   return {
     deviceId: id,
     credential: `Device ${res.body.deviceId}.${res.body.deviceToken}`,

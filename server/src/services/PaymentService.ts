@@ -10,7 +10,7 @@ import { deviceManagementService } from './DeviceManagementService.js';
 import { AuditService } from './AuditService.js';
 import { DeviceReleaseService } from './DeviceReleaseService.js';
 import { AppError } from '../utils/AppError.js';
-import { amountOutstanding, DEFAULT_POLICY } from './InstallmentMath.js';
+import { amountOutstanding, DEFAULT_POLICY, toBusinessDate } from './InstallmentMath.js';
 
 export interface PaymentActor {
   userId: string;
@@ -191,6 +191,7 @@ export class PaymentService {
       if (!payment) throw AppError.notFound('Payment');
       if (payment.reversedAt) throw AppError.badRequest('This payment has been reversed and cannot be verified.');
       if (payment.status === 'VERIFIED') throw AppError.badRequest('This payment has already been verified.');
+      if (payment.status !== 'PENDING') throw AppError.badRequest('Only a pending payment can be verified.');
 
       const updated = await repo.payments.update(
         paymentId,
@@ -310,6 +311,9 @@ export class PaymentService {
     }
 
     const creditBalanceAdded = Math.max(0, remaining);
+    await repo.payments.update(payment.id, { allocationJson: JSON.stringify({
+      allocations, creditBefore: plan.creditBalance || 0, creditAfter: creditBalanceAdded,
+    }) }, tx);
 
     if (lateFeeTotal > 0) {
       await repo.payments.update(payment.id, { lateFeePortion: lateFeeTotal }, tx);
@@ -464,48 +468,31 @@ export class PaymentService {
       const plan = payment.planId ? await repo.installmentPlans.findById(payment.planId, tx) : undefined;
 
       if (plan) {
-        let toClawBack = payment.amount;
-        let feeClawBack = payment.lateFeePortion ?? 0;
-
-        // Reverse in the opposite order to allocation: newest installments first.
-        const installments = (await repo.installments.findByPlan(plan.id, tx))
-          .slice()
-          .sort((a, b) => b.installmentNumber - a.installmentNumber);
-
-        // Take the overpayment credit back before touching installments.
-        const creditReclaim = Math.min(plan.creditBalance || 0, toClawBack);
-        toClawBack -= creditReclaim;
-        if (creditReclaim > 0) {
-          await repo.installmentPlans.update(
-            plan.id,
-            { creditBalance: (plan.creditBalance || 0) - creditReclaim },
-            tx
-          );
+        if (!payment.allocationJson) {
+          throw AppError.conflict('This historical payment has no allocation history. Reconcile its allocations before reversing it.');
         }
-
-        for (const inst of installments) {
-          if (toClawBack <= 0) break;
-
-          const feeBack = Math.min(feeClawBack, inst.lateFeePaid ?? 0, toClawBack);
-          feeClawBack -= feeBack;
-          toClawBack -= feeBack;
-
-          const principalBack = Math.min(inst.amountPaid, toClawBack);
-          toClawBack -= principalBack;
-
-          if (feeBack === 0 && principalBack === 0) continue;
-
-          await repo.installments.update(
-            inst.id,
-            {
-              amountPaid: inst.amountPaid - principalBack,
-              lateFeePaid: (inst.lateFeePaid ?? 0) - feeBack,
-              status: inst.status === 'PAID' ? 'PENDING' : inst.status,
-              paidAt: inst.status === 'PAID' ? undefined : inst.paidAt,
-            },
-            tx
-          );
+        const footprint = JSON.parse(payment.allocationJson) as {
+          allocations: AllocationLine[]; creditBefore: number; creditAfter: number;
+        };
+        const creditDelta = footprint.creditAfter - footprint.creditBefore;
+        if ((plan.creditBalance || 0) < creditDelta) {
+          throw AppError.conflict('This payment credit has been used. Reverse the later payments first.');
         }
+        for (const line of footprint.allocations) {
+          const inst = await repo.installments.findById(line.installmentId, tx);
+          if (!inst || inst.amountPaid < line.appliedToPrincipal || (inst.lateFeePaid || 0) < line.appliedToLateFee) {
+            throw AppError.conflict('The schedule has changed. Reconcile this payment before reversing it.');
+          }
+          await repo.installments.update(inst.id, {
+            amountPaid: inst.amountPaid - line.appliedToPrincipal,
+            lateFeePaid: (inst.lateFeePaid || 0) - line.appliedToLateFee,
+            status: inst.graceDate < toBusinessDate(new Date()) ? 'OVERDUE' : 'PENDING',
+            paidAt: undefined,
+          }, tx);
+        }
+        await repo.installmentPlans.update(plan.id, {
+          creditBalance: (plan.creditBalance || 0) - creditDelta,
+        }, tx);
       }
 
       await repo.payments.update(
@@ -607,7 +594,7 @@ export class PaymentService {
    * the existing credit untouched (used by the reversal path, which adjusts the
    * credit itself).
    */
-  private static async recalculatePlan(planId: string, tx: Tx, newCreditBalance?: number) {
+  public static async recalculatePlan(planId: string, tx: Tx, newCreditBalance?: number) {
     const plan = await repo.installmentPlans.findById(planId, tx);
     if (!plan) throw AppError.notFound('Installment plan');
 
@@ -633,7 +620,7 @@ export class PaymentService {
         outstandingLateFees,
         creditBalance: newCreditBalance !== undefined ? newCreditBalance : plan.creditBalance,
         status,
-        closedAt: allPaid && !plan.closedAt ? new Date().toISOString() : plan.closedAt,
+        closedAt: allPaid ? (plan.closedAt || new Date().toISOString()) : undefined,
       },
       tx
     );
