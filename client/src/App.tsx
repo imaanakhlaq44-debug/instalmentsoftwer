@@ -12,14 +12,18 @@ import { ChangePasswordPage } from './pages/ChangePasswordPage.js';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage.js';
 import { DashboardPage } from './pages/DashboardPage.js';
 import { PlatformDashboardPage, PlatformOrdersPage, PlatformShopsPage } from './pages/PlatformDashboardPage.js';
+import { ShopAppHomePage } from './pages/ShopAppHomePage.js';
 import { useAuth } from './context/AuthContext.js';
+import { isNativeShopApp } from './utils/nativeApp.js';
 
 /**
- * Home. A super admin looking at every shop gets the platform view; once they
+ * Home. Inside the Android shop app it is the app's own home screen. On the
+ * website a super admin looking at every shop gets the platform view; once they
  * pick a shop, or for anyone else, it is that shop's own dashboard.
  */
 const HomePage: React.FC = () => {
   const { role, selectedDealerId, setSelectedDealerId } = useAuth();
+  if (isNativeShopApp()) return <ShopAppHomePage />;
   if (role !== 'SUPER_ADMIN') return <DashboardPage />;
   if (!selectedDealerId) return <PlatformDashboardPage />;
   return (
