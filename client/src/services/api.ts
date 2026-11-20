@@ -177,6 +177,25 @@ export class ApiService {
     });
   }
 
+  /** Whether this server can send password-reset codes by SMS. */
+  static passwordResetStatus() {
+    return this.request<{ available: boolean }>('/auth/password-reset/status');
+  }
+
+  static forgotPassword(email: string) {
+    return this.request<{ available: boolean; message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  static resetPasswordWithCode(email: string, code: string, newPassword: string) {
+    return this.request<{ success: true; message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ email, code, newPassword }),
+    });
+  }
+
   static registerDealer(data: unknown) {
     return this.request<any>('/auth/register-dealer', { method: 'POST', body: JSON.stringify(data) });
   }
@@ -293,6 +312,22 @@ export class ApiService {
 
   static deactivateCustomer(id: string) {
     return this.request<any>(`/customers/${id}`, { method: 'DELETE' });
+  }
+
+  /** The customer's photo as a data URL. A 404 means there is none. */
+  static getCustomerPhoto(id: string) {
+    return this.request<{ photo: string; updatedAt: string }>(`/customers/${id}/photo`);
+  }
+
+  static setCustomerPhoto(id: string, photo: string) {
+    return this.request<{ success: true }>(`/customers/${id}/photo`, {
+      method: 'PUT',
+      body: JSON.stringify({ photo }),
+    });
+  }
+
+  static deleteCustomerPhoto(id: string) {
+    return this.request<{ success: true }>(`/customers/${id}/photo`, { method: 'DELETE' });
   }
 
   // -------------------------------------------------------------------------

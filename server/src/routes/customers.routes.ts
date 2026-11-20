@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request } from 'express';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -11,6 +11,7 @@ import { EnrollmentService } from '../services/EnrollmentService.js';
 import { ContractService } from '../services/ContractService.js';
 import { LicenseService } from '../services/LicenseService.js';
 import { AuditService } from '../services/AuditService.js';
+import { CustomerPhotoService, customerPhotoSchema } from '../services/CustomerPhotoService.js';
 import { buildInstallmentSchedule } from '../services/InstallmentMath.js';
 import {
   requireDealerStaff, requireDealerAdmin, getAuthUser, resolveDealerScope,
@@ -178,7 +179,7 @@ customersRouter.get('/:id', asyncHandler(async (req, res) => {
     throw AppError.notFound('Customer');
   }
 
-  const [devices, plans, installments, payments, notifications, whatsappOpens] = await Promise.all([
+  const [devices, plans, installments, payments, notifications, whatsappOpens, hasPhoto] = await Promise.all([
     repo.devices.findByCustomer(customer.id),
     repo.installmentPlans.findByCustomer(customer.id),
     repo.installments.findMany({
@@ -200,10 +201,12 @@ customersRouter.get('/:id', asyncHandler(async (req, res) => {
           orderBy: { createdAt: 'desc' },
           take: 20,
         }),
+    // Whether there is a photo, not the photo: the image comes from /:id/photo.
+    user.role === 'CUSTOMER' ? Promise.resolve(false) : CustomerPhotoService.has(customer.id),
   ]);
 
   res.json({
-    customer: sanitizeCustomer(customer, user.role, user.customerId),
+    customer: { ...sanitizeCustomer(customer, user.role, user.customerId), hasPhoto },
     devices: devices.map((d) => sanitizeDevice(d, user.role)),
     plans,
     installments,
@@ -280,6 +283,11 @@ const createSchema = z.object({
     emergencyContactName: z.string().trim().min(3, 'Emergency contact name is required.').max(120).optional(),
     emergencyContactPhone: pakistaniPhoneSchema.optional(),
     notes: z.string().trim().max(1000).optional(),
+    /**
+     * The customer's photo, taken at the counter. Optional. For a returning
+     * customer a new photo replaces the one on file.
+     */
+    photo: customerPhotoSchema.optional(),
   }),
   device: z
     .object({
@@ -409,6 +417,10 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
       active: true,
       createdAt: nowIso,
     }, tx);
+
+    if (body.customer.photo) {
+      await CustomerPhotoService.save({ customerId: customer.id, dealerId, image: body.customer.photo }, tx);
+    }
 
     let device: Device | undefined;
     let plan: InstallmentPlan | undefined;
@@ -577,6 +589,72 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
     contractId: result.contractId,
     enrollmentToken,
   });
+}));
+
+// ---------------------------------------------------------------------------
+// PHOTO — taken at the counter; shown on the customer's page
+// ---------------------------------------------------------------------------
+
+/** The customer, after checking the caller is shop staff allowed to see them. */
+async function customerForStaff(req: Request): Promise<Customer> {
+  const customer = await repo.customers.findById(routeParam(req, 'id'));
+  if (!customer) throw AppError.notFound('Customer');
+  assertDealerAccess(req, customer.dealerId, 'customer');
+  return customer;
+}
+
+customersRouter.get('/:id/photo', requireDealerStaff, asyncHandler(async (req, res) => {
+  const customer = await customerForStaff(req);
+  const photo = await CustomerPhotoService.find(customer.id);
+  if (!photo) throw AppError.notFound('Customer photo');
+  // A photograph of a person: never kept by a shared cache.
+  res.set('Cache-Control', 'private, no-store');
+  res.json({ photo: photo.image, updatedAt: photo.updatedAt });
+}));
+
+const photoBodySchema = z.object({ photo: customerPhotoSchema });
+
+customersRouter.put('/:id/photo', requireDealerStaff, validateBody(photoBodySchema), asyncHandler(async (req, res) => {
+  const user = getAuthUser(req);
+  const customer = await customerForStaff(req);
+  const { photo } = req.body as z.infer<typeof photoBodySchema>;
+  const replacing = await CustomerPhotoService.has(customer.id);
+
+  await CustomerPhotoService.save({ customerId: customer.id, dealerId: customer.dealerId, image: photo });
+
+  await AuditService.log({
+    dealerId: customer.dealerId,
+    userId: user.userId,
+    actorName: user.name,
+    actorRole: user.role,
+    action: 'CUSTOMER_PHOTO_UPDATED',
+    targetType: 'CUSTOMER',
+    targetId: customer.id,
+    details: `${user.name} ${replacing ? 'replaced' : 'added'} the photo of ${customer.name}.`,
+    ipAddress: clientIp(req),
+  });
+
+  res.json({ success: true });
+}));
+
+customersRouter.delete('/:id/photo', requireDealerStaff, asyncHandler(async (req, res) => {
+  const user = getAuthUser(req);
+  const customer = await customerForStaff(req);
+  if (!(await CustomerPhotoService.remove(customer.id))) throw AppError.notFound('Customer photo');
+
+  await AuditService.log({
+    dealerId: customer.dealerId,
+    userId: user.userId,
+    actorName: user.name,
+    actorRole: user.role,
+    action: 'CUSTOMER_PHOTO_REMOVED',
+    targetType: 'CUSTOMER',
+    targetId: customer.id,
+    details: `${user.name} removed the photo of ${customer.name}.`,
+    ipAddress: clientIp(req),
+  });
+
+  res.json({ success: true });
 }));
 
 // ---------------------------------------------------------------------------

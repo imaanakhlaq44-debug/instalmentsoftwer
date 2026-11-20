@@ -13,6 +13,7 @@ import { GoogleIdGuideModal } from './GoogleIdGuideModal.js';
 import { SaleSignStep, SaleSignState } from '../contract/SaleSignStep.js';
 import { ImeiScanButton } from './ImeiScanButton.js';
 import { CnicScanButton } from './CnicScanButton.js';
+import { CustomerPhotoPicker } from '../customers/CustomerPhotoPicker.js';
 import {
   X,
   User,
@@ -79,6 +80,8 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
   const [recentModels, setRecentModels] = useState<RecentModel[]>([]);
   const [returning, setReturning] = useState<Returning | null>(null);
   const [lookingUp, setLookingUp] = useState(false);
+  // The customer's photo, as a shrunk JPEG data URL. Optional.
+  const [photo, setPhoto] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     customerName: '',
@@ -255,16 +258,20 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
         // server cannot tell which shop the sale belongs to and refuses it.
         dealerId: dealerParam,
         // A returning customer's details are on file: the server uses those.
-        customer: returning
-          ? { name: formData.customerName, cnic: formData.customerCnic }
-          : {
-              name: formData.customerName,
-              phone: formData.customerPhone,
-              cnic: formData.customerCnic,
-              address: formData.customerAddress,
-              emergencyContactName: formData.emergencyName,
-              emergencyContactPhone: formData.emergencyPhone,
-            },
+        customer: {
+          ...(returning
+            ? { name: formData.customerName, cnic: formData.customerCnic }
+            : {
+                name: formData.customerName,
+                phone: formData.customerPhone,
+                cnic: formData.customerCnic,
+                address: formData.customerAddress,
+                emergencyContactName: formData.emergencyName,
+                emergencyContactPhone: formData.emergencyPhone,
+              }),
+          // A returning customer's new photo replaces the one on file.
+          ...(photo ? { photo } : {}),
+        },
         device: {
           brand: formData.brand,
           model: formData.model,
@@ -642,6 +649,20 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess }) 
                   </div>
                 </div>
               )}
+
+              <div>
+                <p className="field-label">Customer photo (optional)</p>
+                <CustomerPhotoPicker
+                  value={photo}
+                  onChange={setPhoto}
+                  disabled={submitting}
+                  hint={
+                    returning
+                      ? 'A new photo replaces the one on file.'
+                      : 'Take the customer’s photo with the camera, or choose one already on this device.'
+                  }
+                />
+              </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className={returning ? 'sm:col-span-2' : ''}>

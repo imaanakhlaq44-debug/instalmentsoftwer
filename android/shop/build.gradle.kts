@@ -18,8 +18,8 @@ android {
         applicationId = "pk.almassdm.shop"
         minSdk = 26
         targetSdk = 36
-        versionCode = 6
-        versionName = "1.2.0"
+        versionCode = 7
+        versionName = "1.2.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "APP_ORIGIN", "\"https://app.almassdm.pro\"")
     }
@@ -39,7 +39,8 @@ android {
         debug {
             applicationIdSuffix = ".debug"; versionNameSuffix = "-test"
             val testOrigin = (project.findProperty("almassdm.shopTestOrigin") as String?) ?: "https://app.almassdm.pro"
-            require(testOrigin == "https://app.almassdm.pro" || testOrigin.matches(Regex("http://10\\.0\\.2\\.2:[0-9]{4,5}")))
+            // 10.0.2.2 is the emulator's view of this computer; 127.0.0.1 is a real phone on USB after `adb reverse`.
+            require(testOrigin == "https://app.almassdm.pro" || testOrigin.matches(Regex("http://(10\\.0\\.2\\.2|127\\.0\\.0\\.1):[0-9]{4,5}")))
             buildConfigField("String", "APP_ORIGIN", "\"$testOrigin\"")
         }
         release {

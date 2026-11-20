@@ -123,6 +123,19 @@ const authLimiter = rateLimit({
 });
 
 /**
+ * Forgot password is public and always answers 200, so the login limiter (which
+ * skips successes) would never stop it. Every request counts here: a code is an
+ * SMS someone pays for, and six digits must not be guessed at speed.
+ */
+const passwordResetLimiter = rateLimit({
+  windowMs: config.passwordResetRateLimit.windowMs,
+  max: config.passwordResetRateLimit.max,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many password-reset attempts from this network. Please wait and try again.', code: 'RESET_RATE_LIMITED' },
+});
+
+/**
  * Sign-up is public and, unlike sign-in, a success is the thing to limit: the
  * login limiter skips successful requests, so without this one address could
  * create shops without end.
@@ -197,6 +210,7 @@ app.get('/api/health', (_req, res) => {
 // Auth router handles its own per-route protection: /login and /register-dealer
 // are public, everything else inside it requires a session.
 app.use('/api/auth/register-dealer', signupLimiter);
+app.use(['/api/auth/forgot-password', '/api/auth/reset-password'], passwordResetLimiter);
 app.use('/api/auth', authLimiter, authRouter);
 
 /**

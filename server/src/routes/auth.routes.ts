@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 
 import { AuthService, toPublicUser } from '../services/AuthService.js';
+import { PasswordResetService } from '../services/PasswordResetService.js';
 import { repo } from '../db/repositories/index.js';
 import { runInTransaction } from '../db/prisma.js';
 import { Dealer } from '../types/index.js';
@@ -33,6 +34,50 @@ authRouter.post(
     const { email, password } = req.body as z.infer<typeof loginSchema>;
     const session = await AuthService.login(email, password, clientIp(req));
     res.json(session);
+  })
+);
+
+// ---------------------------------------------------------------------------
+// FORGOT PASSWORD — a code by SMS to the account's own mobile number
+// ---------------------------------------------------------------------------
+
+/** Whether this server can send reset codes at all (it needs an SMS gateway). */
+authRouter.get('/password-reset/status', (_req, res) => {
+  res.json({ available: PasswordResetService.isAvailable() });
+});
+
+const forgotSchema = z.object({
+  email: z.string().trim().email('Please enter a valid email address.').max(255),
+});
+
+authRouter.post(
+  '/forgot-password',
+  validateBody(forgotSchema),
+  asyncHandler(async (req, res) => {
+    const { email } = req.body as z.infer<typeof forgotSchema>;
+    const result = await PasswordResetService.request(email, clientIp(req));
+    res.json({
+      ...result,
+      // The same words whether or not the email is registered.
+      message: result.available
+        ? 'If this email belongs to an account, a 6-digit code has been sent by SMS to the mobile number on that account.'
+        : 'Password reset by SMS is not switched on for this server yet.',
+    });
+  })
+);
+
+const resetSchema = z.object({
+  email: z.string().trim().email('Please enter a valid email address.').max(255),
+  code: z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit code from the SMS.'),
+  newPassword: z.string().min(8, 'New password must be at least 8 characters.').max(128),
+});
+
+authRouter.post(
+  '/reset-password',
+  validateBody(resetSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as z.infer<typeof resetSchema>;
+    res.json(await PasswordResetService.confirm({ ...body, ipAddress: clientIp(req) }));
   })
 );
 

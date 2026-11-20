@@ -9,6 +9,7 @@ import { ErrorBoundary } from './components/ErrorBoundary.js';
 import { LoginPage } from './pages/LoginPage.js';
 import { RegisterPage } from './pages/RegisterPage.js';
 import { ChangePasswordPage } from './pages/ChangePasswordPage.js';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage.js';
 import { DashboardPage } from './pages/DashboardPage.js';
 import { PlatformDashboardPage, PlatformOrdersPage, PlatformShopsPage } from './pages/PlatformDashboardPage.js';
 import { useAuth } from './context/AuthContext.js';
@@ -72,6 +73,7 @@ export function App() {
             {/* Public */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
             {/* Signed in, but outside the dashboard shell */}
             <Route

@@ -266,6 +266,7 @@ model Dealer {
   contracts        Contract[]
   testimonial      Testimonial?
   handsetTests     HandsetTest[]
+  customerPhotos   CustomerPhoto[]
 
   @@index([active])
   @@map("dealers")
@@ -408,12 +409,32 @@ model User {
   passwordChangedAt   DateTime? @map("password_changed_at") @db.Timestamptz(3)
   createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  dealer   Dealer?   @relation(fields: [dealerId], references: [id], onDelete: SetNull)
-  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  dealer         Dealer?         @relation(fields: [dealerId], references: [id], onDelete: SetNull)
+  customer       Customer?       @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  passwordResets PasswordReset[]
 
   @@index([dealerId])
   @@index([role])
   @@map("users")
+}
+
+/// A "forgot password" code, sent by SMS to the account's own mobile number.
+///
+/// Only a hash of the code is kept. A code works once, for fifteen minutes,
+/// and is dead after five wrong guesses; asking for a new one kills the old.
+model PasswordReset {
+  id        String    @id
+  userId    String    @map("user_id")
+  codeHash  String    @map("code_hash") @db.VarChar(128)
+  attempts  Int       @default(0)
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("password_resets")
 }
 
 model Customer {
@@ -439,6 +460,7 @@ model Customer {
   enrollmentTokens EnrollmentToken[]
   logins           User[]
   contracts        Contract[]
+  photo            CustomerPhoto?
 
   // The same person must not be entered twice at one counter.
   @@unique([dealerId, cnic], name: "customer_dealer_cnic")
@@ -446,6 +468,26 @@ model Customer {
   @@index([dealerId, name])
   @@index([phone])
   @@map("customers")
+}
+
+/// The customer's photograph, taken at the counter when the phone is sold.
+///
+/// Its own table rather than a column on `customers`: a customer list reads
+/// every row of that table, and a hundred-odd kilobytes of JPEG per customer
+/// would ride along on every page of it. The photo is fetched on its own, only
+/// by the screen that shows it.
+model CustomerPhoto {
+  customerId String   @id @map("customer_id")
+  dealerId   String   @map("dealer_id")
+  /// A JPEG data URL, already shrunk in the browser.
+  image      String   @db.Text
+  updatedAt  DateTime @map("updated_at") @db.Timestamptz(3)
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  dealer   Dealer   @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+
+  @@index([dealerId])
+  @@map("customer_photos")
 }
 
 // ---------------------------------------------------------------------------

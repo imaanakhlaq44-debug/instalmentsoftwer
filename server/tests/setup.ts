@@ -26,6 +26,7 @@ process.env.SEED_DEFAULT_PASSWORD = 'AlmasSdm#2026';
 process.env.RATE_LIMIT_MAX = '100000';
 process.env.LOGIN_RATE_LIMIT_MAX = '100000';
 process.env.SIGNUP_RATE_LIMIT_MAX = '100000';
+process.env.PASSWORD_RESET_RATE_LIMIT_MAX = '100000';
 
 // bcrypt cost dominates the runtime of every login. 4 is the minimum and keeps
 // the suite in seconds rather than minutes; it is a test-only value.

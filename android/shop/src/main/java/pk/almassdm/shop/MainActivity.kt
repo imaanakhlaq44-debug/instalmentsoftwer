@@ -164,7 +164,7 @@ class MainActivity : AppCompatActivity() {
         }
         root.postDelayed({ if (!isFinishing && !isDestroyed) {
             val last = preferences.getString("last_route",null)
-            if (last != null && last !in listOf("/login","/register","/privacy","/account-deletion")) showWeb(last) else showWelcome()
+            if (last != null && last !in listOf("/login","/register","/forgot-password","/privacy","/account-deletion")) showWeb(last) else showWelcome()
         } }, if (ValueAnimator.areAnimatorsEnabled()) 950L else 0L)
     }
 
@@ -259,6 +259,8 @@ class MainActivity : AppCompatActivity() {
             override fun onShowFileChooser(view:WebView,callback:ValueCallback<Array<Uri>>,params:FileChooserParams):Boolean {
                 if(!NavigationPolicy.isInternal(view.url))return false
                 finishFileSelection(null); fileCallback=callback
+                // A page button marked `capture` asked for the camera itself: no "photo or file?" question.
+                if(params.isCaptureEnabled) { requestPhoto(); return true }
                 AlertDialog.Builder(this@MainActivity).setTitle("Add a photo or document")
                     .setItems(arrayOf("Take a photo","Choose a file")) { _,which -> if(which==0)requestPhoto()else chooseFile(params.acceptTypes) }
                     .setOnCancelListener { finishFileSelection(null) }.show()

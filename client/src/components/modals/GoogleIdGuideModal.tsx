@@ -6,8 +6,10 @@ import {
   ExternalLink,
   HelpCircle,
   Key,
+  Laptop,
   ShieldAlert,
   ShieldCheck,
+  Smartphone,
   X,
 } from 'lucide-react';
 
@@ -19,15 +21,39 @@ interface GoogleIdGuideModalProps {
 
 type GuideLang = 'both' | 'roman' | 'en';
 
-const PEOPLE_API_EXPLORER_URL = 'https://developers.google.com/people/api/rest/v1/people/get';
+const GOOGLE_MAPS_URL = 'https://www.google.com/maps';
+const EXAMPLE_ID = '118223344556677889900';
 
+/**
+ * The numeric Google Account ID inside a Google Maps "Your contributions"
+ * link: https://www.google.com/maps/contrib/118223344556677889900/reviews…
+ * Also accepts the bare number pasted on its own.
+ */
+export function extractGoogleAccountId(text: string): string | null {
+  const trimmed = text.trim();
+  const fromLink = trimmed.match(/contrib\/(\d{15,25})/);
+  if (fromLink) return fromLink[1];
+  const bare = trimmed.match(/^\d{15,25}$/);
+  return bare ? bare[0] : null;
+}
+
+/**
+ * How a shop finds its Google Account ID, the number Factory Reset Protection
+ * needs.
+ *
+ * Google Maps shows it with no developer tools at all: the shop's own
+ * "Your contributions" page has it in the address bar. So the guide is four
+ * plain steps, the same on a computer and — with Chrome's "Desktop site"
+ * switched on — on a phone, plus a box that pulls the number out of the link.
+ */
 export const GoogleIdGuideModal: React.FC<GoogleIdGuideModalProps> = ({
   isOpen,
   onClose,
   onGoToSettings,
 }) => {
   const [lang, setLang] = useState<GuideLang>('both');
-  const [copiedField, setCopiedField] = useState<'resourceName' | 'personFields' | null>(null);
+  const [pasted, setPasted] = useState('');
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -43,13 +69,28 @@ export const GoogleIdGuideModal: React.FC<GoogleIdGuideModalProps> = ({
   const showEn = lang === 'both' || lang === 'en';
   const showRo = lang === 'both' || lang === 'roman';
 
-  const copyValue = (field: 'resourceName' | 'personFields', value: string) => {
+  const foundId = pasted ? extractGoogleAccountId(pasted) : null;
+
+  const copyId = (value: string) => {
     navigator.clipboard?.writeText(value);
-    setCopiedField(field);
-    window.setTimeout(() => {
-      setCopiedField((curr) => (curr === field ? null : curr));
-    }, 1800);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1800);
   };
+
+  /** One numbered step, in whichever languages are showing. */
+  const step = (num: number, title: string, en: React.ReactNode, ro: React.ReactNode, extra?: React.ReactNode) => (
+    <li className="flex gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-ink-900 text-xs font-extrabold text-white">
+        {num}
+      </span>
+      <div className="min-w-0 flex-1 space-y-1.5">
+        <p className="text-sm font-extrabold text-slate-900">{title}</p>
+        {showEn && <p className="text-slate-600">{en}</p>}
+        {showRo && <p className="text-slate-800">{ro}</p>}
+        {extra}
+      </div>
+    </li>
+  );
 
   return (
     <div
@@ -78,8 +119,8 @@ export const GoogleIdGuideModal: React.FC<GoogleIdGuideModalProps> = ({
                 {lang === 'roman'
                   ? 'Google Account ID Kaise Nikalein'
                   : lang === 'en'
-                  ? 'How to Get Your Numeric Google Account ID'
-                  : 'Google Account ID Guide — ID Kahan Se Aur Kaise Lein'}
+                  ? 'How to Get Your Google Account ID'
+                  : 'Google Account ID — 2 minute ka kaam'}
               </h2>
             </div>
           </div>
@@ -133,172 +174,175 @@ export const GoogleIdGuideModal: React.FC<GoogleIdGuideModalProps> = ({
             </div>
             {showEn && (
               <p>
-                <strong>Do NOT enter your Gmail address or phone number.</strong> Android requires your{' '}
-                <strong>21-digit numeric Google Account ID</strong> (example:{' '}
-                <code className="rounded bg-amber-100 px-1 py-0.5 font-mono font-bold">118223344556677889900</code>).
-                Use a dedicated <strong>Shop Gmail with 2-Step Verification ON</strong> — never your personal email.
+                <strong>Do NOT enter your Gmail address or phone number.</strong> Android needs the{' '}
+                <strong>21-digit Google Account ID</strong> (example:{' '}
+                <code className="rounded bg-amber-100 px-1 py-0.5 font-mono font-bold">{EXAMPLE_ID}</code>). Use a
+                separate <strong>Shop Gmail with 2-Step Verification ON</strong> — never your personal email.
               </p>
             )}
             {showRo && (
               <p className={showEn ? 'border-t border-amber-200/80 pt-1.5 text-amber-900' : ''}>
                 <strong>Yahan @gmail.com ya phone number har giz mat likhein!</strong> Android sirf Google account ka{' '}
                 <strong>21 hindson wala number ID</strong> qabool karta hai (misaal:{' '}
-                <code className="rounded bg-amber-100 px-1 py-0.5 font-mono font-bold">118223344556677889900</code>).
+                <code className="rounded bg-amber-100 px-1 py-0.5 font-mono font-bold">{EXAMPLE_ID}</code>).
                 Dukaan ke liye ek <strong>alag Shop Gmail</strong> banayein aur us par{' '}
                 <strong>2-Step Verification ON</strong> rakhein — apna zati email na daalein.
               </p>
             )}
           </div>
 
+          {/* Where to do it */}
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            <div className="flex items-start gap-2.5 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+              <Laptop className="mt-0.5 h-4 w-4 shrink-0 text-blue-700" aria-hidden="true" />
+              <p className="text-slate-700">
+                <strong className="text-slate-900">Laptop / Computer:</strong>{' '}
+                {showRo ? 'Google Chrome kholein aur seedha neeche wale steps karein.' : 'Open Google Chrome and follow the steps below.'}
+              </p>
+            </div>
+            <div className="flex items-start gap-2.5 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+              <Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-blue-700" aria-hidden="true" />
+              <p className="text-slate-700">
+                <strong className="text-slate-900">Mobile:</strong>{' '}
+                {showRo ? (
+                  <>
+                    Chrome kholein → upar <strong>⋮ (3 dots)</strong> → <strong>&ldquo;Desktop site&rdquo;</strong> par
+                    tick lagayein. Phir yehi steps.
+                  </>
+                ) : (
+                  <>
+                    Open Chrome → <strong>⋮ (3 dots)</strong> → tick <strong>&ldquo;Desktop site&rdquo;</strong>. Then
+                    the same steps.
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+
           {/* 4 Steps */}
-          <div className="space-y-3">
-            {/* Step 1 */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-extrabold text-slate-900 text-sm">
-                  1. Open Google People API Explorer
-                </p>
-                <a
-                  href={PEOPLE_API_EXPLORER_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-blue-500"
-                >
-                  Open Google ID Finder <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                </a>
-              </div>
-              {showEn && (
-                <p className="text-slate-600">
-                  Open Google&apos;s official API Explorer page above and make sure you are signed in with your{' '}
-                  <strong>Shop Gmail account</strong> (the account allowed to unlock reset phones).
-                </p>
-              )}
-              {showRo && (
-                <p className="text-slate-800">
-                  Upar diye gaye button se Google ka official page kholein aur apni{' '}
-                  <strong>Dukaan wali Gmail</strong> se login karein (woh Gmail jis se format shuda phone khulwana ho).
-                </p>
-              )}
-            </div>
-
-            {/* Step 2 */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-2.5">
-              <p className="font-extrabold text-slate-900 text-sm">
-                2. Fill the 2 fields in &ldquo;Try this method&rdquo;
-              </p>
-              {showEn && (
-                <p className="text-slate-600">
-                  On the right side of Google&apos;s page (or below on mobile) inside <strong>Try this method</strong>,
-                  enter these exact two values:
-                </p>
-              )}
-              {showRo && (
-                <p className="text-slate-800">
-                  Google ke page par <strong>&ldquo;Try this method&rdquo;</strong> wale dabbe mein yeh dono lafz bilkul
-                  isi tarah likhein (neeche Copy button daba kar bhi le sakte hain):
-                </p>
-              )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                  <div>
-                    <span className="block text-[11px] font-semibold text-slate-500">resourceName</span>
-                    <code className="font-mono font-extrabold text-slate-900 text-xs">people/me</code>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => copyValue('resourceName', 'people/me')}
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-100"
-                  >
-                    {copiedField === 'resourceName' ? (
-                      <>
-                        <Check className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" /> Copied
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="h-3.5 w-3.5" aria-hidden="true" /> Copy
-                      </>
-                    )}
-                  </button>
-                </div>
-                <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                  <div>
-                    <span className="block text-[11px] font-semibold text-slate-500">personFields</span>
-                    <code className="font-mono font-extrabold text-slate-900 text-xs">metadata</code>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => copyValue('personFields', 'metadata')}
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-100"
-                  >
-                    {copiedField === 'personFields' ? (
-                      <>
-                        <Check className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" /> Copied
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="h-3.5 w-3.5" aria-hidden="true" /> Copy
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-1.5">
-              <p className="font-extrabold text-slate-900 text-sm">
-                3. Click &ldquo;Execute&rdquo; and allow permission
-              </p>
-              {showEn && (
-                <p className="text-slate-600">
-                  Scroll down in that panel and click the blue <strong>Execute</strong> button. If Google pops up a sign-in
-                  or permission prompt, select your Shop Gmail and click <strong>Allow</strong>.
-                </p>
-              )}
-              {showRo && (
-                <p className="text-slate-800">
-                  Neeche blue rang ka <strong>Execute</strong> button dabayein. Agar Google ijazat mange to apni Shop Gmail
-                  chunein aur <strong>Allow / Continue</strong> kar dein.
-                </p>
-              )}
-            </div>
-
-            {/* Step 4 + Visual Example */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-2.5">
-              <p className="font-extrabold text-slate-900 text-sm">
-                4. Copy only the digits after <code className="font-mono">people/</code>
-              </p>
-              {showEn && (
-                <p className="text-slate-600">
-                  In the green <code className="rounded bg-emerald-50 px-1 font-mono text-emerald-800">200</code> result,
-                  copy only the long number after <strong>people/</strong>, paste it in Shop Settings, and click Save Policy.
-                </p>
-              )}
-              {showRo && (
-                <p className="text-slate-800">
-                  Sabz rang ke <code className="rounded bg-emerald-50 px-1 font-mono text-emerald-800">200</code> jawab mein{' '}
-                  <strong>people/</strong> ke baad likha hua lamba number copy karein, phir Settings mein paste karke{' '}
-                  <strong>Save Policy Settings</strong> dabayein.
-                </p>
-              )}
-
-              <div className="rounded-xl bg-slate-900 p-3 font-mono text-[11px] text-slate-200 space-y-1">
-                <div className="text-slate-400">{'// Result shown on Google page:'}</div>
-                <div>
-                  {'"resourceName": "people/'}
+          <ol className="space-y-2.5">
+            {step(
+              1,
+              'Google Maps kholein / Open Google Maps',
+              <>
+                In Chrome, search <strong>Google Maps</strong> and open it. Make sure you are signed in with your{' '}
+                <strong>Shop Gmail</strong>.
+              </>,
+              <>
+                Chrome mein <strong>Google Maps</strong> search karke kholein. Check karein ke{' '}
+                <strong>Dukaan wali Gmail</strong> se login hai.
+              </>,
+              <a
+                href={GOOGLE_MAPS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-blue-500"
+              >
+                Open Google Maps <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+              </a>
+            )}
+            {step(
+              2,
+              '3 dots → "Your contributions"',
+              <>
+                Click the <strong>⋮ (3 dots)</strong> / your profile picture at the <strong>top right</strong>, then
+                click <strong>Your contributions</strong>.
+              </>,
+              <>
+                <strong>Upar right side</strong> par <strong>⋮ (3 dots)</strong> / apni profile photo par click karein,
+                phir <strong>&ldquo;Your contributions&rdquo;</strong> par click karein.
+              </>
+            )}
+            {step(
+              3,
+              'URL se number copy karein / Copy the number from the URL',
+              <>
+                Look at the <strong>address bar</strong>. Copy only the long number that comes right after{' '}
+                <code className="font-mono">contrib/</code>.
+              </>,
+              <>
+                Upar <strong>address bar (URL)</strong> mein dekhein. <code className="font-mono">contrib/</code> ke
+                baad jo lamba number hai, sirf woh copy karein.
+              </>,
+              <div className="mt-1 overflow-x-auto rounded-xl bg-slate-900 p-3 font-mono text-[11px] text-slate-200">
+                <span className="whitespace-nowrap">
+                  google.com/maps/contrib/
                   <span className="rounded bg-emerald-500/30 px-1 font-extrabold text-emerald-300 underline decoration-emerald-400">
-                    118223344556677889900
+                    {EXAMPLE_ID}
                   </span>
-                  {'"'}
+                  /reviews
+                </span>
+                <div className="pt-1.5 font-sans font-bold text-emerald-300">
+                  ✓ Copy this / Yeh copy karein: {EXAMPLE_ID}
                 </div>
-                <div className="pt-1 text-emerald-300 font-sans font-bold">
-                  ✓ Copy this / Yeh copy karein: 118223344556677889900
-                </div>
-                <div className="text-rose-300 font-sans font-bold">
-                  ✕ Do NOT paste / Yeh mat daalein: people/..., yourshop@gmail.com
+                <div className="font-sans font-bold text-rose-300">
+                  ✕ Do NOT paste / Yeh mat daalein: contrib/..., yourshop@gmail.com
                 </div>
               </div>
-            </div>
+            )}
+            {step(
+              4,
+              'Settings mein paste karein / Paste it in Settings',
+              <>
+                Paste the number in <strong>Settings → Google Account ID</strong> and click <strong>Save</strong>.
+              </>,
+              <>
+                Number ko <strong>Settings → Google Account ID</strong> mein paste karein aur <strong>Save</strong>{' '}
+                dabayein.
+              </>
+            )}
+          </ol>
+
+          {/* Paste helper */}
+          <div className="rounded-2xl border border-blue-200 bg-blue-50/60 p-4 space-y-2">
+            <label htmlFor="google-id-link" className="block text-sm font-extrabold text-slate-900">
+              Pura link yahan paste karein — number hum nikal denge
+            </label>
+            {showEn && (
+              <p className="text-slate-600">Not sure which part to copy? Paste the whole link and we&apos;ll pick out the ID.</p>
+            )}
+            <input
+              id="google-id-link"
+              type="text"
+              inputMode="url"
+              autoComplete="off"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              value={pasted}
+              onChange={(e) => setPasted(e.target.value)}
+              placeholder="https://www.google.com/maps/contrib/…"
+              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none"
+            />
+            {pasted && foundId && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2">
+                <div>
+                  <span className="block text-[11px] font-semibold text-emerald-700">Your Google Account ID</span>
+                  <code className="font-mono text-sm font-extrabold text-emerald-900">{foundId}</code>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => copyId(foundId)}
+                  className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-white px-2.5 py-1 text-[11px] font-bold text-emerald-800 hover:bg-emerald-100"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-3.5 w-3.5" aria-hidden="true" /> Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3.5 w-3.5" aria-hidden="true" /> Copy ID
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+            {pasted && !foundId && (
+              <p role="alert" className="font-semibold text-rose-700">
+                Is link mein ID nahi mili. &ldquo;Your contributions&rdquo; page ka link copy karein (us mein{' '}
+                <code className="font-mono">/contrib/</code> likha hota hai).
+              </p>
+            )}
           </div>
 
           {/* Honest OS Limitation / Android 15+ Note */}
@@ -355,4 +399,3 @@ export const GoogleIdGuideModal: React.FC<GoogleIdGuideModalProps> = ({
     </div>
   );
 };
-
