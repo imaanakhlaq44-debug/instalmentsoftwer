@@ -1,7 +1,9 @@
 import { repo } from '../db/repositories/index.js';
 import { config } from '../config.js';
 import { Notification, SmsChannel } from '../types/index.js';
-import { HttpSmsProvider, SmsProvider, TwilioSmsProvider } from './sms/SmsProvider.js';
+import {
+  HttpSmsProvider, OutboundSms, SmsProvider, SmsSendResult, TwilioSmsProvider,
+} from './sms/SmsProvider.js';
 
 /**
  * Drains the notification queue through an SMS aggregator account.
@@ -63,6 +65,20 @@ export class SmsAggregatorService {
 
   public static isConfigured(): boolean {
     return this.provider !== null;
+  }
+
+  /**
+   * Sends one message now, outside the queue, and says whether the gateway
+   * took it. For a message that is useless late and must never sit in a shop's
+   * outbox where a paired phone could read it — a password-reset code.
+   */
+  public static async sendNow(sms: OutboundSms): Promise<SmsSendResult> {
+    if (!this.provider) return { accepted: false, reason: 'No SMS gateway is configured.', retryable: false };
+    try {
+      return await this.provider.send(sms);
+    } catch (err) {
+      return { accepted: false, reason: err instanceof Error ? err.message : 'SMS gateway error.', retryable: true };
+    }
   }
 
   public static describe(): AggregatorDescription {

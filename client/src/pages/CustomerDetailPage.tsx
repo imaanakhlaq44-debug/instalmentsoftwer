@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext.js';
 import { ReceiptModal } from '../components/modals/ReceiptModal.js';
 import { EditCustomerModal } from '../components/modals/EditCustomerModal.js';
 import { WhatsAppButton } from '../components/whatsapp/WhatsAppButton.js';
+import { CustomerPhotoCard } from '../components/customers/CustomerPhotoCard.js';
 
 const rs = (n: number) => `Rs. ${Math.round(n || 0).toLocaleString('en-PK')}`;
 
@@ -116,6 +117,9 @@ export const CustomerDetailPage: React.FC = () => {
           >
             <ArrowLeft className="rtl:rotate-180 w-4 h-4" />
           </button>
+          {isStaff && (
+            <CustomerPhotoCard customerId={customer.id} customerName={customer.name} hasPhoto={!!customer.hasPhoto} />
+          )}
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="text-xl font-bold text-slate-900">{customer.name}</h1>

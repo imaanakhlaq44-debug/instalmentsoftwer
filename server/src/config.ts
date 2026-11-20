@@ -213,6 +213,12 @@ export const config = {
     max: num(process.env.SIGNUP_RATE_LIMIT_MAX, 5),
   },
 
+  /** Forgot-password requests and code attempts per address. Every request counts. */
+  passwordResetRateLimit: {
+    windowMs: num(process.env.PASSWORD_RESET_RATE_LIMIT_WINDOW_MINUTES, 15) * 60_000,
+    max: num(process.env.PASSWORD_RESET_RATE_LIMIT_MAX, 10),
+  },
+
   loginRateLimit: {
     windowMs: num(process.env.LOGIN_RATE_LIMIT_WINDOW_MINUTES, 15) * 60_000,
     max: num(process.env.LOGIN_RATE_LIMIT_MAX, 10),

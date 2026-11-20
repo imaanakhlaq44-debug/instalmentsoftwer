@@ -16,7 +16,9 @@ export const LoginPage: React.FC = () => {
   const { login, isAuthenticated, isBootstrapping } = useAuth();
   const location = useLocation();
 
-  const [email, setEmail] = useState('');
+  // Arriving from "Forgot password": say it worked and keep the email typed.
+  const arrival = location.state as { notice?: string; email?: string } | null;
+  const [email, setEmail] = useState(arrival?.email ?? '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -77,6 +79,14 @@ export const LoginPage: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="surface p-6 shadow-hairline sm:p-7" noValidate>
+          {arrival?.notice && !error && (
+            <div
+              role="status"
+              className="mb-5 rounded-md border border-positive-200 bg-positive-50 px-3.5 py-2.5 text-body text-positive-700"
+            >
+              {arrival.notice}
+            </div>
+          )}
           {error && (
             <div
               role="alert"
@@ -94,7 +104,7 @@ export const LoginPage: React.FC = () => {
               id="email"
               type="email"
               autoComplete="username"
-              autoFocus
+              autoFocus={!arrival?.email}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={submitting}
@@ -104,9 +114,14 @@ export const LoginPage: React.FC = () => {
           </div>
 
           <div className="mb-6">
-            <label htmlFor="password" className="field-label">
-              Password
-            </label>
+            <div className="flex items-baseline justify-between gap-2">
+              <label htmlFor="password" className="field-label">
+                Password
+              </label>
+              <Link to="/forgot-password" className="text-caption font-bold text-accent-700 hover:underline">
+                Forgot password?
+              </Link>
+            </div>
             <div className="relative">
               <input
                 id="password"
@@ -137,10 +152,6 @@ export const LoginPage: React.FC = () => {
             {submitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
             {submitting ? 'Signing in…' : 'Sign in'}
           </button>
-
-          <p className="mt-5 text-center text-caption text-ink-400">
-            Forgotten your password? Your shop administrator can reset it.
-          </p>
         </form>
 
         <Link to="/register" className="btn-secondary mt-5 w-full py-2.5">
