@@ -25,6 +25,7 @@ async function enrol(deviceId: string) {
   expect(qr.status).toBe(201);
   const res = await anonymous().post('/api/dpc/enroll').send({ token: qr.body.token.token, dpcVersion: '1.1.0' });
   expect(res.status).toBe(201);
+  await anonymous().post('/api/dpc/check-in').set('Authorization', `Device ${res.body.deviceId}.${res.body.deviceToken}`).send({isDeviceOwner:true,setupComplete:true}).expect(200);
   return `Device ${res.body.deviceId}.${res.body.deviceToken}`;
 }
 

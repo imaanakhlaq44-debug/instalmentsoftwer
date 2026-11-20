@@ -149,6 +149,7 @@ export class AuthService {
   public static issueToken(user: User): string {
     const payload: AuthenticatedUser = {
       userId: user.id,
+      sessionVersion: user.sessionVersion ?? 0,
       dealerId: user.dealerId,
       customerId: user.customerId,
       role: user.role,
@@ -210,6 +211,7 @@ export class AuthService {
     }
 
     await repo.users.update(user.id, {
+      sessionVersion: (user.sessionVersion ?? 0) + 1,
       passwordHash: hashPassword(params.newPassword),
       passwordChangedAt: new Date().toISOString(),
       mustChangePassword: false,
@@ -256,6 +258,7 @@ export class AuthService {
     }
 
     await repo.users.update(target.id, {
+      sessionVersion: (target.sessionVersion ?? 0) + 1,
       passwordHash: hashPassword(params.temporaryPassword),
       passwordChangedAt: new Date().toISOString(),
       mustChangePassword: true,

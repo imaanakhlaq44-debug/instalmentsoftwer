@@ -42,6 +42,8 @@ enum UserRole {
   SUPER_ADMIN
   DEALER_ADMIN
   DEALER_STAFF
+  /// Shop staff who may look at the shop's records but never change them.
+  DEALER_VIEWER
   CUSTOMER
 }
 
@@ -234,6 +236,8 @@ enum ContractStatus {
 // ---------------------------------------------------------------------------
 
 model Dealer {
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  saleDrafts SaleDraft[]
   id           String   @id
   name         String   @db.VarChar(120)
   code         String   @unique @db.VarChar(40)
@@ -267,6 +271,7 @@ model Dealer {
   testimonial      Testimonial?
   handsetTests     HandsetTest[]
   customerPhotos   CustomerPhoto[]
+  phoneIntakes     PhoneIntake[]
 
   @@index([active])
   @@map("dealers")
@@ -393,6 +398,7 @@ model PlatformSetting {
 }
 
 model User {
+  saleDrafts SaleDraft[]
   id                  String    @id
   dealerId            String?   @map("dealer_id")
   customerId          String?   @map("customer_id")
@@ -406,6 +412,7 @@ model User {
   failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
   lockedUntil         DateTime? @map("locked_until") @db.Timestamptz(3)
   mustChangePassword  Boolean   @default(false) @map("must_change_password")
+  sessionVersion      Int       @default(0) @map("session_version")
   passwordChangedAt   DateTime? @map("password_changed_at") @db.Timestamptz(3)
   createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
@@ -495,6 +502,7 @@ model CustomerPhoto {
 // ---------------------------------------------------------------------------
 
 model Device {
+  commandVersion Int @default(0) @map("command_version")
   id               String          @id
   dealerId         String          @map("dealer_id")
   customerId       String          @map("customer_id")
@@ -603,6 +611,7 @@ model Device {
   enrollmentTokens EnrollmentToken[]
   notifications    Notification[]
   contract         Contract?
+  phoneIntake      PhoneIntake?
 
   @@index([dealerId])
   @@index([dealerId, status])
@@ -639,6 +648,7 @@ model DeviceActionLog {
 }
 
 model EnrollmentToken {
+  phoneIntake PhoneIntake?
   id         String                @id
   dealerId   String                @map("dealer_id")
   deviceId   String?               @map("device_id")
@@ -656,6 +666,23 @@ model EnrollmentToken {
   @@index([dealerId, createdAt(sort: Desc)])
   @@index([status, expiresAt])
   @@map("enrollment_tokens")
+}
+
+/// A welcome-screen phone scan waiting for the counter to register its sale.
+model PhoneIntake {
+  id String @id
+  dealerId String @map("dealer_id")
+  tokenId String @unique @map("token_id")
+  report Json?
+  identityHash String? @map("identity_hash") @db.VarChar(64)
+  deviceId String? @unique @map("device_id")
+  reportedAt DateTime? @map("reported_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  dealer Dealer @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  token EnrollmentToken @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+  device Device? @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+  @@index([dealerId, createdAt])
+  @@map("phone_intakes")
 }
 
 // ---------------------------------------------------------------------------
@@ -747,6 +774,7 @@ model Payment {
   reversedBy          String?       @map("reversed_by") @db.VarChar(64)
   reversalReason      String?       @map("reversal_reason") @db.VarChar(500)
   reversalOfPaymentId String?       @map("reversal_of_payment_id") @db.VarChar(64)
+  allocationJson      String?       @map("allocation_json") @db.Text
   lateFeePortion      Int           @default(0) @map("late_fee_portion")
   receiptNumber       String?       @map("receipt_number") @db.VarChar(40)
   recordedBy          String?       @map("recorded_by") @db.VarChar(64)
@@ -773,6 +801,7 @@ model Payment {
   // Blocks the double-submit at the counter at the database level, not just in
   // application code — two concurrent requests cannot both win.
   @@unique([dealerId, referenceNumber], name: "payment_dealer_reference")
+  @@unique([dealerId, receiptNumber], name: "payment_dealer_receipt")
   @@index([dealerId, createdAt(sort: Desc)])
   @@index([customerId, createdAt(sort: Desc)])
   /** The verification queue: one dealership's unverified customer submissions. */
@@ -1160,4 +1189,20 @@ model HandsetTest {
   @@index([brand])
   @@index([published])
   @@map("handset_tests")
+}
+
+model SaleDraft {
+  id String @id @db.Uuid
+  dealerId String @map("dealer_id")
+  userId String @map("user_id")
+  data Json
+  version Int @default(1)
+  completedAt DateTime? @map("completed_at") @db.Timestamptz(3)
+  deviceId String? @map("device_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  dealer Dealer @relation(fields:[dealerId],references:[id],onDelete:Cascade)
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  @@index([dealerId, completedAt, updatedAt])
+  @@map("sale_drafts")
 }

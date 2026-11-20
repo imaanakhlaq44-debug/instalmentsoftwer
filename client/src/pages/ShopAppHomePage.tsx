@@ -1,3 +1,4 @@
+import { PendingWork } from '../components/dashboard/PendingWork.js';
 import { useEffect, useState } from 'react';
 import { ArrowRight, CalendarDays, ClipboardList, KeyRound, Plus, RefreshCw, ShieldAlert, Smartphone, Store, Users, Wallet } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -17,6 +18,7 @@ const TILE_ART: Record<string, string> = {
   'New sale': 'agreement', 'Record payment': 'wallet', 'Scan new phone': 'phone', 'Customer list': 'customer',
   'My phones': 'phone', 'My payments': 'wallet', Installments: 'agreement', Notifications: 'agreement',
   'Lock orders': 'agreement', 'All shops': 'customer', 'Device Locks': 'wallet', 'Phone tests': 'phone',
+  Phones: 'phone', Payments: 'wallet',
 };
 const amount = (value?: number) => value == null ? '—' : money(value);
 
@@ -37,7 +39,7 @@ export function ShopAppHomePage() {
 }
 
 function PortfolioHome() {
-  const { selectedDealerId, role, isStaff, shopEditMode } = useAuth();
+  const { selectedDealerId, role, isStaff, isViewer, isShopTeam, shopEditMode } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState<AppStats | null>(null);
   const [failed, setFailed] = useState(false);
@@ -55,6 +57,12 @@ function PortfolioHome() {
     { label: 'Record payment', icon: Wallet, action: () => navigate('/payments'), tone: 'paper' },
     { label: 'Installments', icon: CalendarDays, action: () => navigate('/installments'), tone: 'mint' },
     { label: 'Customer list', icon: Users, action: () => navigate('/customers'), tone: 'peach' },
+  ] : isViewer ? [
+    // View-only staff: who has which phone, and who is behind. Nothing that changes data.
+    { label: 'Phones', icon: Smartphone, action: () => navigate('/devices'), tone: 'navy' },
+    { label: 'Payments', icon: Wallet, action: () => navigate('/payments'), tone: 'paper' },
+    { label: 'Installments', icon: CalendarDays, action: () => navigate('/installments'), tone: 'mint' },
+    { label: 'Customer list', icon: Users, action: () => navigate('/customers'), tone: 'peach' },
   ] : [
     { label: 'My phones', icon: Smartphone, action: () => navigate('/devices'), tone: 'navy' },
     { label: 'My payments', icon: Wallet, action: () => navigate('/payments'), tone: 'paper' },
@@ -70,12 +78,13 @@ function PortfolioHome() {
       <dl className="app-home-money-details"><div><dt>Total outstanding</dt><dd data-i18n-skip>{amount(stats?.outstandingAmount)}</dd></div><div><dt>Collected this month</dt><dd data-i18n-skip>{amount(stats?.collectedThisMonth)}</dd></div></dl>
     </section>
     <Tiles items={items} />
+    {isStaff&&<div className="mt-4"><PendingWork disabled={viewOnly}/></div>}
     {stats && <>
       <button type="button" className="app-home-attention" onClick={() => navigate(`/installments${stats.overdueInstallmentsCount ? '?status=OVERDUE' : ''}`)}>
         <span className="app-home-count">{stats.overdueInstallmentsCount}</span><span className="min-w-0 flex-1"><strong>{stats.overdueInstallmentsCount ? 'Installments past due' : 'No overdue installments'}</strong><small>{stats.overdueInstallmentsCount ? 'Open the list and follow up' : 'View your installment schedule'}</small></span><ArrowRight className="rtl:rotate-180" />
       </button>
-      {isStaff && stats.pendingVerificationAmount > 0 && <button type="button" className="app-home-inline-alert" onClick={() => navigate('/payments?status=PENDING')}><Wallet /><span><strong data-i18n-skip>{amount(stats.pendingVerificationAmount)}</strong> <span>Payments awaiting confirmation</span></span><ArrowRight /></button>}
-      {isStaff && (stats.tamperAlertDevices ?? 0) > 0 && <button type="button" className="app-home-inline-alert critical" onClick={() => navigate('/devices?tamper=true')}><ShieldAlert /><span>{stats.tamperAlertDevices} <span>Phones need inspection</span></span><ArrowRight /></button>}
+      {isShopTeam && stats.pendingVerificationAmount > 0 && <button type="button" className="app-home-inline-alert" onClick={() => navigate('/payments?status=PENDING')}><Wallet /><span><strong data-i18n-skip>{amount(stats.pendingVerificationAmount)}</strong> <span>Payments awaiting confirmation</span></span><ArrowRight /></button>}
+      {isShopTeam && (stats.tamperAlertDevices ?? 0) > 0 && <button type="button" className="app-home-inline-alert critical" onClick={() => navigate('/devices?tamper=true')}><ShieldAlert /><span>{stats.tamperAlertDevices} <span>Phones need inspection</span></span><ArrowRight /></button>}
       <p className="app-home-footer"><span>{stats.totalDevices} <span>phones</span></span><i>·</i><span>{stats.totalCustomers} <span>customers</span></span><i>·</i><span>One place</span></p>
     </>}
     {saleOpen && <AddCustomerWizardModal onClose={() => setSaleOpen(false)} onSuccess={() => setReload(n => n + 1)} />}

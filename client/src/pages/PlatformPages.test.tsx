@@ -203,6 +203,21 @@ describe('lock orders', () => {
 });
 
 describe('shops', () => {
+  it('requires the exact shop name before deleting and releasing its phones', async () => {
+    const api = open(<PlatformShopsPage />, { 'DELETE /platform/shops/dealer-1': { success: true, releasedPhones: 60, voidedLocks: 100 } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete Al-Madina Mobile Hub' }));
+    const dialog=screen.getByRole('dialog',{ name:'Delete shop' });
+    const submit=within(dialog).getByRole('button',{name:'Delete shop and release phones'});
+    expect(submit).toBeDisabled();
+    fireEvent.change(within(dialog).getByRole('textbox',{name:'Type shop name'}),{target:{value:'wrong'}});
+    expect(submit).toBeDisabled();
+    fireEvent.change(within(dialog).getByRole('textbox',{name:'Type shop name'}),{target:{value:'Al-Madina Mobile Hub'}});
+    fireEvent.click(submit);
+    await waitFor(()=>expect(api.to('DELETE /platform/shops/dealer-1')).toHaveLength(1));
+    expect(api.to('DELETE /platform/shops/dealer-1')[0].body).toEqual({confirmationName:'Al-Madina Mobile Hub'});
+    await waitFor(()=>expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
   const rowOf = (name: string) => screen.getByText(name).closest('tr') as HTMLElement;
 
   it('lists every shop with its locks, phones and what it has paid', async () => {

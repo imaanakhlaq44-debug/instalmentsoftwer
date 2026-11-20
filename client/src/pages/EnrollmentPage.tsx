@@ -41,6 +41,7 @@ interface AwaitingDevice {
   imei?: string;
   maskedImei?: string;
   customerName: string;
+  status?: string;
   customerPhone?: string;
   createdAt?: string;
 }
@@ -125,7 +126,7 @@ export const EnrollmentPage: React.FC = () => {
 
   const loadAwaiting = useCallback(async () => {
     try {
-      const res = await ApiService.getDevices({ dealerId: selectedDealerId, status: 'PENDING', lockable: 'true', limit: 50 });
+      const res = await ApiService.getDevices({ dealerId: selectedDealerId, status: 'SETUP_PENDING', lockable: 'true', limit: 50 });
       setAwaiting(res.data ?? []);
     } catch (err: any) {
       setAwaiting([]);
@@ -176,6 +177,7 @@ export const EnrollmentPage: React.FC = () => {
 
   const generate = useCallback(
     async (deviceId: string) => {
+      if(awaiting?.find(d=>d.id===deviceId)?.status==='ENROLLED'){setSelectedId(deviceId);showToast('Finish Android setup on the same phone. Connection confirmation is pending.','info');return;}
       try {
         setGenerating(true);
         setSelectedId(deviceId);
@@ -317,7 +319,7 @@ export const EnrollmentPage: React.FC = () => {
                             {d.brand} {d.model}
                           </span>
                           <span className="block truncate text-caption text-ink-700">
-                            {d.customerName}
+                            {d.customerName}{d.status==='ENROLLED' ? ' · Setup baqi' : ''}
                             {imeiTail(d) ? ` · ${imeiTail(d)}` : ''}
                           </span>
                         </span>
@@ -350,6 +352,7 @@ export const EnrollmentPage: React.FC = () => {
             }
           />
 
+          <div className="mt-4">{selected?.status==='ENROLLED' && <div role="status" className="rounded-lg border-2 border-sun-400 bg-sun-100 p-4"><b>Setup baqi hai</b><p className="mt-2 text-body">Isi phone par Android setup mukammal karein aur internet chalu rakhein. Phone ki tasdeeq milne par yahan Active nazar aayega. Dobara QR scan karne ki zaroorat nahi.</p><button type="button" className="btn-secondary mt-3" onClick={()=>void loadAwaiting()}>Connection dobara check karein</button></div>}</div>
           <div className="mt-5 grid items-start gap-6 md:grid-cols-[auto,1fr]">
             <div className="mx-auto w-full max-w-[18rem]">
               <div className="relative grid aspect-square place-items-center rounded-lg border-2 border-ink-900 bg-white p-3 shadow-[5px_5px_0_#0F1419]">
@@ -481,7 +484,7 @@ export const EnrollmentPage: React.FC = () => {
                           t.status === 'ENROLLED' ? 'status-active' : t.isExpired ? 'status-inactive' : 'status-pending'
                         }`}
                       >
-                        {t.status === 'ENROLLED' ? 'Connected' : t.isExpired ? 'Expired' : 'Waiting for scan'}
+                        {t.status === 'ENROLLED' ? 'Connected' : t.status === 'VERIFYING' ? 'Setup pending' : t.isExpired ? 'Expired' : 'Waiting for scan'}
                       </span>
                     </td>
                     <td className="px-3 py-3 text-caption text-ink-500">

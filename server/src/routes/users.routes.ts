@@ -44,7 +44,7 @@ const createUserSchema = z.object({
   email: z.string().trim().email('Please enter a valid email address.').max(255),
   phone: pakistaniPhoneSchema,
   password: z.string().min(8, 'Password must be at least 8 characters.').max(128),
-  role: z.enum(['DEALER_ADMIN', 'DEALER_STAFF', 'CUSTOMER']),
+  role: z.enum(['DEALER_ADMIN', 'DEALER_STAFF', 'DEALER_VIEWER', 'CUSTOMER']),
   /** Required when role is CUSTOMER — binds the login to one customer record. */
   customerId: z.string().trim().optional(),
   dealerId: z.string().trim().optional(),
@@ -113,7 +113,7 @@ usersRouter.post(
 const updateUserSchema = z.object({
   name: z.string().trim().min(2).max(120).optional(),
   phone: pakistaniPhoneSchema.optional(),
-  role: z.enum(['DEALER_ADMIN', 'DEALER_STAFF', 'CUSTOMER']).optional(),
+  role: z.enum(['DEALER_ADMIN', 'DEALER_STAFF', 'DEALER_VIEWER', 'CUSTOMER']).optional(),
   active: z.boolean().optional(),
   /** Required when changing a staff login into a CUSTOMER login. */
   customerId: z.string().trim().optional(),

@@ -328,7 +328,7 @@ export const devices = {
     const where: Record<string, unknown> = { ...dealerScope(args.dealerId) };
 
     if (args.customerId) where.customerId = args.customerId;
-    if (args.status && args.status !== 'ALL') where.status = args.status;
+    if (args.status && args.status !== 'ALL') where.status = args.status === 'SETUP_PENDING' ? { in: ['PENDING','ENROLLED'] } : args.status;
     if (args.brand && args.brand !== 'ALL') where.brand = { equals: args.brand, mode: 'insensitive' };
     if (args.lockable !== undefined) where.noLock = !args.lockable;
     if (args.tamper !== undefined) {
@@ -669,7 +669,12 @@ export const transactions = {
     tx?: Tx
   ): Promise<{ count: number; inflow: number; outflow: number; net: number }> {
     const d = delegate('transaction', tx);
-    const completed = { ...where, status: 'COMPLETED' };
+    const completed = { AND: [where, {
+      OR: [
+        { status: { in: ['COMPLETED', 'REVERSED'] }, type: { in: ['DOWN_PAYMENT', 'MONTHLY_INSTALLMENT'] } },
+        { status: 'COMPLETED', type: 'REVERSAL' },
+      ],
+    }] };
 
     const [count, credits, debits] = await Promise.all([
       d.count({ where }),

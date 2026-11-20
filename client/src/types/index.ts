@@ -1,4 +1,4 @@
-export type UserRole = 'SUPER_ADMIN' | 'DEALER_ADMIN' | 'DEALER_STAFF' | 'CUSTOMER';
+export type UserRole = 'SUPER_ADMIN' | 'DEALER_ADMIN' | 'DEALER_STAFF' | 'DEALER_VIEWER' | 'CUSTOMER';
 
 export type DeviceStatus = 
   | 'PENDING'

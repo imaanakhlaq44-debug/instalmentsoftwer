@@ -1,4 +1,4 @@
-export type UserRole = 'SUPER_ADMIN' | 'DEALER_ADMIN' | 'DEALER_STAFF' | 'CUSTOMER';
+export type UserRole = 'SUPER_ADMIN' | 'DEALER_ADMIN' | 'DEALER_STAFF' | 'DEALER_VIEWER' | 'CUSTOMER';
 
 export type DeviceStatus = 
   | 'PENDING'
@@ -53,6 +53,7 @@ export type EnrollmentTokenStatus =
   | 'FAILED';
 
 export interface Dealer {
+  deletedAt?: string | null;
   id: string;
   name: string;
   code: string;
@@ -86,11 +87,13 @@ export interface User {
   /** Forces a password change on next login (e.g. after an admin reset). */
   mustChangePassword?: boolean;
   passwordChangedAt?: string;
+  sessionVersion?: number;
   createdAt: string;
 }
 
 /** The authenticated principal decoded from a JWT and attached to every request. */
 export interface AuthenticatedUser {
+  sessionVersion?: number;
   userId: string;
   dealerId?: string;
   customerId?: string;
@@ -114,6 +117,7 @@ export interface Customer {
 }
 
 export interface Device {
+  commandVersion?: number;
   id: string;
   dealerId: string;
   customerId: string;
@@ -287,6 +291,7 @@ export interface Installment {
 }
 
 export interface Payment {
+  allocationJson?: string;
   id: string;
   dealerId: string;
   customerId: string;

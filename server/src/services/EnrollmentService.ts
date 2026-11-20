@@ -42,6 +42,7 @@ export class EnrollmentService {
       if (device.dealerId !== params.dealerId) {
         throw AppError.forbidden('You cannot generate an enrollment token for another dealer\'s device.');
       }
+      if (device.status === 'ENROLLED') throw AppError.badRequest('Finish Android setup on the same phone; connection confirmation is pending.');
       if (device.status === 'ACTIVE' || device.status === 'LOCKED') {
         throw AppError.badRequest('This device is already enrolled and under management.');
       }
@@ -215,6 +216,7 @@ export class EnrollmentService {
       throw AppError.badRequest('This enrollment code is not valid.');
     }
 
+    if (tokenRecord.status === 'VERIFYING') throw AppError.badRequest('Enrollment setup is pending on this handset. Continue on the same phone.');
     if (tokenRecord.status === 'ENROLLED') {
       throw AppError.badRequest('This enrollment code has already been used. Please generate a new QR.');
     }
@@ -291,7 +293,7 @@ export class EnrollmentService {
     }
 
     try {
-      const result = await deviceManagementService.enrollDevice(device.id, tokenRecord.token, params.ipAddress);
+      const result = await deviceManagementService.enrollDevice(device.id, tokenRecord.token, params.ipAddress, true);
 
       /**
        * Issue the handset its own credentials.
@@ -306,13 +308,12 @@ export class EnrollmentService {
           ...telemetryUpdates,
           authTokenHash: credentials.tokenHash,
           authTokenIssuedAt: nowIso,
-          lastCheckInAt: nowIso,
           dpcVersion: params.dpcVersion,
           updatedAt: nowIso,
         })) ?? result.device;
 
       await repo.enrollmentTokens.update(tokenRecord.id, {
-        status: 'ENROLLED',
+        status: 'VERIFYING',
         deviceId: device.id,
       });
 
@@ -321,11 +322,11 @@ export class EnrollmentService {
         userId: 'system',
         actorName: 'Enrollment Client',
         actorRole: 'DEALER_STAFF',
-        action: 'DEVICE_ENROLLED',
+        action: 'DEVICE_ENROLLMENT_STARTED',
         targetType: 'DEVICE',
         targetId: device.id,
         details:
-          `${device.brand} ${device.model} completed provisioning and is now under management. ` +
+          `${device.brand} ${device.model} started enrollment; Android setup and an authenticated device confirmation are still required. ` +
           (alreadyHeld
             ? `Re-enrolled on its existing lock ${license.licenseKey} — no new lock was spent.`
             : `Lock ${license.licenseKey} was spent on IMEI ${device.imei}.`),
@@ -336,7 +337,7 @@ export class EnrollmentService {
         success: true,
         device: updatedDevice,
         deviceToken: credentials.token,
-        message: `${device.brand} ${device.model} was enrolled successfully and is now active.`,
+        message: `${device.brand} ${device.model} is saved. Finish phone setup to activate it.`,
       };
     } catch (err) {
       // Leave the token reusable so a transient failure does not burn the QR.

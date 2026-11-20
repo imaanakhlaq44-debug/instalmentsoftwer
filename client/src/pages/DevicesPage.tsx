@@ -181,7 +181,7 @@ export const DevicesPage: React.FC = () => {
     }
   };
 
-  const statusTabs = ['ALL', 'ACTIVE', 'OVERDUE', 'LOCKED', 'PENDING', 'INACTIVE'];
+  const statusTabs = ['ALL', 'ACTIVE', 'OVERDUE', 'LOCKED', 'SETUP_PENDING', 'INACTIVE'];
 
   return (
     <div className="space-y-6">
@@ -340,13 +340,13 @@ export const DevicesPage: React.FC = () => {
                 {devices.map((d) => {
                   const isLocked = d.status === 'LOCKED' || d.status === 'LOCK_PENDING';
                   const isOverdue = d.status === 'OVERDUE';
-                  const isPending = d.status === 'PENDING';
+                  const isPending = d.status === 'PENDING' || d.status === 'ENROLLED';
                   const hasTamper = (d.tamperFlags?.length ?? 0) > 0 || Boolean(d.tamperDetectedAt);
                   const lastContactIso = d.lastCheckInAt || d.lastSeen;
                   const lastContactMs = lastContactIso ? Date.parse(lastContactIso) : NaN;
                   const isSilent72h =
                     !d.noLock &&
-                    d.status !== 'PENDING' &&
+                    !isPending &&
                     d.status !== 'INACTIVE' &&
                     d.status !== 'REMOVED' &&
                     Number.isFinite(lastContactMs) &&
@@ -413,7 +413,7 @@ export const DevicesPage: React.FC = () => {
                             }`}
                           >
                             <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                            {d.noLock ? 'NO LOCK' : d.status}
+                            {d.noLock ? 'NO LOCK' : d.status==='ENROLLED' ? 'Setup pending' : d.status}
                           </span>
                           {hasTamper && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-micro font-bold text-rose-700">

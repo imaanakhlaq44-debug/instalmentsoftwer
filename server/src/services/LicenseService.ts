@@ -113,13 +113,17 @@ export class LicenseService {
       );
     }
 
-    const dealer = await repo.dealers.findById(params.dealerId);
+    const dealer = await repo.dealers.findById(params.dealerId, params.tx);
     if (!dealer) throw AppError.notFound('Dealer');
+    if (!dealer.active || dealer.deletedAt) throw AppError.forbidden('This shop is no longer active.');
 
     const nowIso = new Date().toISOString();
     const packId = `pack-${uuidv4().substring(0, 8)}`;
 
     const mint = async (tx: Tx) => {
+      await tx.$queryRaw`SELECT id FROM dealers WHERE id = ${params.dealerId} FOR UPDATE`;
+      const shop = await tx.dealer.findUnique({ where: { id: params.dealerId } });
+      if (!shop?.active || shop.deletedAt) throw AppError.forbidden('This shop is no longer active.');
       const pack = await repo.licensePacks.create(
         {
           id: packId,

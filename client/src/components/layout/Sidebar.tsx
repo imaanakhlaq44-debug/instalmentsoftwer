@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.js';
 import { ApiService } from '../../services/api.js';
@@ -23,12 +23,14 @@ const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: 'Super admin',
   DEALER_ADMIN: 'Shop owner',
   DEALER_STAFF: 'Counter staff',
+  DEALER_VIEWER: 'View-only staff',
   CUSTOMER: 'Customer',
 };
 
 export const Sidebar: React.FC = () => {
   const { role, dealer, user, selectedDealerId, setSelectedDealerId } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const isPlatform = role === 'SUPER_ADMIN';
   const viewingShop = isPlatform && Boolean(selectedDealerId);
 
@@ -43,10 +45,19 @@ export const Sidebar: React.FC = () => {
 
   // Menu is derived from the signed-in role, so nothing unreachable is shown.
   const navItems = navItemsForRole(role, viewingShop);
-  const groups = NAV_GROUPS.map((group: NavGroup) => ({
+  const originalGroups = NAV_GROUPS.map((group: NavGroup) => ({
     group,
     items: navItems.filter((i) => i.group === group),
   })).filter((g) => g.items.length > 0);
+
+  const simpleShop = role === 'DEALER_ADMIN' || role === 'DEALER_STAFF';
+  const primary = new Set(['/', '/devices', '/customers', '/installments', '/payments']);
+  const administration = new Set(['/buy-locks', '/licenses', '/settings']);
+  const groups = simpleShop ? [
+    {group:'Shop menu',items:navItems.filter(i=>primary.has(i.to))},
+    {group:'Administration',items:navItems.filter(i=>administration.has(i.to))},
+    {group:'More tools',items:navItems.filter(i=>!primary.has(i.to)&&!administration.has(i.to))},
+  ].filter(g=>g.items.length) : originalGroups;
 
   return (
     <aside className="hidden w-60 shrink-0 select-none flex-col border-e-2 border-ink-900 bg-paper-50 lg:flex">
@@ -91,9 +102,10 @@ export const Sidebar: React.FC = () => {
       )}
 
       <nav className="flex-1 overflow-y-auto px-3 py-2">
-        {groups.map(({ group, items }) => (
-          <div key={group} className="mb-5 last:mb-0">
-            <p className="eyebrow px-2.5 pb-1.5">{group}</p>
+        {groups.map(({ group, items }) => {
+          const Group = group==='More tools' ? 'details' : 'div';
+          return <Group key={group} {...(group==='More tools' ? {open:items.some(i=>i.to===location.pathname)||undefined} : {})} className="mb-5 last:mb-0">
+            {group==='More tools' ? <summary className="cursor-pointer rounded-md px-2.5 py-2 text-body font-bold hover:bg-sun-100">More tools</summary> : <p className="eyebrow px-2.5 pb-1.5">{group}</p>}
             <ul className="space-y-0.5">
               {items.map((item) => {
                 const Icon = item.icon;
@@ -124,8 +136,8 @@ export const Sidebar: React.FC = () => {
                 );
               })}
             </ul>
-          </div>
-        ))}
+          </Group>;
+        })}
       </nav>
 
       {user && (

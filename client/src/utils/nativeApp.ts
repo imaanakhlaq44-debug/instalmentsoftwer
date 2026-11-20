@@ -13,3 +13,6 @@ export function isNativeShopApp(userAgent: string = typeof navigator === 'undefi
 export function isPlayShopApp(userAgent: string = typeof navigator === 'undefined' ? '' : navigator.userAgent): boolean {
   return SHOP_APP.exec(userAgent)?.[1] === 'Play';
 }
+
+/** Name used by the live branch for the same check. */
+export const isPlayStoreApp = (): boolean => isPlayShopApp();

@@ -42,6 +42,13 @@ const PASSWORD_CHANGE_ALLOWED = new Set([
   'POST /api/auth/logout',
 ]);
 
+/** The only writes a view-only staff login may make: its own password, and signing out. */
+const VIEWER_WRITE_ALLOWED = new Set([
+  'POST /api/auth/change-password',
+  'POST /api/auth/logout',
+]);
+const READ_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
 function extractToken(req: Request): string | null {
   const header = req.headers.authorization;
   if (header && header.startsWith('Bearer ')) {
@@ -72,6 +79,9 @@ export const requireAuth = asyncHandler(async (req: Request, _res: Response, nex
   if (!user) {
     return next(AppError.unauthorized('Account no longer exists.'));
   }
+  if ((decoded.sessionVersion ?? 0) !== (user.sessionVersion ?? 0)) {
+    return next(AppError.unauthorized('Session revoked. Please sign in again.'));
+  }
   if (!user.active) {
     return next(AppError.forbidden('This account has been deactivated.'));
   }
@@ -92,6 +102,21 @@ export const requireAuth = asyncHandler(async (req: Request, _res: Response, nex
   if (user.mustChangePassword && !PASSWORD_CHANGE_ALLOWED.has(`${req.method} ${req.baseUrl}${req.path}`)) {
     return next(
       new AppError('You must change your temporary password before continuing.', 403, { code: 'PASSWORD_CHANGE_REQUIRED' })
+    );
+  }
+
+  // A view-only staff login may read but never write. This is enforced here,
+  // before any route runs, so a write route that forgets its role guard still
+  // cannot be used by one to change shop data.
+  if (
+    user.role === 'DEALER_VIEWER' &&
+    !READ_METHODS.has(req.method) &&
+    !VIEWER_WRITE_ALLOWED.has(`${req.method} ${req.baseUrl}${req.path}`)
+  ) {
+    return next(
+      new AppError("Your account can view the shop's records but cannot change them. Ask the shop owner.", 403, {
+        code: 'VIEW_ONLY',
+      })
     );
   }
 
@@ -127,6 +152,8 @@ export function requireRole(...roles: UserRole[]) {
 /** Convenience guards for the two most common permission levels. */
 export const requireDealerStaff = requireRole('SUPER_ADMIN', 'DEALER_ADMIN', 'DEALER_STAFF');
 export const requireDealerAdmin = requireRole('SUPER_ADMIN', 'DEALER_ADMIN');
+/** Everyone on the shop's side, view-only staff included. For reads only. */
+export const requireShopTeam = requireRole('SUPER_ADMIN', 'DEALER_ADMIN', 'DEALER_STAFF', 'DEALER_VIEWER');
 export const requireSuperAdmin = requireRole('SUPER_ADMIN');
 
 export function getAuthUser(req: Request): AuthenticatedUser {

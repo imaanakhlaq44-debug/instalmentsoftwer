@@ -22,20 +22,24 @@ export function pickImei(codes: DetectedBarcode[]): string | null {
   return null;
 }
 
-type Status = 'idle' | 'scanning' | 'unsupported' | 'denied';
+type Status = 'idle' | 'opening' | 'scanning' | 'unsupported' | 'denied';
 
 /**
  * "Scan" beside the IMEI box: opens the rear camera and reads the IMEI barcode
- * off the phone box. Where the browser has no camera or no BarcodeDetector
- * (most desktops, iPhones) it says so, and typing the IMEI still works.
+ * off the phone box. A JavaScript reader covers WebViews without BarcodeDetector;
+ * when camera access is unavailable, typing the IMEI still works.
  */
 export function ImeiScanButton({ onScan }: { onScan: (imei: string) => void }) {
   const [status, setStatus] = useState<Status>('idle');
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const generation = useRef(0);
+  const opening = useRef(false);
 
   const stop = () => {
+    generation.current++;
+    opening.current = false;
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = null;
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -51,28 +55,44 @@ export function ImeiScanButton({ onScan }: { onScan: (imei: string) => void }) {
   };
 
   const start = async () => {
+    if (opening.current || status === 'scanning') return;
+    stop();
+    opening.current = true;
+    const run = generation.current;
+    setStatus('opening');
     const Detector = (globalThis as { BarcodeDetector?: BarcodeDetectorCtor }).BarcodeDetector;
-    if (!Detector || !navigator.mediaDevices?.getUserMedia) {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      opening.current = false;
       setStatus('unsupported');
       return;
     }
     let detector: BarcodeDetectorLike;
     try {
+      if (!Detector) throw new Error('Use the JavaScript barcode reader.');
       detector = new Detector({ formats: FORMATS });
     } catch {
-      setStatus('unsupported');
-      return;
+      try {
+        const { BrowserMultiFormatOneDReader } = await import('@zxing/browser');
+        if (run !== generation.current) return;
+        const reader = new BrowserMultiFormatOneDReader();
+        detector = { detect: async video => [{ rawValue: reader.decode(video).getText() }] };
+      } catch {
+        if (run === generation.current) { opening.current = false; setStatus('unsupported'); }
+        return;
+      }
     }
-    stop();
     try {
-      streamRef.current = await navigator.mediaDevices.getUserMedia({
+      const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: 'environment' } },
         audio: false,
       });
+      if (run !== generation.current) { stream.getTracks().forEach(t => t.stop()); return; }
+      streamRef.current = stream;
     } catch {
-      setStatus('denied');
+      if (run === generation.current) { opening.current = false; setStatus('denied'); }
       return;
     }
+    opening.current = false;
     setStatus('scanning');
     let busy = false;
     timerRef.current = setInterval(async () => {
@@ -82,7 +102,7 @@ export function ImeiScanButton({ onScan }: { onScan: (imei: string) => void }) {
       busy = true;
       try {
         const imei = pickImei(await detector.detect(video));
-        if (imei) {
+        if (imei && run === generation.current) {
           onScan(imei);
           close();
         }
@@ -98,6 +118,7 @@ export function ImeiScanButton({ onScan }: { onScan: (imei: string) => void }) {
     <>
       <button
         type="button"
+        disabled={status === 'opening'}
         onClick={() => void start()}
         className="btn-secondary shrink-0 inline-flex items-center gap-1.5"
         aria-label="Scan the IMEI barcode on the box"
@@ -119,6 +140,7 @@ export function ImeiScanButton({ onScan }: { onScan: (imei: string) => void }) {
           )}
           <div className="flex items-start justify-between gap-2">
             <p className="text-sm font-bold">
+              {status === 'opening' && 'Opening camera…'}
               {status === 'scanning' && (
                 <span className="bg-sun px-1">Point the camera at the IMEI barcode on the box.</span>
               )}

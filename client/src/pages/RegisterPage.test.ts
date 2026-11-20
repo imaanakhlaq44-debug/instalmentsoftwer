@@ -52,3 +52,6 @@ describe('lock pricing, as the server charges it', () => {
     expect([...PACK_PRESETS]).toEqual([5, 10, 30, 50, 100]);
   });
 });
+
+it('accepts spaced mobile numbers and account-only signup without choosing locks',()=>{expect(validateSignup({...ok,phone:'+92 (300) 123-4567',packSize:NaN},{accountOnly:true})).toBeNull();});
+it('explains the server password rules before submitting',()=>{expect(validateSignup({...ok,password:'abcdefgh',confirm:'abcdefgh'})).toMatch(/letter and one number/);expect(validateSignup({...ok,password:'admin123',confirm:'admin123'})).toMatch(/common/);});

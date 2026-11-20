@@ -82,6 +82,7 @@ authRouter.post(
 );
 
 const registerDealerSchema = z.object({
+  accountOnly: z.boolean().default(false),
   name: z.string().trim().min(2, 'Shop name must be at least 2 characters.').max(120),
   ownerName: z.string().trim().min(2, 'Owner name must be at least 2 characters.').max(120),
   email: z.string().trim().email('Please enter a valid email address.').max(255),
@@ -132,7 +133,7 @@ authRouter.post(
     // 100 free locks. The shop starts with none; a super admin issues the pack
     // once payment is confirmed, and until then a financed sale is refused at
     // the counter with "no locks left" rather than going ahead unpaid.
-    const requestedPack = priceForPack(body.packSize)!;
+    const requestedPack = body.accountOnly ? undefined : priceForPack(body.packSize)!;
     const session = await runInTransaction(async (tx) => {
       await repo.dealers.create(
         {
@@ -146,7 +147,7 @@ authRouter.post(
           address: body.address,
           active: true,
           createdAt: nowIso,
-          requestedPackSize: requestedPack.size,
+          requestedPackSize: requestedPack?.size,
         },
         tx
       );
@@ -193,8 +194,9 @@ authRouter.post(
         targetType: 'DEALER',
         targetId: dealerId,
         details:
-          `New dealer "${body.name}" registered in ${body.city}. Requested a pack of ` +
-          `${requestedPack.size} device locks (Rs ${requestedPack.totalPrice}), not issued until payment is confirmed.`,
+          `New dealer "${body.name}" registered in ${body.city}. ` + (requestedPack
+            ? `Requested a pack of ${requestedPack.size} device locks (Rs ${requestedPack.totalPrice}), not issued until payment is confirmed.`
+            : 'Account registration only; no license purchase requested or issued.'),
         ipAddress: clientIp(req),
       }, tx);
 
@@ -202,7 +204,7 @@ authRouter.post(
         user: toPublicUser(user),
         dealer: await repo.dealers.findById(dealerId, tx),
         token: AuthService.issueToken(user),
-        requestedPack: { ...requestedPack, issued: false },
+        requestedPack: requestedPack ? { ...requestedPack, issued: false } : undefined,
       };
     });
 
@@ -240,12 +242,12 @@ authRouter.post(
       newPassword,
       ipAddress: clientIp(req),
     });
-    res.json(result);
+    res.json({ ...result, session: await AuthService.getSession(getAuthUser(req).userId) });
   })
 );
 
 /**
- * Logout is client-side (the token is simply discarded), but we record it so the
+ * Logout revokes the account session version and records the event so the
  * audit trail shows a complete session history.
  */
 authRouter.post(
@@ -264,6 +266,8 @@ authRouter.post(
       details: `${user.name} signed out.`,
       ipAddress: clientIp(req),
     });
+    const account = await repo.users.findById(user.userId);
+    if (account) await repo.users.update(account.id, { sessionVersion: (account.sessionVersion ?? 0) + 1 });
     res.json({ success: true, message: 'Signed out successfully.' });
   })
 );

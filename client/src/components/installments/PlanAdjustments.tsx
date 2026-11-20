@@ -235,3 +235,16 @@ export const WaiveLateFeeModal: React.FC<{
     </Shell>
   );
 };
+
+export const ExtendGraceModal: React.FC<{installment:any;onClose:()=>void;onDone:(message:string)=>void}> = ({installment,onClose,onDone}) => {
+ const base = installment.graceDate > new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Karachi'}) ? installment.graceDate : new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Karachi'});
+ const next = new Date(base+'T00:00:00Z'); next.setUTCDate(next.getUTCDate()+1);
+ const [date,setDate]=useState(next.toISOString().slice(0,10)); const [reason,setReason]=useState(''); const [saving,setSaving]=useState(false); const [error,setError]=useState<string|null>(null);
+ return <Shell title={'Qist #'+installment.installmentNumber+' — Muhlat dein'} onClose={()=>{if(!saving)onClose();}}>
+ <p className="text-body text-ink-600">Asal qist ki tareekh aur raqam wahi rahegi. Sirf mohlat ki aakhri tareekh aage barhegi.</p>
+ <p className="text-body">Maujooda mohlat: <b>{installment.graceDate}</b></p>
+ <label className="field-label" htmlFor="grace-until">Nayi mohlat ki tareekh</label><input id="grace-until" type="date" className="input" min={next.toISOString().slice(0,10)} value={date} disabled={saving} onChange={e=>setDate(e.target.value)} />
+ <ReasonField id="grace-reason" value={reason} onChange={setReason} placeholder="Customer ko mohlat dene ki wajah" /><ErrorLine error={error}/>
+ <button className="btn-primary w-full" disabled={saving||!date||date<=installment.graceDate||reason.trim().length<MIN_REASON} onClick={async()=>{setSaving(true);setError(null);try{const result=await ApiService.extendGrace(installment.id,date,reason.trim());onDone(result.unlockQueued?'Muhlat barha di gayi. Phone ko unlock ka hukam bhej diya hai.':'Muhlat barha di gayi.');}catch(err){setError(err instanceof Error?err.message:'Muhlat save nahi hui. Dobara koshish karein.');}finally{setSaving(false);}}}>{saving?'Save ho raha hai…':'Muhlat save karein'}</button>
+ </Shell>;
+};

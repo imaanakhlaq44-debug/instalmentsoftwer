@@ -44,7 +44,12 @@ interface AuthContextType {
   can: (...roles: UserRole[]) => boolean;
   isSuperAdmin: boolean;
   isDealerAdmin: boolean;
+  /** Can make sales and take payments: owner, admin, counter staff. Not view-only staff. */
   isStaff: boolean;
+  /** Anyone on the shop's side, view-only staff included. For what may be seen, never for actions. */
+  isShopTeam: boolean;
+  /** View-only staff: sees the shop's records, changes nothing. */
+  isViewer: boolean;
   isCustomer: boolean;
 
   toasts: Toast[];
@@ -169,11 +174,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const changePassword = useCallback(
     async (currentPassword: string, newPassword: string) => {
-      await ApiService.changePassword(currentPassword, newPassword);
+      const result = await ApiService.changePassword(currentPassword, newPassword);
+      if (result.session) applySession(result.session);
       setUser((prev) => (prev ? { ...prev, mustChangePassword: false } : prev));
       showToast('Password updated successfully.', 'success');
     },
-    [showToast]
+    [showToast, applySession]
   );
 
   const refreshSession = useCallback(async () => {
@@ -227,6 +233,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isSuperAdmin: role === 'SUPER_ADMIN',
     isDealerAdmin: role === 'SUPER_ADMIN' || role === 'DEALER_ADMIN',
     isStaff: role === 'SUPER_ADMIN' || role === 'DEALER_ADMIN' || role === 'DEALER_STAFF',
+    isShopTeam: role === 'SUPER_ADMIN' || role === 'DEALER_ADMIN' || role === 'DEALER_STAFF' || role === 'DEALER_VIEWER',
+    isViewer: role === 'DEALER_VIEWER',
     isCustomer: role === 'CUSTOMER',
 
     toasts,

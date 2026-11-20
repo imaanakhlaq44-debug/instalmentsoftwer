@@ -4,6 +4,7 @@ import { CheckCircle2, Eye, EyeOff, Loader2, MessageCircle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.js';
 import { ApiError, ApiService } from '../services/api.js';
 import { MAX_PACK_SIZE, PACK_PRESETS, money, priceForPack } from '../utils/packPricing.js';
+import { isPlayStoreApp } from '../utils/nativeApp.js';
 
 /**
  * A shop signs itself up.
@@ -42,22 +43,28 @@ const EMPTY: Form = {
 };
 
 /** Checks the browser can make before bothering the server. */
-export function validateSignup(f: Form): string | null {
+export const normalizeSignupPhone = (phone: string) => phone.replace(/[\s()\-]/g, '');
+
+export function validateSignup(f: Form, { accountOnly = false } = {}): string | null {
   if (f.name.trim().length < 2) return 'Please enter your shop name.';
   if (f.ownerName.trim().length < 2) return "Please enter the owner's name.";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) return 'Please enter a valid email address.';
-  if (!/^(03\d{2}-?\d{7}|\+?923\d{9})$/.test(f.phone.trim())) {
+  if (!/^(03\d{2}-?\d{7}|\+?923\d{9})$/.test(normalizeSignupPhone(f.phone))) {
     return 'Please enter a Pakistani mobile number, e.g. 0300-1234567.';
   }
   if (f.city.trim().length < 2) return 'Please enter your city.';
   if (f.address.trim().length < 5) return 'Please enter the full shop address.';
   if (f.password.length < 8) return 'Password must be at least 8 characters.';
+  if (f.password.length > 128) return 'Password must be 128 characters or fewer.';
+  if (!/[A-Za-z]/.test(f.password) || !/[0-9]/.test(f.password)) return 'Password needs at least one letter and one number.';
+  if (['password','12345678','admin123','dealer123','staff123','customer123','qwerty123','demo1234','11111111'].includes(f.password.toLowerCase())) return 'This password is too common. Please choose another.';
   if (f.password !== f.confirm) return 'The two passwords do not match.';
-  if (!priceForPack(f.packSize)) return `Choose between 1 and ${MAX_PACK_SIZE} locks.`;
+  if (!accountOnly && !priceForPack(f.packSize)) return `Choose between 1 and ${MAX_PACK_SIZE} locks.`;
   return null;
 }
 
 export const RegisterPage: React.FC = () => {
+  const play = isPlayStoreApp();
   const { login, isAuthenticated, isBootstrapping } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState<Form>(EMPTY);
@@ -65,6 +72,14 @@ export const RegisterPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [choosePack, setChoosePack] = useState(false);
+  const accountOnly = play || !choosePack;
+  const openAfterSignup = async (destination = '/') => {
+    setSubmitting(true); setError(null);
+    try { await login(form.email.trim(), form.password); navigate(destination, { replace: true }); }
+    catch { setError('Your shop is registered. Please sign in again to open your dashboard.'); }
+    finally { setSubmitting(false); }
+  };
 
   if (isBootstrapping) {
     return (
@@ -85,9 +100,10 @@ export const RegisterPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    const problem = validateSignup(form);
+    const problem = validateSignup(form, { accountOnly });
     if (problem) {
       setError(problem);
+      requestAnimationFrame(() => document.querySelector<HTMLElement>('[role="alert"]')?.scrollIntoView({ block: 'center', behavior: 'smooth' }));
       return;
     }
 
@@ -97,11 +113,12 @@ export const RegisterPage: React.FC = () => {
         name: form.name.trim(),
         ownerName: form.ownerName.trim(),
         email: form.email.trim(),
-        phone: form.phone.trim(),
+        phone: normalizeSignupPhone(form.phone),
         city: form.city.trim(),
         address: form.address.trim(),
         password: form.password,
-        packSize: form.packSize,
+        packSize: accountOnly ? undefined : form.packSize,
+        accountOnly,
       });
       setDone(true);
     } catch (err) {
@@ -117,6 +134,7 @@ export const RegisterPage: React.FC = () => {
   };
 
   if (done) {
+    if (accountOnly) return <div className="flex min-h-screen items-center justify-center bg-paper-100 p-5"><div className="surface w-full max-w-md space-y-4 p-6"><CheckCircle2 className="h-10 w-10 text-positive-600" /><h1 className="text-display">Your shop is registered</h1><p>Use your account to manage your shop. Available device licenses appear in your dashboard.</p><p>No payment is needed to create your account. You can choose locks from your dashboard when ready.</p>{error && <p role="alert" className="text-critical-700">{error}</p>}<button type="button" disabled={submitting} className="btn-primary w-full" onClick={()=>void openAfterSignup()}>{submitting ? 'Opening…' : 'Open my dashboard'}</button><Link to="/login" className="block text-center underline">Sign in</Link></div></div>;
     const text = encodeURIComponent(
       `Salam, maine Almas SDM par "${form.name.trim()}" register kiya hai (${form.email.trim()}). ` +
         `${pack?.size} locks chahiye: ${money(pack?.totalPrice ?? 0)}. Payment ki detail bhej dein.`
@@ -141,15 +159,13 @@ export const RegisterPage: React.FC = () => {
             </p>
           </div>
 
+          {error && <p role="alert" className="mt-3 text-critical-700">{error}</p>}
           {/* The next step is on the dashboard: the account to pay into, and
               the form for the transaction ID. */}
           <button
             type="button"
             className="btn-primary mt-5 w-full py-2.5"
-            onClick={async () => {
-              await login(form.email.trim(), form.password);
-              navigate('/buy-locks', { replace: true });
-            }}
+            disabled={submitting} onClick={()=>void openAfterSignup('/buy-locks')}
           >
             Pay and get my locks
           </button>
@@ -165,10 +181,7 @@ export const RegisterPage: React.FC = () => {
           <button
             type="button"
             className="btn-ghost mt-3 w-full py-2"
-            onClick={async () => {
-              await login(form.email.trim(), form.password);
-              navigate('/', { replace: true });
-            }}
+            disabled={submitting} onClick={()=>void openAfterSignup()}
           >
             Open my dashboard
           </button>
@@ -183,7 +196,7 @@ export const RegisterPage: React.FC = () => {
         <div className="mb-6 text-center">
           <img src="/logo-lockup.webp" alt="Almas SDM" width={720} height={629} className="mx-auto mb-4 h-20 w-auto" />
           <h1 className="text-display text-ink-900">Register your shop</h1>
-          <p className="mt-1 text-body text-ink-500">No monthly fee. Pay once per phone, from Rs 600.</p>
+          <p className="mt-1 text-body text-ink-500">{play ? 'Create your account and manage your shop on the go.' : 'No monthly fee. Pay once per phone, from Rs 600.'}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="surface p-6 sm:p-7" noValidate>
@@ -228,6 +241,7 @@ export const RegisterPage: React.FC = () => {
                   value={form.password}
                   onChange={set('password')}
                   disabled={submitting}
+                  maxLength={128}
                   autoComplete="new-password"
                 />
                 <button
@@ -241,6 +255,7 @@ export const RegisterPage: React.FC = () => {
               </div>
             </div>
             <div>
+              <p className="mb-2 text-caption text-ink-500">8 or more characters, including a letter and a number.</p>
               <label htmlFor="r-confirm" className="field-label">Repeat password</label>
               <input
                 id="r-confirm"
@@ -254,7 +269,8 @@ export const RegisterPage: React.FC = () => {
             </div>
           </div>
 
-          <fieldset className="mt-6">
+          {!play && <label className="mt-6 flex items-center gap-3 text-body"><input type="checkbox" checked={choosePack} disabled={submitting} onChange={e => setChoosePack(e.target.checked)} />Choose locks now (optional)</label>}
+          {!accountOnly && <fieldset className="mt-6">
             <legend className="field-label">How many locks? (one lock per phone)</legend>
             <div className="flex flex-wrap gap-2">
               {PACK_PRESETS.map((n) => {
@@ -303,7 +319,7 @@ export const RegisterPage: React.FC = () => {
             <p className="mt-2 text-caption text-ink-500">
               You pay after signing up. Locks are added once the payment is confirmed.
             </p>
-          </fieldset>
+          </fieldset>}
 
           <button type="submit" disabled={submitting} className="btn-primary mt-6 w-full py-2.5">
             {submitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
@@ -323,3 +339,4 @@ export const RegisterPage: React.FC = () => {
 };
 
 export default RegisterPage;
+

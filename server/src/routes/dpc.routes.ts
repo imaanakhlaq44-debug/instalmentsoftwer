@@ -1,3 +1,6 @@
+import { confirmEnrollment } from '../services/EnrollmentConfirmation.js';
+import rateLimit from 'express-rate-limit';
+import { deviceCommandSignal } from '../services/DeviceCommandSignal.js';
 import { config } from '../config.js';
 import { Router } from 'express';
 import { z } from 'zod';
@@ -37,9 +40,40 @@ import { Device, DevicePolicy } from '../types/index.js';
  */
 export const dpcRouter = Router();
 
+// One authenticated, bounded long poll per phone. This carries no executable command:
+// waking the phone only asks it to run the existing check-in/consent/ack protocol.
+const waitIpLimiter = rateLimit({ windowMs: 60000, max: 2400, standardHeaders: true, legacyHeaders: false });
+const waitLimiter = rateLimit({ windowMs: 60000, max: 60, keyGenerator: req => getDevice(req).id, standardHeaders: true, legacyHeaders: false });
+dpcRouter.get('/wait', waitIpLimiter, requireDevice, waitLimiter, asyncHandler(async (req, res) => {
+  const id = getDevice(req).id;
+  const after = typeof req.query.after === 'string' ? req.query.after.slice(0, 200) : '';
+  await new Promise<void>((resolve, reject) => {
+    let finished = false, timer: ReturnType<typeof setTimeout> | undefined;
+    const cleanup = () => { if (timer) clearTimeout(timer); unsubscribe(); res.off('close', closed); };
+    const closed = () => { if (!finished) { finished = true; cleanup(); resolve(); } };
+    const check = async (force = false) => {
+      try {
+        const device = await repo.devices.findById(id);
+        if (finished) return;
+        if (!device || ['INACTIVE','REMOVED'].includes(device.status) || device.authTokenHash !== getDevice(req).authTokenHash) {
+          finished = true; cleanup(); res.status(403).json({ error: 'This device is no longer under management.' }); resolve(); return;
+        }
+        const state = [device.status, device.pendingCommand ?? '', device.pendingCommandAt ?? '', device.commandVersion ?? 0].join('|');
+        if (force || state !== after) { finished = true; cleanup(); res.setHeader('Cache-Control','no-store'); res.json({ state }); resolve(); }
+      } catch (error) { if (!finished) { finished = true; cleanup(); reject(error); } }
+    };
+    const unsubscribe = deviceCommandSignal.subscribe(id, () => { void check(); });
+    res.on('close', closed);
+    timer = setTimeout(() => { void check(true); }, 25000);
+    void check();
+  });
+}));
+
+
 /** What the phone is told about its own lock state. */
 interface DevicePolicyView {
   locked: boolean;
+  setupPending: boolean;
   lockMessage: string | null;
   emergencyCallsAllowed: boolean;
   paymentMethods: string[];
@@ -92,11 +126,13 @@ async function buildPolicyView(device: Device): Promise<DevicePolicyView> {
   const unpaid = installments.filter((i) => i.status !== 'PAID');
   const overdue = installments.filter((i) => i.status === 'OVERDUE');
 
+  const setupPending = ['PENDING','ENROLLED'].includes(device.status);
   const locked = device.status === 'LOCKED';
-  const restrictionLevel = locked ? 0 : await restrictionLevelFor(device, policy, installments);
+  const restrictionLevel = locked || setupPending ? 0 : await restrictionLevelFor(device, policy, installments);
 
   return {
     locked,
+    setupPending: device.status === 'ENROLLED',
     lockMessage: device.status === 'LOCKED' ? device.lockMessage ?? device.lockReason ?? null : null,
     // Not a setting. Every version of the agreement promises that a restricted
     // handset still makes emergency calls, so no stored policy can say otherwise.
@@ -104,10 +140,10 @@ async function buildPolicyView(device: Device): Promise<DevicePolicyView> {
     paymentMethods: policy.paymentMethodsOnLock ?? ['CASH'],
     amountDue: overdue.reduce((sum, i) => sum + amountOutstanding(i), 0),
     nextDueDate: unpaid[0]?.dueDate ?? null,
-    offlineLockAfterDays: await offlineLockDaysFor(device, policy),
+    offlineLockAfterDays: setupPending ? 0 : await offlineLockDaysFor(device, policy),
     gracePeriodDays: policy.gracePeriodDays ?? DEFAULT_POLICY.gracePeriodDays,
     frpAccountIds:
-      unpaid.length > 0 && (policy.frpAccountIds?.length ?? 0) > 0 && (await resetProtectionDisclosedFor(device))
+      !setupPending && unpaid.length > 0 && (policy.frpAccountIds?.length ?? 0) > 0 && (await resetProtectionDisclosedFor(device))
         ? policy.frpAccountIds ?? []
         : [],
     restrictionLevel,
@@ -158,6 +194,9 @@ const frpSchema = z
   .optional();
 
 const enrollSchema = z.object({
+  brand: z.string().trim().min(1).max(40).optional(),
+  model: z.string().trim().min(1).max(60).optional(),
+  osVersion: z.string().trim().max(40).optional(),
   token: z.string().trim().min(8, 'Enrollment code is required.').max(120),
   /** Only needed for a token issued without a device attached. */
   deviceId: z.string().trim().max(64).optional(),
@@ -175,6 +214,20 @@ dpcRouter.post(
   validateBody(enrollSchema),
   asyncHandler(async (req, res) => {
     const body = req.body as z.infer<typeof enrollSchema>;
+
+    const { PhoneIntakeService } = await import('../services/PhoneIntakeService.js');
+    const intake = await PhoneIntakeService.receive(body.token, {
+      brand: body.brand || 'Unknown', model: body.model || 'Unknown', osVersion: body.osVersion,
+      imeis: body.imeis, serialNumber: body.serialNumber, isDeviceOwner: body.isDeviceOwner,
+    });
+    if (intake?.cancelled) {
+      res.json({ intakeCancelled: true });
+      return;
+    }
+    if (intake?.pending) {
+      res.status(202).json({ intakePending: true, message: 'Phone details received. Complete the sale at the counter.' });
+      return;
+    }
 
     const result = await EnrollmentService.verifyAndEnroll({
       token: body.token,
@@ -197,7 +250,7 @@ dpcRouter.post(
       deviceId: result.device.id,
       deviceToken: result.deviceToken,
       checkInIntervalSeconds: 900,
-      policy: await buildPolicyView(result.device),
+      policy: { ...(await buildPolicyView(result.device)), locked: false, offlineLockAfterDays: 0, restrictionLevel: 0, restrictedApps: [], frpAccountIds: [] },
     });
   })
 );
@@ -216,6 +269,7 @@ const checkInSchema = z.object({
   imeis: imeiArraySchema,
   serialNumber: z.string().trim().max(64).optional(),
   isDeviceOwner: z.boolean().optional(),
+  setupComplete: z.boolean().optional(),
   integrity: integritySchema,
   attestation: attestationSchema,
   frp: frpSchema,
@@ -242,11 +296,19 @@ dpcRouter.post(
   requireDevice,
   validateBody(checkInSchema),
   asyncHandler(async (req, res) => {
-    const device = getDevice(req);
+    let device = getDevice(req);
     const body = req.body as z.infer<typeof checkInSchema>;
     const nowIso = new Date().toISOString();
     const ip = clientIp(req);
 
+    if (device.status === 'ENROLLED') {
+      if (body.isDeviceOwner !== true || body.setupComplete !== true) {
+        await repo.devices.update(device.id, { isOnline: false });
+        res.json({ status: 'ENROLLED', command: null, checkInIntervalSeconds: 900, policy: { ...(await buildPolicyView(device)), locked: false, offlineLockAfterDays: 0, restrictionLevel: 0, restrictedApps: [], frpAccountIds: [] } });
+        return;
+      }
+      device = await confirmEnrollment(device, nowIso);
+    }
     const offlineLockActive = body.offlineLockActive === true;
     const wasOfflineLocked = device.offlineLockActive === true;
 

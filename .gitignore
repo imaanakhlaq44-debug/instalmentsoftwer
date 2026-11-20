@@ -51,3 +51,20 @@ coverage/
 # address and payment history — they are the database, in a file.
 deploy/.env
 deploy/backups/
+
+# Private local recovery snapshots
+/recovery-verification-*/
+
+# Local environment backup files contain credentials
+**/.env.bak*
+
+# Rebuilt from pinned OCR packages before client builds.
+/client/public/ocr/
+/client/public/downloads/*.apk
+/phone-scan-signed/
+/phone-scan-signed.zip
+/cnic-synthetic-test.png
+/phone-scan-*.png
+/phone-scan-browser.cjs
+/shop-*.cjs
+/shop-build.init.gradle

@@ -3,6 +3,8 @@ import { OverdueEngine } from './OverdueEngine.js';
 import { SmsAggregatorService } from './SmsAggregatorService.js';
 import { repo } from '../db/repositories/index.js';
 import { config } from '../config.js';
+import { prisma } from '../db/prisma.js';
+import { Prisma } from '../generated/prisma/client.js';
 import { WhatsAppDispatchService } from './whatsapp/WhatsAppDispatchService.js';
 
 export interface SchedulerHandle {
@@ -63,6 +65,7 @@ async function expireStaleTokens(): Promise<void> {
     // One UPDATE with the predicate in the WHERE clause, instead of loading
     // every token and updating the stale ones row by row.
     const expired = await repo.enrollmentTokens.expireStale(new Date());
+    await prisma.phoneIntake.updateMany({ where: { deviceId: null, token: { OR: [{ expiresAt: { lte: new Date() } }, { status: 'EXPIRED' }] } }, data: { report: Prisma.DbNull, identityHash: null } });
 
     if (expired > 0) {
       console.log(`[scheduler] Expired ${expired} stale enrollment token(s).`);

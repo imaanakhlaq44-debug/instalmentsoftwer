@@ -267,6 +267,16 @@ describe('POST /api/auth/register-dealer', () => {
     expect(await repo.licensePacks.findMany({ where: { dealerId } })).toHaveLength(0);
   });
 
+  it('supports app account creation without requesting or issuing a license purchase', async () => {
+    const res = await anonymous().post('/api/auth/register-dealer').send({ ...signup, accountOnly: true });
+    expect(res.status).toBe(201);
+    expect(res.body.token).toBeTruthy();
+    expect(res.body.requestedPack).toBeUndefined();
+    expect((await repo.dealers.findById(res.body.dealer.id))?.requestedPackSize).toBeUndefined();
+    expect(await repo.deviceLicenses.countAvailable(res.body.dealer.id)).toBe(0);
+    expect(await repo.licensePacks.findMany({ where: { dealerId: res.body.dealer.id } })).toHaveLength(0);
+  });
+
   it('accepts a small pack of five, priced per lock', async () => {
     const res = await anonymous().post('/api/auth/register-dealer').send({ ...signup, packSize: 5 });
     expect(res.status).toBe(201);

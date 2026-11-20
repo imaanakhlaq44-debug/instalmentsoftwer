@@ -8,6 +8,10 @@ import { ErrorBoundary } from './components/ErrorBoundary.js';
 
 import { LoginPage } from './pages/LoginPage.js';
 import { RegisterPage } from './pages/RegisterPage.js';
+import { AccountPrivacyPage } from './pages/AccountPrivacyPage.js';
+import { ShopAppDownloadPage } from './pages/ShopAppDownloadPage.js';
+import { isPlayStoreApp, isNativeShopApp } from './utils/nativeApp.js';
+import { ShopAppHomePage } from './pages/ShopAppHomePage.js';
 import { ChangePasswordPage } from './pages/ChangePasswordPage.js';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage.js';
 import { DashboardPage } from './pages/DashboardPage.js';
@@ -15,11 +19,13 @@ import { PlatformDashboardPage, PlatformOrdersPage, PlatformShopsPage } from './
 import { useAuth } from './context/AuthContext.js';
 
 /**
- * Home. A super admin looking at every shop gets the platform view; once they
+ * Home. Inside the Android shop app it is the app's own home screen. On the
+ * website a super admin looking at every shop gets the platform view; once they
  * pick a shop, or for anyone else, it is that shop's own dashboard.
  */
 const HomePage: React.FC = () => {
   const { role, selectedDealerId, setSelectedDealerId } = useAuth();
+  if (isNativeShopApp()) return <ShopAppHomePage />;
   if (role !== 'SUPER_ADMIN') return <DashboardPage />;
   if (!selectedDealerId) return <PlatformDashboardPage />;
   return (
@@ -47,6 +53,7 @@ import { HandsetTestsPage } from './pages/HandsetTestsPage.js';
 import { NotificationsPage } from './pages/NotificationsPage.js';
 import { AuditLogsPage } from './pages/AuditLogsPage.js';
 import { SettingsPage } from './pages/SettingsPage.js';
+import { StaffPage } from './pages/StaffPage.js';
 import { FeedbackPage } from './pages/FeedbackPage.js';
 import { ShopFeedbackPage } from './pages/ShopFeedbackPage.js';
 
@@ -57,9 +64,11 @@ const Languages: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 /** Everyone signed in. */
-const ALL = ['SUPER_ADMIN', 'DEALER_ADMIN', 'DEALER_STAFF', 'CUSTOMER'] as const;
+const ALL = ['SUPER_ADMIN', 'DEALER_ADMIN', 'DEALER_STAFF', 'DEALER_VIEWER', 'CUSTOMER'] as const;
 /** Shop-side users; excludes customers. */
 const STAFF = ['SUPER_ADMIN', 'DEALER_ADMIN', 'DEALER_STAFF'] as const;
+/** STAFF plus view-only staff, for pages that only show the shop's records. */
+const TEAM = [...STAFF, 'DEALER_VIEWER'] as const;
 /** Owners and above — enforcement, money movement, audit, licensing. */
 const ADMIN = ['SUPER_ADMIN', 'DEALER_ADMIN'] as const;
 
@@ -74,6 +83,9 @@ export function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/privacy" element={<AccountPrivacyPage />} />
+            <Route path="/account-deletion" element={<AccountPrivacyPage deletion />} />
+            <Route path="/download" element={<ShopAppDownloadPage />} />
 
             {/* Signed in, but outside the dashboard shell */}
             <Route
@@ -98,12 +110,12 @@ export function App() {
               <Route path="/devices" element={<RequireRole roles={[...ALL]}><DevicesPage /></RequireRole>} />
               <Route path="/devices/:id" element={<RequireRole roles={[...ALL]}><DeviceDetailPage /></RequireRole>} />
 
-              <Route path="/customers" element={<RequireRole roles={[...STAFF]}><CustomersPage /></RequireRole>} />
-              <Route path="/customers/:id" element={<RequireRole roles={[...STAFF]}><CustomerDetailPage /></RequireRole>} />
+              <Route path="/customers" element={<RequireRole roles={[...TEAM]}><CustomersPage /></RequireRole>} />
+              <Route path="/customers/:id" element={<RequireRole roles={[...TEAM]}><CustomerDetailPage /></RequireRole>} />
 
               <Route path="/installments" element={<RequireRole roles={[...ALL]}><InstallmentsPage /></RequireRole>} />
               <Route path="/payments" element={<RequireRole roles={[...ALL]}><PaymentsPage /></RequireRole>} />
-              <Route path="/transactions" element={<RequireRole roles={[...STAFF]}><TransactionsPage /></RequireRole>} />
+              <Route path="/transactions" element={<RequireRole roles={[...TEAM]}><TransactionsPage /></RequireRole>} />
               <Route path="/notifications" element={<RequireRole roles={[...ALL]}><NotificationsPage /></RequireRole>} />
 
               <Route path="/orders" element={<RequireRole roles={["SUPER_ADMIN"]}><PlatformOrdersPage /></RequireRole>} />
@@ -119,7 +131,8 @@ export function App() {
 
               <Route path="/licenses" element={<RequireRole roles={[...ADMIN]}><LicensesPage /></RequireRole>} />
               {/* Ordering is the shop owner's; the platform decides orders on /orders. */}
-              <Route path="/buy-locks" element={<RequireRole roles={['DEALER_ADMIN']}><BuyLocksPage /></RequireRole>} />
+              <Route path="/buy-locks" element={<RequireRole roles={['DEALER_ADMIN']}>{isPlayStoreApp() ? <Navigate to="/licenses" replace /> : <BuyLocksPage />}</RequireRole>} />
+              <Route path="/staff" element={<RequireRole roles={[...ADMIN]}><StaffPage /></RequireRole>} />
               <Route path="/audit-logs" element={<RequireRole roles={[...ADMIN]}><AuditLogsPage /></RequireRole>} />
               <Route path="/settings" element={<RequireRole roles={[...ADMIN]}><SettingsPage /></RequireRole>} />
 

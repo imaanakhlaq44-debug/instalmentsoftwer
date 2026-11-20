@@ -162,3 +162,10 @@ export function amountOutstanding(installment: Installment): number {
   const fees = Math.max(0, (installment.lateFee ?? 0) - (installment.lateFeePaid ?? 0));
   return principal + fees;
 }
+
+/** Calendar date used by the Pakistan business, independent of server timezone. */
+export function toBusinessDate(date: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Karachi', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(date);
+}
