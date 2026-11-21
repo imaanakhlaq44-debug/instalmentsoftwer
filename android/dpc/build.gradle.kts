@@ -58,8 +58,8 @@ android {
         applicationId = "pk.almassdm.dpc"
         minSdk = 26
         targetSdk = 36
-        versionCode = 12
-        versionName = "1.7.1"
+        versionCode = 13
+        versionName = "1.7.2"
 
         buildConfigField(
             "String",

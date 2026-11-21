@@ -36,7 +36,7 @@ jobs:
           ./gradlew --no-daemon :dpc:testDebugUnitTest :dpc:lintRelease :dpc:assembleRelease :dpc:verifyReleaseSigned :dpc:printSigningCertChecksum -Palmassdm.defaultServerUrl=https://app.almassdm.pro/api/dpc
       - uses: actions/upload-artifact@v4
         with:
-          name: almas-sdm-dpc-1.7.1-signed
+          name: almas-sdm-dpc-1.7.2-signed
           path: android/dpc/build/outputs/apk/release/dpc-release.apk
           if-no-files-found: error
           retention-days: 7
