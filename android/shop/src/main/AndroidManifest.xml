@@ -5,6 +5,9 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <!-- Only the CNIC scan screen is locked to portrait, which makes Android
+         infer a required portrait screen; the app works without it. -->
+    <uses-feature android:name="android.hardware.screen.portrait" android:required="false" />
     <application android:allowBackup="false" android:usesCleartextTraffic="false"
         android:networkSecurityConfig="@xml/network_security_config"
         android:dataExtractionRules="@xml/data_extraction_rules" android:fullBackupContent="@xml/backup_rules"
