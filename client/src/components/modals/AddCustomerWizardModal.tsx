@@ -16,6 +16,7 @@ import { installmentPreview } from '../../utils/installmentPreview.js';
 import { CnicScanButton, cnicBridge } from './CnicScanButton.js';
 import { CnicOcrButton } from './CnicOcrButton.js';
 import { PhoneIntakeScan } from './PhoneIntakeScan.js';
+import { ImeiRegistrationCheck } from './ImeiRegistrationCheck.js';
 import { CustomerPhotoPicker } from '../customers/CustomerPhotoPicker.js';
 import {
   X,
@@ -91,6 +92,8 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess, st
   const [photo, setPhoto] = useState<string | null>(null);
   const [phoneIntakeId, setPhoneIntakeId] = useState<string | undefined>(initialDraft?.data.phoneIntakeId);
   const [phoneScanPending, setPhoneScanPending] = useState(false);
+  // Bumped when the server refuses the sale for an IMEI already registered.
+  const [imeiRecheck, setImeiRecheck] = useState(0);
   const [scannedOsVersion, setScannedOsVersion] = useState<string | undefined>(initialDraft?.data.scannedOsVersion);
   // A typed advance is never silently replaced when the price changes.
   const [advanceChoice, setAdvanceChoice] = useState<number | null>(initialDraft?.data.advanceChoice === undefined ? 25 : initialDraft.data.advanceChoice);
@@ -379,7 +382,11 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess, st
       // A 422 names each bad field: mark it and take the shop to it, instead of
       // a bare "not valid" that points nowhere.
       const serverErrors = err instanceof ApiError ? fieldsFromServer(err.details) : {};
-      if (Object.keys(serverErrors).length > 0) {
+      if (err instanceof ApiError && err.code === 'IMEI_REGISTERED') {
+        // Show who holds the IMEI, and the owner's way out, next to the field.
+        setImeiRecheck((n) => n + 1);
+        showProblems({ imei: 'This IMEI is already registered.' }, err.message);
+      } else if (Object.keys(serverErrors).length > 0) {
         showProblems(serverErrors, Object.values(serverErrors)[0]);
       } else {
         const detail = err instanceof ApiError ? err.details?.map((d) => d.message).join(' ') : '';
@@ -701,6 +708,7 @@ export const AddCustomerWizardModal: React.FC<Props> = ({ onClose, onSuccess, st
                     />
                   </div>
                   {fieldError('imei')}
+                  <ImeiRegistrationCheck imei={formData.imei} recheck={imeiRecheck} />
                 </div>
 
                 <div>

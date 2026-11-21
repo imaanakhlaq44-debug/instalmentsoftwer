@@ -26,6 +26,8 @@ generator client {
   // The Docker build generates before tsconfig.json is copied in, guessed ".ts",
   // and the compiled server then required ./internal/class.ts and crashed.
   importFileExtension = "js"
+  // For the devices IMEI index: unique among live registrations only.
+  previewFeatures     = ["partialIndexes"]
 }
 
 // Prisma 7 takes the connection URL from prisma.config.ts (driver adapter),
@@ -508,8 +510,13 @@ model Device {
   customerId       String          @map("customer_id")
   brand            String          @db.VarChar(40)
   model            String          @db.VarChar(60)
-  imei             String          @unique @db.VarChar(20)
+  // Unique among live registrations only (see @@unique below): a phone taken
+  // back and sold again keeps its old, closed record for the history.
+  imei             String          @db.VarChar(20)
   serialNumber     String          @map("serial_number") @db.VarChar(64)
+  /// When the shop closed this registration so the same IMEI could be
+  /// registered again. Null for every live registration.
+  retiredAt        DateTime?       @map("retired_at") @db.Timestamptz(3)
   color            String          @db.VarChar(30)
   ramStorage       String          @map("ram_storage") @db.VarChar(40)
   purchasePrice    Int             @map("purchase_price")
@@ -621,6 +628,9 @@ model Device {
   @@index([dealerId, brand])
   // Every DPC request looks the device up by this hash before anything else.
   @@index([authTokenHash])
+  // One live registration per IMEI; closed ones stay as history.
+  @@unique([imei], map: "devices_imei_active_key", where: raw("retired_at IS NULL"))
+  @@index([imei])
   @@map("devices")
 }
 

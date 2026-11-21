@@ -22,6 +22,25 @@ export interface ApiErrorDetail {
 }
 
 /** An error carrying the server's status code and field-level validation detail. */
+/** GET /devices/imei-status/:imei — see RegistrationClosureService on the server. */
+export type ImeiStatus =
+  | { registered: false }
+  | {
+      registered: true;
+      sameShop: true;
+      canClose: boolean;
+      device: {
+        id: string;
+        brand: string;
+        model: string;
+        status: string;
+        registeredAt: string;
+        customerName: string | null;
+        plan: { status: string; remainingBalance: number; outstandingLateFees: number } | null;
+      };
+    }
+  | { registered: true; sameShop: false; canClose: false };
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -270,6 +289,19 @@ export class ApiService {
   /** Hands the phone back to its owner: no more lock, and the app can be removed. */
   static releaseDevice(id: string, data: { reason: string }) {
     return this.request<any>(`/devices/${id}/release`, { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  /** Whether an IMEI already has a live registration, as the sale form asks before saving. */
+  static getImeiStatus(imei: string) {
+    return this.request<ImeiStatus>(`/devices/imei-status/${encodeURIComponent(imei)}`);
+  }
+
+  /** Closes a registration so the same phone can be sold again. Owner only. */
+  static closeRegistration(id: string, data: { reason: string; confirmImeiLast4: string }) {
+    return this.request<{ outstandingAtClose: number }>(`/devices/${encodeURIComponent(id)}/close-registration`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 
   static correctImei(id: string, data: { imei: string; reason: string }) {

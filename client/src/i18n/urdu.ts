@@ -1413,6 +1413,27 @@ export const URDU: Record<string, string> = {
   'Refresh dashboard': 'ڈیش بورڈ دوبارہ لوڈ کریں',
   'Choose locks now (optional)': 'ابھی لاکس چنیں (اختیاری)',
   '8 or more characters, including a letter and a number.': 'کم از کم 8 حروف، جن میں ایک انگریزی حرف اور ایک نمبر ہو۔',
+  // sale form: an IMEI already registered (a phone taken back and sold again)
+  'This phone is already registered in your shop.': 'یہ فون پہلے سے آپ کی دکان میں رجسٹرڈ ہے۔',
+  'If you took this phone back and are selling it again, close the old registration first.': 'اگر آپ نے یہ فون واپس لیا ہے اور دوبارہ بیچ رہے ہیں تو پہلے پرانی رجسٹریشن بند کریں۔',
+  'Close old registration': 'پرانی رجسٹریشن بند کریں',
+  'Ask the shop owner to close the old registration before registering it again.': 'دوبارہ رجسٹر کرنے سے پہلے دکان کے مالک سے کہیں کہ پرانی رجسٹریشن بند کریں۔',
+  'This IMEI is registered with another shop. That shop has to release it first, or contact Almas SDM support.': 'یہ IMEI کسی اور دکان میں رجسٹرڈ ہے۔ پہلے وہ دکان اسے ریلیز کرے، یا الماس ایس ڈی ایم سپورٹ سے رابطہ کریں۔',
+  'Old registration closed. You can register this phone for the new customer now.': 'پرانی رجسٹریشن بند ہو گئی۔ اب آپ یہ فون نئے گاہک کے لیے رجسٹر کر سکتے ہیں۔',
+  'The phone is released: at its next internet connection the app removes its lock and restrictions.': 'فون ریلیز ہو جائے گا: اگلی بار انٹرنیٹ ملتے ہی ایپ اپنا لاک اور پابندیاں ہٹا دے گی۔',
+  'The old installment plan is cancelled. No more reminders, late fees or locks for the old customer.': 'پرانا قسطوں کا پلان منسوخ ہو جائے گا۔ پرانے گاہک کو نہ یاددہانی جائے گی، نہ لیٹ فیس لگے گی، نہ لاک ہو گا۔',
+  'The old customer, payments and agreement stay in the records. Nothing is deleted.': 'پرانا گاہک، ادائیگیاں اور معاہدہ ریکارڈ میں رہیں گے۔ کچھ بھی ڈیلیٹ نہیں ہوتا۔',
+  'This plan still has money owed:': 'اس پلان پر ابھی رقم باقی ہے:',
+  'It stays recorded in the audit trail, but the plan stops collecting it.': 'یہ آڈٹ ریکارڈ میں لکھی رہے گی، لیکن پلان اب یہ رقم وصول نہیں کرے گا۔',
+  'Phone taken back from the customer': 'گاہک سے فون واپس لیا',
+  'Customer returned the phone': 'گاہک نے فون واپس کر دیا',
+  'Sale cancelled': 'سیل منسوخ ہو گئی',
+  'Type the last 4 digits of the IMEI to confirm': 'تصدیق کے لیے IMEI کے آخری 4 ہندسے لکھیں',
+  "If the old app is still on the phone, keep it switched on with internet until it lets go, then factory reset it and scan the new sale's QR.": 'اگر فون میں پرانی ایپ ابھی بھی ہے تو فون کو انٹرنیٹ کے ساتھ آن رکھیں جب تک ایپ ہٹ نہ جائے، پھر فیکٹری ری سیٹ کر کے نئی سیل کا کیو آر اسکین کریں۔',
+  'Closing…': 'بند ہو رہا ہے…',
+  'Close registration': 'رجسٹریشن بند کریں',
+  'This IMEI is already registered.': 'یہ IMEI پہلے سے رجسٹرڈ ہے۔',
+  'This IMEI is already registered. If the phone was taken back, the shop owner can close the old registration first.': 'یہ IMEI پہلے سے رجسٹرڈ ہے۔ اگر فون واپس لیا گیا ہے تو دکان کا مالک پہلے پرانی رجسٹریشن بند کر سکتا ہے۔',
 };
 
 /**

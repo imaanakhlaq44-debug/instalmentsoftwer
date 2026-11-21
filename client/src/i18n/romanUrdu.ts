@@ -1459,6 +1459,27 @@ export const ROMAN_URDU: Record<string, string> = {
   "Confirm waiver": "Maafi pakki karein",
   "Late fee waived.": "Late fee maaf ho gayi.",
   "Plan restructured.": "Plan dobara ban gaya.",
+  // sale form: an IMEI already registered (a phone taken back and sold again)
+  "This phone is already registered in your shop.": "Yeh phone pehle se aap ki dukaan mein registered hai.",
+  "If you took this phone back and are selling it again, close the old registration first.": "Agar aap ne yeh phone wapas liya hai aur dobara bech rahe hain, to pehle purani registration band karein.",
+  "Close old registration": "Purani registration band karein",
+  "Ask the shop owner to close the old registration before registering it again.": "Dobara register karne se pehle dukaan ke malik se kahein ke purani registration band karein.",
+  "This IMEI is registered with another shop. That shop has to release it first, or contact Almas SDM support.": "Yeh IMEI kisi aur dukaan mein registered hai. Pehle woh dukaan isay release kare, ya Almas SDM support se rabta karein.",
+  "Old registration closed. You can register this phone for the new customer now.": "Purani registration band ho gayi. Ab aap yeh phone naye customer ke liye register kar sakte hain.",
+  "The phone is released: at its next internet connection the app removes its lock and restrictions.": "Phone release ho jayega: agli baar internet milte hi app apna lock aur pabandiyan hata degi.",
+  "The old installment plan is cancelled. No more reminders, late fees or locks for the old customer.": "Purana qiston ka plan cancel ho jayega. Purane customer ko na reminder jayega, na late fee lagegi, na lock hoga.",
+  "The old customer, payments and agreement stay in the records. Nothing is deleted.": "Purana customer, payments aur muahida record mein rahenge. Kuch delete nahi hota.",
+  "This plan still has money owed:": "Is plan par abhi raqam baqi hai:",
+  "It stays recorded in the audit trail, but the plan stops collecting it.": "Yeh audit record mein likhi rahegi, lekin plan ab yeh raqam wasool nahi karega.",
+  "Phone taken back from the customer": "Customer se phone wapas liya",
+  "Customer returned the phone": "Customer ne phone wapas kar diya",
+  "Sale cancelled": "Sale cancel ho gayi",
+  "Type the last 4 digits of the IMEI to confirm": "Pakka karne ke liye IMEI ke aakhri 4 hindse likhein",
+  "If the old app is still on the phone, keep it switched on with internet until it lets go, then factory reset it and scan the new sale's QR.": "Agar phone mein purani app abhi bhi hai, to phone ko internet ke saath on rakhein jab tak app hat na jaye, phir factory reset kar ke nayi sale ka QR scan karein.",
+  "Closing…": "Band ho raha hai…",
+  "Close registration": "Registration band karein",
+  "This IMEI is already registered.": "Yeh IMEI pehle se registered hai.",
+  "This IMEI is already registered. If the phone was taken back, the shop owner can close the old registration first.": "Yeh IMEI pehle se registered hai. Agar phone wapas liya gaya hai, to dukaan ka malik pehle purani registration band kar sakta hai.",
 };
 
 export const ROMAN_URDU_PATTERNS: Array<[RegExp, string]> = [

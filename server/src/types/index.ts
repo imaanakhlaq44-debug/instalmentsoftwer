@@ -125,6 +125,8 @@ export interface Device {
   model: string;
   imei: string;
   serialNumber: string;
+  /** Set when the shop closed this registration so the IMEI could be sold again. */
+  retiredAt?: string | null;
   color: string;
   ramStorage: string;
   purchasePrice: number;
