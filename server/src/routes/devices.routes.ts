@@ -6,6 +6,7 @@ import { Customer, InstallmentPlan, Installment } from '../types/index.js';
 import { deviceManagementService } from '../services/DeviceManagementService.js';
 import { AuditService } from '../services/AuditService.js';
 import { DeviceReleaseService } from '../services/DeviceReleaseService.js';
+import { RegistrationClosureService } from '../services/RegistrationClosureService.js';
 import { LocationService } from '../services/LocationService.js';
 import {
   requireDealerAdmin,
@@ -327,6 +328,7 @@ devicesRouter.post(
     const device = await repo.devices.findById(routeParam(req, 'id'));
     if (!device) throw AppError.notFound('Device');
     assertDealerAccess(req, device.dealerId, 'device');
+    if (device.retiredAt) throw AppError.badRequest('This registration was closed and can no longer be changed.');
 
     const body = req.body as z.infer<typeof correctImeiSchema>;
 
@@ -422,6 +424,9 @@ devicesRouter.post(
     if (!device) throw AppError.notFound('Device');
     assertDealerAccess(req, device.dealerId, 'device');
 
+    if (device.retiredAt) {
+      throw AppError.badRequest('This registration was closed. Register the phone as a new sale.');
+    }
     if (device.noLock) {
       throw AppError.badRequest('This phone was sold without a lock, so it has no QR code.');
     }
@@ -530,6 +535,53 @@ devicesRouter.post(
     });
 
     res.json(sanitizeDevice(released, user.role));
+  })
+);
+
+/**
+ * Is this IMEI already registered? Asked by the sale form as soon as an IMEI
+ * is typed or scanned, so the counter learns about an old registration before
+ * filling in the whole sale — and the owner can close it there and then.
+ */
+devicesRouter.get(
+  '/imei-status/:imei',
+  requireShopTeam,
+  asyncHandler(async (req, res) => {
+    const imei = routeParam(req, 'imei').replace(/\D/g, '');
+    if (!/^\d{15}$/.test(imei)) throw AppError.badRequest('An IMEI has 15 digits.');
+    const user = getAuthUser(req);
+    res.setHeader('Cache-Control', 'no-store');
+    res.json(
+      await RegistrationClosureService.imeiStatus(imei, {
+        userId: user.userId, userName: user.name, userRole: user.role, dealerId: user.dealerId ?? null,
+      })
+    );
+  })
+);
+
+/**
+ * Close a registration so the same phone can be registered again — a phone
+ * the shop took back and is selling to someone else. Owner only; every rule is
+ * in RegistrationClosureService.
+ */
+const closeRegistrationSchema = z.object({
+  reason: z.string().trim().min(5, 'Please give a reason of at least 5 characters.').max(500),
+  confirmImeiLast4: z.string().trim().regex(/^\d{4}$/, 'Type the last 4 digits of the IMEI.'),
+});
+
+devicesRouter.post(
+  '/:id/close-registration',
+  requireDealerAdmin,
+  validateBody(closeRegistrationSchema),
+  asyncHandler(async (req, res) => {
+    const user = getAuthUser(req);
+    const body = req.body as z.infer<typeof closeRegistrationSchema>;
+    const result = await RegistrationClosureService.close(routeParam(req, 'id'), {
+      actor: { userId: user.userId, userName: user.name, userRole: user.role, dealerId: user.dealerId ?? null, ipAddress: clientIp(req) },
+      reason: body.reason,
+      confirmImeiLast4: body.confirmImeiLast4,
+    });
+    res.json({ device: sanitizeDevice(result.device, user.role), outstandingAtClose: result.outstanding });
   })
 );
 

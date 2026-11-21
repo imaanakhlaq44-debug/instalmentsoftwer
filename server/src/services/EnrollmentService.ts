@@ -42,6 +42,7 @@ export class EnrollmentService {
       if (device.dealerId !== params.dealerId) {
         throw AppError.forbidden('You cannot generate an enrollment token for another dealer\'s device.');
       }
+      if (device.retiredAt) throw AppError.badRequest('This registration was closed. Register the phone as a new sale.');
       if (device.status === 'ENROLLED') throw AppError.badRequest('Finish Android setup on the same phone; connection confirmation is pending.');
       if (device.status === 'ACTIVE' || device.status === 'LOCKED') {
         throw AppError.badRequest('This device is already enrolled and under management.');

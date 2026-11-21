@@ -406,7 +406,7 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
 
   if (body.device) {
     if (await repo.devices.findByImei(body.device.imei)) {
-      throw AppError.conflict(`A device with this IMEI is already registered in the system.`);
+      throw new AppError('This IMEI is already registered. If the phone was taken back, the shop owner can close the old registration first.', 409, { code: 'IMEI_REGISTERED' });
     }
 
     /**

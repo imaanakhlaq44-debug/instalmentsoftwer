@@ -294,8 +294,9 @@ export const customers = {
 export const devices = {
   ...makeRepository<Device>('device'),
 
+  /** The live registration holding this IMEI. Closed (retired) ones do not count. */
   findByImei(imei: string, tx?: Tx): Promise<Device | undefined> {
-    return this.findFirst({ imei }, tx);
+    return this.findFirst({ imei, retiredAt: null }, tx);
   },
 
   findByCustomer(customerId: string, tx?: Tx): Promise<Device[]> {

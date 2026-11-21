@@ -15,6 +15,9 @@ export const dashboardRouter = Router();
  * Dealer scope comes from the verified JWT; a CUSTOMER login is narrowed
  * further to its own records. Every query below starts from this.
  */
+/** Installments whose plan is still being collected (not cancelled). */
+const LIVE_PLAN_INSTALLMENTS = { plan: { status: { not: 'CANCELLED' as const } } };
+
 function scopeWhere(scope: string | null, customerId?: string): Record<string, unknown> {
   return { ...dealerScope(scope), ...(customerId ? { customerId } : {}) };
 }
@@ -39,6 +42,9 @@ dashboardRouter.get(
     const scope = resolveDealerScope(req);
     const customerScope = user.role === 'CUSTOMER' ? user.customerId : undefined;
     const where = scopeWhere(scope, customerScope);
+    // A cancelled plan (its phone taken back and its registration closed) is no
+    // longer money the shop is collecting, so it stays out of the figures below.
+    const liveInstallments = { ...where, ...LIVE_PLAN_INSTALLMENTS };
 
     const now = new Date();
     const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
@@ -75,10 +81,10 @@ dashboardRouter.get(
       prisma.device.groupBy({ by: ['status'], where: { ...where, noLock: false }, _count: { _all: true } }),
       prisma.installmentPlan.groupBy({ by: ['status'], where, _count: { _all: true } }),
       prisma.installmentPlan.findMany({ where, distinct: ['customerId'], select: { customerId: true } }),
-      prisma.installmentPlan.aggregate({ where, _sum: { remainingBalance: true, outstandingLateFees: true } }),
-      repo.installments.findMany({ where: { ...where, status: 'OVERDUE' } }),
+      prisma.installmentPlan.aggregate({ where: { ...where, status: { not: 'CANCELLED' } }, _sum: { remainingBalance: true, outstandingLateFees: true } }),
+      repo.installments.findMany({ where: { ...liveInstallments, status: 'OVERDUE' } }),
       repo.installments.findMany({
-        where: { ...where, status: { not: 'PAID' }, dueDate: { gte: today, lte: weekEnd } },
+        where: { ...liveInstallments, status: { not: 'PAID' }, dueDate: { gte: today, lte: weekEnd } },
       }),
       prisma.payment.aggregate({
         where: { ...where, status: 'VERIFIED', reversedAt: null },
@@ -90,12 +96,12 @@ dashboardRouter.get(
       }),
       prisma.payment.aggregate({ where: { ...where, status: 'PENDING' }, _sum: { amount: true } }),
       prisma.installment.aggregate({
-        where: { ...where, dueDate: { lte: today } },
+        where: { ...liveInstallments, dueDate: { lte: today } },
         _sum: { amountDue: true, amountPaid: true },
       }),
       prisma.device.count({ where: { ...where, isOnline: false, noLock: false, status: { not: 'REMOVED' } } }),
       prisma.payment.aggregate({ where: { ...where, status: 'VERIFIED', reversedAt: null, createdAt: { gte: businessStart, lt: businessEnd } }, _sum: { amount: true } }),
-      prisma.installment.groupBy({ by: ['status'], where: { ...where, dueDate: scheduledDate }, _count: { _all: true } }),
+      prisma.installment.groupBy({ by: ['status'], where: { ...liveInstallments, dueDate: scheduledDate }, _count: { _all: true } }),
     ]);
     const noLockDevices = await prisma.device.count({ where: { ...where, noLock: true, status: { not: 'REMOVED' } } });
     const silentCutoff = new Date(now.getTime() - 72 * 3_600_000);
@@ -201,7 +207,7 @@ dashboardRouter.get(
 
     const monthlyTrends = await Promise.all(
       months.map(async ({ monthDate, start, end }) => {
-        const monthInstallmentWhere = { ...where, dueDate: { gte: start, lt: end } };
+        const monthInstallmentWhere = { ...where, ...LIVE_PLAN_INSTALLMENTS, dueDate: { gte: start, lt: end } };
 
         const [collection, scheduled, overdueRows] = await Promise.all([
           prisma.payment.aggregate({
@@ -263,7 +269,7 @@ dashboardRouter.get(
 
     // 25 rows, ordered and limited by the database.
     const overdueRows = await repo.installments.findMany({
-      where: { ...dealerScope(scope), status: 'OVERDUE' },
+      where: { ...dealerScope(scope), ...LIVE_PLAN_INSTALLMENTS, status: 'OVERDUE' },
       orderBy: { dueDate: 'asc' },
       take: 25,
     });
