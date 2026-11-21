@@ -15,6 +15,35 @@
 {$SITE_DOMAIN} {
 	encode zstd gzip
 
+	# Every response, API included: HTTPS only from now on, and no guessing at
+	# content types. (The API adds its own stricter headers through helmet.)
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		-Server
+	}
+
+	# The dashboard's own pages. The API's JSON keeps helmet's CSP, so this is
+	# scoped away from /api/*.
+	#
+	# Why each source is allowed:
+	#   wasm-unsafe-eval   the CNIC scanner runs Tesseract as WebAssembly
+	#   blob: (worker)     Tesseract starts its worker from a blob URL
+	#   blob:/data: (img)  camera photos, QR codes and previews before upload
+	#   Google Fonts       index.html loads the interface fonts from there
+	#   'unsafe-inline'    styles only — React style props and the font CSS
+	#   form-action https: a hosted payment checkout posts the browser to the
+	#                      gateway's own page (JazzCash), off-origin by design
+	# The shop's dashboard is never framed: frame-ancestors/X-Frame-Options stop
+	# another site from overlaying it to trick a click on "Lock" or "Verify".
+	@dashboard not path /api/*
+	header @dashboard {
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self' https:; frame-ancestors 'none'"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(self), microphone=(), geolocation=(), payment=(), usb=()"
+	}
+
 	# The API, including the DPC endpoints the handsets use.
 	handle /api/* {
 		reverse_proxy server:5000 {
