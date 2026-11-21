@@ -18,8 +18,8 @@ android {
         applicationId = "pk.almassdm.shop"
         minSdk = 26
         targetSdk = 36
-        versionCode = 9
-        versionName = "1.2.3"
+        versionCode = 10
+        versionName = "1.2.4"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "APP_ORIGIN", "\"https://app.almassdm.pro\"")
     }
