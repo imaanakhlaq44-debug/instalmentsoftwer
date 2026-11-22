@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { runInTransaction, Tx } from '../db/prisma.js';
+import { prisma, runInShopTransaction, Tx } from '../db/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { isValidImei } from '../utils/validators.js';
 import { repo } from '../db/repositories/index.js';
@@ -16,7 +16,11 @@ export interface PhoneReport {
 /** Intake credentials never authorize a lock or a financial record. */
 export class PhoneIntakeService {
   static async receive(token: string, report: PhoneReport) {
-    return runInTransaction(async (tx) => {
+    // A phone polls this every few seconds while the sale is finished at the
+    // counter, so it takes only its own shop's lock. A token's shop never changes.
+    const owner = await prisma.enrollmentToken.findUnique({ where: { token }, select: { dealerId: true } });
+    if (!owner) return null;
+    return runInShopTransaction(owner.dealerId, async (tx) => {
       const enrollment = await tx.enrollmentToken.findUnique({ where: { token } });
       if (!enrollment) return null;
       const session = await tx.phoneIntake.findUnique({ where: { tokenId: enrollment.id } });

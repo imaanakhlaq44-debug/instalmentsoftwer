@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { prisma, runInTransaction } from '../db/prisma.js';
+import { prisma, runInTransaction, runInShopTransaction } from '../db/prisma.js';
 import { requireDealerStaff, getAuthUser, resolveDealerScope, resolveWritableDealerId, assertDealerAccess, routeParam } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
@@ -18,7 +18,7 @@ saleDraftsRouter.get('/',asyncHandler(async(req,res)=>{
 saleDraftsRouter.put('/:id',validateBody(saveSchema),asyncHandler(async(req,res)=>{
  const id=z.string().uuid().parse(routeParam(req,'id')),user=getAuthUser(req),body=req.body as z.infer<typeof saveSchema>;
  const dealerId=await resolveWritableDealerId(req,body.dealerId);
- const draft=await runInTransaction(async tx=>{
+ const draft=await runInShopTransaction(dealerId, async tx=>{
   const shop=await tx.dealer.findUnique({where:{id:dealerId}});if(!shop?.active||shop.deletedAt)throw AppError.forbidden('This shop is no longer active.');
   const existing=await tx.saleDraft.findUnique({where:{id}});
   if(existing&&(existing.dealerId!==dealerId||user.role==='DEALER_STAFF'&&existing.userId!==user.userId))throw AppError.notFound('Pending sale');

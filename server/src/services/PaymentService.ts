@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 
 import { repo } from '../db/repositories/index.js';
-import { runInTransaction, Tx } from '../db/prisma.js';
+import { runInShopTransaction, Tx } from '../db/prisma.js';
 import {
   Payment, Installment, InstallmentPlan, Device, DevicePolicy,
   PaymentMethod, UserRole,
@@ -98,11 +98,17 @@ export class PaymentService {
       params.referenceNumber?.trim() ||
       `${params.paymentMethod.substring(0, 3).toUpperCase()}-${Date.now().toString().slice(-8)}`;
 
-    const { outcome, unlock } = await runInTransaction(async (tx) => {
+    const { outcome, unlock } = await runInShopTransaction(params.dealerId, async (tx) => {
       // Work out which plan this payment belongs to. The original code only
       // ever acted on `installmentId`, so a lump-sum payment against a plan was
       // recorded but never reduced the balance and never unlocked the device.
       const plan = await this.resolvePlan(params, tx);
+
+      // The transaction holds only this shop's lock, so it may only touch
+      // this shop's records.
+      if (plan && plan.dealerId !== params.dealerId) {
+        throw AppError.notFound('Installment plan');
+      }
 
       if (plan && plan.customerId !== params.customerId) {
         throw AppError.badRequest('This installment plan does not belong to the selected customer.');
@@ -186,7 +192,10 @@ export class PaymentService {
   }
 
   public static async verifyPayment(paymentId: string, actor: PaymentActor): Promise<PaymentOutcome> {
-    const { outcome, unlock } = await runInTransaction(async (tx) => {
+    // A payment's shop never changes, so it can pick the lock before the transaction.
+    const shopOf = await repo.payments.findById(paymentId);
+    if (!shopOf) throw AppError.notFound('Payment');
+    const { outcome, unlock } = await runInShopTransaction(shopOf.dealerId, async (tx) => {
       const payment = await repo.payments.findById(paymentId, tx);
       if (!payment) throw AppError.notFound('Payment');
       if (payment.reversedAt) throw AppError.badRequest('This payment has been reversed and cannot be verified.');
@@ -439,7 +448,9 @@ export class PaymentService {
     reason: string;
     actor: PaymentActor;
   }): Promise<{ success: true; message: string; unlockedDeviceRelocked: boolean }> {
-    return runInTransaction(async (tx) => {
+    const shopOf = await repo.payments.findById(params.paymentId);
+    if (!shopOf) throw AppError.notFound('Payment');
+    return runInShopTransaction(shopOf.dealerId, async (tx) => {
       const payment = await repo.payments.findById(params.paymentId, tx);
       if (!payment) throw AppError.notFound('Payment');
       if (payment.reversedAt) throw AppError.badRequest('This payment has already been reversed.');

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 
 import { repo, indexBy, groupBy, dealerScope } from '../db/repositories/index.js';
-import { runInTransaction } from '../db/prisma.js';
+import { runInShopTransaction } from '../db/prisma.js';
 import {
   Installment, InstallmentPlan, Customer, Device, Transaction, DevicePolicy,
 } from '../types/index.js';
@@ -220,7 +220,7 @@ installmentsRouter.post('/:id/waive-late-fee', requireDealerAdmin, validateBody(
 
   // The waiver, its ledger entry and the plan total move together — a waiver
   // recorded without the matching contra-entry would leave the books wrong.
-  await runInTransaction(async (tx) => {
+  await runInShopTransaction(inst.dealerId, async (tx) => {
     const current = await repo.installments.findById(inst.id, tx);
     if (!current || current.amountPaid !== inst.amountPaid || current.lateFee !== inst.lateFee || current.lateFeePaid !== inst.lateFeePaid) {
       throw AppError.conflict('The installment changed. Reload and try again.');
@@ -340,7 +340,7 @@ installmentsRouter.post('/plans/:id/reschedule', requireDealerAdmin, validateBod
   const nowIso = new Date().toISOString();
 
   // Preserve the historical rows and move remaining principal exactly once.
-  const created = await runInTransaction(async (tx) => {
+  const created = await runInShopTransaction(plan.dealerId, async (tx) => {
     const currentRows = await repo.installments.findByPlan(plan.id, tx);
     if (JSON.stringify(currentRows) !== JSON.stringify(existing)) {
       throw AppError.conflict('The schedule changed while you were editing. Reload and try again.');

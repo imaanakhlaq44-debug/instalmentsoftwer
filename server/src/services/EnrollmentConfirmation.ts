@@ -1,4 +1,4 @@
-import { runInTransaction } from '../db/prisma.js';
+import { runInShopTransaction } from '../db/prisma.js';
 import { repo } from '../db/repositories/index.js';
 import { AuditService } from './AuditService.js';
 import { deviceCommandSignal } from './DeviceCommandSignal.js';
@@ -6,7 +6,7 @@ import { AppError } from '../utils/AppError.js';
 import { Device } from '../types/index.js';
 
 export async function confirmEnrollment(device: Device, nowIso: string): Promise<Device> {
-  const result = await runInTransaction(async tx => {
+  const result = await runInShopTransaction(device.dealerId, async tx => {
     const current = await repo.devices.findById(device.id, tx);
     if (!current || current.authTokenHash !== device.authTokenHash) throw AppError.unauthorized('Enrollment credentials changed.');
     if (current.status !== 'ENROLLED') return current;
