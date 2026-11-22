@@ -1,12 +1,13 @@
 import { PendingWork } from '../components/dashboard/PendingWork.js';
 import { useEffect, useState } from 'react';
-import { ArrowRight, CalendarDays, ClipboardList, KeyRound, Plus, RefreshCw, ShieldAlert, Smartphone, Store, Users, Wallet } from 'lucide-react';
+import { ArrowRight, CalendarDays, ClipboardList, KeyRound, Plus, RefreshCw, Smartphone, Store, Wallet } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.js';
 import { ApiService } from '../services/api.js';
 import { firstName, money } from '../utils/format.js';
 import { AddCustomerWizardModal } from '../components/modals/AddCustomerWizardModal.js';
 import type { PlatformOverview } from './PlatformDashboardPage.js';
+import { ShopKhataHome } from '../components/dashboard/ShopKhataHome.js';
 
 interface AppStats {
   collectedToday: number; collectedThisMonth: number; outstandingAmount: number;
@@ -35,35 +36,23 @@ function Failure({ retry }: { retry: () => void }) {
 }
 export function ShopAppHomePage() {
   const { role, selectedDealerId } = useAuth();
-  return role === 'SUPER_ADMIN' && !selectedDealerId ? <PlatformHome /> : <PortfolioHome />;
+  if (role === 'SUPER_ADMIN' && !selectedDealerId) return <PlatformHome />;
+  // The shop's own team gets the khata home; a customer keeps their own phones and payments.
+  return role === 'CUSTOMER' ? <PortfolioHome /> : <ShopKhataHome />;
 }
 
+/** A customer's own home in the shop app: their phones, payments and dues. */
 function PortfolioHome() {
-  const { selectedDealerId, role, isStaff, isViewer, isShopTeam, shopEditMode } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState<AppStats | null>(null);
   const [failed, setFailed] = useState(false);
   const [reload, setReload] = useState(0);
-  const [saleOpen, setSaleOpen] = useState(false);
-  const viewOnly = role === 'SUPER_ADMIN' && !shopEditMode;
   useEffect(() => {
     let live = true; setStats(null); setFailed(false);
-    ApiService.getDashboardStats(selectedDealerId).then(data => { if (live) setStats(data); }).catch(() => { if (live) setFailed(true); });
+    ApiService.getDashboardStats().then(data => { if (live) setStats(data); }).catch(() => { if (live) setFailed(true); });
     return () => { live = false; };
-  }, [selectedDealerId, reload]);
-  const openSale = () => setSaleOpen(true);
-  const items: Tile[] = isStaff ? [
-    { label: 'New sale', icon: Plus, action: () => openSale(), tone: 'navy', disabled: viewOnly },
-    { label: 'Record payment', icon: Wallet, action: () => navigate('/payments'), tone: 'paper' },
-    { label: 'Installments', icon: CalendarDays, action: () => navigate('/installments'), tone: 'mint' },
-    { label: 'Customer list', icon: Users, action: () => navigate('/customers'), tone: 'peach' },
-  ] : isViewer ? [
-    // View-only staff: who has which phone, and who is behind. Nothing that changes data.
-    { label: 'Phones', icon: Smartphone, action: () => navigate('/devices'), tone: 'navy' },
-    { label: 'Payments', icon: Wallet, action: () => navigate('/payments'), tone: 'paper' },
-    { label: 'Installments', icon: CalendarDays, action: () => navigate('/installments'), tone: 'mint' },
-    { label: 'Customer list', icon: Users, action: () => navigate('/customers'), tone: 'peach' },
-  ] : [
+  }, [reload]);
+  const items: Tile[] = [
     { label: 'My phones', icon: Smartphone, action: () => navigate('/devices'), tone: 'navy' },
     { label: 'My payments', icon: Wallet, action: () => navigate('/payments'), tone: 'paper' },
     { label: 'Installments', icon: CalendarDays, action: () => navigate('/installments'), tone: 'mint' },
@@ -78,16 +67,11 @@ function PortfolioHome() {
       <dl className="app-home-money-details"><div><dt>Total outstanding</dt><dd data-i18n-skip>{amount(stats?.outstandingAmount)}</dd></div><div><dt>Collected this month</dt><dd data-i18n-skip>{amount(stats?.collectedThisMonth)}</dd></div></dl>
     </section>
     <Tiles items={items} />
-    {isStaff&&<div className="mt-4"><PendingWork disabled={viewOnly}/></div>}
     {stats && <>
-      <button type="button" className="app-home-attention" onClick={() => navigate(`/installments${stats.overdueInstallmentsCount ? '?status=OVERDUE' : ''}`)}>
+      <button type="button" className="app-home-attention" onClick={() => navigate(stats.overdueInstallmentsCount ? '/installments?status=OVERDUE' : '/installments')}>
         <span className="app-home-count">{stats.overdueInstallmentsCount}</span><span className="min-w-0 flex-1"><strong>{stats.overdueInstallmentsCount ? 'Installments past due' : 'No overdue installments'}</strong><small>{stats.overdueInstallmentsCount ? 'Open the list and follow up' : 'View your installment schedule'}</small></span><ArrowRight className="rtl:rotate-180" />
       </button>
-      {isShopTeam && stats.pendingVerificationAmount > 0 && <button type="button" className="app-home-inline-alert" onClick={() => navigate('/payments?status=PENDING')}><Wallet /><span><strong data-i18n-skip>{amount(stats.pendingVerificationAmount)}</strong> <span>Payments awaiting confirmation</span></span><ArrowRight /></button>}
-      {isShopTeam && (stats.tamperAlertDevices ?? 0) > 0 && <button type="button" className="app-home-inline-alert critical" onClick={() => navigate('/devices?tamper=true')}><ShieldAlert /><span>{stats.tamperAlertDevices} <span>Phones need inspection</span></span><ArrowRight /></button>}
-      <p className="app-home-footer"><span>{stats.totalDevices} <span>phones</span></span><i>·</i><span>{stats.totalCustomers} <span>customers</span></span><i>·</i><span>One place</span></p>
     </>}
-    {saleOpen && <AddCustomerWizardModal onClose={() => setSaleOpen(false)} onSuccess={() => setReload(n => n + 1)} />}
   </div>;
 }
 

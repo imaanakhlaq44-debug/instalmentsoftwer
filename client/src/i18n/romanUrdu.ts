@@ -10,6 +10,27 @@
  * QR, IMEI, app, SMS, CNIC, JazzCash, Wi-Fi.
  */
 export const ROMAN_URDU: Record<string, string> = {
+  // Shop app home: Khata card (Nov 2026)
+  "Collect payment": "Qist jama",
+  "Due now": "Abhi dena hai",
+  "Amount (Rs)": "Raqam (Rs)",
+  "How was it paid?": "Payment kaise mili?",
+  "Cash": "Naqad",
+  "Bank": "Bank",
+  "Enter the amount received.": "Jo raqam mili wo likhein.",
+  "Enter the transaction ID.": "Transaction ID likhein.",
+  "Payment recorded.": "Payment darj ho gayi.",
+  "Could not record the payment.": "Payment darj nahin ho saki.",
+  "Shop khata": "Shop khata",
+  "Today": "Aaj",
+  "Received today": "Aaj aaye",
+  "Today's installments received": "Aaj ki qistein jo mil gayin",
+  "No installments due today": "Aaj koi qist nahin",
+  "Due today": "Aaj due",
+  "Nobody owes an installment today.": "Aaj kisi ki qist baqi nahin.",
+  "Remind": "Yaad dilao",
+  "Search customers": "Customer dhoondein",
+  "Shop app home": "Shop app home",
  "Pending work": "Adhure kaam",
  "Save pending": "Adhura kaam save karein",
  "Saved sale forms": "Save kiye hue sale forms",
@@ -1490,6 +1511,9 @@ export const ROMAN_URDU: Record<string, string> = {
 };
 
 export const ROMAN_URDU_PATTERNS: Array<[RegExp, string]> = [
+  [/^(\d+) of (\d+) installments received$/, '$2 mein se $1 qistein mil gayin'],
+  [/^(\d+) of (\d+) paid$/, '$2 mein se $1 ada'],
+  [/^\+ (\d+) more customers today · see all$/, '+ $1 aur customers aaj · sab dekhein'],
   [/^WhatsApp message for (.+)$/, '$1 ke liye WhatsApp message'],
   [/^WhatsApp (?!message)(.+)$/, '$1 ko WhatsApp karein'],
   [/^(\d+) of (\d+) Months Paid$/, '$2 mein se $1 mahine ada'],

@@ -19,6 +19,27 @@
  * Figures stay in Western digits, as they do on the site and on the receipts.
  */
 export const URDU: Record<string, string> = {
+  // Shop app home: Khata card (Nov 2026)
+  "Collect payment": "قسط جمع",
+  "Due now": "ابھی دینا ہے",
+  "Amount (Rs)": "رقم (Rs)",
+  "How was it paid?": "ادائیگی کیسے ہوئی؟",
+  "Cash": "نقد",
+  "Bank": "بینک",
+  "Enter the amount received.": "جو رقم ملی وہ لکھیں۔",
+  "Enter the transaction ID.": "ٹرانزیکشن آئی ڈی لکھیں۔",
+  "Payment recorded.": "ادائیگی درج ہو گئی۔",
+  "Could not record the payment.": "ادائیگی درج نہیں ہو سکی۔",
+  "Shop khata": "دکان کا کھاتہ",
+  "Today": "آج",
+  "Received today": "آج آئے",
+  "Today's installments received": "آج کی قسطیں جو مل گئیں",
+  "No installments due today": "آج کوئی قسط نہیں",
+  "Due today": "آج واجب",
+  "Nobody owes an installment today.": "آج کسی کی قسط باقی نہیں۔",
+  "Remind": "یاد دلائیں",
+  "Search customers": "گاہک ڈھونڈیں",
+  "Shop app home": "شاپ ایپ ہوم",
   "Plan price (Rs)": "فون کی قیمت (روپے)",
   "Filled from the phone price above.": "اوپر فون کی قیمت سے خود بھر جاتا ہے۔",
   "Remaining amount (Rs)": "باقی رقم (روپے)",
@@ -1450,6 +1471,9 @@ export const URDU: Record<string, string> = {
  * marked line exists only here.
  */
 export const URDU_PATTERNS: Array<[RegExp, string]> = [
+  [/^(\d+) of (\d+) installments received$/, '$2 میں سے $1 قسطیں مل گئیں'],
+  [/^(\d+) of (\d+) paid$/, '$2 میں سے $1 ادا'],
+  [/^\+ (\d+) more customers today · see all$/, '+ $1 مزید گاہک آج · سب دیکھیں'],
   [/^(\d+) of (\d+) Months Paid$/, '$2 میں سے $1 مہینے ادا'],
   [/^(\d+) Days Prior$/, '$1 دن پہلے'],
   [/^(\d+) Days$/, '$1 دن'],
