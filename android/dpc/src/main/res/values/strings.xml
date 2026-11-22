@@ -12,6 +12,10 @@
     <string name="enroll_submit">Register</string>
     <string name="enroll_working">Registering…</string>
     <string name="enroll_done">This phone is registered.</string>
+    <string name="enroll_waiting_title">Phone details sent to the shop</string>
+    <string name="enroll_waiting_subtitle">No code is needed. Finish the customer and the sale on the shop\'s screen. This phone connects by itself a few seconds after the sale is saved.</string>
+    <string name="enroll_waiting_status">Waiting for the shop to save the sale…</string>
+    <string name="enroll_waiting_retry">Connection interrupted. Still waiting for the shop, retrying…</string>
 
     <!-- Status -->
     <string name="status_title">Almas SDM</string>

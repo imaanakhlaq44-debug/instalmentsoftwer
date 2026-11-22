@@ -96,7 +96,9 @@ class DpcSync(context: Context) {
         return result.policy
     }
 
-    fun syncOnce(): Outcome {
+    fun syncOnce(): Outcome = synchronized(SYNC_LOCK) { syncOnceLocked() }
+
+    private fun syncOnceLocked(): Outcome {
         if (!prefs.isEnrolled) return Outcome.NotEnrolled
 
         val api = DpcApi(prefs)
@@ -259,6 +261,7 @@ class DpcSync(context: Context) {
     }
 
     companion object {
+        private val SYNC_LOCK = Any()
         private const val TAG = "DpcSync"
     }
 }

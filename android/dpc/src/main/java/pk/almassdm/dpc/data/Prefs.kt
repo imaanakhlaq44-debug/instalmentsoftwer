@@ -127,6 +127,7 @@ class Prefs(context: Context) {
     fun savePolicy(policy: PolicyView) {
         prefs.edit()
             .putBoolean(KEY_P_LOCKED, policy.locked)
+            .putBoolean("policy_setup_pending", policy.setupPending)
             .putString(KEY_P_MESSAGE, policy.lockMessage)
             .putBoolean(KEY_P_EMERGENCY, policy.emergencyCallsAllowed)
             .putString(KEY_P_METHODS, policy.paymentMethods.joinToString("|"))
@@ -144,6 +145,7 @@ class Prefs(context: Context) {
 
     fun cachedPolicy(): PolicyView = PolicyView(
         locked = prefs.getBoolean(KEY_P_LOCKED, false),
+        setupPending = prefs.getBoolean("policy_setup_pending", false),
         lockMessage = prefs.getString(KEY_P_MESSAGE, null),
         emergencyCallsAllowed = prefs.getBoolean(KEY_P_EMERGENCY, true),
         paymentMethods = prefs.getString(KEY_P_METHODS, "")

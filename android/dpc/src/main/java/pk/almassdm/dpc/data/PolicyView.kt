@@ -45,6 +45,7 @@ data class PolicyView(
     val reportLocation: Boolean = false,
     val dealerName: String?,
     val dealerPhone: String?,
+    val setupPending: Boolean = false,
 ) {
     companion object {
         fun fromJson(json: JSONObject): PolicyView {
@@ -52,6 +53,7 @@ data class PolicyView(
             val methods = json.optJSONArray("paymentMethods")
             return PolicyView(
                 locked = json.optBoolean("locked", false),
+                setupPending = json.optBoolean("setupPending", false),
                 lockMessage = json.optStringOrNull("lockMessage"),
                 emergencyCallsAllowed = json.optBoolean("emergencyCallsAllowed", true),
                 paymentMethods = buildList {
