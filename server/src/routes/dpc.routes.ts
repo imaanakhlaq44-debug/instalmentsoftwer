@@ -12,6 +12,7 @@ import { RESTRICTED_APPS, restrictionLevelFor } from '../services/StagedRestrict
 import { LocationService } from '../services/LocationService.js';
 import { resetProtectionDisclosedFor } from '../services/DisclosurePolicy.js';
 import { DeviceIntegrityService } from '../services/DeviceIntegrityService.js';
+import { dpcUpdateOffer } from '../services/DpcUpdate.js';
 import { deviceManagementService } from '../services/DeviceManagementService.js';
 import { AuditService } from '../services/AuditService.js';
 import { amountOutstanding, DEFAULT_POLICY } from '../services/InstallmentMath.js';
@@ -387,6 +388,8 @@ dpcRouter.post(
     // Once a day the handset is asked to prove, with its secure chip, which
     // phone it is. It answers on its next check-in.
     const attestationChallenge = await DeviceIntegrityService.attestationChallengeFor(current);
+    // The newest handset app, which DPC 1.8.1+ installs on itself. Older builds ignore the field.
+    const update = dpcUpdateOffer(config.dpc);
 
     res.json({
       status: current.status,
@@ -394,6 +397,7 @@ dpcRouter.post(
       checkInIntervalSeconds: 900,
       policy: await buildPolicyView(current),
       ...(attestationChallenge ? { attestationChallenge } : {}),
+      ...(update ? { update } : {}),
     });
   })
 );

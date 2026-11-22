@@ -46,6 +46,15 @@ class Prefs(context: Context) {
         get() = prefs.getString(KEY_PROVISIONING_HANDED_OFF, null)
         set(value) = prefs.edit().putString(KEY_PROVISIONING_HANDED_OFF, value).apply()
 
+    /** The last self-update version that failed, and when; it is not retried for a day. */
+    var updateFailedVersion: Int
+        get() = prefs.getInt(KEY_UPDATE_FAILED_VERSION, 0)
+        set(value) = prefs.edit().putInt(KEY_UPDATE_FAILED_VERSION, value).apply()
+
+    var updateFailedAt: Long
+        get() = prefs.getLong(KEY_UPDATE_FAILED_AT, 0L)
+        set(value) = prefs.edit().putLong(KEY_UPDATE_FAILED_AT, value).apply()
+
     val isEnrolled: Boolean
         get() = !deviceId.isNullOrBlank() && !deviceToken.isNullOrBlank()
 
@@ -234,6 +243,8 @@ class Prefs(context: Context) {
         private const val KEY_DEVICE_TOKEN = "device_token"
         private const val KEY_ENROLL_TOKEN = "enrollment_token"
         private const val KEY_PROVISIONING_HANDED_OFF = "provisioning_handed_off"
+        private const val KEY_UPDATE_FAILED_VERSION = "update_failed_version"
+        private const val KEY_UPDATE_FAILED_AT = "update_failed_at"
         private const val KEY_LOCK_APPLIED = "lock_applied"
         private const val KEY_INTERVAL = "check_in_interval"
         private const val KEY_LAST_CHECK_IN = "last_check_in"

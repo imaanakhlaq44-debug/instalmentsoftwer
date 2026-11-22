@@ -127,6 +127,8 @@ data class CheckInResult(
     val policy: PolicyView,
     /** Set when the server wants a fresh secure-chip attestation (base64url). */
     val attestationChallenge: String? = null,
+    /** A newer build of this app to install, when the server announces one. */
+    val update: UpdateOffer? = null,
 )
 
 /** The answer to an enrolment: the credential, transmitted exactly once. */
