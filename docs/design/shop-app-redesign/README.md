@@ -46,7 +46,7 @@ Tareekh: 23 Nov 2026 · Phone size 375×812 · Shop app ka user agent (`AlmasSDM
 
 ## 2. Direction
 
-Brand wahi: cream paper `#FFF8E8`, ink borders, navy `#17375E`, sun yellow `#FFD05B`, mint, hard offset shadow. Koi naya rang nahin. Mockups mein emoji sirf jagah rakhne ke liye hain; asal mein lucide icons aur `android/shop/src/main/assets/home-icons` wali 3D art rahegi.
+Brand **bilkul almassdm.pro jaisa** (owner ki shart, har screen par): cream `#FFF8E8` + halke dots, cards `#FFFDF6`, 2–2.5px ink `#0F1419` border aur hard offset shadow (3–6px, blur nahin), Archivo 800/900 uppercase headings, sun-yellow `#FFC83D` main button (site ka `btn-sun`), navy `#12305F` paise wala band, emerald/mint paise ke liye, critical `#B3301F` on `#FDE3DF` late/lock ke liye, WhatsApp-green button (`btn-wa`), kala ink bottom nav. Yeh sab tokens pehle se `client/tailwind.config.js` mein hain; koi naya rang nahin. Mockups mein emoji sirf jagah rakhne ke liye hain; asal mein lucide icons aur `android/shop/src/main/assets/home-icons` wali 3D art rahegi.
 
 | Before | After |
 |---|---|
@@ -56,7 +56,7 @@ Brand wahi: cream paper `#FFF8E8`, ink borders, navy `#17375E`, sun yellow `#FFD
 | ![](before/roman-ur-device.png) | ![](after/after-device.png) |
 | ![](before/ur-home.png) | ![](after/after-home-ur.png) |
 
-**Home** — Yellow card "Aaj wasool karna hai" (aaj + late), neeche ek bara "Nayi sale" button, do buttons "Qist jama" aur "Gahak talash", phir "Aaj ke kaam": late/aaj wale gahak, har ek par seedha "Jama" ya Call.
+**Home** — Owner ko parent session mein teen home layouts dikhaye gaye: A "Aaj ka kaam", B "Bare buttons", C "Khatra pehle" — abhi faisla baqi hai. Upar ka mockup **A** hai (mera mashwara: counter par sab se zaroori sawal "aaj kis se paise lene hain" seedha jawab deta hai). B ya C chunein to wahi brand style us layout par lagega. Yellow card "Aaj wasool karna hai" (aaj + late), neeche ek bara "Nayi sale" button, do buttons "Qist jama" aur "Gahak talash", phir "Aaj ke kaam": late/aaj wale gahak, har ek par seedha "Jama" ya Call.
 
 **Nayi sale** — 4 qadam, har qadam alag screen: Gahak → Phone → Plan → Dastakhat. Upar progress bar, neeche sticky bar jis mein mahana qist live dikhe aur "Agla" button. Qeemat sirf ek dafa (Phone step mein). Saare chips 48px. Adhura kaam khud save (button ki zaroorat nahin, ✕ dabane par poochhe). Logic/API wahi rahega — sirf layout.
 
@@ -80,6 +80,7 @@ Har PR mein 375px screenshots teeno zabanon mein, `npm test` green. Android shel
 
 ## Aap se faisla chahiye
 
-- Kya yeh direction theek hai? (Haan / tabdeeli batayein)
+- Home ke liye A, B ya C? (mashwara: A)
+- Baqi screens (Nayi sale, Gahak/Qist jama, Device) ki direction theek hai?
 - Bottom nav: "Payments" ki jagah "Qistein" — theek?
 - Nayi sale: 4 alag screens (recommended) ya ek hi page lekin upar progress + sticky button?
