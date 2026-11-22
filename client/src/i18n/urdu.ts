@@ -39,6 +39,12 @@ export const URDU: Record<string, string> = {
   "Nobody owes an installment today.": "آج کسی کی قسط باقی نہیں۔",
   "Remind": "یاد دلائیں",
   "To collect today": "آج کس سے لینا ہے",
+  "This month": "اس مہینے",
+  "Platform khata": "پلیٹ فارم کھاتہ",
+  "Shops to look at": "ان دکانوں کو دیکھیں",
+  "No shops yet.": "ابھی کوئی دکان نہیں۔",
+  "Search shops": "دکان ڈھونڈیں",
+  "Locks on phones": "فونوں پر لگے لاک",
   "Search customers": "گاہک ڈھونڈیں",
   "Shop app home": "شاپ ایپ ہوم",
   "Plan price (Rs)": "فون کی قیمت (روپے)",
@@ -1472,6 +1478,12 @@ export const URDU: Record<string, string> = {
  * marked line exists only here.
  */
 export const URDU_PATTERNS: Array<[RegExp, string]> = [
+  [/^(\d+) of (\d+) locks on phones$/, "$2 میں سے $1 لاک فونوں پر"],
+  [/^(\d+) of (\d+) locks used$/, "$2 میں سے $1 لاک استعمال"],
+  [/^(\d+) phones behind$/, "$1 فونوں کی قسط لیٹ"],
+  [/^(\d+) lock orders to check$/, "$1 لاک آرڈر چیک کرنے ہیں"],
+  [/^\+ (\d+) more shops · see all$/, "+ $1 مزید دکانیں · سب دیکھیں"],
+  [/^(\d+) phones$/, "$1 فون"],
   [/^(\d+) of (\d+) installments received$/, '$2 میں سے $1 قسطیں مل گئیں'],
   [/^(\d+) of (\d+) paid$/, '$2 میں سے $1 ادا'],
   [/^\+ (\d+) more customers today · see all$/, '+ $1 مزید گاہک آج · سب دیکھیں'],

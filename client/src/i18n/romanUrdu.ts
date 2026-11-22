@@ -30,6 +30,12 @@ export const ROMAN_URDU: Record<string, string> = {
   "Nobody owes an installment today.": "Aaj kisi ki qist baqi nahin.",
   "Remind": "Yaad dilao",
   "To collect today": "Aaj kis se lena hai",
+  "This month": "Is mahine",
+  "Platform khata": "Platform khata",
+  "Shops to look at": "In dukanon ko dekhein",
+  "No shops yet.": "Abhi koi dukaan nahin.",
+  "Search shops": "Dukaan dhoondein",
+  "Locks on phones": "Phones par lage locks",
   "Search customers": "Customer dhoondein",
   "Shop app home": "Shop app home",
  "Pending work": "Adhure kaam",
@@ -1512,6 +1518,12 @@ export const ROMAN_URDU: Record<string, string> = {
 };
 
 export const ROMAN_URDU_PATTERNS: Array<[RegExp, string]> = [
+  [/^(\d+) of (\d+) locks on phones$/, "$2 mein se $1 locks phones par"],
+  [/^(\d+) of (\d+) locks used$/, "$2 mein se $1 locks istemal"],
+  [/^(\d+) phones behind$/, "$1 phones ki qist late"],
+  [/^(\d+) lock orders to check$/, "$1 lock orders check karne hain"],
+  [/^\+ (\d+) more shops · see all$/, "+ $1 aur dukanein · sab dekhein"],
+  [/^(\d+) phones$/, "$1 phones"],
   [/^(\d+) of (\d+) installments received$/, '$2 mein se $1 qistein mil gayin'],
   [/^(\d+) of (\d+) paid$/, '$2 mein se $1 ada'],
   [/^\+ (\d+) more customers today · see all$/, '+ $1 aur customers aaj · sab dekhein'],

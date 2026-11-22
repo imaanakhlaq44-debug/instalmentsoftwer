@@ -116,9 +116,52 @@ describe('Shop app home — customer and platform', () => {
     expect(screen.getByRole('button', { name: 'My phones' })).toBeInTheDocument();
   });
 
-  it('shows real platform earnings and platform actions for the super admin', async () => {
-    open('SUPER_ADMIN', { 'GET /platform/overview': { totals: { shops: 5, revenueThisMonth: 14000, revenue: 28000, locksSoldThisMonth: 14, locksConsumed: 2 }, awaitingPayment: [], shops: [], fleet: { byStatus: {}, stale: 0 } } });
-    expect(await screen.findByText(/14,000/)).toBeInTheDocument(); expect(screen.getByRole('button', { name: 'All shops' })).toBeInTheDocument();
+});
+
+describe('Platform home — khata style', () => {
+  const shop = (over: Record<string, unknown>) => ({
+    dealerId: 'd', name: 'Shop', ownerName: 'Owner', phone: '0300-1234567', city: 'Lahore', createdAt: '2026-01-01',
+    available: 20, consumed: 10, packsBought: 1, billed: 24000, lastPackAt: null,
+    devices: { total: 10, locked: 0, overdue: 0 }, outOfLocks: false, runningLow: false, requestedPack: null, ...over,
+  });
+  const overview = {
+    totals: { shops: 4, shopsAwaitingPayment: 1, ordersToCheck: 1, locksSold: 150, locksSoldThisMonth: 14, revenue: 28000, revenueThisMonth: 14000, locksAvailable: 126, locksConsumed: 24 },
+    awaitingPayment: [{ dealerId: 'd9', name: 'New', ownerName: 'X', phone: '0300', email: '', city: 'Lahore', createdAt: '', requestedPack: { size: 30, unitPrice: 800, totalPrice: 24000 } }],
+    shops: [
+      shop({ dealerId: 'calm', name: 'Calm Mobiles' }),
+      shop({ dealerId: 'late', name: 'Late Phones', devices: { total: 9, locked: 0, overdue: 5 } }),
+      shop({ dealerId: 'out', name: 'Empty Locks', available: 0, consumed: 30, outOfLocks: true }),
+      shop({ dealerId: 'low', name: 'Low Locks', available: 2, consumed: 28, runningLow: true }),
+    ],
+    fleet: { byStatus: {}, stale: 0, staleAfterDays: 3 },
+  };
+
+  it('shows the month\'s earnings, lock usage and orders waiting', async () => {
+    open('SUPER_ADMIN', { 'GET /platform/overview': overview });
+    expect(await screen.findByText(/14,000/)).toBeInTheDocument();
+    expect(screen.getByText('Platform khata')).toBeInTheDocument();
+    expect(screen.getByText('24 of 150 locks on phones')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /2 lock orders to check/ }));
+    expect(await screen.findByText('Went to /orders')).toBeInTheDocument();
+  });
+
+  it('puts the shops that need a word first, with WhatsApp and Open shop', async () => {
+    open('SUPER_ADMIN', { 'GET /platform/overview': overview });
+    await screen.findByText('Empty Locks');
+    const names = screen.getAllByRole('listitem').map(li => li.querySelector('strong')?.textContent);
+    expect(names[0]).toMatch(/Empty Locks/); expect(names[1]).toMatch(/Low Locks/); expect(names[2]).toMatch(/Late Phones/);
+    expect(screen.queryByText('Calm Mobiles')).not.toBeInTheDocument();
+    const empty = screen.getByText('Empty Locks').closest('li')!;
+    expect(within(empty).getByText('Out of locks')).toBeInTheDocument();
+    expect(within(empty).getByRole('link', { name: /WhatsApp/ })).toHaveAttribute('href', 'https://wa.me/923001234567');
+    expect(screen.getByRole('button', { name: /\+ 1 more shops · see all/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'New sale' })).not.toBeInTheDocument();
+  });
+
+  it('has its labels in Roman Urdu and Urdu', () => {
+    for (const label of ['This month', 'Shops to look at', 'Search shops', '24 of 150 locks on phones', '16 of 30 locks used', '5 phones behind', '2 lock orders to check', '+ 1 more shops · see all']) {
+      expect(toUrdu(label), label).not.toMatch(/[A-Za-z]{3,}/);
+      expect(toRomanUrdu(label), label).not.toBe(label);
+    }
   });
 });
