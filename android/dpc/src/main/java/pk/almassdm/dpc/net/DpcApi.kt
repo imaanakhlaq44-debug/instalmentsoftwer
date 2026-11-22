@@ -31,6 +31,8 @@ class DpcApi(private val baseUrl: String, private val credential: String? = null
         credential = prefs.deviceId?.let { id -> prefs.deviceToken?.let { "$id.$it" } }
     )
 
+    fun waitForCommand(after: String): String = request("GET", "/wait?after=" + java.net.URLEncoder.encode(after, "UTF-8"), null, authenticated = true).getString("state")
+
     /** POST /enroll — the only unauthenticated call, and the only time the token is seen. */
     fun enroll(
         enrollmentToken: String,
@@ -116,7 +118,7 @@ class DpcApi(private val baseUrl: String, private val credential: String? = null
         val connection = (url.openConnection() as HttpURLConnection).apply {
             requestMethod = method
             connectTimeout = CONNECT_TIMEOUT_MS
-            readTimeout = READ_TIMEOUT_MS
+            readTimeout = if (path.startsWith("/wait")) 35000 else READ_TIMEOUT_MS
             setRequestProperty("Accept", "application/json")
             setRequestProperty("User-Agent", "EMIShieldDPC/" + BuildConfig.VERSION_NAME)
             if (authenticated) setRequestProperty("Authorization", "Device " + credential)

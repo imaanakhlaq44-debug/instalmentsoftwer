@@ -2,6 +2,7 @@ package pk.almassdm.dpc.ui
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
@@ -76,16 +77,20 @@ class EnrollActivity : AppCompatActivity() {
 
             if (result.exceptionOrNull() is IntakePendingException) {
                 waitingForSale = true
-                binding.enrollStatus.text = "Phone details received. Complete the customer and sale on your shop screen. This phone will connect automatically."
+                showWaiting(true)
+                binding.enrollStatus.text = getString(R.string.enroll_waiting_status)
                 delay(5000)
                 continue
             }
             if (waitingForSale && (result.exceptionOrNull() as? DpcException)?.retryable == true) {
-                binding.enrollStatus.text = "Connection interrupted. Retrying your phone registration…"
+                binding.enrollStatus.text = getString(R.string.enroll_waiting_retry)
                 delay(5000)
                 continue
             }
 
+            // Leaving the wait (connected, cancelled or refused): if the form is
+            // needed again it must be visible, with the server's reason under it.
+            showWaiting(false)
             setBusy(false)
             if (result.exceptionOrNull() is IntakeCancelledException) {
                 goToStatus()
@@ -103,6 +108,22 @@ class EnrollActivity : AppCompatActivity() {
             break
           }
         }
+    }
+
+    /**
+     * A phone that scanned the shop's QR has nothing to type: it is waiting for
+     * the counter to save the sale. Showing the code form during that wait made
+     * staff think the phone wanted the code again, so the form is hidden and
+     * the screen says plainly what happens next.
+     */
+    private fun showWaiting(waiting: Boolean) {
+        val form = if (waiting) View.GONE else View.VISIBLE
+        binding.serverInput.visibility = form
+        binding.codeInput.visibility = form
+        binding.enrollButton.visibility = form
+        binding.waitingSpinner.visibility = if (waiting) View.VISIBLE else View.GONE
+        binding.enrollTitle.setText(if (waiting) R.string.enroll_waiting_title else R.string.enroll_title)
+        binding.enrollSubtitle.setText(if (waiting) R.string.enroll_waiting_subtitle else R.string.enroll_subtitle)
     }
 
     private fun setBusy(busy: Boolean) {

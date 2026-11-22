@@ -19,6 +19,7 @@
             android:src="@drawable/ic_shield" />
 
         <TextView
+            android:id="@+id/enrollTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
@@ -28,12 +29,23 @@
             android:textStyle="bold" />
 
         <TextView
+            android:id="@+id/enrollSubtitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:gravity="center"
             android:text="@string/enroll_subtitle"
             android:textSize="15sp" />
+
+        <!-- Shown in place of the form while a scanned phone waits for the counter. -->
+        <ProgressBar
+            android:id="@+id/waitingSpinner"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="32dp"
+            android:indeterminate="true"
+            android:visibility="gone" />
 
         <EditText
             android:id="@+id/serverInput"

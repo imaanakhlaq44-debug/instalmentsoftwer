@@ -115,10 +115,10 @@ class LockController(context: Context) {
 
         if (desiredIds.isEmpty()) {
             return try {
-                val liveModern = if (Build.VERSION.SDK_INT >= FactoryResetProtection.MODERN_API_LEVEL) {
-                    runCatching { dpm.getFactoryResetProtectionPolicy(admin) }.getOrNull()
+                val liveModernEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    runCatching { dpm.getFactoryResetProtectionPolicy(admin)?.isFactoryResetProtectionEnabled == true }.getOrDefault(false)
                 } else {
-                    null
+                    false
                 }
                 val liveLegacy = if (hasGms) {
                     runCatching {
@@ -130,7 +130,7 @@ class LockController(context: Context) {
                 }
                 if (
                     !prefs.frpAppliedIds.isNullOrEmpty() ||
-                    liveModern?.isFactoryResetProtectionEnabled == true ||
+                    liveModernEnabled ||
                     (liveLegacy != null && liveLegacy.isNotEmpty())
                 ) {
                     clearFactoryResetProtection()
@@ -157,7 +157,7 @@ class LockController(context: Context) {
         }
 
         return try {
-            if (Build.VERSION.SDK_INT >= FactoryResetProtection.MODERN_API_LEVEL) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 val beforePolicy = runCatching { dpm.getFactoryResetProtectionPolicy(admin) }.getOrNull()
                 val alreadyInSync = FactoryResetProtection.isLivePolicyInSync(
                     desiredIds,
@@ -269,6 +269,7 @@ class LockController(context: Context) {
         }
     }
 
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.R)
     private fun applyModernFrp(accountIds: List<String>) {
         check(Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) { "The FRP policy API needs Android 11." }
         dpm.setFactoryResetProtectionPolicy(

@@ -11,6 +11,10 @@
     <string name="enroll_submit">رجسٹر کریں</string>
     <string name="enroll_working">رجسٹر ہو رہا ہے…</string>
     <string name="enroll_done">یہ فون رجسٹر ہو چکا ہے۔</string>
+    <string name="enroll_waiting_title">فون کی تفصیلات دکان کو بھیج دی گئیں</string>
+    <string name="enroll_waiting_subtitle">کوئی کوڈ درکار نہیں۔ دکان کی اسکرین پر کسٹمر اور سیل مکمل کریں۔ سیل محفوظ ہوتے ہی یہ فون چند سیکنڈ میں خود جڑ جائے گا۔</string>
+    <string name="enroll_waiting_status">دکان کے سیل محفوظ کرنے کا انتظار ہو رہا ہے…</string>
+    <string name="enroll_waiting_retry">کنکشن منقطع ہو گیا۔ دکان کا انتظار جاری ہے، دوبارہ کوشش ہو رہی ہے…</string>
 
     <string name="status_title">الماس ایس ڈی ایم</string>
     <string name="status_registered">رجسٹرڈ · محفوظ</string>
