@@ -120,12 +120,66 @@
             android:text="@string/lock_emergency" />
 
         <Button
+            android:id="@+id/internetButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/lock_internet" />
+
+        <Button
             android:id="@+id/refreshButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:layout_marginBottom="32dp"
             android:text="@string/lock_refresh" />
+
+        <!-- Offline unlock: the shop turns the phone code into an unlock code. -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="32dp"
+            android:background="@drawable/bg_panel"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/lock_offline_unlock_help"
+                android:textColor="@color/on_lock_muted"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/lockPhoneCode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textColor="@color/on_lock"
+                android:textIsSelectable="false"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/unlockCodeInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:autofillHints=""
+                android:hint="@string/lock_unlock_code_hint"
+                android:importantForAutofill="no"
+                android:inputType="number"
+                android:maxLength="9"
+                android:textColor="@color/on_lock"
+                android:textColorHint="@color/on_lock_muted" />
+
+            <Button
+                android:id="@+id/unlockCodeButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/lock_unlock_code_button" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/lockStatusLine"

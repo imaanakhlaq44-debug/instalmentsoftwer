@@ -366,6 +366,11 @@ export const ROMAN_URDU: Record<string, string> = {
   'Confirm Unlock': 'Unlock pakka karein',
   'This record already exists — for example, this IMEI is already registered. Refresh and check.':
     'Yeh record pehle se maujood hai — maslan yeh IMEI pehle se register hai. Page refresh karke check karein.',
+  'Phone locked with no internet?': 'Phone lock hai aur internet nahi?',
+  'Ask the customer for the 8-digit phone code on the lock screen. You get an unlock code to type into the phone. Record the payment first; a phone still locked here must be unlocked here before a code is given.':
+    'Customer se lock screen par likha 8 hindson ka phone code poochein. Aap ko unlock code milega jo phone mein likhna hai. Pehle payment darj karein; jo phone yahan abhi lock hai, use code se pehle yahan unlock karein.',
+  'Get unlock code': 'Unlock code lein',
+  'Unlock code:': 'Unlock code:',
   'Re-enroll this phone': 'Yeh phone dobara jorein',
   'Use this when': 'Yeh tab istemal karein jab',
   'was factory reset and the lock app is gone. It gets a fresh QR on the same lock, so no new lock is used.':

@@ -8,6 +8,7 @@ import { AuditService } from '../services/AuditService.js';
 import { DeviceReleaseService } from '../services/DeviceReleaseService.js';
 import { RegistrationClosureService } from '../services/RegistrationClosureService.js';
 import { LocationService } from '../services/LocationService.js';
+import { OfflineUnlockService } from '../services/OfflineUnlockCode.js';
 import {
   requireDealerAdmin,
   requireDealerStaff,
@@ -199,6 +200,36 @@ devicesRouter.post(
       ipAddress: clientIp(req),
     });
 
+    res.json(result);
+  })
+);
+
+const offlineUnlockSchema = z.object({
+  challenge: z.string().trim().min(8).max(20),
+});
+
+/**
+ * An unlock code for a phone that is locked and cannot get online. The shop
+ * reads the 8-digit phone code off the lock screen; see OfflineUnlockService.
+ */
+devicesRouter.post(
+  '/:id/offline-unlock-code',
+  requireDealerAdmin,
+  validateBody(offlineUnlockSchema),
+  asyncHandler(async (req, res) => {
+    const user = getAuthUser(req);
+    const device = await repo.devices.findById(routeParam(req, 'id'));
+    if (!device) throw AppError.notFound('Device');
+    assertDealerAccess(req, device.dealerId, 'device');
+
+    const result = await OfflineUnlockService.issue({
+      deviceId: device.id,
+      challenge: (req.body as z.infer<typeof offlineUnlockSchema>).challenge,
+      userId: user.userId,
+      userName: user.name,
+      userRole: user.role,
+      ipAddress: clientIp(req),
+    });
     res.json(result);
   })
 );

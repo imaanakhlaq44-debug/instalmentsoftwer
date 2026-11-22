@@ -539,6 +539,29 @@ class LockController(context: Context) {
         addCategory(Intent.CATEGORY_DEFAULT)
     }
 
+    /**
+     * Lets the system's internet panel (Wi-Fi, mobile data, airplane mode) run
+     * inside the kiosk, so a locked phone whose data is off can get back
+     * online and hear an unlock. Only the package that answers the panel
+     * intent is added, and only until the lock screen is back in front
+     * ([closeConnectivitySettings]). Factory reset, safe boot, debugging and
+     * uninstalling this app stay blocked by their own restrictions meanwhile.
+     */
+    fun openConnectivitySettings(settingsPackage: String, emergencyCallsAllowed: Boolean): Boolean {
+        if (!isDeviceOwner || !prefs.lockApplied) return true
+        return runCatching {
+            dpm.setLockTaskPackages(admin, lockTaskPackages(emergencyCallsAllowed) + settingsPackage)
+        }.onFailure { Log.w(TAG, "Could not allow $settingsPackage in the kiosk: ${it.message}") }
+            .isSuccess
+    }
+
+    /** Takes the settings package back out of the kiosk. Safe to call any time. */
+    fun closeConnectivitySettings(emergencyCallsAllowed: Boolean) {
+        if (!isDeviceOwner || !prefs.lockApplied) return
+        runCatching { dpm.setLockTaskPackages(admin, lockTaskPackages(emergencyCallsAllowed)) }
+            .onFailure { Log.w(TAG, "Could not restore kiosk packages: ${it.message}") }
+    }
+
     private fun lockTaskPackages(emergencyCallsAllowed: Boolean): Array<String> {
         val packages = mutableListOf(appContext.packageName)
         if (emergencyCallsAllowed) {

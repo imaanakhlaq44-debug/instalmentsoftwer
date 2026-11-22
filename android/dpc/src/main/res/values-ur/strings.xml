@@ -37,6 +37,14 @@
     <string name="lock_emergency">ایمرجنسی کال</string>
     <string name="lock_refresh">ادائیگی کر دی ہے — دوبارہ چیک کریں</string>
     <string name="lock_offline_message">قسط بقایا ہونے کی حالت میں یہ فون کئی دن تک دکان کے سسٹم سے رابطہ نہ کر سکا، اس لیے اس نے خود کو محدود کر لیا ہے۔ فون کو انٹرنیٹ سے جوڑیں: یہ خود دوبارہ رابطہ کرے گا، اور دکان کے سسٹم سے ادائیگی کی تصدیق ہوتے ہی کھل جائے گا۔</string>
+    <string name="lock_internet">وائی فائی یا موبائل ڈیٹا آن کریں</string>
+    <string name="lock_internet_unavailable">اس فون پر انٹرنیٹ کی سیٹنگز نہیں کھل سکیں۔</string>
+    <string name="lock_offline_unlock_help">انٹرنیٹ نہیں ہے؟ دکان کو یہ فون کوڈ بتائیں۔ وہ آپ کو ان لاک کوڈ دیں گے۔</string>
+    <string name="lock_phone_code">فون کوڈ: %1$s</string>
+    <string name="lock_unlock_code_hint">دکان سے ملا ان لاک کوڈ</string>
+    <string name="lock_unlock_code_button">کوڈ سے ان لاک کریں</string>
+    <string name="lock_unlock_code_wrong">یہ ان لاک کوڈ درست نہیں۔ دکان سے دوبارہ پوچھیں۔</string>
+    <string name="lock_unlock_code_blocked">بہت زیادہ غلط کوڈ۔ 30 منٹ بعد دوبارہ کوشش کریں۔</string>
     <string name="lock_checking">دکان سے رابطہ ہو رہا ہے…</string>
     <string name="lock_still_locked">ادائیگی ابھی تک دکان تک نہیں پہنچی۔</string>
 
