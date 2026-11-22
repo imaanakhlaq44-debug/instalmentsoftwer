@@ -236,6 +236,11 @@ export class ApiService {
     return this.request<any>(`/dashboard/charts${buildQuery({ dealerId })}`);
   }
 
+  /** Shop app home: plans with an installment due today or earlier, today first. */
+  static getTodayList(dealerId?: string, limit = 3) {
+    return this.request<any>(`/dashboard/today${buildQuery({ dealerId, limit })}`);
+  }
+
   static getAttentionList(dealerId?: string) {
     return this.request<any>(`/dashboard/attention${buildQuery({ dealerId })}`);
   }

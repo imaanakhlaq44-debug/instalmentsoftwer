@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { prisma } from '../db/prisma.js';
 import { repo, indexBy, dealerScope } from '../db/repositories/index.js';
 import { Device, InstallmentPlan, Customer, Installment } from '../types/index.js';
-import { getAuthUser, resolveDealerScope } from '../middleware/auth.js';
+import { getAuthUser, resolveDealerScope, requireShopTeam } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { amountOutstanding, addMonthsPreservingEndOfMonth, toDateOnly, parseDateOnly } from '../services/InstallmentMath.js';
 
@@ -314,5 +314,99 @@ dashboardRouter.get(
     });
 
     res.json({ overdueInstallments: overdue });
+  })
+);
+
+/**
+ * The shop app's home: who owes money today.
+ *
+ * One card per plan with an unpaid installment due today or earlier. A plan
+ * three months behind is one conversation and one "Qist jama", so its unpaid
+ * rows are summed onto one card dated by the oldest. Installments due today
+ * come first (that is the day's work); late plans follow, longest late first.
+ *
+ * Shop team only: a customer login has no business seeing other customers.
+ */
+dashboardRouter.get(
+  '/today',
+  requireShopTeam,
+  asyncHandler(async (req, res) => {
+    const scope = resolveDealerScope(req);
+    const limit = Math.min(20, Math.max(1, Number.parseInt(String(req.query.limit ?? '3'), 10) || 3));
+
+    // Same Pakistan business day as /stats.
+    const businessDate = new Date(Date.now() + 5 * 3_600_000).toISOString().slice(0, 10);
+    const scheduledDate = parseDateOnly(businessDate);
+
+    const unpaid = await repo.installments.findMany({
+      where: {
+        ...dealerScope(scope),
+        ...LIVE_PLAN_INSTALLMENTS,
+        status: { not: 'PAID' },
+        dueDate: { lte: scheduledDate },
+      },
+      orderBy: { dueDate: 'asc' },
+    });
+
+    const byPlan = new Map<string, Installment[]>();
+    for (const row of unpaid) {
+      if (amountOutstanding(row) <= 0) continue;
+      const list = byPlan.get(row.planId) ?? [];
+      list.push(row);
+      byPlan.set(row.planId, list);
+    }
+
+    const dayMs = 86_400_000;
+    const ranked = [...byPlan.entries()]
+      .map(([planId, rows]) => {
+        const oldest = rows[0];
+        const daysLate = Math.max(0, Math.round((scheduledDate.getTime() - parseDateOnly(String(oldest.dueDate).slice(0, 10)).getTime()) / dayMs));
+        return { planId, rows, oldest, daysLate, amount: rows.reduce((s, i) => s + amountOutstanding(i), 0) };
+      })
+      .sort((a, b) => {
+        const aToday = a.daysLate === 0 ? 0 : 1;
+        const bToday = b.daysLate === 0 ? 0 : 1;
+        return aToday - bToday || b.daysLate - a.daysLate || b.amount - a.amount;
+      });
+
+    const page = ranked.slice(0, limit);
+    const [plans, customers] = await Promise.all([
+      repo.installmentPlans.findMany({ where: { id: { in: page.map((p) => p.planId) } } }),
+      repo.customers.findByIds([...new Set(page.map((p) => p.oldest.customerId))]),
+    ]);
+    const plansById = indexBy<InstallmentPlan>(plans, (p) => p.id);
+    const customersById = indexBy<Customer>(customers, (c) => c.id);
+    const devicesById = indexBy<Device>(
+      await repo.devices.findByIds([...new Set(plans.map((p) => p.deviceId))]),
+      (d) => d.id
+    );
+
+    res.json({
+      businessDate,
+      total: ranked.length,
+      dueTodayCount: ranked.filter((p) => p.daysLate === 0).length,
+      lateCount: ranked.filter((p) => p.daysLate > 0).length,
+      customers: page.map(({ planId, rows, oldest, daysLate, amount }) => {
+        const plan = plansById.get(planId);
+        const device = plan ? devicesById.get(plan.deviceId) : undefined;
+        const customer = customersById.get(oldest.customerId);
+        return {
+          planId,
+          installmentId: oldest.id,
+          customerId: oldest.customerId,
+          customerName: customer?.name ?? 'Unknown',
+          customerPhone: customer?.phone ?? '',
+          deviceId: device?.id,
+          deviceName: device ? `${device.brand} ${device.model}` : '',
+          deviceStatus: device?.status ?? 'UNKNOWN',
+          totalInstallments: plan?.totalInstallments ?? 0,
+          paidInstallments: plan?.paidInstallments ?? 0,
+          installmentsDue: rows.length,
+          amountDue: amount,
+          dueDate: String(oldest.dueDate).slice(0, 10),
+          daysLate,
+        };
+      }),
+    });
   })
 );

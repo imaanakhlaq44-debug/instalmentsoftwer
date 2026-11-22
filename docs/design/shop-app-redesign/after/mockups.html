@@ -1,0 +1,229 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500&family=Noto+Naskh+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#ddd;font-family:Archivo,'Noto Naskh Arabic',system-ui,sans-serif;color:#13283c}
+.phone{width:375px;height:812px;background:#fff8e8;position:relative;overflow:hidden;margin:0 0 20px}
+.top{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 8px}
+.brand{font-weight:800;font-size:17px;letter-spacing:-.3px;display:flex;gap:8px;align-items:center}
+.gem{width:26px;height:22px;background:linear-gradient(135deg,#1db98f,#3d6cb8);clip-path:polygon(20% 0,80% 0,100% 35%,50% 100%,0 35%)}
+.ic{width:40px;height:40px;border:1.5px solid #172c40;border-radius:50%;display:grid;place-items:center;font-size:16px;position:relative}
+.badge{position:absolute;top:-4px;right:-4px;background:#ffd05b;border:1px solid #172c40;border-radius:10px;font-size:10px;font-weight:800;padding:0 5px}
+.main{padding:4px 20px 110px}
+.hello{font-size:13px;color:#6f6a5c;margin:6px 0 2px}
+h1{font-size:26px;letter-spacing:-.8px;font-weight:800}
+.money{background:#ffd05b;border:1.5px solid #172c40;border-radius:20px;padding:16px 18px;box-shadow:3px 4px 0 #172c40;margin-top:14px}
+.lbl{font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:#5c4a1c}
+.amt{font-size:34px;font-weight:800;letter-spacing:-1.2px;margin:4px 0 2px}
+.sub{font-size:13px;color:#5c4a1c}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;border-top:1px solid #b08a3560;margin-top:12px;padding-top:10px}
+.row2 b{display:block;font-size:16px}
+.row2 span{font-size:12px;color:#7d6226}
+.cta{display:flex;align-items:center;justify-content:center;gap:10px;height:58px;border-radius:16px;background:#17375e;color:#fff;font-weight:800;font-size:17px;margin-top:16px;border:1.5px solid #172c40}
+.cta2{display:flex;align-items:center;justify-content:center;gap:10px;height:52px;border-radius:16px;background:#fffdf8;color:#17375e;font-weight:800;font-size:16px;border:1.5px solid #172c40}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.sec{display:flex;justify-content:space-between;align-items:baseline;margin:20px 0 8px}
+.sec h2{font-size:16px;font-weight:800}
+.sec a{font-size:13px;font-weight:700;color:#1b4382}
+.card{background:#fffdf7;border:1.5px solid #e2d6bb;border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.av{width:40px;height:40px;border-radius:50%;background:#f6e6db;display:grid;place-items:center;font-weight:800;flex-shrink:0}
+.grow{flex:1;min-width:0}
+.name{font-weight:800;font-size:15px}
+.meta{font-size:12.5px;color:#6f6a5c;margin-top:2px}
+.pill{font-size:11px;font-weight:800;padding:3px 8px;border-radius:20px;display:inline-block}
+.late{background:#fde3df;color:#b3301f}.ok{background:#ddf6ec;color:#0b7a5e}.due{background:#fff1c7;color:#8a5b00}.lock{background:#0f1419;color:#fff}
+.mini{height:40px;min-width:44px;padding:0 12px;border-radius:12px;border:1.5px solid #172c40;background:#fff;font-weight:800;font-size:13px;display:grid;place-items:center}
+.mini.navy{background:#17375e;color:#fff}
+.nav{position:absolute;bottom:0;left:0;right:0;height:68px;background:#fffdf8;border-top:1px solid #e9deca;display:flex;justify-content:space-around;align-items:center;font-size:11px;color:#8b969e}
+.nav div{display:flex;flex-direction:column;align-items:center;gap:4px}
+.nav .on{color:#17375e;font-weight:800}
+.nav .on i{background:#17375e;color:#fff}
+.nav i{font-style:normal;padding:3px 14px;border-radius:20px;font-size:15px}
+/* sale */
+.shead{background:#fff8e8;border-bottom:1.5px solid #172c40;padding:12px 16px 12px}
+.shead .t{display:flex;justify-content:space-between;align-items:center}
+.shead b{font-size:18px}
+.steps{display:flex;gap:6px;margin-top:12px}
+.steps div{flex:1;text-align:center;font-size:11px;font-weight:700;color:#8a919c}
+.steps div:before{content:'';display:block;height:6px;border-radius:4px;background:#e6d9ba;margin-bottom:5px}
+.steps .done{color:#0b7a5e}.steps .done:before{background:#1db98f}
+.steps .cur{color:#13283c}.steps .cur:before{background:#17375e}
+.fl{font-size:14px;font-weight:700;margin:16px 0 6px}
+.in{height:52px;border:1.5px solid #172c40;border-radius:12px;background:#fff;display:flex;align-items:center;padding:0 14px;font-size:17px;font-weight:700}
+.in.ph{color:#8a919c;font-weight:500}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{height:48px;padding:0 16px;border-radius:12px;border:1.5px solid #172c40;background:#fff;display:grid;place-items:center;font-weight:800;font-size:15px;flex:1}
+.chip.sel{background:#ffd05b;box-shadow:2px 2px 0 #172c40}
+.hint{font-size:12.5px;color:#6f6a5c;margin-top:6px}
+.sticky{position:absolute;left:0;right:0;bottom:0;background:#fffdf8;border-top:1.5px solid #172c40;padding:10px 16px 14px}
+.sum{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.sum b{font-size:22px}
+.sum span{font-size:12px;color:#6f6a5c}
+.bar{display:flex;gap:10px}
+.bar .back{width:56px;height:56px;border-radius:14px;border:1.5px solid #172c40;display:grid;place-items:center;font-size:20px;background:#fff}
+.bar .next{flex:1;height:56px;border-radius:14px;background:#17375e;color:#fff;font-weight:800;font-size:17px;display:grid;place-items:center}
+/* customer */
+.hero{background:#fffdf7;border:1.5px solid #172c40;border-radius:20px;padding:16px;box-shadow:3px 4px 0 #172c40}
+.hero .amt{font-size:30px}
+.tl{display:flex;gap:6px;margin-top:12px}
+.tl div{flex:1;height:30px;border-radius:8px;display:grid;place-items:center;font-size:11px;font-weight:800}
+.tl .p{background:#ddf6ec;color:#0b7a5e}.tl .l{background:#fde3df;color:#b3301f}.tl .n{background:#f7edd3;color:#8a919c}
+.acts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.act{height:62px;border-radius:14px;border:1.5px solid #e2d6bb;background:#fffdf7;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;font-weight:700}
+.act i{font-style:normal;font-size:18px}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:#fffdf8;border-top:1.5px solid #172c40;border-radius:22px 22px 0 0;padding:10px 18px 18px;box-shadow:0 -10px 40px #0003}
+.grab{width:44px;height:5px;background:#cdbd98;border-radius:4px;margin:0 auto 12px}
+.dim{position:absolute;inset:0;background:#0f141955}
+/* device */
+.status{border-radius:20px;padding:18px;border:1.5px solid #172c40;box-shadow:3px 4px 0 #172c40;background:#fde3df}
+.status .big{font-size:24px;font-weight:800;margin-top:4px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.tile{background:#fffdf7;border:1.5px solid #e2d6bb;border-radius:14px;padding:10px 12px}
+.tile span{font-size:11.5px;color:#6f6a5c;display:block}
+.tile b{font-size:15px}
+.danger{background:#e8473a;color:#fff;border-color:#172c40}
+.list{background:#fffdf7;border:1.5px solid #e2d6bb;border-radius:16px;margin-top:12px}
+.list div{display:flex;justify-content:space-between;align-items:center;padding:0 14px;height:50px;border-bottom:1px solid #efe5cf;font-size:14.5px;font-weight:600}
+.list div:last-child{border:0}
+[dir=rtl]{font-family:'Noto Naskh Arabic',Archivo,sans-serif}
+[dir=rtl] .name,[dir=rtl] .cta,[dir=rtl] .cta2{font-size:17px}
+[dir=rtl] .meta,[dir=rtl] .sub{font-size:14px}
+[dir=rtl] .lbl{letter-spacing:0;font-size:13px}
+/* === almassdm.pro brand pass === */
+.phone{background:#FFF8E8 radial-gradient(rgba(15,20,25,.07) 1px,transparent 1.2px) 0 0/18px 18px}
+.brand{font-weight:900;text-transform:uppercase}
+.ic{border:2.5px solid #0F1419;box-shadow:2px 2px 0 #0F1419;background:#FFFDF6}
+h1,.sec h2,.shead b{font-weight:900;text-transform:uppercase;letter-spacing:-.3px}
+.sec h2{font-size:17px}
+.money{background:#12305F;color:#fff;border:2.5px solid #0F1419;box-shadow:4px 4px 0 #0F1419;border-radius:22px}
+.money .lbl{color:#FFC83D}.money .sub,.money .row2 span{color:#c9d6ea}.money .amt{color:#fff;font-weight:900}
+.money .row2{border-top:1.5px dashed #ffffff40}.money .row2 b{color:#7BE0C2}
+.cta{background:#FFC83D;color:#0F1419;border:2.5px solid #0F1419;box-shadow:5px 5px 0 #0F1419;border-radius:16px;font-weight:900;text-transform:uppercase;font-size:18px}
+.cta2{background:#FFFDF6;color:#0F1419;border:2.5px solid #0F1419;box-shadow:3px 3px 0 #0F1419;border-radius:14px;font-weight:800}
+.card{background:#FFFDF6;border:2.5px solid #0F1419;box-shadow:3px 3px 0 #0F1419;border-radius:16px;margin-bottom:12px}
+.av{background:#DDF6EC;border:2px solid #0F1419}
+.mini{border:2px solid #0F1419;box-shadow:2px 2px 0 #0F1419;border-radius:11px;background:#FFFDF6}
+.mini.navy{background:#0F1419;color:#fff}
+.mini.wa{background:#25D366;color:#0F1419}
+.pill{border:1.5px solid currentColor}
+.nav{background:#0F1419;border-top:0;color:#9aa3ad}
+.nav .on{color:#FFC83D}.nav .on i{background:#FFC83D;color:#0F1419}
+.shead{background:#FFFDF6;border-bottom:2.5px solid #0F1419}
+.steps div:before{height:8px;border:1.5px solid #0F1419;background:#FFFDF6}
+.steps .done:before{background:#14946F}.steps .cur:before{background:#FFC83D}
+.in{border:2.5px solid #0F1419;background:#FFFDF6;box-shadow:2px 2px 0 #0F1419}
+.chip{border:2.5px solid #0F1419;background:#FFFDF6;box-shadow:2px 2px 0 #0F1419}
+.chip.sel{background:#FFC83D;box-shadow:3px 3px 0 #0F1419}
+.sticky{background:#12305F;color:#fff;border-top:2.5px solid #0F1419}
+.sticky span{color:#c9d6ea}.sticky .sum b{color:#FFC83D}
+.bar .back{border:2.5px solid #0F1419;background:#FFFDF6;color:#0F1419}
+.bar .next{background:#FFC83D;color:#0F1419;border:2.5px solid #0F1419;box-shadow:3px 3px 0 #0F1419;font-weight:900;text-transform:uppercase}
+.hero{background:#FFFDF6;border:2.5px solid #0F1419;box-shadow:4px 4px 0 #0F1419}
+.tl div{border:1.5px solid #0F1419}
+.tl .p{background:#DDF6EC;color:#0B7A5E}.tl .l{background:#FDE3DF;color:#B3301F}
+.act{border:2.5px solid #0F1419;box-shadow:3px 3px 0 #0F1419;background:#FFFDF6}
+.act.wa{background:#25D366}
+.sheet{background:#FFFDF6;border-top:2.5px solid #0F1419}
+.status{border:2.5px solid #0F1419;box-shadow:4px 4px 0 #0F1419;background:#FDE3DF}
+.status .big{font-weight:900;text-transform:uppercase}
+.cta.danger{background:#B3301F;color:#fff}
+.tile{border:2.5px solid #0F1419;box-shadow:2px 2px 0 #0F1419;background:#FFFDF6}
+.list{border:2.5px solid #0F1419;box-shadow:3px 3px 0 #0F1419;background:#FFFDF6}
+.list div{border-bottom:1.5px solid #E6D9BA}
+[dir=rtl] .cta,[dir=rtl] h1,[dir=rtl] .sec h2{text-transform:none}
+</style></head><body>
+
+<!-- HOME (Roman Urdu) -->
+<div class="phone" id="home">
+ <div class="top"><div class="brand"><div class="gem"></div>ALMAS SDM</div><div style="display:flex;gap:10px"><div class="ic">🔔<span class="badge">3</span></div><div class="ic">⚙</div></div></div>
+ <div class="main">
+  <div class="hello">Salam, Tariq 👋 · Al-Madina Mobiles</div>
+  <div class="money">
+   <div class="lbl">Aaj wasool karna hai</div>
+   <div class="amt">Rs 34,500</div>
+   <div class="sub">5 gahak · 2 ki qist late</div>
+   <div class="row2"><div><span>Is mahine wusool</span><b>Rs 1,12,000</b></div><div><span>Kul baqaya</span><b>Rs 5,02,558</b></div></div>
+  </div>
+  <div class="cta">＋ Nayi sale</div>
+  <div class="grid2"><div class="cta2">₨ Qist jama</div><div class="cta2">🔍 Gahak talash</div></div>
+  <div class="sec"><h2>Aaj ke kaam</h2><a>Sab dekhein →</a></div>
+  <div class="card"><div class="av">FM</div><div class="grow"><div class="name">Fahad Mustafa</div><div class="meta">Rs 7,250 · <span class="pill late">12 din late</span></div></div><div class="mini navy">Jama</div></div>
+  <div class="card"><div class="av">RK</div><div class="grow"><div class="name">Rashid Khan</div><div class="meta">Rs 5,750 · <span class="pill due">Aaj</span></div></div><div class="mini wa">💬</div></div>
+ </div>
+ <div class="nav"><div class="on"><i>⌂</i>Home</div><div><i>📱</i>Phones</div><div><i>₨</i>Qistein</div><div><i>👥</i>Gahak</div></div>
+</div>
+
+<!-- HOME (Urdu RTL) -->
+<div class="phone" id="home-ur" dir="rtl">
+ <div class="top"><div class="brand"><div class="gem"></div>ALMAS SDM</div><div style="display:flex;gap:10px"><div class="ic">🔔<span class="badge" style="right:auto;left:-4px">3</span></div><div class="ic">⚙</div></div></div>
+ <div class="main">
+  <div class="hello">سلام، Tariq 👋 · Al-Madina Mobiles</div>
+  <div class="money">
+   <div class="lbl">آج وصول کرنا ہے</div>
+   <div class="amt" dir="ltr" style="text-align:right">Rs 34,500</div>
+   <div class="sub">5 گاہک · 2 کی قسط لیٹ</div>
+   <div class="row2"><div><span>اس مہینے وصول</span><b dir="ltr" style="text-align:right">Rs 1,12,000</b></div><div><span>کل بقایا</span><b dir="ltr" style="text-align:right">Rs 5,02,558</b></div></div>
+  </div>
+  <div class="cta">＋ نئی سیل</div>
+  <div class="grid2"><div class="cta2">₨ قسط جمع</div><div class="cta2">🔍 گاہک تلاش</div></div>
+  <div class="sec"><h2>آج کے کام</h2><a>سب دیکھیں ←</a></div>
+  <div class="card"><div class="av">FM</div><div class="grow"><div class="name">Fahad Mustafa</div><div class="meta"><span dir="ltr">Rs 7,250</span> · <span class="pill late">12 دن لیٹ</span></div></div><div class="mini navy">جمع</div></div>
+  <div class="card"><div class="av">RK</div><div class="grow"><div class="name">Rashid Khan</div><div class="meta"><span dir="ltr">Rs 5,750</span> · <span class="pill due">آج</span></div></div><div class="mini wa">💬</div></div>
+ </div>
+ <div class="nav"><div class="on"><i>⌂</i>ہوم</div><div><i>📱</i>فون</div><div><i>₨</i>قسطیں</div><div><i>👥</i>گاہک</div></div>
+</div>
+
+<!-- SALE step 3 -->
+<div class="phone" id="sale">
+ <div class="shead"><div class="t"><div><div class="lbl" style="color:#6f6a5c">Nayi sale · Qadam 3 / 4</div><b>Qiston ka plan</b></div><div class="ic">✕</div></div>
+  <div class="steps"><div class="done">Gahak ✓</div><div class="done">Phone ✓</div><div class="cur">Plan</div><div>Dastakhat</div></div></div>
+ <div style="padding:2px 18px 180px">
+  <div class="card" style="margin-top:14px"><div class="av">📱</div><div class="grow"><div class="name">Tecno Camon 30</div><div class="meta">Qeemat Rs 58,000 · …1645</div></div><div class="mini">Badlein</div></div>
+  <div class="fl">Advance</div>
+  <div class="chips"><div class="chip">20%</div><div class="chip sel">25%</div><div class="chip">30%</div><div class="chip">Apni</div></div>
+  <div class="in" style="margin-top:8px">Rs 14,500</div>
+  <div class="fl">Kitne mahine?</div>
+  <div class="chips"><div class="chip">3</div><div class="chip sel">6</div><div class="chip">9</div><div class="chip">12</div></div>
+  <div class="fl">Pehli qist</div>
+  <div class="in">22 Dec 2026 <span style="margin-left:auto;font-size:12px;color:#6f6a5c">· 3 din mohlat</span></div>
+  <div class="hint">Mohlat dukaan ki settings se aati hai.</div>
+ </div>
+ <div class="sticky"><div class="sum"><div><span>Mahana qist × 6</span><br><b>Rs 7,250</b></div><div style="text-align:right"><span>Baqi raqam</span><br><b style="font-size:16px">Rs 43,500</b></div></div>
+  <div class="bar"><div class="back">←</div><div class="next">Agla: Dastakhat →</div></div></div>
+</div>
+
+<!-- CUSTOMER + payment sheet -->
+<div class="phone" id="customer">
+ <div class="top"><div style="display:flex;gap:10px;align-items:center"><div class="ic" style="border:0">←</div><b style="font-size:17px">Gahak</b></div><div class="ic">⋯</div></div>
+ <div class="main">
+  <div class="card" style="border:0;background:none;padding:0 0 10px"><div class="av" style="width:56px;height:56px;font-size:18px">AM</div><div class="grow"><div class="name" style="font-size:20px">Adeel Murtaza</div><div class="meta">0303-7788112 · Xiaomi Poco M6 Pro</div></div></div>
+  <div class="hero"><div class="lbl" style="color:#b3301f">Baqi raqam · 4 qistein late</div><div class="amt">Rs 34,000</div><div class="sub" style="color:#6f6a5c">Agli qist Rs 8,500 · 20 Jul (late)</div>
+   <div class="tl"><div class="p">May</div><div class="p">Jun</div><div class="l">Jul</div><div class="l">Aug</div><div class="l">Sep</div><div class="l">Oct</div></div>
+   <div class="cta" style="margin-top:14px">₨ Qist jama karein</div></div>
+  <div class="acts"><div class="act wa"><i>💬</i>WhatsApp</div><div class="act"><i>📞</i>Call</div><div class="act"><i>🔒</i>Phone</div></div>
+ </div>
+ <div class="dim"></div>
+ <div class="sheet"><div class="grab"></div>
+  <b style="font-size:18px">Qist jama · Adeel Murtaza</b>
+  <div class="fl">Raqam</div><div class="in" style="font-size:22px">Rs 8,500</div>
+  <div class="chips" style="margin-top:8px"><div class="chip sel">1 qist</div><div class="chip">Saari late (34,000)</div></div>
+  <div class="fl">Kaise mila?</div>
+  <div class="chips"><div class="chip sel">Naqad</div><div class="chip">JazzCash</div><div class="chip">Easypaisa</div></div>
+  <div class="cta" style="margin-top:16px">Jama karein aur raseed bhejein</div>
+ </div>
+</div>
+
+<!-- DEVICE -->
+<div class="phone" id="device">
+ <div class="top"><div style="display:flex;gap:10px;align-items:center"><div class="ic" style="border:0">←</div><b style="font-size:17px">Phone</b></div><div class="ic">⋯</div></div>
+ <div class="main">
+  <div class="status"><div class="lbl" style="color:#b3301f">● Qist late · 12 din</div><div class="big">Tecno Camon 30</div><div class="sub" style="color:#3a4350">Fahad Mustafa · …1645</div>
+   <div class="cta danger" style="margin-top:14px">🔒 Phone lock karein</div>
+   <div class="hint" style="color:#3a4350">Lock ke baad bhi emergency call chalti rahegi.</div></div>
+  <div class="tiles"><div class="tile"><span>Aakhri raabta</span><b>2 ghante pehle</b></div><div class="tile"><span>Battery</span><b>64%</b></div><div class="tile"><span>Qist</span><b>2 / 6 ada</b></div><div class="tile"><span>Baqi</span><b>Rs 29,000</b></div></div>
+  <div class="list"><div>💬 Gahak ko message <span>›</span></div><div>🔑 Offline unlock code <span>›</span></div><div>📍 Phone dhoondein <span>›</span></div><div>📄 Agreement · qiston ka schedule <span>›</span></div></div>
+ </div>
+ <div class="nav"><div><i>⌂</i>Home</div><div class="on"><i>📱</i>Phones</div><div><i>₨</i>Qistein</div><div><i>👥</i>Gahak</div></div>
+</div>
+</body></html>
