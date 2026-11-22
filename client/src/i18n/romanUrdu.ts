@@ -364,6 +364,8 @@ export const ROMAN_URDU: Record<string, string> = {
   'Restore full access for': 'Poora phone chalu karein:',
   'Authorization Note': 'Note',
   'Confirm Unlock': 'Unlock pakka karein',
+  'This record already exists — for example, this IMEI is already registered. Refresh and check.':
+    'Yeh record pehle se maujood hai — maslan yeh IMEI pehle se register hai. Page refresh karke check karein.',
   'Re-enroll this phone': 'Yeh phone dobara jorein',
   'Use this when': 'Yeh tab istemal karein jab',
   'was factory reset and the lock app is gone. It gets a fresh QR on the same lock, so no new lock is used.':

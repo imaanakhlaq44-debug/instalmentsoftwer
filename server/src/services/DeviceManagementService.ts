@@ -1,6 +1,6 @@
 import { deviceCommandSignal } from './DeviceCommandSignal.js';
 import { repo } from '../db/repositories/index.js';
-import { runInTransaction, Tx } from '../db/prisma.js';
+import { runInShopTransaction, Tx } from '../db/prisma.js';
 import { Device, DeviceStatus, DeviceActionLog, UserRole } from '../types/index.js';
 import { v4 as uuidv4 } from 'uuid';
 import { AuditService } from './AuditService.js';
@@ -118,7 +118,7 @@ export class MockDeviceManagementService implements IDeviceManagementService {
 
     const nowIso = new Date().toISOString();
     if (awaitConfirmation) {
-      const pending = await runInTransaction(async tx => {
+      const pending = await runInShopTransaction(device.dealerId, async tx => {
         if (device.status !== 'ENROLLED') this.validateTransition(device.status, 'ENROLLED');
         await tx.device.update({ where: { id: deviceId }, data: { status: 'ENROLLED', isOnline: false, lastCheckInAt: null, updatedAt: new Date(nowIso) } });
         await this.recordAction({ deviceId, dealerId: device.dealerId, userId: 'system', userName: 'Enrollment Client', action: 'ENROLL', oldStatus: device.status, newStatus: 'ENROLLED', reason: 'Credentials issued; awaiting the handset setup confirmation.', deviceAck: false, ipAddress }, tx);
@@ -129,7 +129,7 @@ export class MockDeviceManagementService implements IDeviceManagementService {
 
     // Both steps and the log entry commit together: a device left stranded in
     // ENROLLED, with nothing recording why, is not a state worth persisting.
-    const updated = await runInTransaction(async (tx) => {
+    const updated = await runInShopTransaction(device.dealerId, async (tx) => {
       // Step 1: PENDING -> ENROLLED (provisioning handshake accepted)
       if (device.status === 'PENDING') {
         this.validateTransition(device.status, 'ENROLLED');
@@ -265,7 +265,7 @@ export class MockDeviceManagementService implements IDeviceManagementService {
     // The status change, the device action log and the audit entry are one
     // unit: an audit trail claiming a lock that was never written would be
     // worse than no trail at all.
-    await runInTransaction(async (tx) => {
+    await runInShopTransaction(device.dealerId, async (tx) => {
       await tx.$queryRaw`SELECT id FROM dealers WHERE id = ${device.dealerId} FOR UPDATE`;
       const shop = await tx.dealer.findUnique({ where: { id: device.dealerId } });
       if (!shop?.active || shop.deletedAt) throw AppError.forbidden('This shop is no longer active.');
@@ -350,7 +350,7 @@ export class MockDeviceManagementService implements IDeviceManagementService {
 
     const nowIso = new Date().toISOString();
 
-    await runInTransaction(async (tx) => {
+    await runInShopTransaction(device.dealerId, async (tx) => {
       await tx.$queryRaw`SELECT id FROM dealers WHERE id = ${device.dealerId} FOR UPDATE`;
       const shop = await tx.dealer.findUnique({ where: { id: device.dealerId } });
       if (!shop?.active || shop.deletedAt) throw AppError.forbidden('This shop is no longer active.');
@@ -429,7 +429,7 @@ export class MockDeviceManagementService implements IDeviceManagementService {
     const finalStatus: DeviceStatus = isLock ? 'LOCKED' : 'ACTIVE';
     this.validateTransition(device.status, finalStatus);
 
-    await runInTransaction(async (tx) => {
+    await runInShopTransaction(device.dealerId, async (tx) => {
       await repo.devices.update(
         deviceId,
         {

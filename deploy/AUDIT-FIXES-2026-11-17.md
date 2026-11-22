@@ -33,3 +33,7 @@ Backups check pg_dump independently, compress a private temporary dump, validate
 ## Remaining physical/operational checks
 
 Verify factory-reset provisioning, emergency dialing, lock/unlock, reboot, offline behavior, recovery location, APK updates and final release on each supported Android/OEM. Verify production restore, secure upload, NAT fleet capacity and live SMS behavior. Unit tests and builds cannot establish these hardware/operational outcomes.
+
+## Update (23 November 2026): per-shop write locks
+
+The single advisory lock is now two-level (`server/src/db/prisma.ts`). Shop-scoped writes — payments (record, verify, reverse), device lock/unlock/enrol, sale creation, sale drafts, installment waivers and restructures, enrolment QR generation and confirmation, phone intake, lock-order cancellation — take the global lock *shared* plus an exclusive lock for their own shop (`hashtext(dealerId)`). Two shops no longer wait on each other; writes in one shop still run one at a time. Everything else (sign-up, testimonials, licence packs and lock-order approval, shop deletion, grace extensions, registration closure, seeding) still takes the global lock exclusively and so still excludes all shop writes. Cross-shop uniqueness (active IMEI) is enforced by database constraints, not by the lock. `tests/db/shop-locks.test.ts` covers the three cases.

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 
 import { repo, groupBy } from '../db/repositories/index.js';
-import { runInTransaction, Tx } from '../db/prisma.js';
+import { runInShopTransaction, Tx } from '../db/prisma.js';
 import {
   Contract, Customer, Device, InstallmentPlan, Installment, Payment,
 } from '../types/index.js';
@@ -429,7 +429,7 @@ customersRouter.post('/', requireDealerStaff, validateBody(createSchema), asyncH
   // Customer, device, plan, every installment and the down-payment entry are
   // one unit. Under the JSON store a failure part-way left a customer with a
   // device and no schedule — a financed phone nobody was billed for.
-  const result = await runInTransaction(async (tx: Tx) => {
+  const result = await runInShopTransaction(dealerId, async (tx: Tx) => {
     const nowIso = new Date().toISOString();
     if (body.draftId) {
       const draft = await tx.saleDraft.findUnique({where:{id:body.draftId}});

@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 
-import { prisma, runInTransaction } from '../db/prisma.js';
+import { prisma, runInTransaction, runInShopTransaction } from '../db/prisma.js';
 import { repo } from '../db/repositories/index.js';
 import { toDomainList } from '../db/mappers.js';
 import {
@@ -167,7 +167,7 @@ export class LockOrderService {
     // A 404 either way: another shop's order must not be confirmed to exist.
     if (!order || order.dealerId !== params.actor.dealerId) throw AppError.notFound('Lock order');
 
-    await runInTransaction(async (tx) => {
+    await runInShopTransaction(order.dealerId, async (tx) => {
       const done = await repo.lockOrders.decide(order.id, { status: 'CANCELLED' }, tx);
       if (!done) throw AppError.conflict(`This order is already ${order.status.toLowerCase()} and cannot be cancelled.`);
       await AuditService.log(

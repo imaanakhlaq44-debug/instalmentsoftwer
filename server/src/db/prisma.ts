@@ -77,11 +77,37 @@ export type Tx = Omit<
   '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends'
 >;
 
-export function runInTransaction<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
+/** Advisory-lock namespaces (first int of the two-int form). */
+const GLOBAL_LOCK_SPACE = 167026;
+const SHOP_LOCK_SPACE = 167027;
+
+/**
+ * Runs `fn` in a transaction serialised against conflicting writers.
+ *
+ * Every multi-record mutation takes an advisory lock before it reads anything,
+ * so no worker acts on a stale financial snapshot.
+ *
+ * - With no `dealerId` it takes the **global** lock exclusively: it waits for,
+ *   and blocks, every other transaction on every shop. Use this for anything
+ *   that spans shops or platform-wide state.
+ * - With a `dealerId` it takes the global lock **shared** plus that shop's own
+ *   lock exclusively. Two shops' writes no longer wait on each other; writes in
+ *   the same shop still run one at a time, and a global writer still excludes
+ *   everybody. Only pass a `dealerId` when everything the transaction changes
+ *   belongs to that one shop (shop-wide uniqueness such as IMEI is still held
+ *   by database constraints).
+ *
+ * The shop key is `hashtext(dealerId)`. Two shops whose ids collide just share
+ * a lock — slower, never wrong.
+ */
+export function runInTransaction<T>(fn: (tx: Tx) => Promise<T>, opts: { dealerId?: string } = {}): Promise<T> {
   return prisma.$transaction(async (tx) => {
-    // All multi-record mutations share one lock until resource-level locking is introduced.
-    // Taking it before any reads prevents stale financial snapshots across workers.
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(167026, 1)::text`;
+    if (opts.dealerId) {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock_shared(${GLOBAL_LOCK_SPACE}::int, 1)::text`;
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(${SHOP_LOCK_SPACE}::int, hashtext(${opts.dealerId}))::text`;
+    } else {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(${GLOBAL_LOCK_SPACE}::int, 1)::text`;
+    }
     return fn(tx);
   }, {
     // Financial writes must not interleave with a concurrent read-modify-write
@@ -89,5 +115,11 @@ export function runInTransaction<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
     isolationLevel: 'ReadCommitted',
     timeout: 15_000,
   });
+}
+
+/** `runInTransaction` holding one shop's lock only. See the rules there. */
+export function runInShopTransaction<T>(dealerId: string, fn: (tx: Tx) => Promise<T>): Promise<T> {
+  if (!dealerId) throw new Error('runInShopTransaction needs a dealerId.');
+  return runInTransaction(fn, { dealerId });
 }
 

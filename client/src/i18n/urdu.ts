@@ -359,6 +359,8 @@ export const URDU: Record<string, string> = {
   'Restore full access for': 'پورا فون چالو کریں:',
   'Authorization Note': 'نوٹ',
   'Confirm Unlock': 'اَن لاک پکا کریں',
+  'This record already exists — for example, this IMEI is already registered. Refresh and check.':
+    'یہ ریکارڈ پہلے سے موجود ہے — مثلاً یہ IMEI پہلے سے رجسٹر ہے۔ صفحہ ریفریش کر کے دیکھیں۔',
   'Re-enroll this phone': 'یہ فون دوبارہ جوڑیں',
   'Use this when': 'یہ تب استعمال کریں جب',
   'was factory reset and the lock app is gone. It gets a fresh QR on the same lock, so no new lock is used.':

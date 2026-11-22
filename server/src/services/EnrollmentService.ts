@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { config } from '../config.js';
 import { repo } from '../db/repositories/index.js';
-import { runInTransaction, Tx } from '../db/prisma.js';
+import { runInShopTransaction, Tx } from '../db/prisma.js';
 import { EnrollmentToken, QRType, Device, UserRole } from '../types/index.js';
 import { deviceManagementService } from './DeviceManagementService.js';
 import { DeviceIntegrityService, TelemetryPayload } from './DeviceIntegrityService.js';
@@ -57,7 +57,7 @@ export class EnrollmentService {
     const secret = crypto.randomBytes(24).toString('base64url').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 24);
     const tokenStr = `ALMAS-${params.qrType.substring(0, 3)}-${secret}`;
 
-    const token = await runInTransaction(async (tx) => {
+    const token = await runInShopTransaction(params.dealerId, async (tx) => {
       // Only one live token per device — otherwise an old printed QR keeps
       // working. Retiring the old ones and issuing the new one in a single
       // transaction means there is never a moment with two valid QRs, nor one

@@ -57,6 +57,22 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
     return;
   }
 
+  /**
+   * A database uniqueness rule refused the write (Prisma P2002 / Postgres 23505).
+   *
+   * Shops write in parallel, so two of them registering the same IMEI in the
+   * same moment can both pass the friendly pre-check; the unique index then
+   * stops the second. That is a conflict the caller can act on, not a crash.
+   */
+  const code = typeof err === 'object' && err !== null ? (err as { code?: unknown }).code : undefined;
+  if (code === 'P2002' || code === '23505') {
+    res.status(409).json({
+      error: 'This record already exists — for example, this IMEI is already registered. Refresh and check.',
+      code: 'ALREADY_EXISTS',
+    });
+    return;
+  }
+
   if (isAppError(err)) {
     const appErr = err as AppError;
     // 5xx AppErrors still deserve a server-side record.
