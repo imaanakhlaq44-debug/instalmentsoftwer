@@ -10,6 +10,7 @@ import pk.almassdm.dpc.data.CheckInResult
 import pk.almassdm.dpc.data.EnrollResult
 import pk.almassdm.dpc.data.PendingCommand
 import pk.almassdm.dpc.data.PolicyView
+import pk.almassdm.dpc.data.UpdateOffer
 import pk.almassdm.dpc.data.Prefs
 import java.io.BufferedReader
 import java.io.IOException
@@ -75,6 +76,7 @@ class DpcApi(private val baseUrl: String, private val credential: String? = null
             checkInIntervalSeconds = json.optInt("checkInIntervalSeconds", Prefs.DEFAULT_INTERVAL_SECONDS),
             policy = PolicyView.fromJson(json.optJSONObject("policy") ?: JSONObject()),
             attestationChallenge = json.optString("attestationChallenge").takeIf { it.isNotBlank() },
+            update = UpdateOffer.fromJson(json.optJSONObject("update")),
         )
     }
 

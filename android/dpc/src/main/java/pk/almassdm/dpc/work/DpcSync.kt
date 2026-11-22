@@ -11,6 +11,7 @@ import pk.almassdm.dpc.admin.LockController
 import pk.almassdm.dpc.admin.LocationReporter
 import pk.almassdm.dpc.data.PolicyView
 import pk.almassdm.dpc.data.Prefs
+import pk.almassdm.dpc.data.UpdateOffer
 import pk.almassdm.dpc.net.DpcApi
 import pk.almassdm.dpc.net.DpcException
 import pk.almassdm.dpc.net.IntakeCancelledException
@@ -136,6 +137,13 @@ class DpcSync(context: Context) {
         OfflineWatchdogWorker.schedule(appContext)
         syncFactoryResetProtection(result.policy)
         syncStagedRestrictions(result.policy)
+        if (UpdateOffer.shouldInstall(
+                result.update, BuildConfig.VERSION_CODE, lockController.isDeviceOwner, prefs.lockApplied,
+                prefs.updateFailedVersion, prefs.updateFailedAt, System.currentTimeMillis()
+            )
+        ) {
+            SelfUpdateWorker.enqueue(appContext, result.update!!)
+        }
         val frpChanged = prefs.frpStatus != previousFrpStatus || prefs.frpAppliedIds != previousFrpIds
 
         val command = result.command

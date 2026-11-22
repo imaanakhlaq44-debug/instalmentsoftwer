@@ -256,6 +256,13 @@ export const config = {
       'pk.almassdm.dpc/pk.almassdm.dpc.admin.AlmasDeviceAdminReceiver',
     apkUrl: (process.env.DPC_APK_URL || '').trim(),
     apkSignatureChecksum: (process.env.DPC_APK_SIGNATURE_CHECKSUM || '').trim(),
+    /**
+     * The build at `apkUrl`, announced to enrolled handsets so they update
+     * themselves (DPC 1.8.1+). Both must be set: the versionCode the APK carries
+     * and the SHA-256 of the APK file (64 hex). See DpcUpdate.ts.
+     */
+    updateVersionCode: Number.parseInt((process.env.DPC_UPDATE_VERSION_CODE || '').trim(), 10) || 0,
+    updateSha256: (process.env.DPC_UPDATE_SHA256 || '').trim().toLowerCase(),
     /** Leaving system apps enabled keeps the phone a usable phone, not a kiosk terminal. */
     leaveSystemAppsEnabled: bool(process.env.DPC_LEAVE_SYSTEM_APPS_ENABLED, true),
     skipEncryption: bool(process.env.DPC_SKIP_ENCRYPTION, false),

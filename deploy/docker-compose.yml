@@ -60,6 +60,8 @@ services:
       DPC_SERVER_URL: https://${SITE_DOMAIN}/api/dpc
       DPC_APK_URL: ${DPC_APK_URL}
       DPC_APK_SIGNATURE_CHECKSUM: ${DPC_APK_SIGNATURE_CHECKSUM}
+      DPC_UPDATE_VERSION_CODE: ${DPC_UPDATE_VERSION_CODE:-}
+      DPC_UPDATE_SHA256: ${DPC_UPDATE_SHA256:-}
     # Also not published. Caddy reaches it over the compose network; the host
     # does not need port 5000 open at all.
 

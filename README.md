@@ -483,6 +483,17 @@ moment the phone reaches the server. So the rule delays enforcement for a
 determined customer rather than escaping it, and a handset showing "last
 contact: three weeks ago" is visible on the dashboard the entire time.
 
+### Updating the handset app in the field (app 1.8.1+)
+
+Set `DPC_UPDATE_VERSION_CODE` and `DPC_UPDATE_SHA256` (both printed on the
+GitHub release) next to `DPC_APK_URL`. Every check-in then announces that build,
+and a phone on an older version downloads it, checks the file's SHA-256 and that
+it is this package at exactly that versionCode, and installs it silently as
+device owner (Android also refuses any other signing key). It does not update
+while locked, and a failed version is retried after a day. Phones on 1.8.0 or
+older have no updater: each needs one manual update (or a fresh QR) to 1.8.1.
+Code: `server/src/services/DpcUpdate.ts`, `android/dpc/.../work/SelfUpdateWorker.kt`.
+
 ### Getting a locked phone back without internet (app 1.7.0+)
 
 A locked phone whose data is off could never hear an unlock. Two ways out:
