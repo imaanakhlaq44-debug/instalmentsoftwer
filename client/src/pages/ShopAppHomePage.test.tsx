@@ -97,7 +97,7 @@ describe('Shop app home — Khata card', () => {
   });
 
   it('has every new label in Roman Urdu and Urdu', () => {
-    const labels = ['Shop khata', 'Today', 'Received today', 'Due today', 'Remind', 'Collect payment', 'New sale', 'Search customers',
+    const labels = ['Shop khata', 'Today', 'Received today', 'Due today', 'To collect today', 'Remind', 'Collect payment', 'New sale', 'Search customers',
       'Nobody owes an installment today.', 'No installments due today', 'Amount (Rs)', 'How was it paid?', 'Cash', 'Record payment',
       '7 of 12 installments received', '2 of 6 paid', '6 months', '3 days late', '+ 2 more customers today · see all'];
     for (const label of labels) {

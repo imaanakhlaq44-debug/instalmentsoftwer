@@ -150,7 +150,7 @@ export const ShopKhataHome: React.FC = () => {
       )}
 
       <section aria-labelledby="khata-due-title">
-        <h2 id="khata-due-title" className="khata-section-title">Due today</h2>
+        <h2 id="khata-due-title" className="khata-section-title">To collect today</h2>
         {today && today.customers.length === 0 && (
           <div className="khata-empty">Nobody owes an installment today.</div>
         )}
@@ -163,13 +163,13 @@ export const ShopKhataHome: React.FC = () => {
                   <strong data-i18n-skip>{c.customerName}</strong>
                   <small><span data-i18n-skip>{c.deviceName}</span> · <span>{`${c.totalInstallments} months`}</span></small>
                 </span>
-                <DuePill daysLate={c.daysLate} />
               </button>
               <div className="khata-customer-money">
                 <span className="khata-due-amount" data-i18n-skip>{money(c.amountDue)}</span>
-                <span className="khata-paid-count">{`${c.paidInstallments} of ${c.totalInstallments} paid`}</span>
+                <DuePill daysLate={c.daysLate} />
               </div>
               <SegmentBar done={c.paidInstallments} total={c.totalInstallments} label={`${c.paidInstallments} of ${c.totalInstallments} paid`} />
+              <p className="khata-paid-count">{`${c.paidInstallments} of ${c.totalInstallments} paid`}</p>
               {canAct && (
                 <div className="khata-actions">
                   <button

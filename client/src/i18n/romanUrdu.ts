@@ -29,6 +29,7 @@ export const ROMAN_URDU: Record<string, string> = {
   "Due today": "Aaj due",
   "Nobody owes an installment today.": "Aaj kisi ki qist baqi nahin.",
   "Remind": "Yaad dilao",
+  "To collect today": "Aaj kis se lena hai",
   "Search customers": "Customer dhoondein",
   "Shop app home": "Shop app home",
  "Pending work": "Adhure kaam",

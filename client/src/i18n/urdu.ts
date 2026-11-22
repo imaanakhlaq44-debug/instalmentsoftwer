@@ -38,6 +38,7 @@ export const URDU: Record<string, string> = {
   "Due today": "آج واجب",
   "Nobody owes an installment today.": "آج کسی کی قسط باقی نہیں۔",
   "Remind": "یاد دلائیں",
+  "To collect today": "آج کس سے لینا ہے",
   "Search customers": "گاہک ڈھونڈیں",
   "Shop app home": "شاپ ایپ ہوم",
   "Plan price (Rs)": "فون کی قیمت (روپے)",

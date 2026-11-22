@@ -19,8 +19,8 @@
   .khata-seg.solid > span { position:absolute; inset:0 auto 0 0; background:#14946F; }
   [dir="rtl"] .khata-seg.solid > span { inset:0 0 0 auto; }
   .khata-section-title { margin:26px 0 10px; font-size:18px; font-weight:900; letter-spacing:-.01em; text-transform:uppercase; }
-  .khata-list { list-style:none; margin:0; padding:0; display:grid; gap:14px; }
-  .khata-customer { background:#FFFDF6; border:2.5px solid #0F1419; border-radius:20px; padding:14px; box-shadow:4px 4px 0 #0F1419; }
+  .khata-list { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:minmax(0,1fr); gap:14px; }
+  .khata-customer { min-width:0; background:#FFFDF6; border:2.5px solid #0F1419; border-radius:20px; padding:14px; box-shadow:4px 4px 0 #0F1419; }
   .khata-customer-top { display:flex; align-items:center; gap:12px; width:100%; text-align:start; background:none; border:0; padding:0; min-height:48px; }
   .khata-avatar { display:grid; place-items:center; width:46px; height:46px; flex-shrink:0; border:2.5px solid #0F1419; border-radius:50%; background:#DDF6EC; font-weight:900; font-size:16px; }
   .khata-who { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
@@ -29,9 +29,9 @@
   .khata-pill { flex-shrink:0; border:2px solid #0F1419; border-radius:999px; padding:3px 9px; font-size:11px; font-weight:900; letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; }
   .khata-pill.due { background:#FFC83D; }
   .khata-pill.late { background:#FDE3DF; color:#B3301F; border-color:#B3301F; }
-  .khata-customer-money { display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin:12px 0 8px; }
+  .khata-customer-money { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:12px 0 8px; }
   .khata-due-amount { font-size:24px; font-weight:900; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
-  .khata-paid-count { font-size:13px; font-weight:700; color:#5B6472; }
+  .khata-paid-count { margin:6px 0 0; font-size:13px; font-weight:700; color:#5B6472; }
   .khata-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
   .khata-btn-wa, .khata-btn-ink, .khata-btn-sun { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:50px; border:2.5px solid #0F1419; border-radius:14px; font-weight:800; font-size:15px; box-shadow:3px 3px 0 #0F1419; transition:transform .1s ease, box-shadow .1s ease; }
   .khata-btn-wa:active, .khata-btn-ink:active, .khata-btn-sun:active { transform:translate(2px,2px); box-shadow:1px 1px 0 #0F1419; }
@@ -54,6 +54,13 @@
   .khata-dock-search { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-width:58px; min-height:58px; padding:0 16px; border:2.5px solid #0F1419; border-radius:14px; background:#0F1419; color:#fff; font-weight:800; box-shadow:3px 3px 0 #0F1419; }
   .khata-dock-search:only-child { flex:1; }
   .khata-dock-search svg { width:22px; height:22px; }
+
+  /* The site's black ink nav, on every app screen. */
+  .shop-app-bottom-nav { background:#0F1419; border-top:0; }
+  .shop-app-bottom-nav > a { color:#9AA3AD; }
+  .shop-app-bottom-nav > a[aria-current="page"] { color:#FFC83D; font-weight:800; }
+  .shop-app-bottom-nav > a[aria-current="page"] > span:first-child { background:#FFC83D; color:#0F1419; }
+  .khata-dock { background:linear-gradient(to top, #FFF8E8 75%, rgba(255,248,232,0)); }
 
   /* Payment sheet */
   .khata-sheet-backdrop { position:fixed; inset:0; z-index:60; background:rgba(15,20,25,.45); display:flex; align-items:flex-end; justify-content:center; }
