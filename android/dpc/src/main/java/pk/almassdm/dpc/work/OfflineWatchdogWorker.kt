@@ -40,11 +40,14 @@ class OfflineWatchdogWorker(context: Context, params: WorkerParameters) :
         if (prefs.lockApplied) return@withContext Result.success()
 
         val policy = prefs.cachedPolicy()
-        if (!OfflineLockRule.shouldSelfLock(policy, prefs.lastCheckInAt)) {
+        // An offline unlock code typed at the counter counts as contact: the
+        // shop saw the customer, so the silence starts again from then.
+        val lastContact = maxOf(prefs.lastCheckInAt, prefs.offlineUnlockAt)
+        if (!OfflineLockRule.shouldSelfLock(policy, lastContact)) {
             return@withContext Result.success()
         }
 
-        val days = OfflineLockRule.daysOutOfContact(prefs.lastCheckInAt)
+        val days = OfflineLockRule.daysOutOfContact(lastContact)
         Log.i(TAG, "No contact for $days day(s) with an installment past due; restricting the handset.")
 
         // The same honesty rule as everywhere else: `offlineLockSince` is only

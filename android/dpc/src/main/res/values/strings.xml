@@ -40,6 +40,14 @@
     <string name="lock_emergency">Emergency call</string>
     <string name="lock_refresh">I have paid — check again</string>
     <string name="lock_offline_message">This phone could not reach the shop\'s system for several days while an installment was overdue, so it restricted itself. Connect it to the internet: it checks again on its own, and unlocks as soon as the shop\'s system confirms the payment.</string>
+    <string name="lock_internet">Turn on Wi-Fi or mobile data</string>
+    <string name="lock_internet_unavailable">Internet settings could not be opened on this phone.</string>
+    <string name="lock_offline_unlock_help">No internet? Tell the shop this phone code. They will give you an unlock code.</string>
+    <string name="lock_phone_code">Phone code: %1$s</string>
+    <string name="lock_unlock_code_hint">Unlock code from the shop</string>
+    <string name="lock_unlock_code_button">Unlock with code</string>
+    <string name="lock_unlock_code_wrong">That unlock code is not right. Check it with the shop.</string>
+    <string name="lock_unlock_code_blocked">Too many wrong codes. Try again in 30 minutes.</string>
     <string name="lock_checking">Contacting the shop…</string>
     <string name="lock_still_locked">The payment has not reached the shop yet.</string>
 

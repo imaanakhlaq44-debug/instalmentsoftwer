@@ -84,6 +84,8 @@ export const DeviceDetailPage: React.FC = () => {
   const [showClearTamperModal, setShowClearTamperModal] = useState(false);
   const [clearTamperReason, setClearTamperReason] = useState('Handset inspected in shop; confirmed authentic');
   const [showGoogleIdGuide, setShowGoogleIdGuide] = useState(false);
+  const [phoneCode, setPhoneCode] = useState('');
+  const [offlineCode, setOfflineCode] = useState<string | null>(null);
   /** The signed consent this device's lock rests on, if it has one. */
   const [contract, setContract] = useState<any>(null);
 
@@ -143,6 +145,19 @@ export const DeviceDetailPage: React.FC = () => {
       showToast(res.message || 'Device unlocked', 'success');
       setShowUnlockModal(false);
       loadDeviceDetail();
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      setActionProcessing(false);
+    }
+  };
+
+  const handleOfflineUnlockCode = async () => {
+    try {
+      setActionProcessing(true);
+      setOfflineCode(null);
+      const res = await ApiService.offlineUnlockCode(device.id, { challenge: phoneCode });
+      setOfflineCode(res.code);
     } catch (err: any) {
       showToast(err.message, 'error');
     } finally {
@@ -426,6 +441,42 @@ export const DeviceDetailPage: React.FC = () => {
             lifts itself once the phone reaches the server and the account is clear — no unlock command is
             needed for that. Nobody at the counter issued this lock.
           </p>
+        </div>
+      )}
+
+      {isDealerAdmin && !device.noLock && !isReleased && device.status !== 'PENDING' && (
+        <div className="p-4 bg-white border border-slate-200 rounded-2xl space-y-2">
+          <p className="text-xs font-extrabold text-slate-900">Phone locked with no internet?</p>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            Ask the customer for the 8-digit phone code on the lock screen. You get an unlock code to type into the
+            phone. Record the payment first; a phone still locked here must be unlocked here before a code is given.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              aria-label="Phone code"
+              inputMode="numeric"
+              maxLength={9}
+              value={phoneCode}
+              onChange={(e) => setPhoneCode(e.target.value)}
+              placeholder="1234 5678"
+              className="flex-1 px-3 py-2 border border-slate-300 rounded-xl text-sm font-mono"
+            />
+            <button
+              onClick={handleOfflineUnlockCode}
+              disabled={actionProcessing || phoneCode.replace(/[\s-]/g, '').length !== 8}
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white rounded-xl text-xs font-bold"
+            >
+              Get unlock code
+            </button>
+          </div>
+          {offlineCode && (
+            <p className="text-sm text-slate-900">
+              Unlock code:{' '}
+              <span data-testid="offline-unlock-code" className="font-mono text-lg font-extrabold tracking-widest">
+                {`${offlineCode.slice(0, 4)} ${offlineCode.slice(4)}`}
+              </span>
+            </p>
+          )}
         </div>
       )}
 
