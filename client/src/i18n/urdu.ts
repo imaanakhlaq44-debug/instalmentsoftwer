@@ -359,6 +359,11 @@ export const URDU: Record<string, string> = {
   'Restore full access for': 'پورا فون چالو کریں:',
   'Authorization Note': 'نوٹ',
   'Confirm Unlock': 'اَن لاک پکا کریں',
+  'Phone locked with no internet?': 'فون لاک ہے اور انٹرنیٹ نہیں؟',
+  'Ask the customer for the 8-digit phone code on the lock screen. You get an unlock code to type into the phone. Record the payment first; a phone still locked here must be unlocked here before a code is given.':
+    'گاہک سے لاک اسکرین پر لکھا 8 ہندسوں کا فون کوڈ پوچھیں۔ آپ کو اَن لاک کوڈ ملے گا جو فون میں لکھنا ہے۔ پہلے ادائیگی درج کریں؛ جو فون یہاں ابھی لاک ہے، اسے کوڈ سے پہلے یہاں اَن لاک کریں۔',
+  'Get unlock code': 'اَن لاک کوڈ لیں',
+  'Unlock code:': 'اَن لاک کوڈ:',
   'Re-enroll this phone': 'یہ فون دوبارہ جوڑیں',
   'Use this when': 'یہ تب استعمال کریں جب',
   'was factory reset and the lock app is gone. It gets a fresh QR on the same lock, so no new lock is used.':

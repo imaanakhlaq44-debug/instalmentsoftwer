@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.view.View
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
@@ -13,6 +14,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import pk.almassdm.dpc.R
+import pk.almassdm.dpc.admin.LockController
+import pk.almassdm.dpc.admin.OfflineUnlock
 import pk.almassdm.dpc.data.PolicyView
 import pk.almassdm.dpc.data.Prefs
 import pk.almassdm.dpc.databinding.ActivityLockBinding
@@ -51,6 +54,8 @@ class LockActivity : AppCompatActivity() {
         binding.callShopButton.setOnClickListener { dial(prefs.cachedPolicy().dealerPhone) }
         binding.emergencyButton.setOnClickListener { dial(EMERGENCY_NUMBER) }
         binding.refreshButton.setOnClickListener { checkNow() }
+        binding.internetButton.setOnClickListener { openInternetSettings() }
+        binding.unlockCodeButton.setOnClickListener { tryOfflineUnlock() }
 
         if (handleRelease(intent)) return
         render(prefs.cachedPolicy())
@@ -70,8 +75,70 @@ class LockActivity : AppCompatActivity() {
             leave()
             return
         }
+        // Back from the internet panel (or never left): settings leave the kiosk again.
+        LockController(this).closeConnectivitySettings(prefs.cachedPolicy().emergencyCallsAllowed)
         enterKioskMode()
         render(prefs.cachedPolicy())
+    }
+
+    /**
+     * Opens Wi-Fi / mobile data / airplane mode. Without this a phone that was
+     * locked with its data off can never hear the unlock.
+     */
+    private fun openInternetSettings() {
+        val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY)
+        } else {
+            Intent(Settings.ACTION_WIRELESS_SETTINGS)
+        }
+        val settingsPackage = packageManager.resolveActivity(intent, 0)?.activityInfo?.packageName
+        if (settingsPackage.isNullOrBlank()) {
+            binding.lockStatusLine.text = getString(R.string.lock_internet_unavailable)
+            return
+        }
+        val emergency = prefs.cachedPolicy().emergencyCallsAllowed
+        if (!LockController(this).openConnectivitySettings(settingsPackage, emergency)) {
+            binding.lockStatusLine.text = getString(R.string.lock_internet_unavailable)
+            return
+        }
+        runCatching { startActivity(intent) }.onFailure {
+            LockController(this).closeConnectivitySettings(emergency)
+            binding.lockStatusLine.text = getString(R.string.lock_internet_unavailable)
+        }
+    }
+
+    /** Checks a code the shop read out, with no network. See [OfflineUnlock]. */
+    private fun tryOfflineUnlock() {
+        val now = System.currentTimeMillis()
+        if (!OfflineUnlock.attemptAllowed(prefs.unlockBlockedUntil, now)) {
+            binding.lockStatusLine.text = getString(R.string.lock_unlock_code_blocked)
+            return
+        }
+        val deviceId = prefs.deviceId
+        val token = prefs.deviceToken
+        if (deviceId.isNullOrBlank() || token.isNullOrBlank()) return
+
+        val entered = binding.unlockCodeInput.text?.toString().orEmpty()
+        if (!OfflineUnlock.matches(entered, token, deviceId, prefs.offlineUnlockChallenge())) {
+            val (failures, blockedUntil) = OfflineUnlock.afterFailure(prefs.unlockFailures, now)
+            prefs.unlockFailures = failures
+            prefs.unlockBlockedUntil = blockedUntil
+            binding.unlockCodeInput.text?.clear()
+            binding.lockStatusLine.text = getString(
+                if (blockedUntil > 0L) R.string.lock_unlock_code_blocked else R.string.lock_unlock_code_wrong
+            )
+            return
+        }
+
+        // A code works once: the next lock shows a new phone code.
+        prefs.unlockFailures = 0
+        prefs.renewOfflineUnlockChallenge()
+        prefs.offlineUnlockAt = now
+        binding.unlockCodeInput.text?.clear()
+        when (val outcome = LockController(this).releaseLock()) {
+            is LockController.Outcome.Applied -> Unit // the release intent closes this screen
+            is LockController.Outcome.Refused -> binding.lockStatusLine.text = outcome.reason
+        }
     }
 
     /** Returns true when the activity is finishing because the lock was lifted. */
@@ -111,6 +178,8 @@ class LockActivity : AppCompatActivity() {
         binding.lockAmount.text = Formatting.amount(this, policy.amountDue)
         binding.lockDueDate.text = Formatting.date(policy.nextDueDate)
         binding.lockShop.text = policy.dealerName ?: "—"
+        binding.lockPhoneCode.text =
+            getString(R.string.lock_phone_code, OfflineUnlock.display(prefs.offlineUnlockChallenge()))
 
         binding.lockMethods.text = if (policy.paymentMethods.isEmpty()) {
             ""

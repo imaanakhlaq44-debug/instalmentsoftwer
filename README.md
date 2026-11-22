@@ -483,6 +483,26 @@ moment the phone reaches the server. So the rule delays enforcement for a
 determined customer rather than escaping it, and a handset showing "last
 contact: three weeks ago" is visible on the dashboard the entire time.
 
+### Getting a locked phone back without internet (app 1.7.0+)
+
+A locked phone whose data is off could never hear an unlock. Two ways out:
+
+- **Internet button.** The lock screen opens the system internet panel (Wi-Fi,
+  mobile data, airplane mode). Only the package that answers that panel is let
+  into the kiosk, and only until the lock screen is back in front. Factory
+  reset, safe boot, debugging and uninstalling stay blocked by their own
+  restrictions.
+- **Offline unlock code.** The lock screen shows an 8-digit phone code. The shop
+  owner types it into the device page (`POST /api/devices/:id/offline-unlock-code`)
+  and reads back an 8-digit unlock code. It is an HMAC of the device id and the
+  phone code, keyed with the SHA-256 of the handset's credential — the hash the
+  server already stores — so it needs no network on the phone. A code works
+  once (the phone makes a new phone code after each unlock), five wrong codes
+  block entry for 30 minutes, and the server refuses while the dashboard still
+  has the phone `LOCKED`/`LOCK_PENDING`: record the payment and unlock first.
+  The unlock restarts the offline count. Server: `server/src/services/OfflineUnlockCode.ts`;
+  handset: `android/dpc/.../admin/OfflineUnlock.kt`; both test the same vector.
+
 ### Trying it
 
 Outside production, the self-lock action of `/api/simulator/update-state`

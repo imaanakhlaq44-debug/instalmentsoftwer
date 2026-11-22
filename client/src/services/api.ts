@@ -260,6 +260,14 @@ export class ApiService {
     return this.request<any>(`/devices/${id}/unlock`, { method: 'POST', body: JSON.stringify(data) });
   }
 
+  /** An unlock code for a locked phone with no internet, from the phone code on its lock screen. */
+  static offlineUnlockCode(id: string, data: { challenge: string }) {
+    return this.request<{ code: string }>(`/devices/${id}/offline-unlock-code`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   static sendDeviceMessage(id: string, data: { title: string; message: string }) {
     return this.request<any>(`/devices/${id}/message`, { method: 'POST', body: JSON.stringify(data) });
   }

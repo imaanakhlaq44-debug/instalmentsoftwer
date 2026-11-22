@@ -157,6 +157,28 @@ describe('unlocking a phone', () => {
   });
 });
 
+describe('offline unlock code', () => {
+  it('turns the phone code into an unlock code for the shop owner', async () => {
+    const api = open('DEALER_ADMIN', { status: 'ACTIVE' }, {
+      'POST /devices/dev-1/offline-unlock-code': { code: '03478775' },
+    });
+    await loaded();
+
+    fireEvent.change(screen.getByLabelText('Phone code'), { target: { value: '1234 5678' } });
+    fireEvent.click(button('Get unlock code'));
+
+    expect((await screen.findByTestId('offline-unlock-code')).textContent).toBe('0347 8775');
+    expect(api.to('POST /devices/dev-1/offline-unlock-code')[0].body).toEqual({ challenge: '1234 5678' });
+  });
+
+  it('is not offered to staff', async () => {
+    open('DEALER_STAFF', { status: 'ACTIVE' });
+    await loaded();
+
+    expect(screen.queryByText('Phone locked with no internet?')).not.toBeInTheDocument();
+  });
+});
+
 describe('releasing a phone', () => {
   it('says it cannot be undone and needs a reason before it will send', async () => {
     const api = open('DEALER_ADMIN', {}, { 'POST /devices/dev-1/release': { success: true } });

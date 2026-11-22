@@ -68,6 +68,36 @@ class Prefs(context: Context) {
         get() = prefs.getLong(KEY_OFFLINE_LOCK_SINCE, 0L)
         set(value) = prefs.edit().putLong(KEY_OFFLINE_LOCK_SINCE, value).apply()
 
+    /**
+     * When the shop last opened this phone with an offline unlock code, or 0.
+     * The offline rule measures silence from the later of this and
+     * [lastCheckInAt], so a phone opened at the counter is not shut again by
+     * the next watchdog run.
+     */
+    var offlineUnlockAt: Long
+        get() = prefs.getLong(KEY_OFFLINE_UNLOCK_AT, 0L)
+        set(value) = prefs.edit().putLong(KEY_OFFLINE_UNLOCK_AT, value).apply()
+
+    /** The 8-digit phone code the lock screen shows; made on first use, replaced after each unlock. */
+    fun offlineUnlockChallenge(): String {
+        prefs.getString(KEY_UNLOCK_CHALLENGE, null)?.let { return it }
+        val fresh = pk.almassdm.dpc.admin.OfflineUnlock.newChallenge()
+        prefs.edit().putString(KEY_UNLOCK_CHALLENGE, fresh).apply()
+        return fresh
+    }
+
+    fun renewOfflineUnlockChallenge() {
+        prefs.edit().putString(KEY_UNLOCK_CHALLENGE, pk.almassdm.dpc.admin.OfflineUnlock.newChallenge()).apply()
+    }
+
+    var unlockFailures: Int
+        get() = prefs.getInt(KEY_UNLOCK_FAILURES, 0)
+        set(value) = prefs.edit().putInt(KEY_UNLOCK_FAILURES, value).apply()
+
+    var unlockBlockedUntil: Long
+        get() = prefs.getLong(KEY_UNLOCK_BLOCKED_UNTIL, 0L)
+        set(value) = prefs.edit().putLong(KEY_UNLOCK_BLOCKED_UNTIL, value).apply()
+
     /** A secure-chip attestation challenge from the server, answered on the next check-in. */
     var attestationChallenge: String?
         get() = prefs.getString(KEY_ATTESTATION_CHALLENGE, null)
@@ -218,5 +248,9 @@ class Prefs(context: Context) {
         private const val KEY_STAGE_SUSPENDED = "stage_suspended_apps"
         private const val KEY_RELEASED = "released"
         private const val KEY_ATTESTATION_CHALLENGE = "attestation_challenge"
+        private const val KEY_OFFLINE_UNLOCK_AT = "offline_unlock_at"
+        private const val KEY_UNLOCK_CHALLENGE = "offline_unlock_challenge"
+        private const val KEY_UNLOCK_FAILURES = "offline_unlock_failures"
+        private const val KEY_UNLOCK_BLOCKED_UNTIL = "offline_unlock_blocked_until"
     }
 }
