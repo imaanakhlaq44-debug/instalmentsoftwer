@@ -80,6 +80,33 @@
             </intent-filter>
         </activity-alias>
 
+        <!--
+          Android 12+ QR provisioning ("admin-integrated flow"). The setup
+          wizard asks which mode to use, then hands over the admin extras.
+          Both are invisible and answer at once. Guarded by BIND_DEVICE_ADMIN
+          so only the system can start them.
+        -->
+        <activity
+            android:name=".ui.ProvisioningModeActivity"
+            android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.app.action.GET_PROVISIONING_MODE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".ui.PolicyComplianceActivity"
+            android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.app.action.ADMIN_POLICY_COMPLIANCE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <receiver
             android:name=".admin.AlmasDeviceAdminReceiver"
             android:description="@string/admin_description"

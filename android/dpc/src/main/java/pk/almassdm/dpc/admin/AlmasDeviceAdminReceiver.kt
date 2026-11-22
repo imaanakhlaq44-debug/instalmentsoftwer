@@ -1,15 +1,11 @@
 package pk.almassdm.dpc.admin
 
 import android.app.admin.DeviceAdminReceiver
-import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.os.Build
-import android.os.PersistableBundle
 import android.util.Log
 import pk.almassdm.dpc.data.Prefs
-import pk.almassdm.dpc.ui.EnrollActivity
 
 /**
  * The device-owner hook.
@@ -23,37 +19,10 @@ class AlmasDeviceAdminReceiver : DeviceAdminReceiver() {
 
     override fun onProfileProvisioningComplete(context: Context, intent: Intent) {
         super.onProfileProvisioningComplete(context, intent)
-
-        val extras: PersistableBundle? = provisioningExtras(intent)
-
-        val prefs = Prefs(context)
-        extras?.getString(EXTRA_ENROLLMENT_TOKEN)?.takeIf { it.isNotBlank() }?.let {
-            prefs.pendingEnrollmentToken = it
-        }
-        extras?.getString(EXTRA_SERVER_URL)?.takeIf { it.isNotBlank() }?.let {
-            prefs.serverUrl = it
-        }
-
-        Log.i(TAG, "Provisioning complete; enrolment code present: ${prefs.pendingEnrollmentToken != null}")
-
-        // The phone is still in the setup wizard at this point, so enrolment is
-        // launched rather than performed here.
-        context.startActivity(
-            Intent(context, EnrollActivity::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-        )
+        // On Android 12+ PolicyComplianceActivity may already have done this;
+        // ProvisioningHandoff starts enrolment only once per code.
+        ProvisioningHandoff.complete(context, ProvisioningHandoff.adminExtras(intent), "PROFILE_PROVISIONING_COMPLETE")
     }
-
-    @Suppress("DEPRECATION")
-    private fun provisioningExtras(intent: Intent): PersistableBundle? =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            intent.getParcelableExtra(
-                DevicePolicyManager.EXTRA_PROVISIONING_ADMIN_EXTRAS_BUNDLE,
-                PersistableBundle::class.java
-            )
-        } else {
-            intent.getParcelableExtra(DevicePolicyManager.EXTRA_PROVISIONING_ADMIN_EXTRAS_BUNDLE)
-        }
 
     override fun onEnabled(context: Context, intent: Intent) {
         Log.i(TAG, "Device admin enabled.")

@@ -38,6 +38,14 @@ class Prefs(context: Context) {
         get() = prefs.getString(KEY_ENROLL_TOKEN, null)
         set(value) = prefs.edit().putString(KEY_ENROLL_TOKEN, value).apply()
 
+    /**
+     * The enrolment code (or "" for none) whose provisioning already started
+     * enrolment, so a second "provisioning done" signal does not restart it.
+     */
+    var provisioningHandedOff: String?
+        get() = prefs.getString(KEY_PROVISIONING_HANDED_OFF, null)
+        set(value) = prefs.edit().putString(KEY_PROVISIONING_HANDED_OFF, value).apply()
+
     val isEnrolled: Boolean
         get() = !deviceId.isNullOrBlank() && !deviceToken.isNullOrBlank()
 
@@ -223,6 +231,7 @@ class Prefs(context: Context) {
         private const val KEY_DEVICE_ID = "device_id"
         private const val KEY_DEVICE_TOKEN = "device_token"
         private const val KEY_ENROLL_TOKEN = "enrollment_token"
+        private const val KEY_PROVISIONING_HANDED_OFF = "provisioning_handed_off"
         private const val KEY_LOCK_APPLIED = "lock_applied"
         private const val KEY_INTERVAL = "check_in_interval"
         private const val KEY_LAST_CHECK_IN = "last_check_in"
