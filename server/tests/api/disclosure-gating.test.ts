@@ -56,7 +56,7 @@ const clause4 = (version: string, snap: ContractSnapshot = snapshot) =>
 /** An enrolled handset whose agreement is signed under the current terms. */
 async function enrolledHandset(confirmSetup = true) {
   const device = (await repo.devices.findFirst({ dealerId: 'dealer-1', status: 'PENDING', noLock: false }))!;
-  const qr = await as(ACCOUNTS.dealerStaff)
+  const qr = await as(ACCOUNTS.dealerAdmin)
     .post('/api/enrollment/generate')
     .send({ deviceId: device.id, qrType: 'STANDARD' });
   expect(qr.status).toBe(201);

@@ -16,7 +16,7 @@ afterAll(async () => {
 /** Enrols a pending fixture device and returns its id and handset credential. */
 async function enrolledDevice() {
   const device = (await repo.devices.findFirst({ dealerId: 'dealer-1', status: 'PENDING' }))!;
-  const qr = await as(ACCOUNTS.dealerStaff)
+  const qr = await as(ACCOUNTS.dealerAdmin)
     .post('/api/enrollment/generate')
     .send({ deviceId: device.id, qrType: 'STANDARD' });
   expect(qr.status).toBe(201);

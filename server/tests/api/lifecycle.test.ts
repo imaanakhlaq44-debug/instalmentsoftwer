@@ -39,7 +39,7 @@ const registration = {
 };
 
 async function register() {
-  const res = await as(ACCOUNTS.dealerStaff).post('/api/customers').send(registration);
+  const res = await as(ACCOUNTS.dealerAdmin).post('/api/customers').send(registration);
   expect(res.status).toBeLessThan(300);
   return res;
 }
@@ -80,7 +80,7 @@ describe('registration', () => {
   it('rejects a duplicate CNIC within the same dealership', async () => {
     await register();
 
-    const res = await as(ACCOUNTS.dealerStaff).post('/api/customers').send({
+    const res = await as(ACCOUNTS.dealerAdmin).post('/api/customers').send({
       customer: { ...registration.customer, name: 'Different Name', phone: '0300-9998877' },
     });
 
@@ -91,7 +91,7 @@ describe('registration', () => {
   it('adds a second phone to a returning customer instead of refusing the CNIC', async () => {
     const first = await register();
 
-    const res = await as(ACCOUNTS.dealerStaff).post('/api/customers').send({
+    const res = await as(ACCOUNTS.dealerAdmin).post('/api/customers').send({
       customer: { ...registration.customer, name: '  lifecycle test   CUSTOMER ', cnic: '3520212345671' },
       device: { ...registration.device, imei: '490154203237518' },
       plan: registration.plan,
@@ -107,7 +107,7 @@ describe('registration', () => {
   it('refuses a known CNIC under a different name, since that is usually a wrong CNIC', async () => {
     await register();
 
-    const res = await as(ACCOUNTS.dealerStaff).post('/api/customers').send({
+    const res = await as(ACCOUNTS.dealerAdmin).post('/api/customers').send({
       customer: { ...registration.customer, name: 'Someone Else' },
       device: { ...registration.device, imei: '490154203237518' },
       plan: registration.plan,
@@ -121,7 +121,7 @@ describe('registration', () => {
     const first = await register();
     await repo.customers.update(first.body.customer.id, { active: false });
 
-    const res = await as(ACCOUNTS.dealerStaff).post('/api/customers').send({
+    const res = await as(ACCOUNTS.dealerAdmin).post('/api/customers').send({
       customer: registration.customer,
       device: { ...registration.device, imei: '490154203237518' },
       plan: registration.plan,
@@ -135,7 +135,7 @@ describe('registration', () => {
   it('rejects a duplicate phone number within the same dealership', async () => {
     await register();
 
-    const res = await as(ACCOUNTS.dealerStaff).post('/api/customers').send({
+    const res = await as(ACCOUNTS.dealerAdmin).post('/api/customers').send({
       customer: { ...registration.customer, name: 'Different Name', cnic: '35202-7654321-9' },
     });
 
@@ -146,7 +146,7 @@ describe('registration', () => {
   it('rejects an IMEI already registered anywhere in the system', async () => {
     await register();
 
-    const res = await as(ACCOUNTS.dealerStaff).post('/api/customers').send({
+    const res = await as(ACCOUNTS.dealerAdmin).post('/api/customers').send({
       customer: { ...registration.customer, name: 'Second Buyer', phone: '0300-9998877', cnic: '35202-7654321-9' },
       device: registration.device,
       plan: registration.plan,
@@ -157,7 +157,7 @@ describe('registration', () => {
   });
 
   it('rejects an IMEI that fails its checksum', async () => {
-    const res = await as(ACCOUNTS.dealerStaff).post('/api/customers').send({
+    const res = await as(ACCOUNTS.dealerAdmin).post('/api/customers').send({
       ...registration,
       device: { ...registration.device, imei: '359871080012341' },
     });
@@ -166,7 +166,7 @@ describe('registration', () => {
   });
 
   it('refuses a device without a financing plan', async () => {
-    const res = await as(ACCOUNTS.dealerStaff).post('/api/customers').send({
+    const res = await as(ACCOUNTS.dealerAdmin).post('/api/customers').send({
       customer: registration.customer,
       device: registration.device,
     });
@@ -182,7 +182,7 @@ describe('payment lifecycle over the API', () => {
     const { customer, plan, installments } = await created();
 
     for (const inst of installments) {
-      const res = await as(ACCOUNTS.dealerStaff).post('/api/payments').send({
+      const res = await as(ACCOUNTS.dealerAdmin).post('/api/payments').send({
         customerId: customer.id,
         installmentId: inst.id,
         amount: inst.amountDue,
@@ -203,7 +203,7 @@ describe('payment lifecycle over the API', () => {
     await register();
     const { customer, installments } = await created();
 
-    const paid = await as(ACCOUNTS.dealerStaff).post('/api/payments').send({
+    const paid = await as(ACCOUNTS.dealerAdmin).post('/api/payments').send({
       customerId: customer.id,
       installmentId: installments[0].id,
       amount: installments[0].amountDue,
@@ -214,7 +214,7 @@ describe('payment lifecycle over the API', () => {
     const paymentId = paid.body.payment?.id ?? paid.body.data?.payment?.id;
     expect(paymentId).toBeTruthy();
 
-    const receipt = await as(ACCOUNTS.dealerStaff).get(`/api/payments/${paymentId}/receipt`);
+    const receipt = await as(ACCOUNTS.dealerAdmin).get(`/api/payments/${paymentId}/receipt`);
     expect(receipt.status).toBe(200);
     expect(JSON.stringify(receipt.body)).toContain('LIFECYCLE-RECEIPT');
   });
@@ -231,8 +231,8 @@ describe('payment lifecycle over the API', () => {
       referenceNumber: 'LIFECYCLE-DOUBLE-SUBMIT',
     };
 
-    expect((await as(ACCOUNTS.dealerStaff).post('/api/payments').send(body)).status).toBeLessThan(300);
-    expect((await as(ACCOUNTS.dealerStaff).post('/api/payments').send(body)).status).toBe(409);
+    expect((await as(ACCOUNTS.dealerAdmin).post('/api/payments').send(body)).status).toBeLessThan(300);
+    expect((await as(ACCOUNTS.dealerAdmin).post('/api/payments').send(body)).status).toBe(409);
 
     const recorded = await repo.payments.findMany({ where: { referenceNumber: body.referenceNumber } });
     expect(recorded).toHaveLength(1);
@@ -242,7 +242,7 @@ describe('payment lifecycle over the API', () => {
     await register();
     const { customer, plan, installments } = await created();
 
-    const paid = await as(ACCOUNTS.dealerStaff).post('/api/payments').send({
+    const paid = await as(ACCOUNTS.dealerAdmin).post('/api/payments').send({
       customerId: customer.id,
       installmentId: installments[0].id,
       amount: installments[0].amountDue,
@@ -287,7 +287,7 @@ describe('audit trail', () => {
     await register();
     const { customer, installments } = await created();
 
-    await as(ACCOUNTS.dealerStaff).post('/api/payments').send({
+    await as(ACCOUNTS.dealerAdmin).post('/api/payments').send({
       customerId: customer.id,
       installmentId: installments[0].id,
       amount: 1_000,

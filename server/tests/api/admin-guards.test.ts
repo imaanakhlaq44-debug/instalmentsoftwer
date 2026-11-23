@@ -14,11 +14,11 @@ afterAll(async () => {
 
 describe('dealer suspension', () => {
   it('cuts off an already-issued token as soon as the dealer is suspended', async () => {
-    expect((await as(ACCOUNTS.dealerStaff).get('/api/devices')).status).toBe(200);
+    expect((await as(ACCOUNTS.dealerAdmin).get('/api/devices')).status).toBe(200);
 
     await repo.dealers.update('dealer-1', { active: false });
 
-    const res = await as(ACCOUNTS.dealerStaff).get('/api/devices');
+    const res = await as(ACCOUNTS.dealerAdmin).get('/api/devices');
     expect(res.status).toBe(403);
     expect(res.body.message ?? res.body.error).toMatch(/suspended/i);
   });
@@ -37,11 +37,11 @@ describe('temporary password', () => {
 
   async function loginWithTemp(): Promise<string> {
     const reset = await as(ACCOUNTS.dealerAdmin)
-      .post(`/api/users/${ACCOUNTS.dealerStaff}/reset-password`)
+      .post(`/api/users/${ACCOUNTS.dealerAdmin}/reset-password`)
       .send({ temporaryPassword: TEMP });
     expect(reset.status).toBe(200);
 
-    const staff = (await repo.users.findById(ACCOUNTS.dealerStaff))!;
+    const staff = (await repo.users.findById(ACCOUNTS.dealerAdmin))!;
     const login = await anonymous().post('/api/auth/login').send({ email: staff.email, password: TEMP });
     expect(login.status).toBe(200);
     expect(login.body.user.mustChangePassword).toBe(true);
@@ -69,7 +69,7 @@ describe('temporary password', () => {
   });
 
   it('leaves normal accounts untouched', async () => {
-    const staff = (await repo.users.findById(ACCOUNTS.dealerStaff))!;
+    const staff = (await repo.users.findById(ACCOUNTS.dealerAdmin))!;
     const login = await anonymous().post('/api/auth/login').send({ email: staff.email, password: SEED_PASSWORD });
     const res = await anonymous().get('/api/devices').set({ Authorization: `Bearer ${login.body.token}` });
     expect(res.status).toBe(200);

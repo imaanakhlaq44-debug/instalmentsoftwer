@@ -34,7 +34,7 @@ function imeiFrom(base14: string): string {
 }
 
 /** Registers a customer with a financed device, which is what drafts a contract. */
-async function registerSale(account: string = ACCOUNTS.dealerStaff) {
+async function registerSale(account: string = ACCOUNTS.dealerAdmin) {
   const unique = Date.now().toString().slice(-7);
 
   const res = await as(account)
@@ -79,7 +79,7 @@ describe('a sale drafts a contract', () => {
     expect(contractId).toBe(contract.id);
 
     // And that id is signable straight away by the shop that made the sale.
-    const signed = await as(ACCOUNTS.dealerStaff)
+    const signed = await as(ACCOUNTS.dealerAdmin)
       .post(`/api/contracts/${contractId}/sign`)
       .send({ signerName: 'Test Buyer', signatureImage: SIGNATURE, declarationAccepted: true });
     expect(signed.status).toBe(200);
@@ -122,7 +122,7 @@ describe('signing', () => {
   it('records the signature, the signer and a document hash', async () => {
     const { contract } = await registerSale();
 
-    const res = await as(ACCOUNTS.dealerStaff)
+    const res = await as(ACCOUNTS.dealerAdmin)
       .post(`/api/contracts/${contract.id}/sign`)
       .send({ signerName: 'Test Buyer', signatureImage: SIGNATURE, declarationAccepted: true });
 
@@ -137,7 +137,7 @@ describe('signing', () => {
   it('refuses a signature that is not an image drawn on screen', async () => {
     const { contract } = await registerSale();
 
-    const res = await as(ACCOUNTS.dealerStaff)
+    const res = await as(ACCOUNTS.dealerAdmin)
       .post(`/api/contracts/${contract.id}/sign`)
       .send({ signerName: 'Test Buyer', signatureImage: 'I agree', declarationAccepted: true });
 
@@ -148,7 +148,7 @@ describe('signing', () => {
   it('refuses to sign without the declaration being accepted', async () => {
     const { contract } = await registerSale();
 
-    const res = await as(ACCOUNTS.dealerStaff)
+    const res = await as(ACCOUNTS.dealerAdmin)
       .post(`/api/contracts/${contract.id}/sign`)
       .send({ signerName: 'Test Buyer', signatureImage: SIGNATURE, declarationAccepted: false });
 
@@ -159,8 +159,8 @@ describe('signing', () => {
     const { contract } = await registerSale();
     const body = { signerName: 'Test Buyer', signatureImage: SIGNATURE, declarationAccepted: true };
 
-    await as(ACCOUNTS.dealerStaff).post(`/api/contracts/${contract.id}/sign`).send(body);
-    const second = await as(ACCOUNTS.dealerStaff).post(`/api/contracts/${contract.id}/sign`).send(body);
+    await as(ACCOUNTS.dealerAdmin).post(`/api/contracts/${contract.id}/sign`).send(body);
+    const second = await as(ACCOUNTS.dealerAdmin).post(`/api/contracts/${contract.id}/sign`).send(body);
 
     expect(second.status).toBe(409);
   });
@@ -195,7 +195,7 @@ describe('a lock rests on the signature', () => {
 
   it('allows the lock once it is signed', async () => {
     const { deviceId, contract } = await registerSale();
-    await as(ACCOUNTS.dealerStaff)
+    await as(ACCOUNTS.dealerAdmin)
       .post(`/api/contracts/${contract.id}/sign`)
       .send({ signerName: 'Test Buyer', signatureImage: SIGNATURE, declarationAccepted: true });
     await makeLockable(deviceId);
@@ -210,7 +210,7 @@ describe('a lock rests on the signature', () => {
 
   it('refuses again once the agreement is voided', async () => {
     const { deviceId, contract } = await registerSale();
-    await as(ACCOUNTS.dealerStaff)
+    await as(ACCOUNTS.dealerAdmin)
       .post(`/api/contracts/${contract.id}/sign`)
       .send({ signerName: 'Test Buyer', signatureImage: SIGNATURE, declarationAccepted: true });
 
@@ -238,7 +238,7 @@ describe('a lock rests on the signature', () => {
      * term the customer agreed to, so none of them counts as drift.
      */
     const { deviceId, contract } = await registerSale();
-    await as(ACCOUNTS.dealerStaff)
+    await as(ACCOUNTS.dealerAdmin)
       .post(`/api/contracts/${contract.id}/sign`)
       .send({ signerName: 'Test Buyer', signatureImage: SIGNATURE, declarationAccepted: true });
 
@@ -247,7 +247,7 @@ describe('a lock rests on the signature', () => {
 
     // One paid in full, one paid in part — the two shapes an installment can
     // be left in.
-    const full = await as(ACCOUNTS.dealerStaff).post('/api/payments').send({
+    const full = await as(ACCOUNTS.dealerAdmin).post('/api/payments').send({
       customerId: plan.customerId,
       installmentId: first.id,
       amount: first.amountDue,
@@ -256,7 +256,7 @@ describe('a lock rests on the signature', () => {
     });
     expect(full.status).toBeLessThan(300);
 
-    const partial = await as(ACCOUNTS.dealerStaff).post('/api/payments').send({
+    const partial = await as(ACCOUNTS.dealerAdmin).post('/api/payments').send({
       customerId: plan.customerId,
       installmentId: second.id,
       amount: Math.floor(second.amountDue / 3),
@@ -289,7 +289,7 @@ describe('a lock rests on the signature', () => {
      * check compares the signed figures against the plan in force.
      */
     const { deviceId, contract } = await registerSale();
-    await as(ACCOUNTS.dealerStaff)
+    await as(ACCOUNTS.dealerAdmin)
       .post(`/api/contracts/${contract.id}/sign`)
       .send({ signerName: 'Test Buyer', signatureImage: SIGNATURE, declarationAccepted: true });
 
@@ -326,7 +326,7 @@ describe('a lock rests on the signature', () => {
      * it is a row that no longer matches its own signature.
      */
     const { deviceId, contract } = await registerSale();
-    await as(ACCOUNTS.dealerStaff)
+    await as(ACCOUNTS.dealerAdmin)
       .post(`/api/contracts/${contract.id}/sign`)
       .send({ signerName: 'Test Buyer', signatureImage: SIGNATURE, declarationAccepted: true });
 
@@ -347,7 +347,7 @@ describe('a lock rests on the signature', () => {
 
   it('reports the mismatch on the document rather than hiding it', async () => {
     const { contract } = await registerSale();
-    await as(ACCOUNTS.dealerStaff)
+    await as(ACCOUNTS.dealerAdmin)
       .post(`/api/contracts/${contract.id}/sign`)
       .send({ signerName: 'Test Buyer', signatureImage: SIGNATURE, declarationAccepted: true });
 
@@ -370,7 +370,7 @@ describe('reading the document', () => {
   it('renders the clauses in both languages, with the restriction clause present', async () => {
     const { contract } = await registerSale();
 
-    const res = await as(ACCOUNTS.dealerStaff).get(`/api/contracts/${contract.id}`);
+    const res = await as(ACCOUNTS.dealerAdmin).get(`/api/contracts/${contract.id}`);
     expect(res.status).toBe(200);
 
     const restriction = res.body.clauses.find((c: any) => /restriction of the device/i.test(c.heading));
@@ -406,7 +406,7 @@ describe('reading the document', () => {
 
   it('keeps the signature image off the list', async () => {
     const { contract } = await registerSale();
-    await as(ACCOUNTS.dealerStaff)
+    await as(ACCOUNTS.dealerAdmin)
       .post(`/api/contracts/${contract.id}/sign`)
       .send({ signerName: 'Test Buyer', signatureImage: SIGNATURE, declarationAccepted: true });
 

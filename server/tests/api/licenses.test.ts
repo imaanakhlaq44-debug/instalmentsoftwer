@@ -15,7 +15,7 @@ afterAll(async () => {
 async function pendingDeviceWithToken() {
   const device = (await repo.devices.findFirst({ dealerId: 'dealer-1', status: 'PENDING' }))!;
 
-  const res = await as(ACCOUNTS.dealerStaff)
+  const res = await as(ACCOUNTS.dealerAdmin)
     .post('/api/enrollment/generate')
     .send({ deviceId: device.id, qrType: 'STANDARD' });
 
@@ -59,7 +59,7 @@ describe('a lock is spent at enrolment', () => {
     const first = await repo.deviceLicenses.findByDevice(device.id);
 
     // A factory reset puts the same phone through provisioning again.
-    const second = await as(ACCOUNTS.dealerStaff)
+    const second = await as(ACCOUNTS.dealerAdmin)
       .post('/api/enrollment/generate')
       .send({ deviceId: device.id, qrType: 'STANDARD' });
 
@@ -120,7 +120,7 @@ describe('the counter is stopped before the customer is', () => {
   it('refuses a new financed sale when there are no locks left', async () => {
     await exhaustLocks('dealer-1');
 
-    const res = await as(ACCOUNTS.dealerStaff)
+    const res = await as(ACCOUNTS.dealerAdmin)
       .post('/api/customers')
       .send({
         customer: {

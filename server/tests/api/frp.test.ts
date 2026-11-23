@@ -160,7 +160,7 @@ describe('DPC FRP verification telemetry & refusal handling', () => {
 
   it('records REFUSED alert at enrollment and clears FRP columns on re-enroll and release', async () => {
     const pending = (await repo.devices.findFirst({ dealerId: 'dealer-1', status: 'PENDING', noLock: false }))!;
-    const genRes = await as(ACCOUNTS.dealerStaff)
+    const genRes = await as(ACCOUNTS.dealerAdmin)
       .post('/api/enrollment/generate')
       .send({ deviceId: pending.id, qrType: 'STANDARD' });
     expect(genRes.status).toBe(201);
@@ -213,7 +213,7 @@ describe('DPC FRP verification telemetry & refusal handling', () => {
 
 describe('Dealer visibility: readiness, stats, and frp=refused filter', () => {
   it('exposes enrollment readiness to DEALER_STAFF without leaking account IDs and blocks CUSTOMER', async () => {
-    let res = await as(ACCOUNTS.dealerStaff).get('/api/enrollment/readiness');
+    let res = await as(ACCOUNTS.dealerAdmin).get('/api/enrollment/readiness');
     expect(res.status).toBe(200);
     expect(res.body.frpConfigured).toBe(false);
     expect(res.body.frpAccountsCount).toBe(0);
@@ -222,7 +222,7 @@ describe('Dealer visibility: readiness, stats, and frp=refused filter', () => {
 
     await setFrp([DEALER_GOOGLE_ID]);
 
-    res = await as(ACCOUNTS.dealerStaff).get('/api/enrollment/readiness');
+    res = await as(ACCOUNTS.dealerAdmin).get('/api/enrollment/readiness');
     expect(res.status).toBe(200);
     expect(res.body.frpConfigured).toBe(true);
     expect(res.body.frpAccountsCount).toBe(1);
@@ -233,7 +233,7 @@ describe('Dealer visibility: readiness, stats, and frp=refused filter', () => {
   });
 
   it('includes frpConfigured and frpRefusedDevices in dashboard stats and filters GET /api/devices?frp=refused', async () => {
-    let statsRes = await as(ACCOUNTS.dealerStaff).get('/api/dashboard/stats');
+    let statsRes = await as(ACCOUNTS.dealerAdmin).get('/api/dashboard/stats');
     expect(statsRes.status).toBe(200);
     expect(statsRes.body.frpConfigured).toBe(false);
     expect(statsRes.body.frpRefusedDevices).toBe(0);
@@ -249,12 +249,12 @@ describe('Dealer visibility: readiness, stats, and frp=refused filter', () => {
         frp: { status: 'REFUSED', detail: 'OEM blocked FRP' },
       });
 
-    statsRes = await as(ACCOUNTS.dealerStaff).get('/api/dashboard/stats');
+    statsRes = await as(ACCOUNTS.dealerAdmin).get('/api/dashboard/stats');
     expect(statsRes.status).toBe(200);
     expect(statsRes.body.frpConfigured).toBe(true);
     expect(statsRes.body.frpRefusedDevices).toBe(1);
 
-    const listRes = await as(ACCOUNTS.dealerStaff).get('/api/devices?frp=refused');
+    const listRes = await as(ACCOUNTS.dealerAdmin).get('/api/devices?frp=refused');
     expect(listRes.status).toBe(200);
     expect(listRes.body.data).toHaveLength(1);
     expect(listRes.body.data[0].id).toBe(plan.deviceId);

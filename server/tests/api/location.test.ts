@@ -43,7 +43,7 @@ let counter = 0;
 /** A fresh sale, connected, with its agreement signed under the policy now in force. */
 async function signedPhone(sign = true) {
   const unique = String((Number(Date.now().toString().slice(-7)) + counter++) % 10_000_000).padStart(7, '0');
-  const sale = await as(ACCOUNTS.dealerStaff)
+  const sale = await as(ACCOUNTS.dealerAdmin)
     .post('/api/customers')
     .send({
       customer: {
@@ -60,13 +60,13 @@ async function signedPhone(sign = true) {
   expect(sale.status).toBe(201);
   const deviceId = sale.body.device.id as string;
 
-  const qr = await as(ACCOUNTS.dealerStaff).post('/api/enrollment/generate').send({ deviceId, qrType: 'STANDARD' });
+  const qr = await as(ACCOUNTS.dealerAdmin).post('/api/enrollment/generate').send({ deviceId, qrType: 'STANDARD' });
   const enrolled = await anonymous().post('/api/dpc/enroll').send({ token: qr.body.token.token, dpcVersion: '1.3.0' });
   expect(enrolled.status).toBe(201);
 
   if (sign) {
     const contract = (await repo.contracts.findByDevice(deviceId))!;
-    const res = await as(ACCOUNTS.dealerStaff)
+    const res = await as(ACCOUNTS.dealerAdmin)
       .post(`/api/contracts/${contract.id}/sign`)
       .send({ signerName: 'Test Buyer', signatureImage: SIGNATURE, declarationAccepted: true });
     expect(res.status).toBe(200);

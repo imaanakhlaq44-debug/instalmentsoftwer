@@ -134,7 +134,7 @@ describe('writes are stamped with the caller\'s dealer', () => {
   };
 
   it('refuses a dealerId in the body pointing at another dealer', async () => {
-    const res = await as(ACCOUNTS.dealerStaff)
+    const res = await as(ACCOUNTS.dealerAdmin)
       .post('/api/customers')
       .send({ dealerId: 'dealer-2', customer });
 
@@ -143,7 +143,7 @@ describe('writes are stamped with the caller\'s dealer', () => {
   });
 
   it('stamps a new customer with the caller\'s own dealer', async () => {
-    const res = await as(ACCOUNTS.dealerStaff).post('/api/customers').send({ customer });
+    const res = await as(ACCOUNTS.dealerAdmin).post('/api/customers').send({ customer });
 
     expect(res.status).toBeLessThan(300);
     expect((await repo.customers.findFirst({ name: customer.name }))!.dealerId).toBe('dealer-1');

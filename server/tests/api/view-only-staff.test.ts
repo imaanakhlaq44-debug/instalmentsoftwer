@@ -60,28 +60,18 @@ describe('view-only staff', () => {
     await addViewer();
   });
 
-  it("sees the shop's phones, customers, instalments, payments and who is behind", async () => {
+  it('sees customers and their numbers to call them, and nothing else', async () => {
     const { header } = await addViewer();
     const get = (url: string) => request(app).get(url).set(header);
 
-    const devices = await get('/api/devices').expect(200);
-    const deviceList = devices.body.data ?? devices.body.devices ?? devices.body;
-    expect(Array.isArray(deviceList) && deviceList.length).toBeTruthy();
-    const deviceId = deviceList[0].id;
-    await get(`/api/devices/${deviceId}`).expect(200);
-    await get(`/api/devices/${deviceId}/actions`).expect(200);
+    const desk = await get('/api/staff-desk/customers').expect(200);
+    expect(desk.body.customers.length).toBeGreaterThan(0);
+    expect(desk.body.canRecordPayments).toBe(false);
 
-    await get('/api/customers').expect(200);
-    const customer = await get('/api/customers/cust-1').expect(200);
-    // Same masking as counter staff: the full CNIC stays with the owner.
-    expect(customer.body.customer.cnic).toContain('*');
-
-    await get('/api/installments').expect(200);
-    await get('/api/installments/plans').expect(200);
-    await get('/api/payments').expect(200);
-    await get('/api/dashboard/stats').expect(200);
-    const attention = await get('/api/dashboard/attention').expect(200);
-    expect(Array.isArray(attention.body.overdueInstallments)).toBe(true);
+    for (const url of ['/api/devices', '/api/customers', '/api/customers/cust-1', '/api/installments',
+      '/api/installments/plans', '/api/payments', '/api/dashboard/stats', '/api/dashboard/attention']) {
+      expect((await get(url)).status, url).toBe(403);
+    }
   });
 
   it('cannot change anything', async () => {
@@ -117,10 +107,10 @@ describe('view-only staff', () => {
   });
 
   it('counter staff can still record a payment', async () => {
-    const plans = await as(ACCOUNTS.dealerStaff).get('/api/installments/plans').expect(200);
+    const plans = await as(ACCOUNTS.dealerAdmin).get('/api/installments/plans').expect(200);
     const list = plans.body.data ?? plans.body.plans ?? plans.body;
     const plan = list.find((p: { status: string }) => p.status === 'ACTIVE') ?? list[0];
-    const res = await as(ACCOUNTS.dealerStaff)
+    const res = await as(ACCOUNTS.dealerAdmin)
       .post('/api/payments')
       .send({ customerId: plan.customerId, planId: plan.id, amount: 1000, paymentMethod: 'CASH' });
     expect(res.status).toBe(201);

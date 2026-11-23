@@ -101,7 +101,7 @@ describe('Key attestation verifier', () => {
 
 async function pendingDeviceWithToken() {
   const device = (await repo.devices.findFirst({ dealerId: 'dealer-1', status: 'PENDING', noLock: false }))!;
-  const res = await as(ACCOUNTS.dealerStaff)
+  const res = await as(ACCOUNTS.dealerAdmin)
     .post('/api/enrollment/generate')
     .send({ deviceId: device.id, qrType: 'STANDARD' });
   expect(res.status).toBe(201);
@@ -163,12 +163,9 @@ describe('Hardware attestation at enrollment', () => {
     const { device } = await enrollAttested('R58NSECRET77');
     await repo.devices.update(device.id, { attestationChallenge: 'outstanding-challenge-value' });
 
+    // Staff cannot open a device at all any more.
     const staff = await as(ACCOUNTS.dealerStaff).get(`/api/devices/${device.id}`);
-    expect(staff.status).toBe(200);
-    expect(staff.body.attestedImeis).toBeUndefined();
-    expect(staff.body.maskedAttestedImeis?.[0]).toMatch(/^\*+\d{4}$/);
-    expect(staff.body.attestedSerial).toBeUndefined();
-    expect(staff.body.enrolledSerial).toBeUndefined();
+    expect(staff.status).toBe(403);
     const staffJson = JSON.stringify(staff.body);
     expect(staffJson).not.toContain(device.imei);
     expect(staffJson).not.toContain('R58NSECRET77');

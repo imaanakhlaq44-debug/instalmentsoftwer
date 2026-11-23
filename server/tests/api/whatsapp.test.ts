@@ -53,7 +53,7 @@ describe('click-to-WhatsApp: the message', () => {
     const { customer, device, owed, plan } = await overdueCustomer();
     const dealer = (await repo.dealers.findById('dealer-1'))!;
 
-    const res = await as(ACCOUNTS.dealerStaff)
+    const res = await as(ACCOUNTS.dealerAdmin)
       .get('/api/notifications/whatsapp/message')
       .query({ customerId: customer.id, kind: 'OVERDUE', planId: plan.id });
 
@@ -73,7 +73,7 @@ describe('click-to-WhatsApp: the message', () => {
   it('previewing records nothing', async () => {
     const { customer } = await overdueCustomer();
 
-    await as(ACCOUNTS.dealerStaff)
+    await as(ACCOUNTS.dealerAdmin)
       .get('/api/notifications/whatsapp/message')
       .query({ customerId: customer.id, kind: 'OVERDUE' });
 
@@ -83,7 +83,7 @@ describe('click-to-WhatsApp: the message', () => {
   it('writes in the language the shop chose in Settings', async () => {
     const { customer } = await overdueCustomer();
     const ask = () =>
-      as(ACCOUNTS.dealerStaff)
+      as(ACCOUNTS.dealerAdmin)
         .get('/api/notifications/whatsapp/message')
         .query({ customerId: customer.id, kind: 'OVERDUE' });
 
@@ -113,7 +113,7 @@ describe('click-to-WhatsApp: the message', () => {
     )[0];
     expect(payment).toBeTruthy();
 
-    const res = await as(ACCOUNTS.dealerStaff)
+    const res = await as(ACCOUNTS.dealerAdmin)
       .get('/api/notifications/whatsapp/message')
       .query({ customerId: payment.customerId, kind: 'PAYMENT_RECEIVED', paymentId: payment.id });
 
@@ -122,7 +122,7 @@ describe('click-to-WhatsApp: the message', () => {
     expect(res.body.message).toContain(payment.receiptNumber || payment.id);
 
     await repo.payments.update(payment.id, { status: 'PENDING' });
-    const unverified = await as(ACCOUNTS.dealerStaff)
+    const unverified = await as(ACCOUNTS.dealerAdmin)
       .get('/api/notifications/whatsapp/message')
       .query({ customerId: payment.customerId, kind: 'PAYMENT_RECEIVED', paymentId: payment.id });
     expect(unverified.status).toBe(400);
@@ -134,7 +134,7 @@ describe('click-to-WhatsApp: the message', () => {
       await repo.payments.findMany({ where: { dealerId: 'dealer-1', status: 'VERIFIED', NOT: { customerId: customer.id } }, take: 1 })
     )[0];
 
-    const res = await as(ACCOUNTS.dealerStaff)
+    const res = await as(ACCOUNTS.dealerAdmin)
       .get('/api/notifications/whatsapp/message')
       .query({ customerId: customer.id, kind: 'PAYMENT_RECEIVED', paymentId: other.id });
 
@@ -144,7 +144,7 @@ describe('click-to-WhatsApp: the message', () => {
   it('refuses a lock warning with no signed agreement behind it, and allows one with', async () => {
     const { customer, device, plan } = await overdueCustomer();
     const ask = () =>
-      as(ACCOUNTS.dealerStaff)
+      as(ACCOUNTS.dealerAdmin)
         .get('/api/notifications/whatsapp/message')
         .query({ customerId: customer.id, kind: 'LOCK_WARNING', planId: plan.id });
 
@@ -185,7 +185,7 @@ describe('click-to-WhatsApp: the message', () => {
     const { customer } = await overdueCustomer();
     await repo.installments.updateMany({ customerId: customer.id }, { status: 'PAID', amountPaid: 10_000_000 });
 
-    const res = await as(ACCOUNTS.dealerStaff)
+    const res = await as(ACCOUNTS.dealerAdmin)
       .get('/api/notifications/whatsapp/message')
       .query({ customerId: customer.id, kind: 'OVERDUE' });
 
@@ -196,7 +196,7 @@ describe('click-to-WhatsApp: the message', () => {
     const { customer } = await overdueCustomer();
     await repo.customers.update(customer.id, { phone: '042-35761234' });
 
-    const res = await as(ACCOUNTS.dealerStaff)
+    const res = await as(ACCOUNTS.dealerAdmin)
       .get('/api/notifications/whatsapp/message')
       .query({ customerId: customer.id, kind: 'OVERDUE' });
 
@@ -209,7 +209,7 @@ describe('click-to-WhatsApp: the record', () => {
   it('records who opened it, as opened — never sent or delivered', async () => {
     const { customer } = await overdueCustomer();
 
-    const res = await as(ACCOUNTS.dealerStaff)
+    const res = await as(ACCOUNTS.dealerAdmin)
       .post('/api/notifications/whatsapp/opened')
       .send({ customerId: customer.id, kind: 'OVERDUE' });
 
@@ -220,7 +220,7 @@ describe('click-to-WhatsApp: the record', () => {
     expect(logs).toHaveLength(1);
     expect(logs[0]).toMatchObject({
       dealerId: 'dealer-1',
-      userId: ACCOUNTS.dealerStaff,
+      userId: ACCOUNTS.dealerAdmin,
       targetType: 'CUSTOMER',
       targetId: customer.id,
     });
@@ -236,12 +236,12 @@ describe('click-to-WhatsApp: the record', () => {
 
   it('shows the opens on the customer’s page, with the staff member’s name', async () => {
     const { customer } = await overdueCustomer();
-    await as(ACCOUNTS.dealerStaff)
+    await as(ACCOUNTS.dealerAdmin)
       .post('/api/notifications/whatsapp/opened')
       .send({ customerId: customer.id, kind: 'OVERDUE' });
 
     const res = await as(ACCOUNTS.dealerAdmin).get(`/api/customers/${customer.id}`);
-    const staff = (await repo.users.findById(ACCOUNTS.dealerStaff))!;
+    const staff = (await repo.users.findById(ACCOUNTS.dealerAdmin))!;
 
     expect(res.status).toBe(200);
     expect(res.body.whatsappOpens).toHaveLength(1);
@@ -250,7 +250,7 @@ describe('click-to-WhatsApp: the record', () => {
   });
 
   it('does not show staff names to a customer login', async () => {
-    await as(ACCOUNTS.dealerStaff)
+    await as(ACCOUNTS.dealerAdmin)
       .post('/api/notifications/whatsapp/opened')
       .send({ customerId: 'cust-1', kind: 'DUE_REMINDER' });
 
@@ -315,7 +315,7 @@ function connectCloudApi(reply: (call: number) => MetaReply) {
 const ACCEPTED: MetaReply = { status: 200, body: { messaging_product: 'whatsapp', messages: [{ id: 'wamid.OK' }] } };
 
 async function queueWhatsApp(customerId: string, type = 'PAYMENT_OVERDUE') {
-  const res = await as(ACCOUNTS.dealerStaff).post('/api/notifications/send').send({
+  const res = await as(ACCOUNTS.dealerAdmin).post('/api/notifications/send').send({
     customerId,
     channel: 'WHATSAPP',
     type,
@@ -405,7 +405,7 @@ describe('WhatsApp Business Cloud API: sending from the queue', () => {
     const { customer } = await overdueCustomer();
     const fetchMock = connectCloudApi(() => ACCEPTED);
 
-    const sms = await as(ACCOUNTS.dealerStaff).post('/api/notifications/send').send({
+    const sms = await as(ACCOUNTS.dealerAdmin).post('/api/notifications/send').send({
       customerId: customer.id, channel: 'SMS', type: 'PAYMENT_OVERDUE', title: 'Overdue', message: 'Pay please.',
     });
     await WhatsAppDispatchService.dispatchQueued();

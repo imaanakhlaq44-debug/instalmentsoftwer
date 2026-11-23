@@ -47,7 +47,7 @@ async function setChannel(smsChannel: SmsChannel, account: string = ACCOUNTS.dea
 async function queueSms(message = 'Your installment of Rs 5,000 is overdue.') {
   const customer = (await repo.customers.findFirst({ dealerId: 'dealer-1' }))!;
 
-  const res = await as(ACCOUNTS.dealerStaff).post('/api/notifications/send').send({
+  const res = await as(ACCOUNTS.dealerAdmin).post('/api/notifications/send').send({
     customerId: customer.id,
     channel: 'SMS',
     type: 'PAYMENT_OVERDUE',
@@ -266,7 +266,7 @@ describe('draining the queue through the aggregator', () => {
 
   it('fails a message with no customer number without calling the gateway', async () => {
     await setChannel('AGGREGATOR');
-    const res = await as(ACCOUNTS.dealerStaff).post('/api/notifications/send').send({
+    const res = await as(ACCOUNTS.dealerAdmin).post('/api/notifications/send').send({
       channel: 'SMS', type: 'PAYMENT_DUE', title: 'To everyone', message: 'Shop closed on Friday.',
     });
 

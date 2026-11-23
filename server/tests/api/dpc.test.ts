@@ -21,7 +21,7 @@ afterAll(async () => {
 async function pendingDeviceWithToken() {
   const device = (await repo.devices.findFirst({ dealerId: 'dealer-1', status: 'PENDING' }))!;
 
-  const res = await as(ACCOUNTS.dealerStaff)
+  const res = await as(ACCOUNTS.dealerAdmin)
     .post('/api/enrollment/generate')
     .send({ deviceId: device.id, qrType: 'STANDARD' });
 
@@ -92,7 +92,7 @@ describe('POST /api/dpc/enroll', () => {
 
     // A factory reset sends the phone back for a new QR.
     await repo.devices.update(first.deviceId, { status: 'PENDING' });
-    const regenerated = await as(ACCOUNTS.dealerStaff)
+    const regenerated = await as(ACCOUNTS.dealerAdmin)
       .post('/api/enrollment/generate')
       .send({ deviceId: first.deviceId, qrType: 'STANDARD' });
 
@@ -394,7 +394,7 @@ describe('the enrollment QR a factory-reset phone scans', () => {
   it('is an Android provisioning payload, not a shape of our own', async () => {
     const device = (await repo.devices.findFirst({ dealerId: 'dealer-1', status: 'PENDING' }))!;
 
-    const res = await as(ACCOUNTS.dealerStaff)
+    const res = await as(ACCOUNTS.dealerAdmin)
       .post('/api/enrollment/generate')
       .send({ deviceId: device.id, qrType: 'STANDARD' });
 
@@ -413,7 +413,7 @@ describe('the enrollment QR a factory-reset phone scans', () => {
   it('stays small enough for an older phone to scan off a screen', async () => {
     const device = (await repo.devices.findFirst({ dealerId: 'dealer-1', status: 'PENDING' }))!;
 
-    const res = await as(ACCOUNTS.dealerStaff)
+    const res = await as(ACCOUNTS.dealerAdmin)
       .post('/api/enrollment/generate')
       .send({ deviceId: device.id, qrType: 'STANDARD' });
 
@@ -433,7 +433,7 @@ describe('the enrollment QR a factory-reset phone scans', () => {
   it('renders a real QR image rather than leaving the dashboard to draw one', async () => {
     const device = (await repo.devices.findFirst({ dealerId: 'dealer-1', status: 'PENDING' }))!;
 
-    const res = await as(ACCOUNTS.dealerStaff)
+    const res = await as(ACCOUNTS.dealerAdmin)
       .post('/api/enrollment/generate')
       .send({ deviceId: device.id, qrType: 'STANDARD' });
 
@@ -445,7 +445,7 @@ describe('the enrollment QR a factory-reset phone scans', () => {
     // case a shop must be warned about: the QR scans, and nothing installs.
     const device = (await repo.devices.findFirst({ dealerId: 'dealer-1', status: 'PENDING' }))!;
 
-    const res = await as(ACCOUNTS.dealerStaff)
+    const res = await as(ACCOUNTS.dealerAdmin)
       .post('/api/enrollment/generate')
       .send({ deviceId: device.id, qrType: 'STANDARD' });
 

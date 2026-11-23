@@ -37,31 +37,31 @@ const sale = (photo?: string) => ({
 
 describe('customer photo', () => {
   it('is saved with the sale and served on its own', async () => {
-    const res = await as(ACCOUNTS.dealerStaff).post('/api/customers').send(sale(PHOTO)).expect(201);
+    const res = await as(ACCOUNTS.dealerAdmin).post('/api/customers').send(sale(PHOTO)).expect(201);
     const id = res.body.customer.id;
 
-    const detail = await as(ACCOUNTS.dealerStaff).get(`/api/customers/${id}`).expect(200);
+    const detail = await as(ACCOUNTS.dealerAdmin).get(`/api/customers/${id}`).expect(200);
     expect(detail.body.customer.hasPhoto).toBe(true);
     expect(JSON.stringify(detail.body)).not.toContain('base64');
 
-    const list = await as(ACCOUNTS.dealerStaff).get('/api/customers').expect(200);
+    const list = await as(ACCOUNTS.dealerAdmin).get('/api/customers').expect(200);
     expect(JSON.stringify(list.body)).not.toContain('base64');
 
-    const photo = await as(ACCOUNTS.dealerStaff).get(`/api/customers/${id}/photo`).expect(200);
+    const photo = await as(ACCOUNTS.dealerAdmin).get(`/api/customers/${id}/photo`).expect(200);
     expect(photo.body.photo).toBe(PHOTO);
     expect(photo.headers['cache-control']).toContain('no-store');
   });
 
   it('is optional', async () => {
-    const res = await as(ACCOUNTS.dealerStaff).post('/api/customers').send(sale()).expect(201);
+    const res = await as(ACCOUNTS.dealerAdmin).post('/api/customers').send(sale()).expect(201);
     const id = res.body.customer.id;
-    expect((await as(ACCOUNTS.dealerStaff).get(`/api/customers/${id}`)).body.customer.hasPhoto).toBe(false);
-    await as(ACCOUNTS.dealerStaff).get(`/api/customers/${id}/photo`).expect(404);
+    expect((await as(ACCOUNTS.dealerAdmin).get(`/api/customers/${id}`)).body.customer.hasPhoto).toBe(false);
+    await as(ACCOUNTS.dealerAdmin).get(`/api/customers/${id}/photo`).expect(404);
   });
 
   it('is replaced when a returning customer is photographed again', async () => {
-    const first = await as(ACCOUNTS.dealerStaff).post('/api/customers').send(sale(PHOTO)).expect(201);
-    await as(ACCOUNTS.dealerStaff)
+    const first = await as(ACCOUNTS.dealerAdmin).post('/api/customers').send(sale(PHOTO)).expect(201);
+    await as(ACCOUNTS.dealerAdmin)
       .post('/api/customers')
       .send({
         ...sale(),
@@ -69,16 +69,16 @@ describe('customer photo', () => {
         device: { ...sale().device, imei: '490154203237518' },
       })
       .expect(201);
-    const photo = await as(ACCOUNTS.dealerStaff).get(`/api/customers/${first.body.customer.id}/photo`).expect(200);
+    const photo = await as(ACCOUNTS.dealerAdmin).get(`/api/customers/${first.body.customer.id}/photo`).expect(200);
     expect(photo.body.photo).toBe(OTHER_PHOTO);
   });
 
   it('refuses something that is not an image, or is too large', async () => {
-    await as(ACCOUNTS.dealerStaff)
+    await as(ACCOUNTS.dealerAdmin)
       .post('/api/customers')
       .send(sale('data:text/html;base64,PHNjcmlwdD4='))
       .expect(422);
-    await as(ACCOUNTS.dealerStaff)
+    await as(ACCOUNTS.dealerAdmin)
       .post('/api/customers')
       .send(sale(`data:image/jpeg;base64,${'A'.repeat(200_000)}`))
       .expect(422);
@@ -86,15 +86,15 @@ describe('customer photo', () => {
   });
 
   it('can be added, replaced and removed from the customer page, and each is audited', async () => {
-    const id = (await as(ACCOUNTS.dealerStaff).post('/api/customers').send(sale()).expect(201)).body.customer.id;
+    const id = (await as(ACCOUNTS.dealerAdmin).post('/api/customers').send(sale()).expect(201)).body.customer.id;
 
-    await as(ACCOUNTS.dealerStaff).put(`/api/customers/${id}/photo`).send({ photo: PHOTO }).expect(200);
+    await as(ACCOUNTS.dealerAdmin).put(`/api/customers/${id}/photo`).send({ photo: PHOTO }).expect(200);
     await as(ACCOUNTS.dealerAdmin).put(`/api/customers/${id}/photo`).send({ photo: OTHER_PHOTO }).expect(200);
-    expect((await as(ACCOUNTS.dealerStaff).get(`/api/customers/${id}/photo`)).body.photo).toBe(OTHER_PHOTO);
+    expect((await as(ACCOUNTS.dealerAdmin).get(`/api/customers/${id}/photo`)).body.photo).toBe(OTHER_PHOTO);
 
-    await as(ACCOUNTS.dealerStaff).delete(`/api/customers/${id}/photo`).expect(200);
-    await as(ACCOUNTS.dealerStaff).get(`/api/customers/${id}/photo`).expect(404);
-    await as(ACCOUNTS.dealerStaff).delete(`/api/customers/${id}/photo`).expect(404);
+    await as(ACCOUNTS.dealerAdmin).delete(`/api/customers/${id}/photo`).expect(200);
+    await as(ACCOUNTS.dealerAdmin).get(`/api/customers/${id}/photo`).expect(404);
+    await as(ACCOUNTS.dealerAdmin).delete(`/api/customers/${id}/photo`).expect(404);
 
     const actions = (
       await prisma.auditLog.findMany({ where: { targetId: id, action: { startsWith: 'CUSTOMER_PHOTO' } } })
@@ -103,7 +103,7 @@ describe('customer photo', () => {
   });
 
   it("is not visible to another shop or to a customer login", async () => {
-    const id = (await as(ACCOUNTS.dealerStaff).post('/api/customers').send(sale(PHOTO)).expect(201)).body.customer.id;
+    const id = (await as(ACCOUNTS.dealerAdmin).post('/api/customers').send(sale(PHOTO)).expect(201)).body.customer.id;
     await as(ACCOUNTS.otherDealerAdmin).get(`/api/customers/${id}/photo`).expect(404);
     await as(ACCOUNTS.otherDealerAdmin).put(`/api/customers/${id}/photo`).send({ photo: OTHER_PHOTO }).expect(404);
     await as(ACCOUNTS.customer).get(`/api/customers/${id}/photo`).expect(403);

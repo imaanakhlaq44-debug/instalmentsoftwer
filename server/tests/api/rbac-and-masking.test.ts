@@ -64,7 +64,7 @@ describe('role restrictions', () => {
   });
 
   it('does let counter staff record a payment', async () => {
-    const res = await as(ACCOUNTS.dealerStaff).post('/api/payments').send({
+    const res = await as(ACCOUNTS.dealerAdmin).post('/api/payments').send({
       customerId: 'cust-2',
       planId: 'plan-2',
       amount: 1_000,
@@ -85,18 +85,12 @@ describe('PII masking by role', () => {
     expect(device.imeiMasked).toBe(false);
   });
 
-  it('removes the raw IMEI for counter staff rather than shadowing it', async () => {
+  // Staff do two jobs (contact customers, take payments). The device list is
+  // not one of them, so its IMEIs and serial numbers never reach a staff login.
+  it('keeps counter staff away from the device list, IMEIs and serial numbers', async () => {
     const res = await as(ACCOUNTS.dealerStaff).get('/api/devices?limit=5');
-    const device = res.body.data[0];
-
-    expect(device.imei).toBeUndefined();
-    expect(device.maskedImei).toMatch(/^\*+\d{4}$/);
-    expect(device.imeiMasked).toBe(true);
-  });
-
-  it('removes the serial number for counter staff', async () => {
-    const res = await as(ACCOUNTS.dealerStaff).get('/api/devices?limit=5');
-    expect(res.body.data[0].serialNumber).toBeUndefined();
+    expect(res.status).toBe(403);
+    expect(res.body.data).toBeUndefined();
   });
 
   it('never leaks a raw IMEI anywhere in a staff device listing', async () => {
@@ -112,13 +106,16 @@ describe('PII masking by role', () => {
     }
   });
 
-  it('masks CNIC, address and phone for counter staff', async () => {
-    const res = await as(ACCOUNTS.dealerStaff).get('/api/customers?limit=5');
-    const customer = res.body.data[0];
+  it('gives counter staff a customer\'s name and number only, never the CNIC or address', async () => {
+    const full = await as(ACCOUNTS.dealerStaff).get('/api/customers?limit=5');
+    expect(full.status).toBe(403);
 
-    expect(customer.cnic).toContain('*');
-    expect(customer.address).toContain('••••');
-    expect(customer.phone).toContain('***');
+    const desk = await as(ACCOUNTS.dealerStaff).get('/api/staff-desk/customers');
+    expect(desk.status).toBe(200);
+    const stored = (await repo.customers.findById(desk.body.customers[0].customerId))!;
+    const payload = JSON.stringify(desk.body);
+    expect(payload).not.toContain(stored.cnic);
+    if (stored.address) expect(payload).not.toContain(stored.address);
   });
 
   it('leaves the address intact for a dealer admin', async () => {
@@ -171,7 +168,7 @@ describe('error handling', () => {
   });
 
   it('does not leak a stack trace on a validation failure', async () => {
-    const res = await as(ACCOUNTS.dealerStaff).post('/api/payments').send({ amount: 'not-a-number' });
+    const res = await as(ACCOUNTS.dealerAdmin).post('/api/payments').send({ amount: 'not-a-number' });
 
     expect(res.status).toBeGreaterThanOrEqual(400);
     expect(JSON.stringify(res.body)).not.toMatch(/at .*\.ts:\d+|node_modules/);

@@ -21,7 +21,7 @@ it('preserves outstanding principal when rescheduling a partial payment', async 
 it('hides nested private device and customer fields from staff', async () => {
   const plan = (await repo.installmentPlans.findById('plan-1'))!;
   await repo.devices.update(plan.deviceId, { authTokenHash: 'a'.repeat(64), locationLat: 31.5, locationLng: 74.3 });
-  const r = await as(ACCOUNTS.dealerStaff).get('/api/installments/plans/plan-1');
+  const r = await as(ACCOUNTS.dealerAdmin).get('/api/installments/plans/plan-1');
   expect(r.status).toBe(200);
   expect(r.body.device.authTokenHash).toBeUndefined(); expect(r.body.device.locationLat).toBeUndefined();
   expect(r.body.customer.cnic).toContain('*******');
