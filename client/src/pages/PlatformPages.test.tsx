@@ -218,6 +218,32 @@ describe('shops', () => {
     await waitFor(()=>expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
+  it('gives a shop owner a new temporary password, shown once', async () => {
+    const api = open(<PlatformShopsPage />, {
+      'GET /users': [
+        { id: 'owner-1', name: 'Kashif Ali', email: 'kashif@example.pk', role: 'DEALER_ADMIN', active: true },
+        { id: 'staff-1', name: 'Counter Boy', email: 'staff@example.pk', role: 'DEALER_STAFF', active: true },
+      ],
+      'POST /users/owner-1/reset-password': { success: true, message: 'ok' },
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Reset owner password for Al-Madina Mobile Hub' }));
+    const dialog = screen.getByRole('dialog', { name: 'Reset owner password' });
+
+    // Only the owner account is offered, never counter staff.
+    const resetBtn = await within(dialog).findByRole('button', { name: 'Make a new password for Kashif Ali' });
+    expect(within(dialog).queryByText('Counter Boy')).not.toBeInTheDocument();
+    expect(api.to('GET /users')[0].query.get('dealerId')).toBe('dealer-1');
+
+    fireEvent.click(resetBtn);
+    const shown = await within(dialog).findByTestId('owner-temp-password');
+    const sent = api.to('POST /users/owner-1/reset-password')[0].body;
+    expect(sent.temporaryPassword).toMatch(/^[A-Za-z]{5}[2-9]{4}$/);
+    expect(shown).toHaveTextContent(sent.temporaryPassword);
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
   const rowOf = (name: string) => screen.getByText(name).closest('tr') as HTMLElement;
 
   it('lists every shop with its locks, phones and what it has paid', async () => {
