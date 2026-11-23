@@ -1297,6 +1297,9 @@ export const ROMAN_URDU: Record<string, string> = {
     'Shaya karne ki ijazat ke liye box par tick karein, warna na bhejein.',
   'Thank you. Your feedback was sent for review.': 'Shukriya. Aap ki raaye jaanch ke liye bhej di gayi.',
   'Could not send your feedback.': 'Aap ki raaye nahin bheji ja saki.',
+  // Feedback popup in the dashboard (Nov 2026)
+  'How is Almas SDM working for your shop?': 'Almas SDM aap ki dukaan mein kaisa chal raha hai?',
+  Later: 'Baad mein',
   'Your feedback was withdrawn.': 'Aap ki raaye wapas le li gayi.',
   'Could not withdraw your feedback.': 'Aap ki raaye wapas nahin li ja saki.',
   'Feedback cannot contain links or HTML.': 'Raaye mein link ya HTML nahin ho sakta.',

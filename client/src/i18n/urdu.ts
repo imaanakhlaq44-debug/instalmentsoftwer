@@ -1255,6 +1255,9 @@ export const URDU: Record<string, string> = {
   "Tick the box to allow publication, or do not submit.": "شائع کرنے کی اجازت کے لیے خانے پر نشان لگائیں، ورنہ نہ بھیجیں۔",
   "Thank you. Your feedback was sent for review.": "شکریہ۔ آپ کی رائے جانچ کے لیے بھیج دی گئی۔",
   "Could not send your feedback.": "آپ کی رائے نہیں بھیجی جا سکی۔",
+  // Feedback popup in the dashboard (Nov 2026)
+  "How is Almas SDM working for your shop?": "الماس ایس ڈی ایم آپ کی دکان میں کیسا چل رہا ہے؟",
+  Later: "بعد میں",
   "Your feedback was withdrawn.": "آپ کی رائے واپس لے لی گئی۔",
   "Could not withdraw your feedback.": "آپ کی رائے واپس نہیں لی جا سکی۔",
   "Feedback cannot contain links or HTML.": "رائے میں لنک یا HTML نہیں ہو سکتا۔",

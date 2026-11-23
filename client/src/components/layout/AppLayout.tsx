@@ -5,6 +5,7 @@ import { Navbar } from './Navbar.js';
 import { AppTopBar } from './AppTopBar.js';
 import { BottomNav } from './BottomNav.js';
 import { ShopModeBanner } from './ShopModeBanner.js';
+import { FeedbackPrompt } from '../feedback/FeedbackPrompt.js';
 import { isNativeShopApp } from '../../utils/nativeApp.js';
 
 export const AppLayout: React.FC = () => {
@@ -24,6 +25,7 @@ export const AppLayout: React.FC = () => {
       </div>
 
       <BottomNav />
+      {!native && <FeedbackPrompt />}
     </div>
   );
 };

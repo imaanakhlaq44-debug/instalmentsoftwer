@@ -206,6 +206,27 @@ describe('withdrawal', () => {
   });
 });
 
+// The dashboard's feedback popup asks only while this answers `null`. Once a
+// shop has sent feedback — whatever became of it — the popup never returns.
+describe('GET /api/testimonials/mine (what the feedback popup checks)', () => {
+  it('is null until the shop sends feedback, and stays set after that, even when withdrawn', async () => {
+    expect((await owner().get('/api/testimonials/mine')).body.testimonial).toBeNull();
+    await submit();
+    expect((await owner().get('/api/testimonials/mine')).body.testimonial).not.toBeNull();
+    await owner().post('/api/testimonials/mine/withdraw');
+    expect((await owner().get('/api/testimonials/mine')).body.testimonial).not.toBeNull();
+  });
+
+  it('is per shop: one shop\'s feedback does not silence another\'s popup', async () => {
+    await submit();
+    expect((await as(ACCOUNTS.otherDealerAdmin).get('/api/testimonials/mine')).body.testimonial).toBeNull();
+  });
+
+  it('is not asked of staff or the platform', async () => {
+    expect((await admin().get('/api/testimonials/mine')).status).toBe(403);
+  });
+});
+
 describe('GET /api/public/testimonials', () => {
   it('needs no sign-in and exposes exactly five fields', async () => {
     await approve(await submit(urduFeedback));
@@ -248,6 +269,19 @@ describe('GET /api/public/testimonials', () => {
     await approve(await submit());
     await prisma.dealer.update({ where: { id: 'dealer-1' }, data: { active: false } });
     expect(await publicList()).toEqual([]);
+  });
+
+  it('lists the most recently approved first', async () => {
+    const first = await submit();
+    const second = await submit({ ...feedback, quote: 'Fixture quote, other shop, approved second of the two.' }, ACCOUNTS.otherDealerAdmin);
+    await approve(first);
+    await new Promise((r) => setTimeout(r, 5));
+    await approve(second);
+    const list = (await publicList()) as { quote: string }[];
+    expect(list.map((t) => t.quote)).toEqual([
+      'Fixture quote, other shop, approved second of the two.',
+      feedback.quote,
+    ]);
   });
 
   it('is read-only', async () => {
