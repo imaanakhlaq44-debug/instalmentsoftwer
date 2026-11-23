@@ -297,6 +297,18 @@ layout: none
   .tq:nth-child(3n+2) .av { background: var(--sun); } .tq:nth-child(3n) .av { background: #fff; }
   .who b { display: block; font-size: 15px; line-height: 1.25; }
   .who span { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+  /* Early shops — shown instead of testimonials until a real one is approved. */
+  .early { background: var(--sun-soft); border-block: var(--b); }
+  .early-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px; }
+  .early-card { background: #fff; border: var(--b); border-radius: 22px; padding: 26px 24px; box-shadow: var(--sh); }
+  .early-card .n { width: 46px; height: 46px; border-radius: 50%; border: var(--b); display: grid; place-items: center; font: 900 20px/1 Archivo, sans-serif; background: var(--sun); margin-bottom: 16px; }
+  .early-card:nth-child(2) .n { background: var(--mint); } .early-card:nth-child(3) .n { background: var(--mint-soft); }
+  .early-card h3 { margin: 0 0 8px; font-size: 21px; }
+  .early-card p { margin: 0; color: var(--ink-2); font-weight: 600; line-height: 1.55; }
+  .early-cta { margin-top: 34px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; background: var(--ink); color: #fff; border: var(--b); border-radius: 26px; padding: 26px 30px; box-shadow: 8px 8px 0 var(--mint); }
+  .early-cta b { display: block; font: 900 clamp(22px, 2.4vw, 30px)/1.15 Archivo, sans-serif; color: var(--sun); }
+  .early-cta span { display: block; margin-top: 6px; color: #C3D0E6; font-weight: 600; font-size: 15px; }
+  .early-cta .btn { flex: none; }
   /* Pricing */
   .packs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; align-items: stretch; }
   .pk { position: relative; display: flex; flex-direction: column; background: var(--paper); border: var(--b); border-radius: 24px; padding: 30px 26px; box-shadow: var(--sh); }
@@ -386,6 +398,8 @@ layout: none
     .f.full { align-items: start; gap: 14px; }
     .mini-ledger { min-width: 0; }
     .tgrid { grid-template-columns: 1fr; gap: 28px; } .tq.big { grid-column: auto; }
+    .early-grid { grid-template-columns: 1fr; gap: 20px; }
+    .early-cta { padding: 24px 22px; }
     .voices::before { font-size: 260px; top: -60px; }
     .packs { gap: 30px; }
     section { padding: 64px 0; }
@@ -724,6 +738,29 @@ layout: none
     </div>
   </section>
   <!-- /voices -->
+
+  <!-- early-shops -->
+  <!-- Shown only while there is no approved testimonial: the build removes
+       this block as soon as src/data/testimonials.json has an entry, and the
+       real voices section takes its place. Nothing here claims a review. -->
+  <section id="early" class="early">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><span class="kicker"><i></i><span data-ur="نیا سافٹ ویئر">New in the market</span></span><h2 data-ur="نئے ہیں — اور یہ چھپاتے نہیں">New, and honest about it</h2></div>
+        <p data-ur="الماس ایس ڈی ایم نیا ہے، اس لیے ابھی ریویو کم ہیں۔ دوسروں کی بات ماننے کے بجائے خود آزما کر دیکھیں۔">Almas SDM is new, so there aren't many reviews yet. Instead of taking strangers' word for it, check it yourself.</p>
+      </div>
+      <div class="early-grid">
+        <div class="early-card"><div class="n">1</div><h3 data-ur="ویڈیو کال پر دیکھیں">See it on a video call</h3><p data-ur="کچھ خریدنے سے پہلے واٹس ایپ ویڈیو کال پر پوری ایپ چلا کر دکھائیں گے۔">Before you buy anything, we'll walk you through the whole app on a WhatsApp video call.</p></div>
+        <div class="early-card"><div class="n">2</div><h3 data-ur="پہلی سیل، ساتھ مل کر">Your first sale, together</h3><p data-ur="پہلا فون رجسٹر کرتے وقت ہم شروع سے آخر تک کال پر آپ کے ساتھ رہیں گے۔">When you register your first phone, we stay on the call with you from start to finish.</p></div>
+        <div class="early-card"><div class="n">3</div><h3 data-ur="اگلی اپڈیٹ آپ کی مرضی سے">You shape what comes next</h3><p data-ur="شروع کی دکانیں سیدھا بنانے والوں سے بات کرتی ہیں۔ جو آپ مانگیں، وہ اگلی اپڈیٹ میں۔">Early shops talk straight to the people who build it. What you ask for goes into the next update.</p></div>
+      </div>
+      <div class="early-cta">
+        <div><b data-ur="ہماری پہلی دکانوں میں شامل ہوں">Be one of our first shops</b><span data-ur="پہلے سے استعمال کر رہے ہیں؟ ڈیش بورڈ میں ”رائے دیں“ سے اپنی رائے بھیجیں — منظوری کے بعد یہیں لگے گی۔">Already using it? Send your review from "Give feedback" in the dashboard — once approved, it shows up right here.</span></div>
+        <a class="btn" href="https://wa.me/923211144477?text=Assalam%20o%20alaikum%2C%20mujhe%20Almas%20SDM%20ka%20demo%20chahiye" target="_blank" rel="noopener" data-ur="واٹس ایپ پر ڈیمو بک کریں">Book a demo on WhatsApp</a>
+      </div>
+    </div>
+  </section>
+  <!-- /early-shops -->
 
   <section id="price" style="padding-top:24px">
     <div class="wrap">
