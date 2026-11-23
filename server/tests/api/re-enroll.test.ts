@@ -17,7 +17,7 @@ afterAll(async () => {
  * a way to put it back to PENDING and show a fresh QR.
  */
 async function qrFor(deviceId: string) {
-  return as(ACCOUNTS.dealerStaff).post('/api/enrollment/generate').send({ deviceId, qrType: 'STANDARD' });
+  return as(ACCOUNTS.dealerAdmin).post('/api/enrollment/generate').send({ deviceId, qrType: 'STANDARD' });
 }
 
 async function enrol(deviceId: string) {

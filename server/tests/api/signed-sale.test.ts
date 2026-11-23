@@ -8,7 +8,7 @@ const sale = {
   device: { brand: 'Samsung', model: 'Galaxy A15', imei: '490154203237518', purchasePrice: 55000 },
   plan: { downPayment: 15000, totalInstallments: 6, firstDueDate: '2026-12-20' },
 };
-const actor = () => as(ACCOUNTS.dealerStaff);
+const actor = () => as(ACCOUNTS.dealerAdmin);
 async function agreement() { const preview = await actor().post('/api/customers/agreement-preview').send(sale).expect(200); return { signerName: sale.customer.name,
   signatureImage: 'data:image/png;base64,c2lnbmF0dXJl', declarationAccepted: true, termsVersion: preview.body.termsVersion, fingerprint: preview.body.fingerprint }; }
 async function counts() { return Promise.all([prisma.customer.count(), prisma.device.count(), prisma.contract.count(), prisma.installmentPlan.count(), prisma.transaction.count()]); }

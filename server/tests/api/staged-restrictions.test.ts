@@ -38,7 +38,7 @@ function imeiFrom(base14: string): string {
 /** A sale, its contract signed under the terms now in force, and an enrolled handset. */
 async function signedEnrolledSale() {
   const unique = String((Number(Date.now().toString().slice(-7)) + counter++) % 10_000_000).padStart(7, '0');
-  const sale = await as(ACCOUNTS.dealerStaff)
+  const sale = await as(ACCOUNTS.dealerAdmin)
     .post('/api/customers')
     .send({
       customer: {
@@ -56,12 +56,12 @@ async function signedEnrolledSale() {
   const deviceId = sale.body.device.id as string;
 
   const contract = (await repo.contracts.findByDevice(deviceId))!;
-  const signed = await as(ACCOUNTS.dealerStaff)
+  const signed = await as(ACCOUNTS.dealerAdmin)
     .post(`/api/contracts/${contract.id}/sign`)
     .send({ signerName: 'Test Buyer', signatureImage: SIGNATURE, declarationAccepted: true });
   expect(signed.status).toBe(200);
 
-  const qr = await as(ACCOUNTS.dealerStaff).post('/api/enrollment/generate').send({ deviceId, qrType: 'STANDARD' });
+  const qr = await as(ACCOUNTS.dealerAdmin).post('/api/enrollment/generate').send({ deviceId, qrType: 'STANDARD' });
   const enrolled = await anonymous().post('/api/dpc/enroll').send({ token: qr.body.token.token, dpcVersion: '2.4.0' });
   expect(enrolled.status).toBe(201);
   await anonymous().post('/api/dpc/check-in').set('Authorization', `Device ${enrolled.body.deviceId}.${enrolled.body.deviceToken}`).send({isDeviceOwner:true,setupComplete:true}).expect(200);

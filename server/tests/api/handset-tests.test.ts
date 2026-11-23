@@ -61,13 +61,13 @@ describe('the overall verdict', () => {
 
 describe('recording a handset test', () => {
   it('lets staff record one for their own shop, stamped with who and when', async () => {
-    const res = await as(ACCOUNTS.dealerStaff)
+    const res = await as(ACCOUNTS.dealerAdmin)
       .post(URL)
       .send(payload({ steps: { ...steps('PASS'), LOCK: { result: 'PASS', notes: '  Locked in 4 seconds  ' } } }));
 
     expect(res.status).toBe(201);
     expect(res.body.dealerId).toBe('dealer-1');
-    expect(res.body.testedById).toBe(ACCOUNTS.dealerStaff);
+    expect(res.body.testedById).toBe(ACCOUNTS.dealerAdmin);
     expect(res.body.testedByName).toBeTruthy();
     expect(new Date(res.body.testedAt).getTime()).toBeGreaterThan(Date.now() - 60_000);
     expect(res.body.overallResult).toBe('PASS');
@@ -110,15 +110,15 @@ describe('recording a handset test', () => {
 
   it('rejects a checklist with a step missing or an invalid result', async () => {
     const { RE_ENROL: _dropped, ...incomplete } = steps('PASS');
-    const missing = await as(ACCOUNTS.dealerStaff).post(URL).send(payload({ steps: incomplete }));
+    const missing = await as(ACCOUNTS.dealerAdmin).post(URL).send(payload({ steps: incomplete }));
     expect(missing.status).toBe(422);
 
-    const invalid = await as(ACCOUNTS.dealerStaff)
+    const invalid = await as(ACCOUNTS.dealerAdmin)
       .post(URL)
       .send(payload({ steps: { ...steps('PASS'), LOCK: { result: 'MAYBE' } } }));
     expect(invalid.status).toBe(422);
 
-    const badVersion = await as(ACCOUNTS.dealerStaff).post(URL).send(payload({ androidVersion: 'Tiramisu' }));
+    const badVersion = await as(ACCOUNTS.dealerAdmin).post(URL).send(payload({ androidVersion: 'Tiramisu' }));
     expect(badVersion.status).toBe(422);
   });
 
@@ -132,7 +132,7 @@ describe('recording a handset test', () => {
 
 describe('who sees which records', () => {
   it('shows a shop only its own, and a super admin all of them', async () => {
-    const mine = await record(ACCOUNTS.dealerStaff);
+    const mine = await record(ACCOUNTS.dealerAdmin);
     const theirs = await record(ACCOUNTS.otherDealerAdmin, { brand: 'Infinix', model: 'Hot 40', androidVersion: '13' });
     const platform = await record(ACCOUNTS.superAdmin, { brand: 'Tecno', model: 'Spark 20', androidVersion: '13' });
 
@@ -165,17 +165,17 @@ describe('who sees which records', () => {
   });
 
   it('filters by brand and by Android version', async () => {
-    await record(ACCOUNTS.dealerStaff);
-    await record(ACCOUNTS.dealerStaff, { brand: 'Samsung', model: 'Galaxy A05', androidVersion: '13' });
-    await record(ACCOUNTS.dealerStaff, { brand: 'Vivo', model: 'Y17s', androidVersion: '13' });
+    await record(ACCOUNTS.dealerAdmin);
+    await record(ACCOUNTS.dealerAdmin, { brand: 'Samsung', model: 'Galaxy A05', androidVersion: '13' });
+    await record(ACCOUNTS.dealerAdmin, { brand: 'Vivo', model: 'Y17s', androidVersion: '13' });
 
-    const samsung = await as(ACCOUNTS.dealerStaff).get(`${URL}?brand=samsung`);
+    const samsung = await as(ACCOUNTS.dealerAdmin).get(`${URL}?brand=samsung`);
     expect(samsung.body.pagination.total).toBe(2);
 
-    const android13 = await as(ACCOUNTS.dealerStaff).get(`${URL}?androidVersion=13`);
+    const android13 = await as(ACCOUNTS.dealerAdmin).get(`${URL}?androidVersion=13`);
     expect(android13.body.data.map((r: { model: string }) => r.model).sort()).toEqual(['Galaxy A05', 'Y17s']);
 
-    const both = await as(ACCOUNTS.dealerStaff).get(`${URL}?brand=Samsung&androidVersion=13`);
+    const both = await as(ACCOUNTS.dealerAdmin).get(`${URL}?brand=Samsung&androidVersion=13`);
     expect(both.body.data.map((r: { model: string }) => r.model)).toEqual(['Galaxy A05']);
 
     expect(both.body.facets.androidVersions).toEqual(['13', '14']);
@@ -184,8 +184,8 @@ describe('who sees which records', () => {
 
 describe('correcting a record', () => {
   it('recomputes the verdict when the steps change', async () => {
-    const rec = await record(ACCOUNTS.dealerStaff);
-    const res = await as(ACCOUNTS.dealerStaff)
+    const rec = await record(ACCOUNTS.dealerAdmin);
+    const res = await as(ACCOUNTS.dealerAdmin)
       .patch(`${URL}/${rec.id}`)
       .send({ steps: steps('PASS', { OFFLINE_SELF_LOCK: 'FAIL' }) });
 
@@ -193,12 +193,12 @@ describe('correcting a record', () => {
     expect(res.body.overallResult).toBe('FAIL');
   });
 
-  it('lets staff edit only what they recorded, and the owner anything in the shop', async () => {
+  it('keeps phone tests with the owner: staff can neither record nor edit one', async () => {
     const byAdmin = await record(ACCOUNTS.dealerAdmin);
-    const byStaff = await record(ACCOUNTS.dealerStaff);
 
     expect((await as(ACCOUNTS.dealerStaff).patch(`${URL}/${byAdmin.id}`).send({ model: 'A16' })).status).toBe(403);
-    expect((await as(ACCOUNTS.dealerAdmin).patch(`${URL}/${byStaff.id}`).send({ model: 'A16' })).status).toBe(200);
+    expect((await as(ACCOUNTS.dealerStaff).get(URL)).status).toBe(403);
+    expect((await as(ACCOUNTS.dealerAdmin).patch(`${URL}/${byAdmin.id}`).send({ model: 'A16' })).status).toBe(200);
   });
 
   it('freezes a published record for the shop but not for the super admin', async () => {
@@ -222,7 +222,7 @@ describe('publishing', () => {
     const rec = await record(ACCOUNTS.dealerAdmin);
 
     expect((await as(ACCOUNTS.dealerAdmin).patch(`${URL}/${rec.id}/publish`).send({ published: true })).status).toBe(403);
-    expect((await as(ACCOUNTS.dealerStaff).patch(`${URL}/${rec.id}/publish`).send({ published: true })).status).toBe(403);
+    expect((await as(ACCOUNTS.dealerAdmin).patch(`${URL}/${rec.id}/publish`).send({ published: true })).status).toBe(403);
     // And not through the ordinary edit route either.
     await as(ACCOUNTS.dealerAdmin).patch(`${URL}/${rec.id}`).send({ published: true });
     expect((await repo.handsetTests.findById(rec.id))?.published).toBe(false);

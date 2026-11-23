@@ -65,7 +65,7 @@ async function registerSale() {
   const unique = String((Number(Date.now().toString().slice(-7)) + saleCounter++) % 10_000_000)
     .padStart(7, '0');
 
-  const res = await as(ACCOUNTS.dealerStaff)
+  const res = await as(ACCOUNTS.dealerAdmin)
     .post('/api/customers')
     .send({
       customer: {
@@ -98,7 +98,7 @@ async function registerSale() {
 async function enrolledDevice(deviceId?: string) {
   const id = deviceId ?? (await registerSale());
 
-  const qr = await as(ACCOUNTS.dealerStaff)
+  const qr = await as(ACCOUNTS.dealerAdmin)
     .post('/api/enrollment/generate')
     .send({ deviceId: id, qrType: 'STANDARD' });
   expect(qr.status).toBe(201);
@@ -119,7 +119,7 @@ async function enrolledDevice(deviceId?: string) {
 /** Signs the draft contract the sale created, under the terms now in force. */
 async function signContractFor(deviceId: string) {
   const contract = (await repo.contracts.findByDevice(deviceId))!;
-  const res = await as(ACCOUNTS.dealerStaff)
+  const res = await as(ACCOUNTS.dealerAdmin)
     .post(`/api/contracts/${contract.id}/sign`)
     .send({ signerName: 'Test Buyer', signatureImage: SIGNATURE, declarationAccepted: true });
   expect(res.status).toBe(200);
@@ -397,7 +397,7 @@ describe('the terms the rule rests on', () => {
     const { deviceId } = await enrolledDevice();
     const contract = await signContractFor(deviceId);
 
-    const res = await as(ACCOUNTS.dealerStaff).get(`/api/contracts/${contract.id}`);
+    const res = await as(ACCOUNTS.dealerAdmin).get(`/api/contracts/${contract.id}`);
     expect(res.status).toBe(200);
 
     const clause = res.body.clauses.find((c: { heading: string }) => c.heading.startsWith('4.'));
@@ -412,7 +412,7 @@ describe('the terms the rule rests on', () => {
     const { deviceId } = await enrolledDevice();
     const contract = await signContractFor(deviceId);
 
-    const res = await as(ACCOUNTS.dealerStaff).get(`/api/contracts/${contract.id}`);
+    const res = await as(ACCOUNTS.dealerAdmin).get(`/api/contracts/${contract.id}`);
     const clause = res.body.clauses.find((c: { heading: string }) => c.heading.startsWith('4.'));
 
     expect(clause.body).not.toMatch(/days in a row/);

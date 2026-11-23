@@ -29,12 +29,12 @@ const registration = {
   plan: { downPayment: 8_000, totalInstallments: 6, firstDueDate: '2026-12-20', gracePeriodDays: 3 },
 };
 
-const helper = (cnic?: string, account: string = ACCOUNTS.dealerStaff) =>
+const helper = (cnic?: string, account: string = ACCOUNTS.dealerAdmin) =>
   as(account).get(`/api/customers/sale-helper${cnic ? `?cnic=${encodeURIComponent(cnic)}` : ''}`);
 
 describe('GET /api/customers/sale-helper', () => {
   it('finds a returning customer by CNIC, with or without dashes, by name only', async () => {
-    await as(ACCOUNTS.dealerStaff).post('/api/customers').send(registration).expect(201);
+    await as(ACCOUNTS.dealerAdmin).post('/api/customers').send(registration).expect(201);
 
     for (const cnic of ['35202-1234567-1', '3520212345671']) {
       const res = await helper(cnic).expect(200);
@@ -52,12 +52,12 @@ describe('GET /api/customers/sale-helper', () => {
   });
 
   it("does not find another shop's customer", async () => {
-    await as(ACCOUNTS.dealerStaff).post('/api/customers').send(registration).expect(201);
+    await as(ACCOUNTS.dealerAdmin).post('/api/customers').send(registration).expect(201);
     expect((await helper('35202-1234567-1', ACCOUNTS.otherDealerAdmin).expect(200)).body.customer).toBeNull();
   });
 
   it("lists the shop's recent models once each, newest first, with the last price", async () => {
-    await as(ACCOUNTS.dealerStaff).post('/api/customers').send(registration).expect(201);
+    await as(ACCOUNTS.dealerAdmin).post('/api/customers').send(registration).expect(201);
 
     const res = await helper().expect(200);
     expect(res.body.recentModels[0]).toEqual({ brand: 'Tecno', model: 'Spark 20', ramStorage: '8GB / 128GB', price: 38_000 });
@@ -79,9 +79,9 @@ describe('GET /api/customers/sale-helper', () => {
 
 describe('selling a returning customer another phone without their details', () => {
   it('needs only the CNIC and the name on file', async () => {
-    const first = await as(ACCOUNTS.dealerStaff).post('/api/customers').send(registration).expect(201);
+    const first = await as(ACCOUNTS.dealerAdmin).post('/api/customers').send(registration).expect(201);
 
-    const res = await as(ACCOUNTS.dealerStaff)
+    const res = await as(ACCOUNTS.dealerAdmin)
       .post('/api/customers')
       .send({
         customer: { name: 'Counter Test Customer', cnic: '3520212345671' },
@@ -98,7 +98,7 @@ describe('selling a returning customer another phone without their details', () 
   });
 
   it('still asks a new customer for every contact box, naming each one', async () => {
-    const res = await as(ACCOUNTS.dealerStaff)
+    const res = await as(ACCOUNTS.dealerAdmin)
       .post('/api/customers')
       .send({ customer: { name: 'Brand New Buyer', cnic: '35202-7654321-9' }, device: registration.device, plan: registration.plan })
       .expect(422);

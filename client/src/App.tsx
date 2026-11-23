@@ -56,6 +56,7 @@ import { SettingsPage } from './pages/SettingsPage.js';
 import { StaffPage } from './pages/StaffPage.js';
 import { FeedbackPage } from './pages/FeedbackPage.js';
 import { ShopFeedbackPage } from './pages/ShopFeedbackPage.js';
+import { StaffDeskPage } from './pages/StaffDeskPage.js';
 
 /** The language follows whoever is signed in. */
 const Languages: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -71,6 +72,17 @@ const STAFF = ['SUPER_ADMIN', 'DEALER_ADMIN', 'DEALER_STAFF'] as const;
 const TEAM = [...STAFF, 'DEALER_VIEWER'] as const;
 /** Owners and above — enforcement, money movement, audit, licensing. */
 const ADMIN = ['SUPER_ADMIN', 'DEALER_ADMIN'] as const;
+
+/**
+ * Shop staff get the staff desk and nothing else: the owner's rule is that
+ * staff contact customers and (counter staff) take payments. Everyone else
+ * gets the full dashboard.
+ */
+function ShellForRole() {
+  const { role } = useAuth();
+  if (role === 'DEALER_STAFF' || role === 'DEALER_VIEWER') return <StaffDeskPage />;
+  return <AppLayout />;
+}
 
 export function App() {
   return (
@@ -101,7 +113,7 @@ export function App() {
             <Route
               element={
                 <RequireAuth>
-                  <AppLayout />
+                  <ShellForRole />
                 </RequireAuth>
               }
             >

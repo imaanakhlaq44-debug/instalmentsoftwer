@@ -182,7 +182,7 @@ describe('the verification queue', () => {
     const { planId } = await customerPlan();
     await as(ACCOUNTS.customer).post('/api/payments/submit').send(submission(planId));
 
-    const res = await as(ACCOUNTS.dealerStaff).get('/api/payments/pending-submissions');
+    const res = await as(ACCOUNTS.dealerAdmin).get('/api/payments/pending-submissions');
 
     expect(res.status).toBe(200);
     expect(res.body.count).toBe(1);
@@ -195,14 +195,14 @@ describe('the verification queue', () => {
     // waiting on anybody.
     const { customerId, planId } = await customerPlan();
 
-    await as(ACCOUNTS.dealerStaff).post('/api/payments').send({
+    await as(ACCOUNTS.dealerAdmin).post('/api/payments').send({
       customerId,
       planId,
       amount: 3000,
       paymentMethod: 'CASH',
     });
 
-    const res = await as(ACCOUNTS.dealerStaff).get('/api/payments/pending-submissions');
+    const res = await as(ACCOUNTS.dealerAdmin).get('/api/payments/pending-submissions');
     expect(res.body.count).toBe(0);
   });
 
@@ -225,7 +225,7 @@ describe('the verification queue', () => {
 
     await as(ACCOUNTS.dealerAdmin).post(`/api/payments/${submitted.body.payment.id}/verify`).send({});
 
-    const res = await as(ACCOUNTS.dealerStaff).get('/api/payments/pending-submissions');
+    const res = await as(ACCOUNTS.dealerAdmin).get('/api/payments/pending-submissions');
     expect(res.body.count).toBe(0);
   });
 });

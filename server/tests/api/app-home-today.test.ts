@@ -36,7 +36,7 @@ it('lists one card per plan: due today first, then late plans, with amounts summ
   const p = await rowsOf(paidPlan.id);
   await prisma.installment.update({ where: { id: p[0].id }, data: { dueDate: new Date('2026-11-18'), status: 'PAID', amountPaid: p[0].amountDue } });
 
-  const res = await as(ACCOUNTS.dealerStaff).get('/api/dashboard/today').expect(200);
+  const res = await as(ACCOUNTS.dealerAdmin).get('/api/dashboard/today').expect(200);
   expect(res.body.businessDate).toBe('2026-11-18');
   expect(res.body.total).toBe(2);
   expect(res.body.dueTodayCount).toBe(1);

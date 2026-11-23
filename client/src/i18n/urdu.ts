@@ -42,6 +42,24 @@ export const URDU: Record<string, string> = {
   // Lock orders: change a pending order (Nov 2026)
   "Change order": "آرڈر بدلیں",
   "Stop changing": "بدلنا بند کریں",
+  // Staff desk: the only screen a staff login sees (Nov 2026)
+  "Sees customers and their phone numbers to call them, and takes installments at the counter. Nothing else.": "گاہک اور ان کے فون نمبر دیکھ کر کال کرتا ہے، اور کاؤنٹر پر قسط جمع کرتا ہے۔ اس کے علاوہ کچھ نہیں۔",
+  "Sees customers and their phone numbers to call them. Nothing else.": "گاہک اور ان کے فون نمبر دیکھ کر کال کرتا ہے۔ اس کے علاوہ کچھ نہیں۔",
+  "Counter staff": "کاؤنٹر اسٹاف",
+  "What you can do": "آپ کیا کر سکتے ہیں",
+  "Call customers and take installments at the counter.": "گاہکوں کو کال کریں اور کاؤنٹر پر قسط جمع کریں۔",
+  "Call customers about their installments.": "گاہکوں کو ان کی قسطوں کے بارے میں کال کریں۔",
+  "Search by name or phone": "نام یا فون نمبر سے ڈھونڈیں",
+  "Refresh list": "فہرست دوبارہ لائیں",
+  "Could not load customers. Check the internet and try again.": "گاہک لوڈ نہیں ہوئے۔ انٹرنیٹ چیک کر کے دوبارہ کوشش کریں۔",
+  "Loading…": "لوڈ ہو رہا ہے…",
+  "No customer matches this search.": "اس نام یا نمبر کا کوئی گاہک نہیں ملا۔",
+  "No customers yet.": "ابھی کوئی گاہک نہیں۔",
+  "Up to date": "سب قسطیں وقت پر",
+  "WhatsApp": "واٹس ایپ",
+  "Language": "زبان",
+  "Your account can only look up customers and record payments. Ask the shop owner.": "آپ کا اکاؤنٹ صرف گاہک دیکھ سکتا ہے اور قسط جمع کر سکتا ہے۔ دکان کے مالک سے کہیں۔",
+  "Your account can only look up customers to contact them. Ask the shop owner.": "آپ کا اکاؤنٹ صرف گاہکوں سے رابطے کے لیے انہیں دیکھ سکتا ہے۔ دکان کے مالک سے کہیں۔",
   "Replace screenshot": "اسکرین شاٹ بدلیں",
   "Order updated.": "آرڈر بدل گیا۔",
   "Order updated. Your locks are added as soon as the payment is confirmed.": "آرڈر بدل گیا۔ ادائیگی کی تصدیق ہوتے ہی آپ کے لاک مل جائیں گے۔",
@@ -1488,6 +1506,8 @@ export const URDU: Record<string, string> = {
  * marked line exists only here.
  */
 export const URDU_PATTERNS: Array<[RegExp, string]> = [
+  [/^Collect payment from (.+)$/, "$1 سے قسط جمع کریں"],
+  [/^Call (.+)$/, "$1 کو کال کریں"],
   [/^Changing your order of (\d+) locks \(TID (.+)\)$/, "$1 لاک والا آرڈر بدل رہے ہیں (TID $2)"],
   [/^Change order of (\d+) locks$/, "$1 لاک والا آرڈر بدلیں"],
   [/^(\d+) of (\d+) locks on phones$/, "$2 میں سے $1 لاک فونوں پر"],

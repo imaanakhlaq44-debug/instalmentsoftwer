@@ -42,12 +42,40 @@ const PASSWORD_CHANGE_ALLOWED = new Set([
   'POST /api/auth/logout',
 ]);
 
-/** The only writes a view-only staff login may make: its own password, and signing out. */
-const VIEWER_WRITE_ALLOWED = new Set([
-  'POST /api/auth/change-password',
-  'POST /api/auth/logout',
-]);
-const READ_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+/**
+ * Everything a shop's staff login may reach. Nothing else answers for them.
+ *
+ * The owner's rule: staff have exactly two jobs. Every staff login can look a
+ * customer up and call or WhatsApp them (the staff desk). Counter staff can
+ * also take a payment at the counter. No sales, no phones, no settings, no
+ * account deletion, no line to the platform: those are the owner's.
+ *
+ * This is an allow-list checked before any route runs, so a new route is
+ * closed to staff until someone adds it here on purpose.
+ */
+const STAFF_ALLOWED: Partial<Record<UserRole, ReadonlySet<string>>> = {
+  DEALER_VIEWER: new Set([
+    'GET /api/auth/me',
+    'POST /api/auth/change-password',
+    'POST /api/auth/logout',
+    'GET /api/staff-desk/customers',
+  ]),
+  DEALER_STAFF: new Set([
+    'GET /api/auth/me',
+    'POST /api/auth/change-password',
+    'POST /api/auth/logout',
+    'GET /api/staff-desk/customers',
+    'POST /api/payments',
+  ]),
+};
+
+/** Whether a staff role may make this request. Other roles are not limited here. */
+export function staffMayReach(role: UserRole, method: string, path: string): boolean {
+  const allowed = STAFF_ALLOWED[role];
+  if (!allowed) return true;
+  const verb = method === 'HEAD' || method === 'OPTIONS' ? 'GET' : method;
+  return allowed.has(`${verb} ${path.replace(/\/+$/, '') || '/'}`);
+}
 
 function extractToken(req: Request): string | null {
   const header = req.headers.authorization;
@@ -105,18 +133,18 @@ export const requireAuth = asyncHandler(async (req: Request, _res: Response, nex
     );
   }
 
-  // A view-only staff login may read but never write. This is enforced here,
-  // before any route runs, so a write route that forgets its role guard still
-  // cannot be used by one to change shop data.
-  if (
-    user.role === 'DEALER_VIEWER' &&
-    !READ_METHODS.has(req.method) &&
-    !VIEWER_WRITE_ALLOWED.has(`${req.method} ${req.baseUrl}${req.path}`)
-  ) {
+  // Staff logins reach only their two jobs (see STAFF_ALLOWED). Enforced here,
+  // before any route runs, so a route that forgets its role guard still stays
+  // closed to them.
+  if (!staffMayReach(user.role, req.method, `${req.baseUrl}${req.path}`)) {
     return next(
-      new AppError("Your account can view the shop's records but cannot change them. Ask the shop owner.", 403, {
-        code: 'VIEW_ONLY',
-      })
+      new AppError(
+        user.role === 'DEALER_VIEWER'
+          ? 'Your account can only look up customers to contact them. Ask the shop owner.'
+          : 'Your account can only look up customers and record payments. Ask the shop owner.',
+        403,
+        { code: user.role === 'DEALER_VIEWER' ? 'VIEW_ONLY' : 'STAFF_LIMITED' }
+      )
     );
   }
 

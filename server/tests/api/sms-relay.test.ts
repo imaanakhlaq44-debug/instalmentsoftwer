@@ -28,7 +28,7 @@ async function pairedRelay(account: string = ACCOUNTS.dealerAdmin) {
 async function queueSms(message = 'Your installment of Rs 5,000 is overdue.') {
   const customer = (await repo.customers.findFirst({ dealerId: 'dealer-1' }))!;
 
-  const res = await as(ACCOUNTS.dealerStaff).post('/api/notifications/send').send({
+  const res = await as(ACCOUNTS.dealerAdmin).post('/api/notifications/send').send({
     customerId: customer.id,
     channel: 'SMS',
     type: 'PAYMENT_OVERDUE',

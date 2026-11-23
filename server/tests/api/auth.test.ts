@@ -143,11 +143,11 @@ describe('token handling', () => {
   });
 
   it('stops honouring a valid token once the account is deactivated', async () => {
-    const before = await as(ACCOUNTS.dealerStaff).get('/api/devices');
+    const before = await as(ACCOUNTS.dealerAdmin).get('/api/devices');
     expect(before.status).toBe(200);
 
-    await repo.users.update(ACCOUNTS.dealerStaff, { active: false });
-    const after = await as(ACCOUNTS.dealerStaff).get('/api/devices');
+    await repo.users.update(ACCOUNTS.dealerAdmin, { active: false });
+    const after = await as(ACCOUNTS.dealerAdmin).get('/api/devices');
 
     expect(after.status).toBe(403);
   });
@@ -155,8 +155,8 @@ describe('token handling', () => {
   it('stops honouring a token whose account has been deleted', async () => {
     // The token is minted before the account goes away, so it is well-formed
     // and correctly signed — only the account behind it is gone.
-    const token = tokenFor(ACCOUNTS.dealerStaff);
-    await repo.users.delete(ACCOUNTS.dealerStaff);
+    const token = tokenFor(ACCOUNTS.dealerAdmin);
+    await repo.users.delete(ACCOUNTS.dealerAdmin);
 
     const res = await anonymous().get('/api/devices').set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(401);
@@ -196,7 +196,7 @@ describe('GET /api/auth/me', () => {
 
 describe('POST /api/auth/change-password', () => {
   it('rejects a wrong current password', async () => {
-    const res = await as(ACCOUNTS.dealerStaff)
+    const res = await as(ACCOUNTS.dealerAdmin)
       .post('/api/auth/change-password')
       .send({ currentPassword: 'NotMyPassword#1', newPassword: 'BrandNew#2026x' });
 
@@ -206,19 +206,19 @@ describe('POST /api/auth/change-password', () => {
   it('rejects a weak new password', async () => {
     // 422 from the Zod schema (too short); the strength policy in AuthService
     // returns 400 for anything that gets past it.
-    const short = await as(ACCOUNTS.dealerStaff)
+    const short = await as(ACCOUNTS.dealerAdmin)
       .post('/api/auth/change-password')
       .send({ currentPassword: SEED_PASSWORD, newPassword: 'abc' });
     expect(short.status).toBe(422);
 
-    const noComplexity = await as(ACCOUNTS.dealerStaff)
+    const noComplexity = await as(ACCOUNTS.dealerAdmin)
       .post('/api/auth/change-password')
       .send({ currentPassword: SEED_PASSWORD, newPassword: 'aaaaaaaaaaaa' });
     expect([400, 422]).toContain(noComplexity.status);
   });
 
   it('rejects reusing the current password', async () => {
-    const res = await as(ACCOUNTS.dealerStaff)
+    const res = await as(ACCOUNTS.dealerAdmin)
       .post('/api/auth/change-password')
       .send({ currentPassword: SEED_PASSWORD, newPassword: SEED_PASSWORD });
 

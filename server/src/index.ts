@@ -14,6 +14,7 @@ import { startScheduler } from './services/Scheduler.js';
 
 import { authRouter } from './routes/auth.routes.js';
 import { dashboardRouter } from './routes/dashboard.routes.js';
+import { staffDeskRouter } from './routes/staffDesk.routes.js';
 import { devicesRouter } from './routes/devices.routes.js';
 import { customersRouter } from './routes/customers.routes.js';
 import { installmentsRouter } from './routes/installments.routes.js';
@@ -251,6 +252,7 @@ app.use('/api/public/testimonials', publicTestimonialsRouter);
 // Protected routes — every single one requires a valid JWT
 // ---------------------------------------------------------------------------
 app.use('/api/dashboard', requireAuth, dashboardRouter);
+app.use('/api/staff-desk', requireAuth, staffDeskRouter);
 app.use('/api/devices', requireAuth, devicesRouter);
 app.use('/api/customers', requireAuth, customersRouter);
 app.use('/api/sale-drafts', requireAuth, saleDraftsRouter);

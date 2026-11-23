@@ -71,10 +71,9 @@ describe('GET /api/devices/imei-status/:imei', () => {
     expect(res.body.device.customerName).toBeTruthy();
   });
 
-  it('shows staff the registration but not the close button', async () => {
+  it('is closed to staff, who no longer make sales', async () => {
     const { device } = await financedDevice();
-    const res = await status(device.imei, ACCOUNTS.dealerStaff).expect(200);
-    expect(res.body).toMatchObject({ registered: true, sameShop: true, canClose: false });
+    expect((await status(device.imei, ACCOUNTS.dealerStaff)).status).toBe(403);
   });
 
   it('tells another shop only that the IMEI is taken', async () => {
@@ -93,7 +92,7 @@ describe('GET /api/devices/imei-status/:imei', () => {
 describe('POST /api/devices/:id/close-registration', () => {
   it('refuses a sale on a registered IMEI with a code the form can act on', async () => {
     const { device } = await financedDevice();
-    const res = await as(ACCOUNTS.dealerStaff).post('/api/customers').send(saleOf(device.imei));
+    const res = await as(ACCOUNTS.dealerAdmin).post('/api/customers').send(saleOf(device.imei));
     expect(res.status).toBe(409);
     expect(res.body.code).toBe('IMEI_REGISTERED');
   });
@@ -127,7 +126,7 @@ describe('POST /api/devices/:id/close-registration', () => {
 
     expect((await status(device.imei).expect(200)).body).toEqual({ registered: false });
 
-    const sale = await as(ACCOUNTS.dealerStaff).post('/api/customers').send(saleOf(device.imei));
+    const sale = await as(ACCOUNTS.dealerAdmin).post('/api/customers').send(saleOf(device.imei));
     expect(sale.status).toBe(201);
 
     const rows = await prisma.device.findMany({ where: { imei: device.imei }, orderBy: { createdAt: 'asc' } });

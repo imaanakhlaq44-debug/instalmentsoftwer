@@ -17,7 +17,7 @@ afterAll(async () => {
  * QR, spends no lock and can never be sent a lock.
  */
 function sale(noLock: boolean) {
-  return as(ACCOUNTS.dealerStaff)
+  return as(ACCOUNTS.dealerAdmin)
     .post('/api/customers')
     .send({
       customer: {
@@ -59,7 +59,7 @@ describe('a sale without a lock', () => {
   it('never gets a QR code', async () => {
     const { body } = await sale(true);
 
-    const res = await as(ACCOUNTS.dealerStaff)
+    const res = await as(ACCOUNTS.dealerAdmin)
       .post('/api/enrollment/generate')
       .send({ deviceId: body.device.id, qrType: 'STANDARD' });
 
@@ -81,7 +81,7 @@ describe('a sale without a lock', () => {
   it('is left out of the phones waiting for a QR', async () => {
     const { body } = await sale(true);
 
-    const res = await as(ACCOUNTS.dealerStaff).get('/api/devices?status=PENDING&lockable=true&limit=100');
+    const res = await as(ACCOUNTS.dealerAdmin).get('/api/devices?status=PENDING&lockable=true&limit=100');
 
     expect(res.status).toBe(200);
     const ids = (res.body.data ?? res.body.devices).map((d: { id: string }) => d.id);

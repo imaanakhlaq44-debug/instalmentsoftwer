@@ -55,7 +55,7 @@ describe('who may download the agreement', () => {
 
   it('gives the shop its own agreement as a PDF attachment', async () => {
     const contract = await ownContract();
-    const res = await as(ACCOUNTS.dealerStaff).get(`/api/contracts/${contract.id}/pdf`);
+    const res = await as(ACCOUNTS.dealerAdmin).get(`/api/contracts/${contract.id}/pdf`);
 
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toMatch(/^application\/pdf/);

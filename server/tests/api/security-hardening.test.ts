@@ -16,7 +16,7 @@ afterAll(async () => {
 async function pendingDeviceWithToken(dealerId = 'dealer-1') {
   const device = (await repo.devices.findFirst({ dealerId, status: 'PENDING', noLock: false }))!;
 
-  const res = await as(ACCOUNTS.dealerStaff)
+  const res = await as(ACCOUNTS.dealerAdmin)
     .post('/api/enrollment/generate')
     .send({ deviceId: device.id, qrType: 'STANDARD' });
 
@@ -209,14 +209,9 @@ describe('PII masking, admin alert resolution & tamper filters', () => {
       .set('Authorization', credential)
       .send({ imeis: [rogue], serialNumber: 'SN-SECRET-99' });
 
+    // Staff cannot open the device list at all any more.
     const staffList = await as(ACCOUNTS.dealerStaff).get('/api/devices?tamper=true');
-    expect(staffList.status).toBe(200);
-    const staffRow = staffList.body.data.find((d: { id: string }) => d.id === device.id);
-    expect(staffRow).toBeDefined();
-    expect(staffRow.reportedImei).toBeUndefined();
-    expect(staffRow.reportedImeis).toBeUndefined();
-    expect(staffRow.reportedSerial).toBeUndefined();
-    expect(staffRow.maskedReportedImei).toMatch(/^\*+3445$/);
+    expect(staffList.status).toBe(403);
 
     const staffPayload = JSON.stringify(staffList.body);
     expect(staffPayload).not.toContain(rogue);
@@ -237,7 +232,7 @@ describe('PII masking, admin alert resolution & tamper filters', () => {
       .set('Authorization', credential)
       .send({ imeis: ['860000998877661'] });
 
-    const statsBefore = await as(ACCOUNTS.dealerStaff).get('/api/dashboard/stats');
+    const statsBefore = await as(ACCOUNTS.dealerAdmin).get('/api/dashboard/stats');
     expect(statsBefore.status).toBe(200);
     expect(statsBefore.body.tamperAlertDevices).toBeGreaterThanOrEqual(1);
 
@@ -302,7 +297,7 @@ describe('Silent-heartbeat watchdog (>72h offline)', () => {
     const updated = (await repo.devices.findById(active.id))!;
     expect(updated.isOnline).toBe(false);
 
-    const stats = await as(ACCOUNTS.dealerStaff).get('/api/dashboard/stats');
+    const stats = await as(ACCOUNTS.dealerAdmin).get('/api/dashboard/stats');
     expect(stats.status).toBe(200);
     expect(stats.body.silentDevices).toBeGreaterThanOrEqual(1);
 
