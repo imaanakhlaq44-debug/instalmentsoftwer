@@ -96,3 +96,24 @@
   [dir="rtl"] .khata-pill { font-size:13px; }
   [dir="rtl"] .khata-who small, [dir="rtl"] .khata-paid-count, [dir="rtl"] .khata-progress-text { font-size:15px; }
 }
+
+/* --- Staff desk: the only screen a staff login sees (Nov 2026) ------------- */
+@media screen {
+  .staff-desk { min-height:100dvh; background:#FFF8E8 radial-gradient(rgba(15,20,25,.07) 1px, transparent 1.2px) 0 0 / 18px 18px; color:#0F1419; font-family:Archivo,'Noto Naskh Arabic',system-ui,sans-serif; }
+  .staff-desk-head { position:sticky; top:0; z-index:20; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:max(10px, env(safe-area-inset-top)) 16px 10px; background:#FFFDF6; border-bottom:2.5px solid #0F1419; }
+  .staff-desk-who { min-width:0; display:flex; flex-direction:column; }
+  .staff-desk-who strong { font-size:17px; font-weight:900; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .staff-desk-role { align-self:flex-start; margin-top:4px; background:#DDF6EC; border:2px solid #0F1419; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:900; letter-spacing:.06em; text-transform:uppercase; }
+  .staff-desk-tools { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .khata-home.is-staff { padding:14px 16px 40px; }
+  .staff-desk-intro p { margin:0; padding:12px 14px; background:#FFC83D; border:2.5px solid #0F1419; border-radius:16px; box-shadow:3px 3px 0 #0F1419; font-size:15px; font-weight:800; }
+  .staff-desk-search { display:flex; align-items:center; gap:10px; margin-top:16px; padding:6px 6px 6px 14px; background:#fff; border:2.5px solid #0F1419; border-radius:16px; box-shadow:3px 3px 0 #0F1419; }
+  [dir="rtl"] .staff-desk-search { padding:6px 14px 6px 6px; }
+  .staff-desk-search > svg { width:20px; height:20px; flex-shrink:0; color:#5B6472; }
+  .staff-desk-search input { flex:1; min-width:0; min-height:44px; border:0; outline:0; background:transparent; font-size:16px; font-weight:700; }
+  .staff-desk-plan { margin-top:12px; padding-top:12px; border-top:2px dashed #E2D6B5; }
+  .staff-desk-plan-line { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .staff-desk-device { min-width:0; font-size:14px; font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .staff-desk-collect { width:100%; margin-top:10px; }
+  .is-staff .khata-who strong { white-space:normal; overflow-wrap:anywhere; }
+}

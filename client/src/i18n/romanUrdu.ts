@@ -33,6 +33,24 @@ export const ROMAN_URDU: Record<string, string> = {
   // Lock orders: change a pending order (Nov 2026)
   "Change order": "Order badlein",
   "Stop changing": "Badalna band karein",
+  // Staff desk: the only screen a staff login sees (Nov 2026)
+  "Sees customers and their phone numbers to call them, and takes installments at the counter. Nothing else.": "Customers aur unke phone number dekh kar call karta hai, aur counter par qist jama karta hai. Is ke ilawa kuch nahin.",
+  "Sees customers and their phone numbers to call them. Nothing else.": "Customers aur unke phone number dekh kar call karta hai. Is ke ilawa kuch nahin.",
+  "Counter staff": "Counter staff",
+  "WhatsApp": "WhatsApp",
+  "What you can do": "Aap kya kar sakte hain",
+  "Call customers and take installments at the counter.": "Customers ko call karein aur counter par qist jama karein.",
+  "Call customers about their installments.": "Customers ko unki qiston ke baare mein call karein.",
+  "Search by name or phone": "Naam ya phone number se dhoondein",
+  "Refresh list": "List dobara layein",
+  "Could not load customers. Check the internet and try again.": "Customers load nahin hue. Internet check kar ke dobara koshish karein.",
+  "Loading…": "Load ho raha hai…",
+  "No customer matches this search.": "Is naam ya number ka koi customer nahin mila.",
+  "No customers yet.": "Abhi koi customer nahin.",
+  "Up to date": "Sab qistein waqt par",
+  "Language": "Zubaan",
+  "Your account can only look up customers and record payments. Ask the shop owner.": "Aap ka account sirf customers dekh sakta hai aur qist jama kar sakta hai. Dukaan ke malik se kahein.",
+  "Your account can only look up customers to contact them. Ask the shop owner.": "Aap ka account sirf customers se rabta karne ke liye unhein dekh sakta hai. Dukaan ke malik se kahein.",
   "Replace screenshot": "Screenshot badlein",
   "Order updated.": "Order badal gaya.",
   "Order updated. Your locks are added as soon as the payment is confirmed.": "Order badal gaya. Payment confirm hote hi aap ke locks mil jayenge.",
@@ -1528,6 +1546,8 @@ export const ROMAN_URDU: Record<string, string> = {
 };
 
 export const ROMAN_URDU_PATTERNS: Array<[RegExp, string]> = [
+  [/^Collect payment from (.+)$/, "$1 se qist jama karein"],
+  [/^Call (.+)$/, "$1 ko call karein"],
   [/^Changing your order of (\d+) locks \(TID (.+)\)$/, "$1 locks wala order badal rahe hain (TID $2)"],
   [/^Change order of (\d+) locks$/, "$1 locks wala order badlein"],
   [/^(\d+) of (\d+) locks on phones$/, "$2 mein se $1 locks phones par"],

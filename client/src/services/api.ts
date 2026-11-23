@@ -241,6 +241,11 @@ export class ApiService {
     return this.request<any>(`/dashboard/today${buildQuery({ dealerId, limit })}`);
   }
 
+  /** Staff desk: customers to contact, with what each owes today. */
+  static getStaffDesk(search?: string) {
+    return this.request<any>(`/staff-desk/customers${buildQuery({ search })}`);
+  }
+
   static getAttentionList(dealerId?: string) {
     return this.request<any>(`/dashboard/attention${buildQuery({ dealerId })}`);
   }

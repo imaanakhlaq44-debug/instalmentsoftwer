@@ -31,11 +31,11 @@ interface TeamMember {
 export const ROLE_INFO: Record<StaffRole, { label: string; body: string }> = {
   DEALER_STAFF: {
     label: 'Counter staff',
-    body: 'Makes new sales, adds customers and records payments. Cannot lock phones or delete anything.',
+    body: 'Sees customers and their phone numbers to call them, and takes installments at the counter. Nothing else.',
   },
   DEALER_VIEWER: {
     label: 'View only',
-    body: 'Sees which phone is with whom, customers, instalments, payments and who is behind. Cannot change anything.',
+    body: 'Sees customers and their phone numbers to call them. Nothing else.',
   },
 };
 
