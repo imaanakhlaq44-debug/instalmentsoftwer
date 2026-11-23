@@ -292,6 +292,14 @@ layout: none
   .tq.big .meta .stars { color: var(--sun); }
   .bubble q[lang="ur"] { font-family: 'Noto Naskh Arabic', serif; line-height: 1.9; }
   .lang-ur .bubble q[lang="en"] { font-family: Archivo, system-ui, sans-serif; }
+  /* Real testimonials: small equal cards; long quotes cut to four lines with "Read more". */
+  .tq.real .bubble { padding: 18px 18px 12px; }
+  .tq.real .bubble q { font-size: 15px; line-height: 1.55; }
+  .tq.real q.clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; }
+  .tq.real.open q.clamp { display: block; -webkit-line-clamp: unset; line-clamp: none; }
+  .tq .more { margin-top: 8px; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 800; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .tq .more .m2, .tq.open .more .m1 { display: none; }
+  .tq.open .more .m2 { display: inline; }
   .who { display: flex; align-items: center; gap: 12px; padding-inline-start: 6px; margin-top: 4px; }
   .who .av { width: 44px; height: 44px; border-radius: 50%; border: var(--b); display: grid; place-items: center; font-weight: 900; font-size: 15px; background: var(--mint); flex: none; }
   .tq:nth-child(3n+2) .av { background: var(--sun); } .tq:nth-child(3n) .av { background: #fff; }
@@ -924,6 +932,21 @@ layout: none
 </script>
 <!-- home-only -->
 <script>
+  /* Testimonials: cut long quotes to four lines and offer "Read more". */
+  (function () {
+    document.querySelectorAll('.tq.real').forEach(function (fig) {
+      var q = fig.querySelector('q');
+      var btn = fig.querySelector('.more');
+      if (!q || !btn) return;
+      q.classList.add('clamp');
+      if (q.scrollHeight <= q.clientHeight + 2) { q.classList.remove('clamp'); return; }
+      btn.hidden = false;
+      btn.addEventListener('click', function () {
+        var open = fig.classList.toggle('open');
+        btn.setAttribute('aria-expanded', String(open));
+      });
+    });
+  })();
   /* Hero counter-to-phone showcase: cycles smoothly through Remind -> Late -> Paid
      until the visitor taps a tab, then holds their selection cleanly. */
   (function () {

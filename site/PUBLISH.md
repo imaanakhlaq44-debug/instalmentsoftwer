@@ -161,9 +161,13 @@ A real one comes into being like this:
 Step 4 is build-time on purpose, not a fetch from the visitor's browser: the
 page stays plain HTML that loads with the API down and without JavaScript.
 
-**Automatic (once the API is hosted):** set the repository variable
-`SITE_API_URL` to the API's address. Every deploy then pulls the approved list
-first, and a nightly run does the same, so an approval, an unpublish or a
+**Automatic:** the API is served from the dashboard's address, so with
+`SITE_APP_URL` set (it is: `https://app.almassdm.pro`) every deploy pulls the
+approved list from `<SITE_APP_URL>/api/public/testimonials` first, and a nightly
+run does the same. Set `SITE_API_URL` only if the API ever moves to a different
+address; it takes precedence. (Until November 2026 the pull read `SITE_API_URL`
+alone, which was never set, so approved feedback never reached the site.)
+Either way, an approval, an unpublish or a
 shop's withdrawal reaches the site within a day — or at once if you run the
 *Deploy site* workflow by hand. If the API cannot be reached the deploy stops
 and the site stays as it was.
