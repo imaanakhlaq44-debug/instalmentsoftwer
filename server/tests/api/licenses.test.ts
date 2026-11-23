@@ -158,8 +158,8 @@ describe('packs', () => {
       .send({ dealerId: 'dealer-4', size: 100, reference: 'HBL-99231' });
 
     expect(res.status).toBe(201);
-    expect(res.body.pack.unitPrice).toBe(600);
-    expect(res.body.pack.totalPrice).toBe(60_000);
+    expect(res.body.pack.unitPrice).toBe(500);
+    expect(res.body.pack.totalPrice).toBe(50_000);
     expect(res.body.pack.reference).toBe('HBL-99231');
     expect(await availableFor('dealer-4')).toBe(before + 100);
   });
@@ -169,7 +169,7 @@ describe('packs', () => {
       .post('/api/licenses/packs')
       .send({ dealerId: 'dealer-1', size: 42 });
     expect(ok.status).toBe(201);
-    expect(ok.body.pack).toMatchObject({ size: 42, unitPrice: 800, totalPrice: 33_600 });
+    expect(ok.body.pack).toMatchObject({ size: 42, unitPrice: 700, totalPrice: 29_400 });
 
     for (const size of [0, 501]) {
       const res = await as(ACCOUNTS.superAdmin)

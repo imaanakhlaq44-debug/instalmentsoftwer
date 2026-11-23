@@ -39,7 +39,7 @@ describe('GET /api/platform/overview', () => {
     const waiting = res.body.awaitingPayment.find((s: { dealerId: string }) => s.dealerId === dealerId);
     expect(waiting).toMatchObject({
       name: 'Bismillah Mobiles',
-      requestedPack: { size: 10, unitPrice: 1000, totalPrice: 10_000 },
+      requestedPack: { size: 10, unitPrice: 800, totalPrice: 8_000 },
     });
     expect(res.body.totals.shopsAwaitingPayment).toBeGreaterThanOrEqual(1);
   });
@@ -53,11 +53,11 @@ describe('GET /api/platform/overview', () => {
 
     const after = await as(ACCOUNTS.superAdmin).get('/api/platform/overview');
     expect(after.body.awaitingPayment.some((s: { dealerId: string }) => s.dealerId === dealerId)).toBe(false);
-    expect(after.body.totals.revenue).toBe(before.revenue + 10_000);
+    expect(after.body.totals.revenue).toBe(before.revenue + 8_000);
     expect(after.body.totals.locksSold).toBe(before.locksSold + 10);
 
     const shop = after.body.shops.find((s: { dealerId: string }) => s.dealerId === dealerId);
-    expect(shop).toMatchObject({ available: 10, consumed: 0, packsBought: 1, billed: 10_000, requestedPack: null });
+    expect(shop).toMatchObject({ available: 10, consumed: 0, packsBought: 1, billed: 8_000, requestedPack: null });
     expect((await repo.dealers.findById(dealerId))?.requestedPackSize ?? null).toBeNull();
   });
 

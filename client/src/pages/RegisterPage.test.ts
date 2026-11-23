@@ -41,10 +41,10 @@ describe('sign-up form checks', () => {
 
 describe('lock pricing, as the server charges it', () => {
   it('prices each tier', () => {
-    expect(priceForPack(5)).toEqual({ size: 5, unitPrice: 1000, totalPrice: 5000 });
-    expect(priceForPack(30)).toEqual({ size: 30, unitPrice: 800, totalPrice: 24_000 });
-    expect(priceForPack(50)).toEqual({ size: 50, unitPrice: 700, totalPrice: 35_000 });
-    expect(priceForPack(100)).toEqual({ size: 100, unitPrice: 600, totalPrice: 60_000 });
+    expect(priceForPack(5)).toEqual({ size: 5, unitPrice: 800, totalPrice: 4000 });
+    expect(priceForPack(30)).toEqual({ size: 30, unitPrice: 700, totalPrice: 21_000 });
+    expect(priceForPack(50)).toEqual({ size: 50, unitPrice: 600, totalPrice: 30_000 });
+    expect(priceForPack(100)).toEqual({ size: 100, unitPrice: 500, totalPrice: 50_000 });
     expect(priceForPack(501)).toBeUndefined();
   });
 

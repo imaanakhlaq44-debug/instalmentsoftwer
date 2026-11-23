@@ -221,15 +221,17 @@ spent for good.
 
 | Pack | Price | Per handset |
 |---|---|---|
-| 1–29 locks | Rs 1,000 each | Rs 1,000 |
-| 30 locks | Rs 24,000 | Rs 800 |
-| 50 locks | Rs 35,000 | Rs 700 |
-| 100 locks | Rs 60,000 | Rs 600 |
+| 1–29 locks | Rs 800 each | Rs 800 |
+| 30 locks | Rs 21,000 | Rs 700 |
+| 50 locks | Rs 30,000 | Rs 600 |
+| 100 locks | Rs 50,000 | Rs 500 |
 
 Any number from 1 to 500 can be bought at once; the price per lock is set by
 how many are bought together (`PRICE_TIERS` in
-[`LicenseService.ts`](server/src/services/LicenseService.ts)): 1–29 at Rs 1,000,
-30–49 at Rs 800, 50–99 at Rs 700, 100 and over at Rs 600.
+[`LicenseService.ts`](server/src/services/LicenseService.ts)): 1–29 at Rs 800,
+30–49 at Rs 700, 50–99 at Rs 600, 100 and over at Rs 500. A pack or lock
+order keeps the price it was placed at, so changing the tiers never reprices
+an order already made.
 
 **A lock is claimed at enrolment, not at the counter.** The moment a handset
 completes provisioning, one lock is stamped with that phone's IMEI and moves to

@@ -5,10 +5,10 @@
  * before it is submitted.
  */
 export const PRICE_TIERS = [
-  { minSize: 100, unitPrice: 600 },
-  { minSize: 50, unitPrice: 700 },
-  { minSize: 30, unitPrice: 800 },
-  { minSize: 1, unitPrice: 1000 },
+  { minSize: 100, unitPrice: 500 },
+  { minSize: 50, unitPrice: 600 },
+  { minSize: 30, unitPrice: 700 },
+  { minSize: 1, unitPrice: 800 },
 ] as const;
 
 export const MAX_PACK_SIZE = 500;

@@ -1030,8 +1030,8 @@ export const ROMAN_URDU: Record<string, string> = {
     'Ek lock ek phone ke liye hota hai. Jitne chahiye chunein, payment karein aur humein transaction ID bhej dein. Payment confirm hote hi aap ke locks add ho jayenge.',
   'How many locks?': 'Kitne locks chahiye?',
   'Number of locks': 'Locks ki tadaad',
-  '1–29: Rs 1,000 · 30–49: Rs 800 · 50–99: Rs 700 · 100+: Rs 600 per phone':
-    '1–29: Rs 1,000 · 30–49: Rs 800 · 50–99: Rs 700 · 100+: Rs 600 fi phone',
+  '1–29: Rs 800 · 30–49: Rs 700 · 50–99: Rs 600 · 100+: Rs 500 per phone':
+    '1–29: Rs 800 · 30–49: Rs 700 · 50–99: Rs 600 · 100+: Rs 500 fi phone',
   'Choose between 1 and 500 locks.': '1 se 500 ke darmiyan locks chunein.',
   'Send the payment': 'Payment bhejein',
   'Amount to send:': 'Bhejni wali raqam:',

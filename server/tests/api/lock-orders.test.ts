@@ -15,7 +15,7 @@ const transfer = {
   size: 30,
   paymentMethod: 'JAZZCASH',
   transactionId: 'JC-778812345',
-  amountPaid: 24_000,
+  amountPaid: 21_000,
 };
 
 const availableFor = (dealerId: string) => repo.deviceLicenses.countAvailable(dealerId);
@@ -40,12 +40,12 @@ describe('a shop orders locks', () => {
     expect(res.body.order).toMatchObject({
       dealerId: 'dealer-1',
       size: 30,
-      unitPrice: 800,
-      totalPrice: 24_000,
+      unitPrice: 700,
+      totalPrice: 21_000,
       status: 'PENDING',
       paymentMethod: 'JAZZCASH',
       transactionId: 'JC-778812345',
-      amountPaid: 24_000,
+      amountPaid: 21_000,
       hasProof: false,
     });
     expect(await availableFor('dealer-1')).toBe(before);
@@ -56,11 +56,11 @@ describe('a shop orders locks', () => {
   it('prices every tier as the price list says', async () => {
     // Split across two shops: one shop may only have three undecided orders.
     const cases: [string, number, number][] = [
-      [ACCOUNTS.dealerAdmin, 1, 1_000],
-      [ACCOUNTS.dealerAdmin, 29, 29_000],
-      [ACCOUNTS.dealerAdmin, 30, 24_000],
-      [ACCOUNTS.otherDealerAdmin, 50, 35_000],
-      [ACCOUNTS.otherDealerAdmin, 100, 60_000],
+      [ACCOUNTS.dealerAdmin, 1, 800],
+      [ACCOUNTS.dealerAdmin, 29, 23_200],
+      [ACCOUNTS.dealerAdmin, 30, 21_000],
+      [ACCOUNTS.otherDealerAdmin, 50, 30_000],
+      [ACCOUNTS.otherDealerAdmin, 100, 50_000],
     ];
     for (const [account, size, total] of cases) {
       const res = await as(account)
@@ -77,7 +77,7 @@ describe('a shop orders locks', () => {
       .send({ ...transfer, totalPrice: 1, unitPrice: 0, dealerId: 'dealer-2', status: 'APPROVED', packId: 'pack-x' });
 
     expect(res.status).toBe(201);
-    expect(res.body.order).toMatchObject({ dealerId: 'dealer-1', totalPrice: 24_000, status: 'PENDING' });
+    expect(res.body.order).toMatchObject({ dealerId: 'dealer-1', totalPrice: 21_000, status: 'PENDING' });
     expect(res.body.order.packId).toBeUndefined();
   });
 
@@ -157,8 +157,8 @@ describe('the platform decides an order', () => {
     expect(res.body.pack).toMatchObject({
       dealerId: 'dealer-1',
       size: 30,
-      unitPrice: 800,
-      totalPrice: 24_000,
+      unitPrice: 700,
+      totalPrice: 21_000,
       reference: 'JazzCash JC-778812345',
     });
 
@@ -173,11 +173,11 @@ describe('the platform decides an order', () => {
 
   it('issues at the price fixed on the order, not at a price list that changed since', async () => {
     const id = await placeOrder();
-    // As if the order had been placed under an older, cheaper price list.
-    await repo.lockOrders.update(id, { unitPrice: 750, totalPrice: 22_500 });
+    // As if the order had been placed under the old price list (Rs 800 a lock for 30).
+    await repo.lockOrders.update(id, { unitPrice: 800, totalPrice: 24_000 });
 
     const res = await as(ACCOUNTS.superAdmin).post(`/api/lock-orders/${id}/approve`);
-    expect(res.body.pack).toMatchObject({ size: 30, unitPrice: 750, totalPrice: 22_500 });
+    expect(res.body.pack).toMatchObject({ size: 30, unitPrice: 800, totalPrice: 24_000 });
   });
 
   it('will not approve the same order twice', async () => {
@@ -359,7 +359,7 @@ describe('a new shop, from sign-up to its first locks', () => {
     const placed = await anonymous()
       .post('/api/lock-orders')
       .set(owner)
-      .send({ size: 10, paymentMethod: 'EASYPAISA', transactionId: 'EP-55667788', amountPaid: 10_000 });
+      .send({ size: 10, paymentMethod: 'EASYPAISA', transactionId: 'EP-55667788', amountPaid: 8_000 });
     expect(placed.status).toBe(201);
     expect(await availableFor(dealerId)).toBe(0);
 
@@ -377,6 +377,6 @@ describe('a new shop, from sign-up to its first locks', () => {
 
     const mine = await anonymous().get('/api/lock-orders').set(owner);
     expect(mine.body.orders).toHaveLength(1);
-    expect(mine.body.orders[0]).toMatchObject({ status: 'APPROVED', size: 10, totalPrice: 10_000 });
+    expect(mine.body.orders[0]).toMatchObject({ status: 'APPROVED', size: 10, totalPrice: 8_000 });
   });
 });
