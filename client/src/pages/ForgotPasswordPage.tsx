@@ -1,19 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check, Eye, EyeOff, KeyRound, Loader2, MessageCircle, MessageSquareText, X } from 'lucide-react';
+import { ArrowLeft, Check, Eye, EyeOff, KeyRound, Loader2, Mail, MessageCircle, MessageSquareText, X } from 'lucide-react';
 import { ApiError, ApiService } from '../services/api.js';
 
 /** Almas SDM support on WhatsApp — the same number as sign-up and Buy locks. */
 const WHATSAPP_NUMBER = '923211144477';
 
 /** Mirrors the server-side policy in server/src/utils/password.ts. */
-const RULES: { label: string; test: (v: string) => boolean }[] = [
+export const RULES: { label: string; test: (v: string) => boolean }[] = [
   { label: 'At least 8 characters', test: (v) => v.length >= 8 },
   { label: 'Contains a letter', test: (v) => /[A-Za-z]/.test(v) },
   { label: 'Contains a number', test: (v) => /[0-9]/.test(v) },
 ];
 
-type Step = 'email' | 'code';
+type Step = 'email' | 'code' | 'sent';
 
 /**
  * "Forgot password", for every shop on its own.
@@ -27,6 +27,7 @@ export const ForgotPasswordPage: React.FC = () => {
   const navigate = useNavigate();
 
   const [available, setAvailable] = useState<boolean | null>(null);
+  const [channel, setChannel] = useState<'email' | 'sms'>('sms');
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -40,7 +41,10 @@ export const ForgotPasswordPage: React.FC = () => {
 
   useEffect(() => {
     ApiService.passwordResetStatus()
-      .then((res) => setAvailable(res.available))
+      .then((res) => {
+        setAvailable(res.available);
+        if (res.channel === 'email') setChannel('email');
+      })
       .catch(() => setAvailable(false));
   }, []);
 
@@ -65,7 +69,8 @@ export const ForgotPasswordPage: React.FC = () => {
         return;
       }
       setNotice(res.message);
-      setStep('code');
+      if (res.channel === 'email') setChannel('email');
+      setStep(res.channel === 'email' ? 'sent' : 'code');
       setResendIn(60);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'The code could not be sent. Please try again.');
@@ -117,9 +122,13 @@ export const ForgotPasswordPage: React.FC = () => {
               <p className="text-caption text-ink-500">
                 {available === false
                   ? 'We can help you on WhatsApp.'
-                  : step === 'email'
-                    ? 'We will send a code to your mobile.'
-                    : 'Enter the code and a new password.'}
+                  : step === 'sent'
+                    ? 'Check your email.'
+                    : step === 'email'
+                      ? channel === 'email'
+                        ? 'We will email you a link.'
+                        : 'We will send a code to your mobile.'
+                      : 'Enter the code and a new password.'}
               </p>
             </div>
           </div>
@@ -171,7 +180,9 @@ export const ForgotPasswordPage: React.FC = () => {
                 placeholder="you@yourshop.pk"
               />
               <p className="mt-1.5 text-micro text-ink-400">
-                The code goes by SMS to the mobile number saved on your account.
+                {channel === 'email'
+                  ? 'A link to choose a new password goes to this email.'
+                  : 'The code goes by SMS to the mobile number saved on your account.'}
               </p>
               <button type="submit" disabled={submitting} className="btn-primary mt-5 w-full py-2.5">
                 {submitting ? (
@@ -179,9 +190,44 @@ export const ForgotPasswordPage: React.FC = () => {
                 ) : (
                   <MessageSquareText className="h-4 w-4" aria-hidden="true" />
                 )}
-                {submitting ? 'Sending…' : 'Send code'}
+                {submitting ? 'Sending…' : channel === 'email' ? 'Email me a reset link' : 'Send code'}
               </button>
             </form>
+          ) : step === 'sent' ? (
+            <div className="space-y-4">
+              <div role="status" className="rounded-md border border-positive-200 bg-positive-50 px-3.5 py-2.5 text-caption text-positive-700">
+                {notice}
+              </div>
+              <p className="flex items-start gap-2 text-body text-ink-700">
+                <Mail className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                <span>
+                  Open the email from Almas SDM on <span className="font-bold" data-i18n-skip>{email.trim()}</span> and tap the
+                  button in it. The link works once, for 30 minutes.
+                </span>
+              </p>
+              <p className="text-caption text-ink-500" lang="ur-Latn">
+                Apni email (Gmail) kholein, Almas SDM ki email mein button dabayein aur naya password banayein. Email na mile to
+                Spam folder dekhein.
+              </p>
+              <button
+                type="button"
+                disabled={resendIn > 0 || submitting}
+                onClick={() => void sendCode()}
+                className="btn-secondary w-full py-2.5"
+              >
+                {resendIn > 0 ? `Send again in ${resendIn}s` : 'Send the email again'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setStep('email');
+                  setError(null);
+                }}
+                className="btn-ghost w-full py-2 text-caption"
+              >
+                Use a different email
+              </button>
+            </div>
           ) : (
             <form onSubmit={resetPassword} noValidate>
               {notice && (

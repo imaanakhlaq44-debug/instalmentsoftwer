@@ -20,6 +20,10 @@ process.env.JWT_SECRET = 'test-only-secret-0123456789abcdef0123456789abcdef';
 // The tests seed explicitly; booting the app must not do it for them.
 process.env.AUTO_SEED = 'false';
 
+// Password-reset tests choose their own mailbox; a developer's SMTP settings must not leak in.
+process.env.SMTP_USER = '';
+process.env.SMTP_PASS = '';
+
 process.env.SEED_DEFAULT_PASSWORD = 'AlmasSdm#2026';
 
 // Rate limits exist to be tested deliberately, not to trip a hundred fixtures.

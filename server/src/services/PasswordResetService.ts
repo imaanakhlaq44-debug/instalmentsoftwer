@@ -1,4 +1,4 @@
-import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import { v4 as uuidv4 } from 'uuid';
 
 import { prisma } from '../db/prisma.js';
@@ -8,6 +8,10 @@ import { AppError } from '../utils/AppError.js';
 import { hashPassword, validatePasswordStrength } from '../utils/password.js';
 import { AuditService } from './AuditService.js';
 import { SmsAggregatorService } from './SmsAggregatorService.js';
+import { EmailService } from './EmailService.js';
+
+const escapeHtml = (s: string) =>
+  s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
 /** How long a code works. */
 const CODE_TTL_MS = 15 * 60_000;
@@ -31,10 +35,19 @@ function sameHash(a: string, b: string): boolean {
   return left.length === right.length && timingSafeEqual(left, right);
 }
 
+export type ResetChannel = 'email' | 'sms';
+
 export interface ResetRequestResult {
-  /** False when this server has no SMS gateway, so no code can be sent at all. */
+  /** False when this server can send neither email nor SMS. */
   available: boolean;
+  /** How the reset goes out: a link by email, or else a code by SMS. */
+  channel: ResetChannel | null;
 }
+
+/** How long an email link works. */
+const LINK_TTL_MS = 30 * 60_000;
+
+const BAD_LINK = 'This reset link is wrong, already used or expired. Ask for a new one.';
 
 /**
  * "Forgot password", without anyone at the platform in the loop.
@@ -51,15 +64,24 @@ export interface ResetRequestResult {
 export class PasswordResetService {
   /** Whether codes can be sent from this server at all. */
   public static isAvailable(): boolean {
-    return SmsAggregatorService.isConfigured();
+    return this.channel() !== null;
+  }
+
+  /** Email when a mailbox is set up (it needs nothing from the shop), else SMS. */
+  public static channel(): ResetChannel | null {
+    if (EmailService.isConfigured()) return 'email';
+    if (SmsAggregatorService.isConfigured()) return 'sms';
+    return null;
   }
 
   public static async request(email: string, ipAddress?: string): Promise<ResetRequestResult> {
-    if (!this.isAvailable()) return { available: false };
+    const channel = this.channel();
+    if (!channel) return { available: false, channel: null };
+    const done: ResetRequestResult = { available: true, channel };
 
     const user = await repo.users.findByEmail(email.trim());
-    if (!user || !user.active || user.role === 'SUPER_ADMIN' || !user.phone) {
-      return { available: true };
+    if (!user || !user.active || user.role === 'SUPER_ADMIN' || (channel === 'sms' && !user.phone)) {
+      return done;
     }
 
     const hourAgo = new Date(Date.now() - 60 * 60_000);
@@ -73,10 +95,11 @@ export class PasswordResetService {
     // is still good.
     const tooMany = recent.length >= MAX_CODES_PER_HOUR;
     const tooSoon = !!recent[0] && Date.now() - recent[0].createdAt.getTime() < RESEND_COOLDOWN_MS;
-    if (tooMany || tooSoon) return { available: true };
+    if (tooMany || tooSoon) return done;
 
     const id = `pwr-${uuidv4()}`;
-    const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
+    // A link carries a long random token; an SMS carries a code a person types.
+    const code = channel === 'email' ? randomBytes(32).toString('hex') : String(randomInt(0, 1_000_000)).padStart(6, '0');
 
     // A new code kills every earlier one.
     await prisma.$transaction([
@@ -89,10 +112,51 @@ export class PasswordResetService {
           id,
           userId: user.id,
           codeHash: hashCode(id, code),
-          expiresAt: new Date(Date.now() + CODE_TTL_MS),
+          expiresAt: new Date(Date.now() + (channel === 'email' ? LINK_TTL_MS : CODE_TTL_MS)),
         },
       }),
     ]);
+
+    if (channel === 'email') {
+      const link = `${config.appPublicUrl}/reset-password?id=${encodeURIComponent(id)}&token=${code}`;
+      const sent = await EmailService.sendNow({
+        to: user.email,
+        subject: 'Reset your Almas SDM password',
+        text:
+          `Assalam o Alaikum ${user.name},\n\n` +
+          'Someone (hopefully you) asked to reset the password for your Almas SDM account.\n' +
+          `Open this link to choose a new password. It works once, for 30 minutes:\n\n${link}\n\n` +
+          'If you did not ask for this, ignore this email. Your password stays the same.\n\n' +
+          'Aap ne password reset maanga tha to upar wala link kholein aur naya password banayein. ' +
+          'Agar aap ne nahi maanga to is email ko ignore kar dein.\n\n— Almas SDM',
+        html:
+          `<p>Assalam o Alaikum ${escapeHtml(user.name)},</p>` +
+          '<p>Someone (hopefully you) asked to reset the password for your Almas SDM account.</p>' +
+          `<p><a href="${link}" style="display:inline-block;padding:12px 20px;background:#0F1419;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold">Choose a new password</a></p>` +
+          '<p>The link works once, for 30 minutes. If you did not ask for this, ignore this email — your password stays the same.</p>' +
+          '<p>Aap ne password reset maanga tha to upar wala button dabayein aur naya password banayein. Agar aap ne nahi maanga to is email ko ignore kar dein.</p>' +
+          '<p>— Almas SDM</p>',
+      });
+
+      if (!sent.accepted) {
+        await prisma.passwordReset.update({ where: { id }, data: { usedAt: new Date() } });
+        console.warn(`[password-reset] email for ${user.id} was not accepted: ${sent.reason}`);
+        throw new AppError('The email could not be sent right now. Please try again in a few minutes.', 503);
+      }
+
+      await AuditService.log({
+        dealerId: user.dealerId,
+        userId: user.id,
+        actorName: user.name,
+        actorRole: user.role,
+        action: 'PASSWORD_RESET_REQUESTED',
+        targetType: 'USER',
+        targetId: user.id,
+        details: `A password-reset link was emailed to ${user.name}'s sign-in address.`,
+        ipAddress,
+      });
+      return done;
+    }
 
     const sent = await SmsAggregatorService.sendNow({
       to: user.phone,
@@ -120,7 +184,64 @@ export class PasswordResetService {
       ipAddress,
     });
 
-    return { available: true };
+    return done;
+  }
+
+  /** A new password with the link from the email. */
+  public static async confirmLink(params: {
+    id: string;
+    token: string;
+    newPassword: string;
+    ipAddress?: string;
+  }): Promise<{ success: true; message: string; email: string }> {
+    const reset = await prisma.passwordReset.findUnique({ where: { id: params.id } });
+    if (!reset || reset.usedAt || reset.expiresAt.getTime() <= Date.now() || reset.attempts >= MAX_ATTEMPTS) {
+      throw new AppError(BAD_LINK, 400);
+    }
+    if (!sameHash(reset.codeHash, hashCode(reset.id, params.token))) {
+      const attempts = reset.attempts + 1;
+      await prisma.passwordReset.update({
+        where: { id: reset.id },
+        data: { attempts, ...(attempts >= MAX_ATTEMPTS ? { usedAt: new Date() } : {}) },
+      });
+      throw new AppError(BAD_LINK, 400);
+    }
+
+    const user = await repo.users.findById(reset.userId);
+    if (!user || !user.active || user.role === 'SUPER_ADMIN') throw new AppError(BAD_LINK, 400);
+
+    const strength = validatePasswordStrength(params.newPassword);
+    if (!strength.valid) throw new AppError(strength.errors.join(' '), 400);
+
+    const { count } = await prisma.passwordReset.updateMany({
+      where: { id: reset.id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+    if (count === 0) throw new AppError(BAD_LINK, 400);
+
+    await repo.users.update(user.id, {
+      // Whoever was signed in with the old password is signed out.
+      sessionVersion: (user.sessionVersion ?? 0) + 1,
+      passwordHash: hashPassword(params.newPassword),
+      passwordChangedAt: new Date().toISOString(),
+      mustChangePassword: false,
+      failedLoginAttempts: 0,
+      lockedUntil: undefined,
+    });
+
+    await AuditService.log({
+      dealerId: user.dealerId,
+      userId: user.id,
+      actorName: user.name,
+      actorRole: user.role,
+      action: 'PASSWORD_RESET_SELF',
+      targetType: 'USER',
+      targetId: user.id,
+      details: `${user.name} reset their own password with a link sent by email.`,
+      ipAddress: params.ipAddress,
+    });
+
+    return { success: true, message: 'Your password has been changed. You can sign in now.', email: user.email };
   }
 
   public static async confirm(params: {
@@ -129,6 +250,8 @@ export class PasswordResetService {
     newPassword: string;
     ipAddress?: string;
   }): Promise<{ success: true; message: string }> {
+    // With email on, rows hold link tokens: typed codes must not burn them.
+    if (this.channel() !== 'sms') throw new AppError(BAD_CODE, 400);
     const user = await repo.users.findByEmail(params.email.trim());
     if (!user || !user.active || user.role === 'SUPER_ADMIN') throw new AppError(BAD_CODE, 400);
 

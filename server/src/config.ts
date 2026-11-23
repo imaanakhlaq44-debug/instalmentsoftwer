@@ -95,6 +95,29 @@ function requireDatabaseUrl(): string {
 }
 
 /**
+ * The mailbox that sends password-reset links, if there is one.
+ *
+ * For Gmail only SMTP_USER and SMTP_PASS are needed: the address and a Google
+ * "App password" (not the normal Gmail password). Any other SMTP server works
+ * with SMTP_HOST and SMTP_PORT. Without a user and password there is no email.
+ */
+function resolveMail() {
+  const env = (name: string) => (process.env[name] || '').trim();
+  const user = env('SMTP_USER');
+  const pass = (process.env.SMTP_PASS || '').replace(/\s+/g, '');
+  if (!user || !pass) return null;
+  const port = num(process.env.SMTP_PORT, 465);
+  return {
+    host: env('SMTP_HOST') || 'smtp.gmail.com',
+    port,
+    secure: port === 465,
+    user,
+    pass,
+    from: env('MAIL_FROM') || `Almas SDM <${user}>`,
+  };
+}
+
+/**
  * The SMS aggregator account, if there is one.
  *
  * Everything here comes from the environment — credentials never live in the
@@ -234,6 +257,15 @@ export const config = {
 
   /** The SMS aggregator account. `provider` is 'none' when there is not one. */
   sms: resolveSms(),
+
+  /** The mailbox password-reset links are sent from. `null` when there is not one. */
+  mail: resolveMail(),
+
+  /**
+   * Where the dashboard lives, for links in emails. APP_PUBLIC_URL, or else the
+   * first allowed browser origin.
+   */
+  appPublicUrl: (process.env.APP_PUBLIC_URL || '').trim().replace(/\/+$/, '') || corsOrigins()[0].replace(/\/+$/, ''),
 
   /** Max JSON request body size — blocks trivial memory-exhaustion payloads. */
   bodyLimit: '256kb',
