@@ -43,7 +43,7 @@ authRouter.post(
 
 /** Whether this server can send reset codes at all (it needs an SMS gateway). */
 authRouter.get('/password-reset/status', (_req, res) => {
-  res.json({ available: PasswordResetService.isAvailable() });
+  res.json({ available: PasswordResetService.isAvailable(), channel: PasswordResetService.channel() });
 });
 
 const forgotSchema = z.object({
@@ -59,10 +59,28 @@ authRouter.post(
     res.json({
       ...result,
       // The same words whether or not the email is registered.
-      message: result.available
-        ? 'If this email belongs to an account, a 6-digit code has been sent by SMS to the mobile number on that account.'
-        : 'Password reset by SMS is not switched on for this server yet.',
+      message: !result.available
+        ? 'Password reset is not switched on for this server yet.'
+        : result.channel === 'email'
+          ? 'If this email belongs to an account, a link to reset the password has been sent to it. Check the inbox and the spam folder.'
+          : 'If this email belongs to an account, a 6-digit code has been sent by SMS to the mobile number on that account.',
     });
+  })
+);
+
+const resetLinkSchema = z.object({
+  id: z.string().trim().min(1).max(64),
+  token: z.string().trim().regex(/^[0-9a-f]{64}$/, 'This reset link is not complete. Open it again from the email.'),
+  newPassword: z.string().min(8, 'New password must be at least 8 characters.').max(128),
+});
+
+/** The link from the email. Under /reset-password so the same rate limit applies. */
+authRouter.post(
+  '/reset-password/link',
+  validateBody(resetLinkSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as z.infer<typeof resetLinkSchema>;
+    res.json(await PasswordResetService.confirmLink({ ...body, ipAddress: clientIp(req) }));
   })
 );
 

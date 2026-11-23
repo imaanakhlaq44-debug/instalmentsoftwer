@@ -196,13 +196,13 @@ export class ApiService {
     });
   }
 
-  /** Whether this server can send password-reset codes by SMS. */
+  /** Whether this server can send password resets, and how: a link by email or a code by SMS. */
   static passwordResetStatus() {
-    return this.request<{ available: boolean }>('/auth/password-reset/status');
+    return this.request<{ available: boolean; channel?: 'email' | 'sms' | null }>('/auth/password-reset/status');
   }
 
   static forgotPassword(email: string) {
-    return this.request<{ available: boolean; message: string }>('/auth/forgot-password', {
+    return this.request<{ available: boolean; channel?: 'email' | 'sms' | null; message: string }>('/auth/forgot-password', {
       method: 'POST',
       body: JSON.stringify({ email }),
     });
@@ -212,6 +212,14 @@ export class ApiService {
     return this.request<{ success: true; message: string }>('/auth/reset-password', {
       method: 'POST',
       body: JSON.stringify({ email, code, newPassword }),
+    });
+  }
+
+  /** A new password with the link from the reset email. */
+  static resetPasswordWithLink(id: string, token: string, newPassword: string) {
+    return this.request<{ success: true; message: string; email: string }>('/auth/reset-password/link', {
+      method: 'POST',
+      body: JSON.stringify({ id, token, newPassword }),
     });
   }
 

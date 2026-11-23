@@ -62,6 +62,13 @@ services:
       DPC_APK_SIGNATURE_CHECKSUM: ${DPC_APK_SIGNATURE_CHECKSUM}
       DPC_UPDATE_VERSION_CODE: ${DPC_UPDATE_VERSION_CODE:-}
       DPC_UPDATE_SHA256: ${DPC_UPDATE_SHA256:-}
+      # "Forgot password" emails. Empty SMTP_USER/SMTP_PASS = no email.
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      APP_PUBLIC_URL: https://${SITE_DOMAIN}
     # Also not published. Caddy reaches it over the compose network; the host
     # does not need port 5000 open at all.
 

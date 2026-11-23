@@ -14,6 +14,7 @@ import { isPlayStoreApp, isNativeShopApp } from './utils/nativeApp.js';
 import { ShopAppHomePage } from './pages/ShopAppHomePage.js';
 import { ChangePasswordPage } from './pages/ChangePasswordPage.js';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage.js';
+import { ResetPasswordPage } from './pages/ResetPasswordPage.js';
 import { DashboardPage } from './pages/DashboardPage.js';
 import { PlatformDashboardPage, PlatformOrdersPage, PlatformShopsPage } from './pages/PlatformDashboardPage.js';
 import { useAuth } from './context/AuthContext.js';
@@ -95,6 +96,7 @@ export function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/privacy" element={<AccountPrivacyPage />} />
             <Route path="/account-deletion" element={<AccountPrivacyPage deletion />} />
             <Route path="/download" element={<ShopAppDownloadPage />} />
