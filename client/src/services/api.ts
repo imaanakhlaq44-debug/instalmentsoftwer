@@ -626,6 +626,11 @@ export class ApiService {
     return this.request<any>(`/lock-orders/${orderId}/cancel`, { method: 'POST' });
   }
 
+  /** Correct a pending order: only the fields sent change. */
+  static updateLockOrder(orderId: string, changes: Record<string, unknown>) {
+    return this.request<any>(`/lock-orders/${orderId}`, { method: 'PATCH', body: JSON.stringify(changes) });
+  }
+
   static getLockOrderProof(orderId: string) {
     return this.request<{ proofImage: string }>(`/lock-orders/${orderId}/proof`);
   }

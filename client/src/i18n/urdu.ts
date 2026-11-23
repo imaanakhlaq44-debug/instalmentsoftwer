@@ -39,6 +39,13 @@ export const URDU: Record<string, string> = {
   "Nobody owes an installment today.": "آج کسی کی قسط باقی نہیں۔",
   "Remind": "یاد دلائیں",
   "To collect today": "آج کس سے لینا ہے",
+  // Lock orders: change a pending order (Nov 2026)
+  "Change order": "آرڈر بدلیں",
+  "Stop changing": "بدلنا بند کریں",
+  "Replace screenshot": "اسکرین شاٹ بدلیں",
+  "Order updated.": "آرڈر بدل گیا۔",
+  "Order updated. Your locks are added as soon as the payment is confirmed.": "آرڈر بدل گیا۔ ادائیگی کی تصدیق ہوتے ہی آپ کے لاک مل جائیں گے۔",
+  "Payment screenshot file": "ادائیگی کا اسکرین شاٹ",
   "Check phone connection or protection": "فون کا کنکشن یا حفاظت چیک کریں",
   "Finish phone protection setup": "فون کی حفاظت کا سیٹ اپ مکمل کریں",
   "Shop dashboard": "دکان کا ڈیش بورڈ",
@@ -1481,6 +1488,8 @@ export const URDU: Record<string, string> = {
  * marked line exists only here.
  */
 export const URDU_PATTERNS: Array<[RegExp, string]> = [
+  [/^Changing your order of (\d+) locks \(TID (.+)\)$/, "$1 لاک والا آرڈر بدل رہے ہیں (TID $2)"],
+  [/^Change order of (\d+) locks$/, "$1 لاک والا آرڈر بدلیں"],
   [/^(\d+) of (\d+) locks on phones$/, "$2 میں سے $1 لاک فونوں پر"],
   [/^(\d+) of (\d+) locks used$/, "$2 میں سے $1 لاک استعمال"],
   [/^(\d+) phones behind$/, "$1 فونوں کی قسط لیٹ"],

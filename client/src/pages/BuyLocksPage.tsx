@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { CheckCircle2, Clock, Image as ImageIcon, MessageCircle, ShoppingCart, Upload, XCircle } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { CheckCircle2, Clock, Image as ImageIcon, MessageCircle, Pencil, Save, ShoppingCart, Upload, XCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { ApiService } from '../services/api.js';
 import { Card, CardHeader, EmptyState, Rows, Skeleton } from '../components/ui/Card.js';
@@ -53,6 +53,9 @@ export const BuyLocksPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState<string | null>(null);
   const [viewingProof, setViewingProof] = useState<string | null>(null);
+  /** The pending order the form is correcting, or null when it places a new one. */
+  const [editing, setEditing] = useState<LockOrder | null>(null);
+  const formTop = useRef<HTMLFormElement>(null);
 
   const load = useCallback(async () => {
     try {
@@ -72,7 +75,34 @@ export const BuyLocksPage: React.FC = () => {
 
   const pack = priceForPack(size);
   const pendingCount = (orders ?? []).filter((o) => o.status === 'PENDING').length;
-  const atLimit = pendingCount >= maxPending;
+  // Correcting an order does not add one, so the limit does not apply to it.
+  const atLimit = !editing && pendingCount >= maxPending;
+
+  const clearForm = () => {
+    setTransactionId('');
+    setAmountPaid('');
+    setNote('');
+    setProof(null);
+    setError(null);
+  };
+
+  /** Loads a pending order into the form so the owner can correct it. */
+  const startEditing = (order: LockOrder) => {
+    setEditing(order);
+    setSize(order.size);
+    setMethod(order.paymentMethod);
+    setTransactionId(order.transactionId);
+    setAmountPaid(order.amountPaid);
+    setNote(order.note ?? '');
+    setProof(null);
+    setError(null);
+    formTop.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  };
+
+  const stopEditing = () => {
+    setEditing(null);
+    clearForm();
+  };
 
   const whatsappText = encodeURIComponent(
     `Salam, "${dealer?.name ?? ''}" ke liye ${pack?.size ?? ''} locks chahiye: ${money(pack?.totalPrice ?? 0)}. ` +
@@ -101,19 +131,20 @@ export const BuyLocksPage: React.FC = () => {
     }
     try {
       setSubmitting(true);
-      const res = await ApiService.submitLockOrder({
+      const fields = {
         size,
         paymentMethod: method,
         transactionId: transactionId.trim(),
         amountPaid: Number(amountPaid),
+        // When correcting, a screenshot is sent only if a new one was attached.
         proofImage: proof ?? undefined,
-        note: note.trim() || undefined,
-      });
-      showToast(res.message || 'Order received.', 'success');
-      setTransactionId('');
-      setAmountPaid('');
-      setNote('');
-      setProof(null);
+      };
+      const res = editing
+        ? await ApiService.updateLockOrder(editing.id, { ...fields, note: note.trim() })
+        : await ApiService.submitLockOrder({ ...fields, note: note.trim() || undefined });
+      showToast(res.message || (editing ? 'Order updated.' : 'Order received.'), 'success');
+      setEditing(null);
+      clearForm();
       await load();
     } catch (err: any) {
       const detail = err?.details?.map((d: { message: string }) => d.message).filter(Boolean).join(' ');
@@ -129,6 +160,7 @@ export const BuyLocksPage: React.FC = () => {
       setWorking(order.id);
       await ApiService.cancelLockOrder(order.id);
       showToast('Order cancelled.', 'success');
+      if (editing?.id === order.id) stopEditing();
       await load();
     } catch (err: any) {
       showToast(err?.message || 'Could not cancel the order', 'error');
@@ -156,7 +188,18 @@ export const BuyLocksPage: React.FC = () => {
         </p>
       </header>
 
-      <form onSubmit={submit} className="space-y-6" noValidate>
+      <form ref={formTop} onSubmit={submit} className="space-y-6 scroll-mt-24" noValidate>
+        {editing && (
+          <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-ink-900 bg-sun-200 px-4 py-3 shadow-[3px_3px_0_#0F1419]">
+            <p className="text-body font-bold text-ink-900">
+              <Pencil className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
+              {`Changing your order of ${editing.size} locks (TID ${editing.transactionId})`}
+            </p>
+            <button type="button" className="btn-secondary py-1 text-caption" onClick={stopEditing} disabled={submitting}>
+              Stop changing
+            </button>
+          </div>
+        )}
         <Step n="1" title="How many locks?">
           <div className="flex flex-wrap gap-2">
             {PACK_PRESETS.map((n) => {
@@ -294,12 +337,18 @@ export const BuyLocksPage: React.FC = () => {
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <label className="btn-secondary cursor-pointer py-1.5 text-caption">
               <Upload className="h-4 w-4" aria-hidden="true" />
-              {preparingImage ? 'Preparing…' : proof ? 'Screenshot attached' : 'Attach screenshot (optional)'}
-              <input type="file" accept="image/*" className="hidden" onChange={(e) => attachProof(e.target.files?.[0])} />
+              {preparingImage
+                ? 'Preparing…'
+                : proof
+                  ? 'Screenshot attached'
+                  : editing
+                    ? editing.hasProof ? 'Replace screenshot' : 'Attach screenshot (optional)'
+                    : 'Attach screenshot (optional)'}
+              <input type="file" accept="image/*" className="hidden" aria-label="Payment screenshot file" onChange={(e) => attachProof(e.target.files?.[0])} />
             </label>
             <button type="submit" disabled={submitting || preparingImage || atLimit || !pack} className="btn-primary ml-auto py-2">
-              <ShoppingCart className="h-4 w-4" aria-hidden="true" />
-              {submitting ? 'Sending…' : 'Send order'}
+              {editing ? <Save className="h-4 w-4" aria-hidden="true" /> : <ShoppingCart className="h-4 w-4" aria-hidden="true" />}
+              {submitting ? 'Sending…' : editing ? 'Save changes' : 'Send order'}
             </button>
           </div>
           <p className="mt-3 text-caption text-ink-500">
@@ -350,6 +399,17 @@ export const BuyLocksPage: React.FC = () => {
                       {o.hasProof && (
                         <button type="button" className="btn-ghost px-2 py-1 text-caption" onClick={() => showProof(o)}>
                           <ImageIcon className="h-4 w-4" aria-hidden="true" /> Screenshot
+                        </button>
+                      )}
+                      {o.status === 'PENDING' && (
+                        <button
+                          type="button"
+                          className="btn-primary py-1 text-caption"
+                          disabled={working !== null || submitting}
+                          onClick={() => startEditing(o)}
+                          aria-label={`Change order of ${o.size} locks`}
+                        >
+                          <Pencil className="h-4 w-4" aria-hidden="true" /> Change order
                         </button>
                       )}
                       {o.status === 'PENDING' && (

@@ -149,6 +149,28 @@ lockOrdersRouter.post(
   })
 );
 
+/**
+ * The shop owner corrects their own order while it is still waiting: the
+ * number of locks, the payment details or the screenshot. Every field is
+ * optional; only what is sent changes. Same rules as placing an order.
+ */
+const amendSchema = submitSchema.partial().refine((v) => Object.keys(v).length > 0, { message: 'Nothing to change.' });
+
+lockOrdersRouter.patch(
+  '/:id',
+  requireRole('DEALER_ADMIN'),
+  validateBody(amendSchema),
+  asyncHandler(async (req, res) => {
+    const order = await LockOrderService.amend({
+      orderId: routeParam(req, 'id'),
+      actor: getAuthUser(req),
+      ipAddress: clientIp(req),
+      changes: req.body as z.infer<typeof amendSchema>,
+    });
+    res.json({ order, message: 'Order updated. Your locks are added as soon as the payment is confirmed.' });
+  })
+);
+
 /** The screenshot for one order: its own shop, or a super admin. */
 lockOrdersRouter.get(
   '/:id/proof',

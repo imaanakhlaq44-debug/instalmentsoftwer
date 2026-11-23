@@ -30,6 +30,13 @@ export const ROMAN_URDU: Record<string, string> = {
   "Nobody owes an installment today.": "Aaj kisi ki qist baqi nahin.",
   "Remind": "Yaad dilao",
   "To collect today": "Aaj kis se lena hai",
+  // Lock orders: change a pending order (Nov 2026)
+  "Change order": "Order badlein",
+  "Stop changing": "Badalna band karein",
+  "Replace screenshot": "Screenshot badlein",
+  "Order updated.": "Order badal gaya.",
+  "Order updated. Your locks are added as soon as the payment is confirmed.": "Order badal gaya. Payment confirm hote hi aap ke locks mil jayenge.",
+  "Payment screenshot file": "Payment ka screenshot",
   "Check phone connection or protection": "Phone connection ya protection check karein",
   "Finish phone protection setup": "Phone protection setup mukammal karein",
   "Shop dashboard": "Dukaan ka dashboard",
@@ -1521,6 +1528,8 @@ export const ROMAN_URDU: Record<string, string> = {
 };
 
 export const ROMAN_URDU_PATTERNS: Array<[RegExp, string]> = [
+  [/^Changing your order of (\d+) locks \(TID (.+)\)$/, "$1 locks wala order badal rahe hain (TID $2)"],
+  [/^Change order of (\d+) locks$/, "$1 locks wala order badlein"],
   [/^(\d+) of (\d+) locks on phones$/, "$2 mein se $1 locks phones par"],
   [/^(\d+) of (\d+) locks used$/, "$2 mein se $1 locks istemal"],
   [/^(\d+) phones behind$/, "$1 phones ki qist late"],

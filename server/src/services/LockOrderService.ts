@@ -190,6 +190,95 @@ export class LockOrderService {
   }
 
   /**
+   * The shop corrects an order nobody has decided yet: a different number of
+   * locks, a mistyped transaction ID, the wrong screenshot.
+   *
+   * Only while PENDING, and as a compare-and-set on that status — an order the
+   * platform approved a moment ago has already minted its pack at the old size
+   * and must not change under it. The price is worked out again from the new
+   * size, the transaction ID is checked against other orders as on submit, and
+   * the audit log records what was and what is.
+   */
+  public static async amend(params: {
+    orderId: string;
+    actor: AuthenticatedUser;
+    ipAddress?: string;
+    changes: Partial<Pick<SubmitOrderParams, 'size' | 'paymentMethod' | 'transactionId' | 'amountPaid' | 'proofImage' | 'note'>>;
+  }): Promise<LockOrderSummary> {
+    const order = await repo.lockOrders.findById(params.orderId);
+    // A 404 either way: another shop's order must not be confirmed to exist.
+    if (!order || order.dealerId !== params.actor.dealerId) throw AppError.notFound('Lock order');
+    if (order.status !== 'PENDING') {
+      throw AppError.conflict(`This order is already ${order.status.toLowerCase()} and can no longer be changed.`);
+    }
+
+    const { changes } = params;
+    const updates: Partial<LockOrder> = {};
+    const said: string[] = [];
+
+    if (changes.size !== undefined && changes.size !== order.size) {
+      const price = priceForPack(changes.size);
+      if (!price) throw AppError.badRequest(PACK_SIZE_RULE);
+      Object.assign(updates, { size: price.size, unitPrice: price.unitPrice, totalPrice: price.totalPrice });
+      said.push(`locks ${order.size} -> ${price.size} (Rs ${order.totalPrice} -> Rs ${price.totalPrice})`);
+    }
+    const method = changes.paymentMethod ?? order.paymentMethod;
+    const transactionId = changes.transactionId?.trim() ?? order.transactionId;
+    if (method !== order.paymentMethod) {
+      updates.paymentMethod = method;
+      said.push(`method ${METHOD_LABELS[order.paymentMethod]} -> ${METHOD_LABELS[method]}`);
+    }
+    if (transactionId !== order.transactionId) {
+      updates.transactionId = transactionId;
+      said.push(`transaction ID ${order.transactionId} -> ${transactionId}`);
+    }
+    if (updates.paymentMethod || updates.transactionId) {
+      const reused = await repo.lockOrders.findFirst({
+        id: { not: order.id },
+        paymentMethod: method,
+        transactionId: { equals: transactionId, mode: 'insensitive' },
+        status: { in: ['PENDING', 'APPROVED'] },
+      });
+      if (reused) throw AppError.conflict('This transaction ID has already been used for a lock order.');
+    }
+    if (changes.amountPaid !== undefined && changes.amountPaid !== order.amountPaid) {
+      updates.amountPaid = changes.amountPaid;
+      said.push(`amount paid Rs ${order.amountPaid} -> Rs ${changes.amountPaid}`);
+    }
+    if (changes.proofImage !== undefined && changes.proofImage !== order.proofImage) {
+      updates.proofImage = changes.proofImage;
+      said.push(order.proofImage ? 'replaced the screenshot' : 'added a screenshot');
+    }
+    if (changes.note !== undefined && (changes.note.trim() || undefined) !== order.note) {
+      updates.note = changes.note.trim() || undefined;
+      said.push('changed the note');
+    }
+
+    if (said.length === 0) return summarise(order);
+
+    await runInShopTransaction(order.dealerId, async (tx) => {
+      const done = await repo.lockOrders.decide(order.id, updates, tx);
+      if (!done) throw AppError.conflict('This order was decided a moment ago and can no longer be changed.');
+      await AuditService.log(
+        {
+          dealerId: order.dealerId,
+          userId: params.actor.userId,
+          actorName: params.actor.name,
+          actorRole: params.actor.role,
+          action: 'LOCK_ORDER_AMENDED',
+          targetType: 'LOCK_ORDER',
+          targetId: order.id,
+          details: `Changed a pending lock order: ${said.join('; ')}. No locks issued until the platform confirms the payment.`,
+          ipAddress: params.ipAddress,
+        },
+        tx
+      );
+    });
+
+    return summarise((await repo.lockOrders.findById(order.id))!);
+  }
+
+  /**
    * The platform confirms the money arrived, and the pack is issued.
    *
    * Everything happens in one transaction, in this order:
