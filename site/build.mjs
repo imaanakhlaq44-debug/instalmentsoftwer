@@ -61,15 +61,19 @@ const VOICES = /<!--\s*voices\s*-->[\s\S]*?<!--\s*\/voices\s*-->/g;
 const escapeHtml = (s) =>
   String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-function testimonialFigure(t, index) {
+function testimonialFigure(t) {
   const stars = '★'.repeat(t.rating) + '☆'.repeat(5 - t.rating);
   // The quote is printed as the shop wrote it, in the language it wrote it in,
   // whichever language the page is showing: translating it would put words in
   // the shop's mouth. So it carries its own lang and dir and no data-ur.
   const dir = t.language === 'ur' ? 'rtl' : 'ltr';
-  return `        <figure class="tq${index === 0 ? ' big' : ''}">
+  // Small, equal cards. A long quote is cut to a few lines with a "Read more"
+  // button — added by the page's script, so without JavaScript the whole
+  // quote simply shows.
+  return `        <figure class="tq real">
           <div class="bubble">
             <q lang="${t.language}" dir="${dir}">${escapeHtml(t.quote)}</q>
+            <button type="button" class="more" hidden aria-expanded="false"><span class="m1" data-ur="مزید پڑھیں">Read more</span><span class="m2" data-ur="کم دکھائیں">Read less</span></button>
             <div class="meta"><span class="stars" role="img" aria-label="${t.rating} out of 5">${stars}</span></div>
           </div>
           <figcaption class="who"><span class="av">${escapeHtml([...t.displayName][0].toUpperCase())}</span><div><b dir="auto">${escapeHtml(t.displayName)}</b><span dir="auto">${escapeHtml(t.city)}</span></div></figcaption>
