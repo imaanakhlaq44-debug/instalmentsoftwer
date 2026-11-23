@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext.js';
 import { ApiService } from '../services/api.js';
 import { Card, CardHeader, Skeleton } from '../components/ui/Card.js';
 import { relativeTime } from '../utils/format.js';
+import { makeTempPassword } from '../utils/tempPassword.js';
 import type { UserRole } from '../types/index.js';
 
 /**
@@ -44,17 +45,7 @@ const TEAM_ROLES: UserRole[] = ['DEALER_ADMIN', 'DEALER_STAFF', 'DEALER_VIEWER']
 const roleLabel = (role: UserRole): string =>
   role === 'DEALER_ADMIN' ? 'Owner / admin' : ROLE_INFO[role as StaffRole]?.label ?? role;
 
-/** A temporary password the owner reads out once: letters and digits, no look-alikes. */
-export function makeTempPassword(): string {
-  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz';
-  const digits = '23456789';
-  const pick = (set: string, n: number) => {
-    const buf = new Uint32Array(n);
-    crypto.getRandomValues(buf);
-    return Array.from(buf, (v) => set[v % set.length]).join('');
-  };
-  return `${pick(letters, 5)}${pick(digits, 4)}`;
-}
+export { makeTempPassword };
 
 const emptyForm = { name: '', phone: '', email: '', role: 'DEALER_VIEWER' as StaffRole };
 
