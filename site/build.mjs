@@ -97,6 +97,15 @@ function withRealTestimonials(html, real) {
 }
 
 /**
+ * The "early shops" section stands in for testimonials while there are none:
+ * it says plainly that the product is new and offers a demo instead. The first
+ * approved testimonial removes it, so the two never show together.
+ */
+const EARLY = /<!--\s*early-shops\s*-->[\s\S]*?<!--\s*\/early-shops\s*-->/g;
+const withEarlyShops = (html, real) =>
+  real.length ? html.replace(EARLY, '') : html.replace(/<!--\s*\/?early-shops\s*-->/g, '');
+
+/**
  * Where the "Sign in" button goes.
  *
  * The site is published before the dashboard has a server — it is the thing a
@@ -268,9 +277,9 @@ async function build() {
   await mkdir(OUT, { recursive: true });
 
   for (const file of pages) {
-    const raw = withTestedPhones(withoutSampleTestimonials(
+    const raw = withTestedPhones(withEarlyShops(withoutSampleTestimonials(
       withRealTestimonials(await readFile(path.join(SRC, 'pages', file), 'utf8'), realTestimonials)
-    ));
+    ), realTestimonials));
     const meta = readMeta(raw);
     const body = raw.replace(/<!--\s*meta[\s\S]*?-->/, '').trim();
 
