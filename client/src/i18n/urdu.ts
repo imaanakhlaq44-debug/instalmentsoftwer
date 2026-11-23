@@ -1129,7 +1129,7 @@ export const URDU: Record<string, string> = {
   "One lock holds one phone. Choose how many you need, pay, and send us the transaction ID. Your locks are added as soon as we confirm the payment.": "ایک لاک ایک فون کے لیے ہوتا ہے۔ جتنے چاہییں چنیں، ادائیگی کریں اور ہمیں ٹرانزیکشن آئی ڈی بھیج دیں۔ ادائیگی کی تصدیق ہوتے ہی آپ کے لاک شامل ہو جائیں گے۔",
   "How many locks?": "کتنے لاک چاہییں؟",
   "Number of locks": "لاک کی تعداد",
-  "1–29: Rs 1,000 · 30–49: Rs 800 · 50–99: Rs 700 · 100+: Rs 600 per phone": "1 سے 29 لاک: Rs 1,000\u200f · 30 سے 49: Rs 800\u200f · 50 سے 99: Rs 700\u200f · 100 یا زیادہ: Rs 600\u200f (فی فون)",
+  "1–29: Rs 800 · 30–49: Rs 700 · 50–99: Rs 600 · 100+: Rs 500 per phone": "1 سے 29 لاک: Rs 800\u200f · 30 سے 49: Rs 700\u200f · 50 سے 99: Rs 600\u200f · 100 یا زیادہ: Rs 500\u200f (فی فون)",
   "Choose between 1 and 500 locks.": "1 سے 500 کے درمیان لاک چنیں۔",
   "Send the payment": "ادائیگی بھیجیں",
   "Amount to send:": "بھیجنے والی رقم:",

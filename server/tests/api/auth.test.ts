@@ -260,7 +260,7 @@ describe('POST /api/auth/register-dealer', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.token).toBeTruthy();
-    expect(res.body.requestedPack).toMatchObject({ size: 100, totalPrice: 60_000, issued: false });
+    expect(res.body.requestedPack).toMatchObject({ size: 100, totalPrice: 50_000, issued: false });
 
     const dealerId = res.body.dealer.id as string;
     expect(await repo.deviceLicenses.countAvailable(dealerId)).toBe(0);
@@ -280,7 +280,7 @@ describe('POST /api/auth/register-dealer', () => {
   it('accepts a small pack of five, priced per lock', async () => {
     const res = await anonymous().post('/api/auth/register-dealer').send({ ...signup, packSize: 5 });
     expect(res.status).toBe(201);
-    expect(res.body.requestedPack).toMatchObject({ size: 5, unitPrice: 1000, totalPrice: 5000, issued: false });
+    expect(res.body.requestedPack).toMatchObject({ size: 5, unitPrice: 800, totalPrice: 4000, issued: false });
   });
 
   it('refuses a pack of zero', async () => {
@@ -329,7 +329,7 @@ describe('POST /api/auth/register-dealer', () => {
     const issued = await as(ACCOUNTS.superAdmin).post('/api/licenses/packs').send({ dealerId, size: 7 });
 
     expect(issued.status).toBe(201);
-    expect(issued.body.pack).toMatchObject({ size: 7, unitPrice: 1000, totalPrice: 7000 });
+    expect(issued.body.pack).toMatchObject({ size: 7, unitPrice: 800, totalPrice: 5600 });
     expect(await repo.deviceLicenses.countAvailable(dealerId)).toBe(7);
   });
 });

@@ -12,7 +12,7 @@ afterAll(async () => {
   await disconnectDatabase();
 });
 
-const transfer = { size: 30, paymentMethod: 'JAZZCASH', transactionId: 'JC-778812345', amountPaid: 24_000 };
+const transfer = { size: 30, paymentMethod: 'JAZZCASH', transactionId: 'JC-778812345', amountPaid: 21_000 };
 const screenshot = 'data:image/png;base64,iVBORw0KGgo=';
 
 async function placeOrder(overrides: Record<string, unknown> = {}): Promise<string> {
@@ -24,13 +24,13 @@ async function placeOrder(overrides: Record<string, unknown> = {}): Promise<stri
 describe('a shop owner changes a pending order', () => {
   it('changes the number of locks and prices it again from the price list', async () => {
     const id = await placeOrder();
-    const res = await as(ACCOUNTS.dealerAdmin).patch(`/api/lock-orders/${id}`).send({ size: 5, amountPaid: 5_000 });
+    const res = await as(ACCOUNTS.dealerAdmin).patch(`/api/lock-orders/${id}`).send({ size: 5, amountPaid: 4_000 });
     expect(res.status).toBe(200);
-    expect(res.body.order).toMatchObject({ status: 'PENDING', size: 5, unitPrice: 1_000, totalPrice: 5_000, amountPaid: 5_000 });
+    expect(res.body.order).toMatchObject({ status: 'PENDING', size: 5, unitPrice: 800, totalPrice: 4_000, amountPaid: 4_000 });
 
     const approved = await as(ACCOUNTS.superAdmin).post(`/api/lock-orders/${id}/approve`);
     expect(approved.body.licenses).toBe(5);
-    expect(approved.body.pack).toMatchObject({ size: 5, totalPrice: 5_000 });
+    expect(approved.body.pack).toMatchObject({ size: 5, totalPrice: 4_000 });
   });
 
   it('changes the transaction ID and screenshot, and records the change in the audit log', async () => {

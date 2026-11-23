@@ -40,8 +40,8 @@ const OTHER = shop({
 });
 
 const CATALOGUE = [
-  { size: 30, unitPrice: 800, totalPrice: 24000 },
-  { size: 50, unitPrice: 700, totalPrice: 35000 },
+  { size: 30, unitPrice: 700, totalPrice: 21000 },
+  { size: 50, unitPrice: 600, totalPrice: 30000 },
 ];
 
 const PACK = {
@@ -106,7 +106,7 @@ describe('a shop owner', () => {
 
     // Buying goes through the lock-order screen, not this page.
     expect(screen.getByRole('link', { name: /Buy locks/ })).toHaveAttribute('href', '/buy-locks');
-    expect(packCard(50).getByText(/35,000/)).toBeInTheDocument();
+    expect(packCard(50).getByText(/30,000/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Issue/ })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Shop to issue locks to')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Custom number of locks')).not.toBeInTheDocument();
@@ -175,7 +175,7 @@ describe('the platform (super admin)', () => {
     expect(screen.getByRole('button', { name: /^Issue\s+locks to Al-Madina Mobile Hub$/ })).toBeDisabled();
 
     fill(custom, '7');
-    expect(screen.getByText(/1,000 per handset · .*7,000 total/)).toBeInTheDocument();
+    expect(screen.getByText(/800 per handset · .*5,600 total/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Issue 7 locks to Al-Madina Mobile Hub' }));
 
     expect(await screen.findByText('7 locks issued.')).toBeInTheDocument();

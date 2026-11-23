@@ -241,7 +241,7 @@ export const BuyLocksPage: React.FC = () => {
               <p className="text-body text-critical-700">{`Choose between 1 and ${MAX_PACK_SIZE} locks.`}</p>
             )}
             <p className="mt-1 text-caption text-ink-700">
-              1–29: Rs 1,000 · 30–49: Rs 800 · 50–99: Rs 700 · 100+: Rs 600 per phone
+              1–29: Rs 800 · 30–49: Rs 700 · 50–99: Rs 600 · 100+: Rs 500 per phone
             </p>
           </div>
         </Step>

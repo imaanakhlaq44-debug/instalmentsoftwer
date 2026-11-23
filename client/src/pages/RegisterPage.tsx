@@ -196,7 +196,7 @@ export const RegisterPage: React.FC = () => {
         <div className="mb-6 text-center">
           <img src="/logo-lockup.webp" alt="Almas SDM" width={720} height={629} className="mx-auto mb-4 h-20 w-auto" />
           <h1 className="text-display text-ink-900">Register your shop</h1>
-          <p className="mt-1 text-body text-ink-500">{play ? 'Create your account and manage your shop on the go.' : 'No monthly fee. Pay once per phone, from Rs 600.'}</p>
+          <p className="mt-1 text-body text-ink-500">{play ? 'Create your account and manage your shop on the go.' : 'No monthly fee. Pay once per phone, from Rs 500.'}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="surface p-6 sm:p-7" noValidate>
@@ -313,7 +313,7 @@ export const RegisterPage: React.FC = () => {
                 <p className="text-body text-critical-700">Choose between 1 and {MAX_PACK_SIZE} locks.</p>
               )}
               <p className="mt-1 text-caption text-ink-700">
-                1–29: Rs 1,000 · 30–49: Rs 800 · 50–99: Rs 700 · 100+: Rs 600 per phone
+                1–29: Rs 800 · 30–49: Rs 700 · 50–99: Rs 600 · 100+: Rs 500 per phone
               </p>
             </div>
             <p className="mt-2 text-caption text-ink-500">

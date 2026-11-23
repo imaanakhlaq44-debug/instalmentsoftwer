@@ -12,7 +12,7 @@ Almas SDM - Mobile Installment Software
 3. Mobile Phone Shop
 
 ## Bio / Intro (live on the page, 216/255 characters)
-Almas SDM: mobile installment (qist) software + automatic phone lock & unlock for Pakistani mobile shops. Signed Urdu/English agreement, SMS reminders. No monthly fee, from Rs 600/phone. Call/WhatsApp +92 321 1144477
+Almas SDM: mobile installment (qist) software + automatic phone lock & unlock for Pakistani mobile shops. Signed Urdu/English agreement, SMS reminders. No monthly fee, from Rs 500/phone. Call/WhatsApp +92 321 1144477
 
 ## Contact info
 - Phone / WhatsApp: +92 321 1144477
@@ -37,7 +37,7 @@ Sell phones on qist with confidence:
 ✅ JazzCash / Easypaisa / Raast transfers reported by the customer and confirmed by the shop
 ✅ Staff roles, audit log and secure login
 
-No monthly subscription. Pay per phone – from Rs 600.
+No monthly subscription. Pay per phone – from Rs 500.
 
 📞 Call / WhatsApp: +92 321 1144477
 🌐 https://almassdm.pro

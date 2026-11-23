@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { validateLockOrder, methodLabel, ORDER_PAYMENT_METHODS } from './lockOrders.js';
 
-const ok = { size: 30, paymentMethod: 'JAZZCASH', transactionId: 'JC-778812345', amountPaid: 24_000 };
+const ok = { size: 30, paymentMethod: 'JAZZCASH', transactionId: 'JC-778812345', amountPaid: 21_000 };
 
 describe('lock order form checks', () => {
   it('accepts a complete order', () => {
     expect(validateLockOrder(ok)).toBeNull();
-    expect(validateLockOrder({ ...ok, size: 1, amountPaid: 1000 })).toBeNull();
+    expect(validateLockOrder({ ...ok, size: 1, amountPaid: 800 })).toBeNull();
   });
 
   it('refuses a pack size the server would refuse', () => {

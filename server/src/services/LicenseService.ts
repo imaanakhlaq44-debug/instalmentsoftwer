@@ -32,17 +32,17 @@ export interface PackOption {
 
 /**
  * What the platform sells today: any number of locks, priced per lock by how
- * many are bought at once. A small shop can start with five; 30, 50 and 100
- * keep the prices they always had.
+ * many are bought at once. A small shop can start with five. Prices since
+ * Nov 2026: 1–29 Rs 800, 30–49 Rs 700, 50–99 Rs 600, 100+ Rs 500.
  *
  * A pack records the price it was actually sold at, so changing these tiers
  * never rewrites what a dealer already paid.
  */
 export const PRICE_TIERS: { minSize: number; unitPrice: number }[] = [
-  { minSize: 100, unitPrice: 600 },
-  { minSize: 50, unitPrice: 700 },
-  { minSize: 30, unitPrice: 800 },
-  { minSize: 1, unitPrice: 1000 },
+  { minSize: 100, unitPrice: 500 },
+  { minSize: 50, unitPrice: 600 },
+  { minSize: 30, unitPrice: 700 },
+  { minSize: 1, unitPrice: 800 },
 ];
 
 /** The largest single pack. A bigger order is two packs, each on the record. */
