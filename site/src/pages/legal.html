@@ -4,20 +4,39 @@ crumb: Contract and data
 titleUr: معاہدہ اور ڈیٹا
 description: What the customer agreement says, what the handset app collects and when, who can see it, and the limits the software places on a dealer.
 page: legal
+layout: home
 -->
 
-<section class="band pb-8">
-  <p class="eyebrow reveal" data-ur="قانونی">Legal</p>
-  <h1 class="mt-2 max-w-2xl font-serif text-hero text-ink-900" data-ur="معاہدہ، ڈیٹا، اور حدود۔">
-    The agreement, the data, and the limits.
-  </h1>
-  <p class="mt-4 max-w-2xl text-lede text-ink-700" data-ur="فون لاک کرنا سنجیدہ کام ہے۔ اس صفحے پر صاف لکھا ہے کہ گاہک کس بات پر دستخط کرتا ہے، ہمارے پاس کیا محفوظ ہوتا ہے، اور سافٹ ویئر دکاندار کو کیا کرنے سے روکتا ہے۔">
-    Locking someone's phone is a serious thing. This page states what the customer signs, what is
-    stored, and what the software refuses to let a dealer do.
-  </p>
+<style>
+/* Legal-only pieces. Header, footer, buttons and colours come from the home page's design. */
+.pg-hero { padding: 56px 0 8px; }
+.pg-hero h1 { font-size: clamp(40px, 6vw, 84px); line-height: .98; letter-spacing: -0.04em; text-transform: uppercase; font-weight: 900; margin: 18px 0 16px; max-width: 900px; }
+.pg-hero p { font-size: 20px; font-weight: 600; color: var(--ink-2); max-width: 680px; margin: 0; }
+.legal-page { padding-top: 56px; }
+.legal-page .space-y-4 { display: grid; gap: 22px; max-width: 920px; }
+.legal-page .surface { background: var(--paper); border: var(--b); border-radius: var(--r); padding: 28px; box-shadow: var(--sh); }
+.legal-page .surface:nth-child(2) { background: var(--red-soft); }
+.legal-page .surface:nth-child(4) { background: var(--sun-soft); }
+.legal-page .surface:last-child { background: var(--mint-soft); }
+.legal-page h2 { font-size: clamp(22px, 2.4vw, 28px); line-height: 1.2; letter-spacing: -0.01em; text-transform: none; margin: 0 0 6px; max-width: none; font-weight: 900; }
+.legal-page p { margin: 12px 0 0; color: var(--ink-2); line-height: 1.65; }
+.legal-page ul { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 10px; }
+.legal-page li { display: flex; gap: 12px; align-items: flex-start; font-weight: 700; }
+.legal-page li > span:first-child { width: 10px; height: 10px; margin-top: 8px; border-radius: 50%; background: var(--red); border: 2px solid var(--ink); flex: none; }
+.legal-note { margin-top: 30px; max-width: 920px; background: var(--ink); color: #fff; border-radius: 18px; padding: 20px 24px; font-weight: 600; }
+.legal-note p { margin: 0; }
+@media (max-width: 900px) { .pg-hero { padding-top: 32px; } .legal-page .surface { padding: 22px; } }
+</style>
+
+<section class="pg-hero">
+  <div class="wrap">
+    <span class="kicker"><i></i><span data-ur="قانونی">Legal</span></span>
+    <h1 data-ur="معاہدہ، ڈیٹا، اور حدود۔">The agreement, the data, and the limits.</h1>
+    <p data-ur="فون لاک کرنا سنجیدہ کام ہے۔ اس صفحے پر صاف لکھا ہے کہ گاہک کس بات پر دستخط کرتا ہے، ہمارے پاس کیا محفوظ ہوتا ہے، اور سافٹ ویئر دکاندار کو کیا کرنے سے روکتا ہے۔">Locking someone's phone is a serious thing. This page states what the customer signs, what is stored, and what the software refuses to let a dealer do.</p>
+  </div>
 </section>
 
-<section class="band-tight pt-0">
+<section class="legal-page"><div class="wrap">
   <div class="space-y-4">
     <div class="surface p-6">
       <h2 class="text-title font-semibold text-ink-900" data-ur="گاہک کس بات پر دستخط کرتا ہے">What the customer signs</h2>
@@ -159,14 +178,12 @@ page: legal
       </p>
     </div>
   </div>
-</section>
 
-<section class="border-t border-paper-300 bg-paper-50">
-  <div class="band-tight">
-    <p class="max-w-2xl text-body text-ink-500" data-ur="یہ صفحہ سافٹ ویئر کے طرزِ عمل کی وضاحت ہے، قانونی مشورہ نہیں۔ معاہدے کی شرائط انجینئروں نے لکھی ہیں اور ابھی پاکستانی وکیل کے جائزے کی منتظر ہیں — اپنی دکان کے قسط کے معاہدے کی حتمی شکل اپنے وکیل سے دیکھوا لیں۔">
+  <div class="legal-note">
+    <p data-ur="یہ صفحہ سافٹ ویئر کے طرزِ عمل کی وضاحت ہے، قانونی مشورہ نہیں۔ معاہدے کی شرائط انجینئروں نے لکھی ہیں اور ابھی پاکستانی وکیل کے جائزے کی منتظر ہیں — اپنی دکان کے قسط کے معاہدے کی حتمی شکل اپنے وکیل سے دیکھوا لیں۔">
       This page describes how the software behaves. It is not legal advice, and the agreement's
       terms were drafted by engineers and are awaiting review by a Pakistani lawyer — have your own
       lawyer review the instalment agreement your shop uses.
     </p>
   </div>
-</section>
+</div></section>
