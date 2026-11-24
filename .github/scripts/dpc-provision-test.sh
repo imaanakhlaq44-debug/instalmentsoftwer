@@ -43,8 +43,17 @@ adb shell settings put secure user_setup_complete 0
 # Phones in a shop set up on Wi-Fi; keep the emulator's cellular link out of it.
 adb shell svc data disable || true
 adb shell input keyevent 82 || true
+
+# The wizard asks for Wi-Fi when the phone has no working internet yet; a shop
+# connects first, so wait until the network is really up.
+for i in $(seq 1 60); do
+  adb shell dumpsys connectivity 2>/dev/null | grep -q "VALIDATED" && { echo "network validated after ${i}x2s" | tee "$OUT/network.txt"; break; }
+  sleep 2
+done
+sleep 5
 adb logcat -c
 
+start_provisioning() {
 adb shell am start -W \
   -a android.app.action.PROVISION_MANAGED_DEVICE_FROM_TRUSTED_SOURCE \
   --ecn android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME "$ADMIN" \
@@ -53,7 +62,15 @@ adb shell am start -W \
   --ez android.app.extra.PROVISIONING_LEAVE_ALL_SYSTEM_APPS_ENABLED true \
   --ez android.app.extra.PROVISIONING_SKIP_ENCRYPTION true \
   --ei android.app.extra.PROVISIONING_TRIGGER 2 \
-  2>&1 | tee "$OUT/am-start.txt"
+  2>&1 | tee -a "$OUT/am-start.txt"
+}
+# Right after a framework restart the provisioning activity may not resolve yet.
+for i in $(seq 1 12); do
+  start_provisioning
+  grep -q "unable to resolve" "$OUT/am-start.txt" || break
+  : > "$OUT/am-start.txt"
+  sleep 10
+done
 
 cat > "$OUT/pick.py" <<'PY'
 import re, sys, xml.etree.ElementTree as ET
@@ -101,9 +118,12 @@ for step in $(seq 1 90); do
 
   if [ "$action" = "fail" ]; then outcome="FAILED_SCREEN"; break; fi
   if [ "$action" = "tap" ]; then adb shell input tap "$x" "$y"; continue; fi
+  # Wi-Fi picker: give the connection time to come up before leaving it
+  # (leaving it early cancels provisioning).
   if [ "$action" = "back" ]; then
-    backs=$((${backs:-0} + 1))
-    [ "$backs" -le 3 ] && { adb shell input keyevent 4; continue; }
+    picker=$((${picker:-0} + 1))
+    [ "$picker" -eq 8 ] && adb shell input keyevent 4
+    continue
   fi
 
   # Done: owner set and the provisioning screens are gone.
