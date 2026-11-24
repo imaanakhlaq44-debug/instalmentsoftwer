@@ -32,7 +32,7 @@ async function payOff(planId: string) {
   const plan = (await repo.installmentPlans.findById(planId))!;
   const installments = (await repo.installments.findByPlan(planId)).filter((i) => i.status !== 'PAID');
   for (const inst of installments) {
-    const res = await as(ACCOUNTS.dealerStaff).post('/api/payments').send({
+    const res = await as(ACCOUNTS.dealerAdmin).post('/api/payments').send({
       customerId: plan.customerId,
       installmentId: inst.id,
       amount: inst.amountDue - (inst.amountPaid ?? 0) + (inst.lateFee ?? 0),

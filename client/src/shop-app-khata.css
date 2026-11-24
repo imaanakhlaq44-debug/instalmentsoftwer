@@ -107,6 +107,9 @@
   .staff-desk-tools { display:flex; align-items:center; gap:8px; flex-shrink:0; }
   .khata-home.is-staff { padding:14px 16px 40px; }
   .staff-desk-intro p { margin:0; padding:12px 14px; background:#FFC83D; border:2.5px solid #0F1419; border-radius:16px; box-shadow:3px 3px 0 #0F1419; font-size:15px; font-weight:800; }
+  /* Counter staff: New sale + Connect phone, in the page flow (staff have no bottom nav). */
+  .khata-dock.staff-desk-jobs { position:static; transform:none; width:auto; max-width:none; margin-top:14px; padding:0; background:none; }
+  .staff-desk-jobs .khata-btn-ink { flex:1; min-height:58px; }
   .staff-desk-search { display:flex; align-items:center; gap:10px; margin-top:16px; padding:6px 6px 6px 14px; background:#fff; border:2.5px solid #0F1419; border-radius:16px; box-shadow:3px 3px 0 #0F1419; }
   [dir="rtl"] .staff-desk-search { padding:6px 14px 6px 6px; }
   .staff-desk-search > svg { width:20px; height:20px; flex-shrink:0; color:#5B6472; }

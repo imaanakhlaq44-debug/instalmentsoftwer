@@ -278,7 +278,8 @@ describe('payment lifecycle over the API', () => {
       .send({ reason: 'Staff attempting a reversal.' });
 
     expect(res.status).toBe(403);
-    expect((await repo.payments.findById(paymentId))!.status).toBe('VERIFIED');
+    // Staff payments wait for the owner; a refused reversal leaves it waiting.
+    expect((await repo.payments.findById(paymentId))!.status).toBe('PENDING');
   });
 });
 

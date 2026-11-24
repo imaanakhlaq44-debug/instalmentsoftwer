@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ApiService } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.js';
 import { Pagination } from '../components/ui/Pagination.js';
@@ -25,6 +26,9 @@ import {
 
 export const PaymentsPage: React.FC = () => {
   const { selectedDealerId, showToast, isStaff, isDealerAdmin, isCustomer } = useAuth();
+  // `?status=PENDING` (from the bell and the home screen) shows only what waits for approval.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const onlyPending = searchParams.get('status') === 'PENDING';
 
   const [payments, setPayments] = useState<any[]>([]);
   const [paymentTotals, setPaymentTotals] = useState<{ verifiedAmount: number; pendingAmount: number; count: number } | null>(null);
@@ -52,6 +56,7 @@ export const PaymentsPage: React.FC = () => {
   const paymentQuery = (extra: Record<string, unknown>) => ({
     search: searchQuery || undefined,
     dealerId: selectedDealerId,
+    status: onlyPending ? 'PENDING' : undefined,
     ...extra,
   });
 
@@ -110,7 +115,7 @@ export const PaymentsPage: React.FC = () => {
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDealerId, paged.page, paged.limit]);
+  }, [selectedDealerId, paged.page, paged.limit, onlyPending]);
 
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,6 +184,23 @@ export const PaymentsPage: React.FC = () => {
       {isCustomer && <PayNowCard onPaid={loadData} />}
       {isCustomer && <SubmitPaymentCard onSubmitted={loadData} />}
       {isStaff && <PendingSubmissions onVerified={loadData} />}
+
+      {onlyPending && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm font-bold text-amber-900">
+            {isDealerAdmin
+              ? 'Payments awaiting your approval. Check the money arrived, then press Verify Payment.'
+              : 'Payments awaiting the owner’s approval.'}
+          </p>
+          <button
+            type="button"
+            className="px-3 py-1.5 rounded-lg bg-white border border-amber-300 text-xs font-bold text-amber-900"
+            onClick={() => setSearchParams({})}
+          >
+            Show all payments
+          </button>
+        </div>
+      )}
 
       {/* Payments List Table */}
       <div className="bg-white rounded-3xl border-2 border-ink-900 shadow-card overflow-hidden">

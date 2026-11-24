@@ -6,11 +6,13 @@ import { AuthService } from '../../src/services/AuthService.js';
 import { disconnectDatabase } from '../../src/db/prisma.js';
 
 /**
- * The owner's rule for shop staff: two jobs and nothing else.
+ * The owner's rule for shop staff:
  *
  *   1. Every staff login can look customers up with their full phone number,
  *      to call or WhatsApp them (GET /api/staff-desk/customers).
- *   2. Counter staff can also take a payment at the counter (POST /api/payments).
+ *   2. Counter staff can also take a payment at the counter (POST /api/payments),
+ *      which waits for the owner's approval, make a new sale and connect the
+ *      sold phone.
  *
  * Every other endpoint is refused for them, by the allow-list in requireAuth.
  */
@@ -40,15 +42,12 @@ const CLOSED: Array<[string, string]> = [
   ['get', '/api/dashboard/today'],
   ['get', '/api/customers'],
   ['get', '/api/customers/cust-1'],
-  ['post', '/api/customers'],
-  ['get', '/api/devices'],
   ['get', '/api/installments'],
   ['get', '/api/installments/plans'],
   ['get', '/api/payments'],
   ['get', '/api/transactions'],
   ['get', '/api/notifications'],
   ['post', '/api/notifications/whatsapp/message'],
-  ['get', '/api/sale-drafts'],
   ['post', '/api/enrollment/qr'],
   ['get', '/api/handset-tests'],
   ['get', '/api/licenses'],
@@ -86,15 +85,60 @@ describe('staff can only do their two jobs', () => {
     expect(res.body.customers.map((c: { customerId: string }) => c.customerId)).toContain('cust-1');
   });
 
-  it('counter staff can take a payment at the counter', async () => {
+  it('a payment taken by counter staff waits for the owner to approve it', async () => {
     const desk = await as(ACCOUNTS.dealerStaff).get('/api/staff-desk/customers').expect(200);
     const one = desk.body.customers.find((c: { plans: unknown[] }) => c.plans.length > 0);
     const plan = one.plans[0];
+    // Even when the client asks for it, staff cannot verify their own payment.
     const res = await as(ACCOUNTS.dealerStaff)
       .post('/api/payments')
       .send({ customerId: one.customerId, planId: plan.planId, amount: 500, paymentMethod: 'CASH', autoVerify: true })
       .expect(201);
-    expect(res.body).toBeTruthy();
+    expect(res.body.payment.status).toBe('PENDING');
+    expect(res.body.payment.receiptNumber).toBeFalsy();
+    expect(res.body.allocations).toEqual([]);
+    expect(res.body.message).toMatch(/owner approves/i);
+
+    const pending = await as(ACCOUNTS.dealerAdmin).get('/api/payments?status=PENDING').expect(200);
+    expect(pending.body.data.map((p: { id: string }) => p.id)).toContain(res.body.payment.id);
+
+    const approved = await as(ACCOUNTS.dealerAdmin).post(`/api/payments/${res.body.payment.id}/verify`).expect(200);
+    expect(approved.body.payment.status).toBe('VERIFIED');
+    expect(approved.body.payment.receiptNumber).toBeTruthy();
+  });
+
+  it("the owner's own payments are still applied straight away", async () => {
+    const desk = await as(ACCOUNTS.dealerAdmin).get('/api/staff-desk/customers').expect(200);
+    const one = desk.body.customers.find((c: { plans: unknown[] }) => c.plans.length > 0);
+    const res = await as(ACCOUNTS.dealerAdmin)
+      .post('/api/payments')
+      .send({ customerId: one.customerId, planId: one.plans[0].planId, amount: 500, paymentMethod: 'CASH' });
+    expect(res.status, JSON.stringify(res.body)).toBe(201);
+    expect(res.body.payment.status).toBe('VERIFIED');
+  });
+
+  it('counter staff can reach the new-sale and connect-phone screens', async () => {
+    for (const url of [
+      '/api/customers/sale-helper',
+      '/api/sale-drafts',
+      '/api/devices',
+      '/api/devices/dev-1',
+      '/api/enrollment/readiness',
+      '/api/enrollment/tokens',
+    ]) {
+      const res = await as(ACCOUNTS.dealerStaff).get(url);
+      expect(res.status, url).toBe(200);
+    }
+  });
+
+  it('view-only staff still cannot make a sale or connect a phone', async () => {
+    const header = await addViewer();
+    for (const url of ['/api/devices', '/api/sale-drafts', '/api/enrollment/tokens']) {
+      const res = await request(app).get(url).set(header);
+      expect(res.status, url).toBe(403);
+    }
+    const sale = await request(app).post('/api/customers').set(header).send({});
+    expect(sale.status).toBe(403);
   });
 
   it.each(CLOSED)('counter staff are refused %s %s', async (method, url) => {

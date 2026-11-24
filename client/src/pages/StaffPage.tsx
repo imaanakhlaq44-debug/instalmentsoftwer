@@ -32,7 +32,7 @@ interface TeamMember {
 export const ROLE_INFO: Record<StaffRole, { label: string; body: string }> = {
   DEALER_STAFF: {
     label: 'Counter staff',
-    body: 'Sees customers and their phone numbers to call them, and takes installments at the counter. Nothing else.',
+    body: 'Makes sales, connects phones, calls customers and takes installments at the counter. Payments wait for your approval.',
   },
   DEALER_VIEWER: {
     label: 'View only',

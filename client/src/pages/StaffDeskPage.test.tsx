@@ -56,13 +56,41 @@ describe('staff desk', () => {
     expect(api.to('POST /payments')[0].body).toMatchObject({ customerId: 'cust-1', planId: 'plan-1', amount: 5000, paymentMethod: 'CASH' });
   });
 
-  it('has no menu, sales, settings or account deletion', async () => {
+  it('has no menu, settings or account deletion', async () => {
     open('DEALER_STAFF');
     await screen.findByText('Ahmed Raza');
-    for (const name of [/New sale/i, /Settings/i, /Delete account/i, /Devices/i, /Support/i]) {
+    for (const name of [/Settings/i, /Delete account/i, /Devices/i, /Support/i]) {
       expect(screen.queryByRole('link', { name })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
     }
+  });
+
+  it('lets counter staff start a new sale and connect a phone', async () => {
+    open('DEALER_STAFF');
+    await screen.findByText('Ahmed Raza');
+    expect(screen.getByRole('button', { name: /New sale/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Connect phone/i }));
+    expect(await screen.findByText('Went to /enrollment')).toBeInTheDocument();
+  });
+
+  it('opens the connect-phone screen for counter staff, with a way back', async () => {
+    mockApi({ role: 'DEALER_STAFF', routes: { 'GET /staff-desk/customers': desk } });
+    renderPage(<StaffDeskPage />, { path: '/enrollment' });
+    expect(await screen.findByRole('button', { name: 'Back to customers' })).toBeInTheDocument();
+    expect(screen.getByText('Connect phone')).toBeInTheDocument();
+  });
+
+  it('sends view-only staff back to the desk from the connect-phone address', async () => {
+    mockApi({ role: 'DEALER_VIEWER', routes: { 'GET /staff-desk/customers': desk } });
+    renderPage(<StaffDeskPage />, { path: '/enrollment' });
+    expect(await screen.findByText('Went to /')).toBeInTheDocument();
+  });
+
+  it('gives view-only staff no sale and no phone connecting', async () => {
+    open('DEALER_VIEWER');
+    await screen.findByText('Ahmed Raza');
+    expect(screen.queryByRole('button', { name: /New sale/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Connect phone/i })).not.toBeInTheDocument();
   });
 
   it('searches by name or phone on the server', async () => {
@@ -74,7 +102,7 @@ describe('staff desk', () => {
 
   it('is in Roman Urdu and Urdu', () => {
     for (const label of [
-      'Call customers and take installments at the counter.', 'Call customers about their installments.',
+      'Make sales, connect phones, call customers and take installments. Payments are added once the owner approves them.', 'Call customers about their installments.',
       'Search by name or phone', 'No customers yet.', 'Up to date', 'Collect payment from Ali', 'Call Ali',
       'Sees customers and their phone numbers to call them. Nothing else.',
     ]) {

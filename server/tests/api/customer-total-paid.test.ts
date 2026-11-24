@@ -18,7 +18,7 @@ describe('customer profile totalPaid', () => {
 
     const before = (await profile()).body.summary.totalPaid as number;
 
-    const paid = await as(ACCOUNTS.dealerStaff).post('/api/payments').send({
+    const paid = await as(ACCOUNTS.dealerAdmin).post('/api/payments').send({
       customerId: 'cust-1',
       planId: plan.id,
       amount: 1234,

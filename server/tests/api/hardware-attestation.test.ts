@@ -163,9 +163,9 @@ describe('Hardware attestation at enrollment', () => {
     const { device } = await enrollAttested('R58NSECRET77');
     await repo.devices.update(device.id, { attestationChallenge: 'outstanding-challenge-value' });
 
-    // Staff cannot open a device at all any more.
+    // Counter staff may open a device (to connect a sold phone), masked.
     const staff = await as(ACCOUNTS.dealerStaff).get(`/api/devices/${device.id}`);
-    expect(staff.status).toBe(403);
+    expect(staff.status).toBe(200);
     const staffJson = JSON.stringify(staff.body);
     expect(staffJson).not.toContain(device.imei);
     expect(staffJson).not.toContain('R58NSECRET77');

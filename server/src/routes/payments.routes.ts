@@ -115,6 +115,10 @@ paymentsRouter.post(
     assertDealerAccess(req, customer.dealerId, 'customer');
     if (!customer.active) throw AppError.badRequest('This customer account is deactivated.');
 
+    // The owner's rule: money taken by counter staff waits for the owner's
+    // approval before it touches a balance, issues a receipt or unlocks a phone.
+    const byCounterStaff = getAuthUser(req).role === 'DEALER_STAFF';
+
     const result = await PaymentService.recordPayment({
       dealerId,
       customerId: body.customerId,
@@ -124,11 +128,15 @@ paymentsRouter.post(
       paymentMethod: body.paymentMethod,
       referenceNumber: body.referenceNumber,
       notes: body.notes,
-      autoVerify: body.autoVerify,
+      autoVerify: byCounterStaff ? false : body.autoVerify,
       actor: actorFrom(req),
     });
 
-    res.status(201).json(result);
+    res.status(201).json(
+      byCounterStaff
+        ? { ...result, message: 'Payment saved. It will be added once the shop owner approves it.' }
+        : result
+    );
   })
 );
 

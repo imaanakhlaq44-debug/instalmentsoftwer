@@ -38,6 +38,7 @@ const Probe = () => {
     <div>
       <span data-testid="authenticated">{String(auth.isAuthenticated)}</span>
       <span data-testid="bootstrapping">{String(auth.isBootstrapping)}</span>
+      <span data-testid="restore-failed">{String(auth.restoreFailed)}</span>
       <span data-testid="role">{auth.role ?? 'none'}</span>
       <span data-testid="name">{auth.user?.name ?? 'none'}</span>
       <span data-testid="dealer">{auth.selectedDealerId ?? 'none'}</span>
@@ -111,6 +112,40 @@ describe('bootstrapping', () => {
 
     expect(screen.getByTestId('authenticated')).toHaveTextContent('false');
     expect(localStorage.getItem(TOKEN_STORAGE_KEY)).toBeNull();
+  });
+
+  it('retries when the phone has no internet yet, instead of signing out', async () => {
+    localStorage.setItem(TOKEN_STORAGE_KEY, 'stored-token');
+    let calls = 0;
+    stubApi(() => {
+      calls += 1;
+      if (calls === 1) throw new TypeError('Failed to fetch');
+      return json(session());
+    });
+
+    renderAuth();
+    await waitFor(() => expect(screen.getByTestId('authenticated')).toHaveTextContent('true'), { timeout: 4000 });
+    expect(calls).toBe(2);
+  });
+
+  it('keeps the sign-in and offers a retry when the server stays unreachable', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      localStorage.setItem(TOKEN_STORAGE_KEY, 'stored-token');
+      stubApi(() => json({ error: 'Bad gateway' }, 502));
+
+      renderAuth();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10_000);
+      });
+      await settled();
+
+      expect(screen.getByTestId('restore-failed')).toHaveTextContent('true');
+      expect(screen.getByTestId('authenticated')).toHaveTextContent('false');
+      expect(localStorage.getItem(TOKEN_STORAGE_KEY)).toBe('stored-token');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

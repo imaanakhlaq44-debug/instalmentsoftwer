@@ -218,7 +218,9 @@ export const config = {
 
   jwt: {
     secret: resolveJwtSecret(),
-    expiresIn: process.env.JWT_EXPIRES_IN || '12h',
+    // Renewed every time the app opens (/auth/me), so a shop that uses the app
+    // at least once a month is never asked to sign in again.
+    expiresIn: process.env.JWT_EXPIRES_IN || '30d',
   },
 
   bcryptRounds: num(process.env.BCRYPT_ROUNDS, isProduction ? 12 : 10),
