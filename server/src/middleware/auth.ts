@@ -45,36 +45,63 @@ const PASSWORD_CHANGE_ALLOWED = new Set([
 /**
  * Everything a shop's staff login may reach. Nothing else answers for them.
  *
- * The owner's rule: staff have exactly two jobs. Every staff login can look a
- * customer up and call or WhatsApp them (the staff desk). Counter staff can
- * also take a payment at the counter. No sales, no phones, no settings, no
- * account deletion, no line to the platform: those are the owner's.
+ * The owner's rule: every staff login can look a customer up and call or
+ * WhatsApp them (the staff desk). Counter staff can also take a payment at the
+ * counter (it waits for the owner's approval), make a new sale and connect the
+ * sold phone. No locking, no settings, no reversals, no account deletion, no
+ * line to the platform: those are the owner's.
  *
  * This is an allow-list checked before any route runs, so a new route is
- * closed to staff until someone adds it here on purpose.
+ * closed to staff until someone adds it here on purpose. `:id` stands for
+ * exactly one path segment.
  */
-const STAFF_ALLOWED: Partial<Record<UserRole, ReadonlySet<string>>> = {
-  DEALER_VIEWER: new Set([
+const STAFF_ALLOWED: Partial<Record<UserRole, readonly string[]>> = {
+  DEALER_VIEWER: [
     'GET /api/auth/me',
     'POST /api/auth/change-password',
     'POST /api/auth/logout',
     'GET /api/staff-desk/customers',
-  ]),
-  DEALER_STAFF: new Set([
+  ],
+  DEALER_STAFF: [
     'GET /api/auth/me',
     'POST /api/auth/change-password',
     'POST /api/auth/logout',
     'GET /api/staff-desk/customers',
     'POST /api/payments',
-  ]),
+    // A new sale: customer, phone and plan in one form.
+    'GET /api/customers/sale-helper',
+    'POST /api/customers/agreement-preview',
+    'POST /api/customers',
+    'GET /api/sale-drafts',
+    'PUT /api/sale-drafts/:id',
+    'DELETE /api/sale-drafts/:id',
+    'GET /api/devices/imei-status/:id',
+    // Connecting the sold phone (the QR on the counter).
+    'GET /api/devices',
+    'GET /api/devices/:id',
+    'GET /api/enrollment/readiness',
+    'GET /api/enrollment/tokens',
+    'POST /api/enrollment/generate',
+    'POST /api/enrollment/tokens/:id/revoke',
+    'POST /api/enrollment/phone-intakes',
+    'GET /api/enrollment/phone-intakes/:id',
+  ],
 };
+
+function routeMatches(pattern: string, request: string): boolean {
+  const want = pattern.split('/');
+  const got = request.split('/');
+  if (want.length !== got.length) return false;
+  return want.every((part, i) => (part === ':id' ? got[i].length > 0 : part === got[i]));
+}
 
 /** Whether a staff role may make this request. Other roles are not limited here. */
 export function staffMayReach(role: UserRole, method: string, path: string): boolean {
   const allowed = STAFF_ALLOWED[role];
   if (!allowed) return true;
   const verb = method === 'HEAD' || method === 'OPTIONS' ? 'GET' : method;
-  return allowed.has(`${verb} ${path.replace(/\/+$/, '') || '/'}`);
+  const request = `${verb} ${path.replace(/\/+$/, '') || '/'}`;
+  return allowed.some((pattern) => routeMatches(pattern, request));
 }
 
 function extractToken(req: Request): string | null {
@@ -141,7 +168,7 @@ export const requireAuth = asyncHandler(async (req: Request, _res: Response, nex
       new AppError(
         user.role === 'DEALER_VIEWER'
           ? 'Your account can only look up customers to contact them. Ask the shop owner.'
-          : 'Your account can only look up customers and record payments. Ask the shop owner.',
+          : 'Your account can only look up customers, record payments, make sales and connect phones. Ask the shop owner.',
         403,
         { code: user.role === 'DEALER_VIEWER' ? 'VIEW_ONLY' : 'STAFF_LIMITED' }
       )

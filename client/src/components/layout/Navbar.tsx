@@ -65,18 +65,28 @@ export const Navbar: React.FC = () => {
       .catch(() => setDealers([]));
   }, [isSuperAdmin]);
 
-  // Badge reflects real queued notifications rather than an always-on red dot.
+  // The owner's badge counts payments waiting for their approval (taken by
+  // counter staff or reported by a customer); anyone else sees queued messages.
+  const ownerBell = role === 'DEALER_ADMIN' || (isSuperAdmin && Boolean(selectedDealerId));
   useEffect(() => {
     let cancelled = false;
-    ApiService.getNotifications({ status: 'QUEUED', limit: 1 })
-      .then((res) => {
-        if (!cancelled) setUnreadCount(res.counts?.queued ?? res.pagination?.total ?? 0);
-      })
-      .catch(() => undefined);
+    const refresh = () =>
+      (ownerBell
+        ? ApiService.getPayments({ status: 'PENDING', limit: 1 }).then((res) => res.pagination?.total ?? 0)
+        : ApiService.getNotifications({ status: 'QUEUED', limit: 1 }).then((res) => res.counts?.queued ?? res.pagination?.total ?? 0)
+      )
+        .then((count) => {
+          if (!cancelled) setUnreadCount(count);
+        })
+        .catch(() => undefined);
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 60_000);
     return () => {
       cancelled = true;
+      window.clearInterval(timer);
     };
-  }, []);
+  }, [ownerBell, selectedDealerId]);
+  const approvals = ownerBell && unreadCount > 0;
 
   const activeDealerLabel = isSuperAdmin
     ? selectedDealerId
@@ -181,9 +191,9 @@ export const Navbar: React.FC = () => {
           {!(isSuperAdmin && !selectedDealerId) && (
             <button
               type="button"
-              onClick={() => navigate('/notifications')}
+              onClick={() => navigate(approvals ? '/payments?status=PENDING' : '/notifications')}
               className="btn-ghost relative h-9 w-9 rounded-md p-0"
-              aria-label={unreadCount > 0 ? `${unreadCount} pending notifications` : 'Notifications'}
+              aria-label={approvals ? `${unreadCount} payments awaiting approval` : unreadCount > 0 ? `${unreadCount} pending notifications` : 'Notifications'}
             >
               <Bell className="h-4 w-4" aria-hidden="true" />
               {unreadCount > 0 && (

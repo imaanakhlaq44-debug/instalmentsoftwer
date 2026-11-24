@@ -33,6 +33,9 @@ interface AuthContextType {
   isAuthenticated: boolean;
   /** True while the stored session is being validated on first load. */
   isBootstrapping: boolean;
+  /** A stored sign-in exists but the server could not be reached to confirm it. */
+  restoreFailed: boolean;
+  retryRestore: () => void;
   mustChangePassword: boolean;
 
   login: (email: string, password: string) => Promise<void>;
@@ -58,6 +61,9 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+/** Waits before each attempt to restore a stored sign-in: about 10 seconds in all. */
+export const RESTORE_RETRY_DELAYS_MS = [0, 1500, 3000, 5000];
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // No hardcoded user. The app starts signed out and only knows who you are
@@ -128,6 +134,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [clearSession, showToast]);
 
   // Restore the session on page load / refresh.
+  //
+  // Only the server saying "this sign-in is no longer valid" (401/403) signs
+  // the user out. A phone that has just woken up often has no internet for the
+  // first few seconds, and a busy server can answer 5xx; neither is a reason
+  // to throw away a perfectly good sign-in. Those are retried, and if the
+  // server still cannot be reached the token is kept and a "Try again" screen
+  // is shown instead of the login page.
+  const [restoreAttempt, setRestoreAttempt] = useState(0);
+  const [restoreFailed, setRestoreFailed] = useState(false);
+  const retryRestore = useCallback(() => {
+    setRestoreFailed(false);
+    setIsBootstrapping(true);
+    setRestoreAttempt((n) => n + 1);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -138,20 +159,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      try {
-        const session = await ApiService.me();
-        if (!cancelled) applySession({ ...session, token: session.token || stored });
-      } catch {
-        if (!cancelled) clearSession();
-      } finally {
-        if (!cancelled) setIsBootstrapping(false);
+      for (const wait of RESTORE_RETRY_DELAYS_MS) {
+        if (wait) await new Promise((resolve) => setTimeout(resolve, wait));
+        if (cancelled) return;
+        try {
+          const session = await ApiService.me();
+          if (cancelled) return;
+          applySession({ ...session, token: session.token || stored });
+          setIsBootstrapping(false);
+          return;
+        } catch (err) {
+          if (cancelled) return;
+          if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+            clearSession();
+            setIsBootstrapping(false);
+            return;
+          }
+          // Network trouble or a server error: try again.
+        }
+      }
+
+      if (!cancelled) {
+        setRestoreFailed(true);
+        setIsBootstrapping(false);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [applySession, clearSession]);
+  }, [applySession, clearSession, restoreAttempt]);
 
   const login = useCallback(
     async (email: string, password: string) => {
@@ -222,6 +259,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     isAuthenticated: Boolean(user && token),
     isBootstrapping,
+    restoreFailed,
+    retryRestore,
     mustChangePassword: user?.mustChangePassword === true,
 
     login,

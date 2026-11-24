@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { Loader2, ShieldAlert } from 'lucide-react';
+import { Loader2, ShieldAlert, WifiOff } from 'lucide-react';
 import { UserRole } from '../../types/index.js';
 import { useAuth } from '../../context/AuthContext.js';
 
@@ -17,10 +17,28 @@ const FullPageSpinner: React.FC<{ label?: string }> = ({ label = 'Loading…' })
  * signed-out user briefly sees the shell of a page they cannot access.
  */
 export const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isBootstrapping, mustChangePassword } = useAuth();
+  const { isAuthenticated, isBootstrapping, restoreFailed, retryRestore, mustChangePassword } = useAuth();
   const location = useLocation();
 
   if (isBootstrapping) return <FullPageSpinner label="Restoring your session…" />;
+
+  // Still signed in, just offline: keep the sign-in and let them try again.
+  if (restoreFailed) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-slate-950 px-6 text-center">
+        <WifiOff className="w-10 h-10 text-amber-400" aria-hidden="true" />
+        <p className="text-base font-bold text-white">Cannot reach the server</p>
+        <p className="text-sm text-slate-400 max-w-xs">Check the internet connection. You are still signed in.</p>
+        <button
+          type="button"
+          onClick={retryRestore}
+          className="mt-2 px-5 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-sm"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;

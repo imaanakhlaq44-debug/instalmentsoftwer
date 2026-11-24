@@ -209,9 +209,9 @@ describe('PII masking, admin alert resolution & tamper filters', () => {
       .set('Authorization', credential)
       .send({ imeis: [rogue], serialNumber: 'SN-SECRET-99' });
 
-    // Staff cannot open the device list at all any more.
+    // Counter staff may list devices (to connect a sold phone), masked.
     const staffList = await as(ACCOUNTS.dealerStaff).get('/api/devices?tamper=true');
-    expect(staffList.status).toBe(403);
+    expect(staffList.status).toBe(200);
 
     const staffPayload = JSON.stringify(staffList.body);
     expect(staffPayload).not.toContain(rogue);

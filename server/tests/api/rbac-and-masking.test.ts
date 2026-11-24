@@ -87,10 +87,13 @@ describe('PII masking by role', () => {
 
   // Staff do two jobs (contact customers, take payments). The device list is
   // not one of them, so its IMEIs and serial numbers never reach a staff login.
-  it('keeps counter staff away from the device list, IMEIs and serial numbers', async () => {
-    const res = await as(ACCOUNTS.dealerStaff).get('/api/devices?limit=5');
-    expect(res.status).toBe(403);
-    expect(res.body.data).toBeUndefined();
+  it('lets counter staff list devices to connect a sold phone, without raw serial numbers', async () => {
+    const admin = await as(ACCOUNTS.dealerAdmin).get('/api/devices?limit=100');
+    const staff = await as(ACCOUNTS.dealerStaff).get('/api/devices?limit=100');
+    expect(staff.status).toBe(200);
+    const serials = admin.body.data.map((d: Device) => d.serialNumber).filter(Boolean);
+    const payload = JSON.stringify(staff.body);
+    for (const serial of serials) expect(payload).not.toContain(serial);
   });
 
   it('never leaks a raw IMEI anywhere in a staff device listing', async () => {

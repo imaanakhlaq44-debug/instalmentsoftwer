@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { LogOut, MessageCircle, Phone, RefreshCw, Search, Wallet } from 'lucide-react';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { ChevronLeft, LogOut, MessageCircle, Phone, Plus, QrCode, RefreshCw, Search, Wallet } from 'lucide-react';
+import { AddCustomerWizardModal } from '../components/modals/AddCustomerWizardModal.js';
+import { EnrollmentPage } from './EnrollmentPage.js';
 import { ApiService } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.js';
 import { LanguageToggle } from '../i18n/LanguageContext.js';
@@ -12,10 +14,11 @@ import { RecordPaymentSheet, type RecordPaymentTarget } from '../components/paym
 /**
  * The whole app, for a shop's staff login.
  *
- * The owner's rule: staff do two things. They contact customers (the number,
- * with Call and WhatsApp), and counter staff take payments at the counter.
+ * The owner's rule: every staff login contacts customers (the number, with
+ * Call and WhatsApp). Counter staff also take payments at the counter (they
+ * wait for the owner's approval), make new sales and connect the sold phone.
  * Nothing else is on this screen, and the server refuses everything else too,
- * so there is no menu, no sales, no settings and no account deletion here.
+ * so there is no menu, no settings and no account deletion here.
  */
 export interface StaffDeskPlan {
   planId: string;
@@ -54,6 +57,8 @@ export const StaffDeskPage: React.FC = () => {
   const [customers, setCustomers] = useState<StaffDeskCustomer[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [paying, setPaying] = useState<RecordPaymentTarget | null>(null);
+  const [saleOpen, setSaleOpen] = useState(false);
+  const navigate = useNavigate();
 
   const load = useCallback(async () => {
     setFailed(false);
@@ -74,7 +79,25 @@ export const StaffDeskPage: React.FC = () => {
     return () => window.clearTimeout(t);
   }, [search]);
 
-  // Staff have one screen; any other address comes back here.
+  // Counter staff can also open the connect-phone screen; every other address
+  // comes back to the desk.
+  if (canCollect && location.pathname === '/enrollment') {
+    return (
+      <div className="staff-desk">
+        <header className="staff-desk-head">
+          <button type="button" className="khata-icon-btn" onClick={() => navigate('/')} aria-label="Back to customers">
+            <ChevronLeft aria-hidden="true" />
+          </button>
+          <div className="staff-desk-who">
+            <p className="khata-eyebrow" data-i18n-skip>{dealer?.name ?? 'ALMAS SDM'}</p>
+            <strong>Connect phone</strong>
+          </div>
+          <div className="staff-desk-tools"><LanguageToggle /></div>
+        </header>
+        <div className="p-4"><EnrollmentPage /></div>
+      </div>
+    );
+  }
   if (location.pathname !== '/') return <Navigate to="/" replace />;
 
   return (
@@ -95,8 +118,19 @@ export const StaffDeskPage: React.FC = () => {
 
       <div className="khata-home is-staff">
         <section className="staff-desk-intro" aria-label="What you can do">
-          <p>{canCollect ? 'Call customers and take installments at the counter.' : 'Call customers about their installments.'}</p>
+          <p>{canCollect ? 'Make sales, connect phones, call customers and take installments. Payments are added once the owner approves them.' : 'Call customers about their installments.'}</p>
         </section>
+
+        {canCollect && (
+          <div className="khata-dock staff-desk-jobs">
+            <button type="button" className="khata-btn-sun khata-dock-sale" onClick={() => setSaleOpen(true)}>
+              <Plus aria-hidden="true" />New sale
+            </button>
+            <button type="button" className="khata-btn-ink" onClick={() => navigate('/enrollment')}>
+              <QrCode aria-hidden="true" />Connect phone
+            </button>
+          </div>
+        )}
 
         <label className="staff-desk-search">
           <Search aria-hidden="true" />
@@ -175,6 +209,7 @@ export const StaffDeskPage: React.FC = () => {
       {paying && (
         <RecordPaymentSheet {...paying} onClose={() => setPaying(null)} onRecorded={() => void load()} />
       )}
+      {saleOpen && <AddCustomerWizardModal onClose={() => setSaleOpen(false)} onSuccess={() => void load()} />}
     </div>
   );
 };

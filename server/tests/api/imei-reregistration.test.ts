@@ -71,9 +71,9 @@ describe('GET /api/devices/imei-status/:imei', () => {
     expect(res.body.device.customerName).toBeTruthy();
   });
 
-  it('is closed to staff, who no longer make sales', async () => {
+  it('is open to counter staff, who make sales again', async () => {
     const { device } = await financedDevice();
-    expect((await status(device.imei, ACCOUNTS.dealerStaff)).status).toBe(403);
+    expect((await status(device.imei, ACCOUNTS.dealerStaff)).status).toBe(200);
   });
 
   it('tells another shop only that the IMEI is taken', async () => {

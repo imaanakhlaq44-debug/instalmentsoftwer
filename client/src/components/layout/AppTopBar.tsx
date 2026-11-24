@@ -12,6 +12,9 @@ export function AppTopBar() {
   const navigate = useNavigate();
   const [pending, setPending] = useState(0);
   const platform = role === 'SUPER_ADMIN' && !selectedDealerId;
+  // The shop owner's bell is for what needs the owner: payments waiting for
+  // approval (taken by counter staff, or reported by a customer).
+  const owner = !platform && (role === 'DEALER_ADMIN' || role === 'SUPER_ADMIN');
   useEffect(() => {
     let cancelled = false, busy = false;
     let previous: Set<string> | null = null;
@@ -20,7 +23,11 @@ export function AppTopBar() {
       if (busy || document.visibilityState === 'hidden') return;
       busy = true;
       try {
-        const result = platform ? await ApiService.getPlatformOverview() : await ApiService.getNotifications({ status: 'QUEUED', limit: 20 });
+        const result = platform
+          ? await ApiService.getPlatformOverview()
+          : owner
+            ? await ApiService.getPayments({ status: 'PENDING', limit: 20 })
+            : await ApiService.getNotifications({ status: 'QUEUED', limit: 20 });
         if (cancelled) return;
         const ids = new Set<string>(platform ? (result as any).awaitingPayment.map((n: any) => n.id) : (result as any).data.map((n: any) => n.id));
         setPending(platform ? (result as any).awaitingPayment.length + ((result as any).totals.ordersToCheck ?? 0) : (result as any).counts?.queued ?? (result as any).pagination?.total ?? 0);
@@ -35,7 +42,8 @@ export function AppTopBar() {
     window.addEventListener('focus', visible);
     document.addEventListener('visibilitychange', visible);
     return () => { cancelled = true; clearInterval(timer); window.removeEventListener('focus', visible); document.removeEventListener('visibilitychange', visible); };
-  }, [platform, selectedDealerId]);
+  }, [platform, owner, selectedDealerId]);
+  const approvals = owner && pending > 0;
   return <header className="shop-app-header">
     <div className="shop-app-brand">
       {pathname !== '/' && <button type="button" className="shop-app-icon" aria-label="Back to home" onClick={() => navigate('/')}><ChevronLeft /></button>}
@@ -43,7 +51,7 @@ export function AppTopBar() {
       <span>ALMAS SDM</span>
     </div>
     <div className="flex items-center gap-1">
-      <button type="button" className="shop-app-icon shop-app-bell" aria-label={platform ? 'Lock orders' : 'Notifications'} onClick={() => navigate(platform ? '/orders' : '/notifications')}><Bell />{pending > 0 && <span className="shop-app-notice">{pending > 99 ? '99+' : pending}</span>}</button>
+      <button type="button" className="shop-app-icon shop-app-bell" aria-label={platform ? 'Lock orders' : approvals ? 'Payments awaiting approval' : 'Notifications'} onClick={() => navigate(platform ? '/orders' : approvals ? '/payments?status=PENDING' : '/notifications')}><Bell />{pending > 0 && <span className="shop-app-notice">{pending > 99 ? '99+' : pending}</span>}</button>
       <button type="button" className="shop-app-icon" aria-label="App settings" aria-haspopup="dialog" onClick={() => window.dispatchEvent(new Event('almas:open-sections'))}><Settings /></button>
     </div>
   </header>;

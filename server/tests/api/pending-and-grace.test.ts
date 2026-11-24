@@ -16,8 +16,8 @@ describe('saved pending work',()=>{
  });
  it('does not let staff read or discard the owners draft',async()=>{
  const id=randomUUID();await as(ACCOUNTS.dealerAdmin).put('/api/sale-drafts/'+id).send({expectedVersion:0,data}).expect(200);
- expect((await as(ACCOUNTS.dealerStaff).get('/api/sale-drafts')).status).toBe(403);
- expect((await as(ACCOUNTS.dealerStaff).delete('/api/sale-drafts/'+id)).status).toBe(403);
+ const staffList=await as(ACCOUNTS.dealerStaff).get('/api/sale-drafts');expect(staffList.status).toBe(200);expect(staffList.body.drafts.find((d:any)=>d.id===id)).toBeUndefined();
+ expect((await as(ACCOUNTS.dealerStaff).delete('/api/sale-drafts/'+id)).status).toBe(404);
  expect(await prisma.saleDraft.count({where:{id}})).toBe(1);
  });
  it('rejects signatures and incorrect field types in drafts',async()=>{
