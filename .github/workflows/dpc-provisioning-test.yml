@@ -1,0 +1,46 @@
+name: DPC provisioning test (emulators)
+# Runs the QR provisioning flow on real Android emulators, one per version,
+# and keeps the screens and logs. Testing only: nothing is released or deployed.
+on:
+  push:
+    branches: ['claude/dpc-provisioning-test']
+permissions:
+  contents: read
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [29, 31, 34, 35, 36]
+    env:
+      # The DPC exactly as phones get it today (release 1.8.1).
+      APK_URL: https://github.com/imaanakhlaq44-debug/instalmentsoftwer/releases/download/dpc-v1.8.1/almas-sdm-dpc-v1.8.1.apk
+      CHECKSUM: Aq8YDC8zY7BUULjeeBHwTk95tYkfmQPcTre2M_GgRl4
+    steps:
+      - uses: actions/checkout@v5
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Provision on Android API ${{ matrix.api }}
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          force-avd-creation: true
+          disable-animations: true
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: OUT=out-${{ matrix.api }} bash .github/scripts/dpc-provision-test.sh
+      - name: Result
+        if: always()
+        run: cat out-${{ matrix.api }}/outcome.txt || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: provisioning-api-${{ matrix.api }}
+          path: out-${{ matrix.api }}
+          retention-days: 7
