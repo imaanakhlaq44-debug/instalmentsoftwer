@@ -165,22 +165,52 @@ const stripTags = (s) =>
  * link on WhatsApp far more often than anyone searches for it, and WhatsApp
  * builds its preview from exactly these tags.
  */
-function seoTags({ file, title, description }) {
+function seoTags({ file, title, description, noindex = false }) {
   const url = file === 'index.html' ? `${SITE_URL}/` : `${SITE_URL}/${file}`;
-  const image = `${SITE_URL}/logo-lockup.png`;
+  // 1200×630, so WhatsApp and Facebook draw the large card rather than a
+  // thumbnail. Made by scripts/og-image.mjs.
+  const image = `${SITE_URL}/og-image.png`;
+  const alt = 'Almas SDM — mobile installment software with automatic phone lock and unlock';
   return [
-    `<link rel="canonical" href="${url}" />`,
+    noindex
+      ? `<meta name="robots" content="noindex, follow" />`
+      : `<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />`,
+    noindex ? '' : `<link rel="canonical" href="${url}" />`,
     `<meta property="og:type" content="website" />`,
     `<meta property="og:site_name" content="Almas SDM" />`,
     `<meta property="og:locale" content="en_PK" />`,
+    `<meta property="og:locale:alternate" content="ur_PK" />`,
     `<meta property="og:url" content="${url}" />`,
     `<meta property="og:title" content="${escapeAttr(title)}" />`,
     `<meta property="og:description" content="${escapeAttr(description)}" />`,
     `<meta property="og:image" content="${image}" />`,
-    `<meta property="og:image:width" content="720" />`,
-    `<meta property="og:image:height" content="629" />`,
-    `<meta name="twitter:card" content="summary" />`,
-  ].join('\n    ');
+    `<meta property="og:image:type" content="image/png" />`,
+    `<meta property="og:image:width" content="1200" />`,
+    `<meta property="og:image:height" content="630" />`,
+    `<meta property="og:image:alt" content="${alt}" />`,
+    `<meta name="twitter:card" content="summary_large_image" />`,
+    `<meta name="twitter:title" content="${escapeAttr(title)}" />`,
+    `<meta name="twitter:description" content="${escapeAttr(description)}" />`,
+    `<meta name="twitter:image" content="${image}" />`,
+    `<meta name="geo.region" content="PK" />`,
+    `<meta name="geo.placename" content="Pakistan" />`,
+  ].filter(Boolean).join('\n    ');
+}
+
+/**
+ * Home › page, for every page but the home page. Google shows it in place of
+ * the raw URL in results, which reads better than "/imei-block.html".
+ */
+function breadcrumbJsonLd({ file, name }) {
+  if (file === 'index.html') return '';
+  return jsonLd({
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
+      { '@type': 'ListItem', position: 2, name, item: `${SITE_URL}/${file}` },
+    ],
+  });
 }
 
 /**
@@ -203,7 +233,23 @@ function faqJsonLd(html) {
 const jsonLd = (data) =>
   `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`;
 
-/** Who we are and what we sell, for the home page. */
+/**
+ * Who we are and what we sell, for the home page.
+ *
+ * Search engines and AI answer engines both read this, so it states plain
+ * facts the pages themselves say — prices included. Keep PRICES in step with
+ * pricing.html: a price here that the page contradicts is worse than none.
+ */
+const PRICES = [
+  { name: 'Single lock', price: 800, description: 'One handset, fewer than 30 locks' },
+  { name: 'Starter pack — 30 locks', price: 700, description: 'Rs 21,000 for 30 handsets' },
+  { name: 'Growth pack — 50 locks', price: 600, description: 'Rs 30,000 for 50 handsets' },
+  { name: 'Dealer pack — 100 locks', price: 500, description: 'Rs 50,000 for 100 handsets' },
+];
+
+const APP_DESCRIPTION =
+  'Mobile installment (qist) software for Pakistani phone shops: a digital khata for every customer, SMS reminders sent from the shop’s own SIM, a customer agreement signed on screen in Urdu or English, and a handset that locks itself when an instalment is overdue and unlocks as soon as the payment is recorded. No monthly fee — one lock per phone, from Rs 500.';
+
 function homeJsonLd() {
   return jsonLd({
     '@context': 'https://schema.org',
@@ -212,14 +258,20 @@ function homeJsonLd() {
         '@type': 'Organization',
         '@id': `${SITE_URL}/#org`,
         name: 'Almas SDM',
+        alternateName: ['Almas SDM Pro', 'AlmasSDM'],
         url: `${SITE_URL}/`,
-        logo: `${SITE_URL}/logo-mark.png`,
-        areaServed: 'PK',
+        logo: { '@type': 'ImageObject', url: `${SITE_URL}/logo-mark.png` },
+        image: `${SITE_URL}/og-image.png`,
+        description: APP_DESCRIPTION,
+        areaServed: { '@type': 'Country', name: 'Pakistan' },
+        knowsLanguage: ['en', 'ur'],
         contactPoint: {
           '@type': 'ContactPoint',
           contactType: 'sales',
           telephone: '+923211144477',
-          availableLanguage: ['en', 'ur'],
+          url: 'https://wa.me/923211144477',
+          areaServed: 'PK',
+          availableLanguage: ['English', 'Urdu'],
         },
       },
       {
@@ -232,19 +284,48 @@ function homeJsonLd() {
       },
       {
         '@type': 'SoftwareApplication',
+        '@id': `${SITE_URL}/#app`,
         name: 'Almas SDM',
+        alternateName: 'Almas SDM mobile installment software',
         applicationCategory: 'BusinessApplication',
+        applicationSubCategory: 'Installment management and device lock software',
         operatingSystem: 'Android, Web',
-        description:
-          'Mobile installment (qist) software for Pakistani phone shops: digital khata, SMS reminders from your own SIM, a signed Urdu/English agreement, and automatic phone lock and unlock.',
+        url: `${SITE_URL}/`,
+        image: `${SITE_URL}/og-image.png`,
+        inLanguage: ['en', 'ur'],
+        description: APP_DESCRIPTION,
+        audience: {
+          '@type': 'BusinessAudience',
+          audienceType: 'Mobile phone shops selling on installments in Pakistan',
+        },
+        featureList: [
+          'Digital installment khata (ledger) per customer: advance, monthly instalment, part payments and balance',
+          'SMS payment reminders sent from the shop’s own SIM, with delivery confirmation',
+          'Automatic phone lock when an instalment is overdue; automatic unlock when the payment is recorded',
+          'Locks on schedule even with mobile data turned off',
+          'Factory reset blocked while money is owed',
+          'Customer agreement in Urdu or English, signed on screen',
+          '80mm thermal receipts',
+          'A login for every salesman, with a full record',
+          'QR-code enrolment of a new handset at the counter',
+        ],
         publisher: { '@id': `${SITE_URL}/#org` },
         offers: {
           '@type': 'AggregateOffer',
           priceCurrency: 'PKR',
-          lowPrice: 600,
-          highPrice: 800,
-          offerCount: 3,
+          lowPrice: Math.min(...PRICES.map((p) => p.price)),
+          highPrice: Math.max(...PRICES.map((p) => p.price)),
+          offerCount: PRICES.length,
           url: `${SITE_URL}/pricing.html`,
+          offers: PRICES.map((p) => ({
+            '@type': 'Offer',
+            name: p.name,
+            description: p.description,
+            price: p.price,
+            priceCurrency: 'PKR',
+            availability: 'https://schema.org/InStock',
+            url: `${SITE_URL}/pricing.html`,
+          })),
         },
       },
     ],
@@ -300,7 +381,12 @@ async function build() {
       if (open < 0 || close < 0) throw new Error('index.html has no <main> to borrow the layout from');
       const title = `${meta.title ?? 'Almas SDM'} · Almas SDM`;
       const description = meta.description ?? '';
-      const seo = [seoTags({ file, title, description }), faqJsonLd(body)].filter(Boolean).join('\n    ');
+      const noindex = meta.robots === 'noindex';
+      const seo = [
+        seoTags({ file, title, description, noindex }),
+        noindex ? '' : breadcrumbJsonLd({ file, name: meta.crumb ?? meta.title ?? 'Almas SDM' }),
+        faqJsonLd(body),
+      ].filter(Boolean).join('\n    ');
       const shell = (part) =>
         part
           .replace(/<!--\s*home-only\s*-->[\s\S]*?<!--\s*\/home-only\s*-->/g, '')
@@ -343,6 +429,7 @@ async function build() {
         '{{seo}}',
         [
           seoTags({ file, title: `${meta.title ?? 'Almas SDM'} · Almas SDM`, description: meta.description ?? '' }),
+          breadcrumbJsonLd({ file, name: meta.crumb ?? meta.title ?? 'Almas SDM' }),
           faqJsonLd(body),
         ].filter(Boolean).join('\n    ')
       )

@@ -9,6 +9,11 @@
 # the bare domain does not stay on plaintext.
 <IfModule mod_rewrite.c>
   RewriteEngine On
+  # One address per page: www.almassdm.pro served a second copy of the whole
+  # site, which search engines treat as duplicate content and split rankings
+  # between. Send it to the bare domain, which the canonical tags name.
+  RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+  RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
   RewriteCond %{HTTPS} !=on
   RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 </IfModule>
@@ -24,14 +29,32 @@
   ExpiresByType text/css "access plus 1 hour"
   ExpiresByType image/png "access plus 7 days"
   ExpiresByType image/webp "access plus 7 days"
+  # robots.txt, sitemap.xml and llms.txt change with a deploy; crawlers should
+  # see a new one within the day.
+  ExpiresByType text/plain "access plus 1 day"
+  ExpiresByType application/xml "access plus 1 day"
+  ExpiresByType text/xml "access plus 1 day"
 </IfModule>
 
 # --- Compression -------------------------------------------------------------
 # The pages are mostly words, and the audience is on a phone on 3G in a shop.
 <IfModule mod_deflate.c>
-  AddOutputFilterByType DEFLATE text/html text/css text/plain application/javascript
+  AddOutputFilterByType DEFLATE text/html text/css text/plain application/javascript application/xml text/xml application/json image/svg+xml
 </IfModule>
+
+# --- Missing pages -----------------------------------------------------------
+# A real 404 (not a redirect to the home page, which search engines count as a
+# "soft 404") with links back into the site. The page itself is noindex.
+ErrorDocument 404 /404.html
 
 # --- Housekeeping ------------------------------------------------------------
 Options -Indexes
 AddDefaultCharset UTF-8
+# llms.txt is Markdown read by AI assistants; serve it as UTF-8 text.
+<Files "llms.txt">
+  ForceType "text/plain; charset=utf-8"
+</Files>
+# Don't let a browser second-guess a file's type.
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+</IfModule>
