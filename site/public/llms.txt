@@ -1,0 +1,31 @@
+# Almas SDM
+
+> Almas SDM is mobile installment (qist) software for mobile phone shops in Pakistan. It keeps a digital khata (ledger) for every customer who buys a phone on instalments, sends payment reminders by SMS from the shop's own SIM, has the customer sign an Urdu or English agreement on screen, and locks the handset automatically when an instalment is overdue — then unlocks it as soon as the shop records the payment. There is no monthly fee: the shop buys one lock per phone, from Rs 500.
+
+Key facts:
+
+- Who it is for: mobile phone shops and dealers in Pakistan that sell Android phones on instalments (qiston par mobile).
+- What it replaces: a paper register, phone calls to chase every customer, and asking for an IMEI / PTA block (which is for stolen and lost phones, not unpaid instalments).
+- How the lock works: an Android device-management app is set up on the customer's phone at the counter by scanning a QR code. The phone keeps its payment schedule on the device, so it locks on the due date even with mobile data off. Factory reset from Settings is blocked while money is owed, and a recovery-mode wipe still asks for the shop's Google account.
+- Unlocking: the shop records the payment in the dashboard and the phone unlocks itself the next time it is online. The customer does not need to visit the shop.
+- Payments: money goes straight to the shop. Almas SDM is not a payment gateway.
+- Fairness: no signed agreement, no lock. The lock screen shows the amount owed and the shop's name and number; emergency calls (1122, 15) still connect while locked; the phone is never tracked except as the agreement allows, and nobody can erase the customer's photos or data.
+- Other features: 80mm thermal receipts, a separate login for every salesman with a full record of actions, and support in English and Urdu.
+- Works with: Android phones from Samsung, Infinix, Tecno, Xiaomi, Vivo, Oppo, Realme, itel and others.
+- Pricing (PKR, one-time per phone, no monthly fee): single lock Rs 800; 30-lock pack Rs 21,000 (Rs 700 each); 50-lock pack Rs 30,000 (Rs 600 each); 100-lock pack Rs 50,000 (Rs 500 each). A phone is never charged for a lock twice.
+- Contact and free demo: WhatsApp +92 321 1144477 (https://wa.me/923211144477).
+- Languages: English and Urdu (the site has an Urdu toggle).
+
+## Pages
+
+- [Home](https://almassdm.pro/): overview, features, rates and frequently asked questions
+- [Pricing](https://almassdm.pro/pricing.html): lock packs and per-phone prices
+- [How it works](https://almassdm.pro/how-it-works.html): a financed sale from the counter to the lock screen
+- [Guide in simple words](https://almassdm.pro/guide.html): scan a QR, customer signs, khata builds itself, phone locks when a qist is late
+- [IMEI block for unpaid instalments](https://almassdm.pro/imei-block.html): why a PTA / IMEI block is not a recovery tool for shops, and what works instead
+- [The handset app](https://almassdm.pro/dpc.html): what the on-phone device policy controller can and cannot do
+- [Contract and data](https://almassdm.pro/legal.html): the customer agreement, what data is collected, and the limits placed on dealers
+
+## Optional
+
+- [Guide video (Urdu)](https://www.youtube.com/watch?v=l5WzGZtbbJI): the whole system step by step
