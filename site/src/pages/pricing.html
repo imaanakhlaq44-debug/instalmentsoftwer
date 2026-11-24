@@ -4,285 +4,146 @@ crumb: Pricing
 titleUr: قیمت
 description: One lock per handset, from Rs 500. Packs of 30, 50 and 100, or singles at Rs 800. No monthly fee, and no phone is ever charged for a lock twice.
 page: pricing
+layout: home
 -->
 
-<section class="band pb-8">
-  <p class="eyebrow reveal" data-ur="قیمت">Pricing</p>
-  <h1 class="mt-2 max-w-2xl font-serif text-hero text-ink-900" data-ur="ایک ہینڈسیٹ، ایک لاک۔">
-    One handset, one lock.
-  </h1>
-  <p class="mt-4 max-w-2xl text-lede text-ink-700" data-ur="کوئی ماہانہ فیس نہیں، کوئی درجہ بندی نہیں۔ آپ لاک خریدتے ہیں، اور ہر لاک ایک ہی فون پر خرچ ہوتا ہے۔">
-    No monthly fee and no tiers. You buy locks, and each one is spent on a single phone.
-  </p>
+<style>
+/* Pricing-only pieces. Cards, buttons, kickers and the final CTA come from the home page's design. */
+.pg-hero { padding: 56px 0 8px; }
+.pg-hero h1 { font-size: clamp(40px, 6vw, 84px); line-height: .98; letter-spacing: -0.04em; text-transform: uppercase; font-weight: 900; margin: 18px 0 16px; max-width: 900px; }
+.pg-hero p { font-size: 20px; font-weight: 600; color: var(--ink-2); max-width: 640px; margin: 0; }
+.single { margin-top: 30px; display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; background: var(--paper); border: var(--b); border-radius: 20px; padding: 20px 24px; box-shadow: var(--sh); }
+.single b { font-size: 22px; font-weight: 900; }
+.single span { color: var(--ink-2); font-weight: 600; }
+.rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+.rule { background: var(--paper); border: var(--b); border-radius: var(--r); padding: 26px; box-shadow: var(--sh); }
+.rule:nth-child(2) { background: var(--sun-soft); } .rule:nth-child(3) { background: var(--mint-soft); }
+.rule p { margin: 0; color: var(--ink-2); }
+.incl .col li { grid-template-columns: 34px 1fr; }
+.incl .col li span { font-size: 16px; color: var(--ink); font-weight: 600; }
+@media (max-width: 900px) { .rules { grid-template-columns: 1fr; } .pg-hero { padding-top: 32px; } }
+</style>
+
+<section class="pg-hero">
+  <div class="wrap">
+    <span class="kicker"><i></i><span data-ur="قیمت">Pricing</span></span>
+    <h1 data-ur="ایک ہینڈسیٹ، ایک لاک۔">One handset, one lock.</h1>
+    <p data-ur="کوئی ماہانہ فیس نہیں، کوئی درجہ بندی نہیں۔ آپ لاک خریدتے ہیں، اور ہر لاک ایک ہی فون پر خرچ ہوتا ہے۔">No monthly fee and no tiers. You buy locks, and each one is spent on a single phone.</p>
+  </div>
 </section>
 
-<section class="band-tight pt-0">
-  <div class="grid gap-8 lg:grid-cols-3 max-w-5xl mx-auto items-stretch">
-    <!-- Card 1: Starter Pack -->
-    <div class="flex flex-col justify-between rounded-2xl bg-white border border-slate-200/90 p-7 shadow-sm hover:shadow-xl hover:border-slate-300 transition-all duration-300">
-      <div>
-        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 tracking-wide" data-ur="اسٹارٹر پیکٹ">
-          Starter Pack
-        </span>
-        <h3 class="mt-4 text-2xl font-extrabold text-slate-900 tracking-tight" data-ur="۳۰ فون لاکس">
-          30 Lock Credits
-        </h3>
-        <p class="mt-1 text-xs text-slate-500 font-medium" data-ur="ایک کاؤنٹر والی دکان کے لیے، یا شروع میں آزمانے کے لیے۔">
-          For a single-counter shop, or to try it first.
-        </p>
-
-        <div class="mt-5 pb-5 border-b border-slate-100">
-          <div class="flex items-baseline gap-1.5">
-            <span class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight font-display">Rs 21,000</span>
-          </div>
-          <div class="mt-1.5 inline-flex items-center text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-md px-2 py-0.5">
-            <span data-ur="سات سو روپے فی ہینڈسیٹ">Rs 700 per handset</span>
-          </div>
-        </div>
-
-        <ul class="mt-6 space-y-3.5 text-xs text-slate-700 font-medium">
-          <li class="flex items-center gap-2.5">
-            <svg class="h-4 w-4 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-            </svg>
-            <span data-ur="مکمل دکاندار پورٹل اور لیجر">Full Dealer Ledger Portal</span>
-          </li>
-          <li class="flex items-center gap-2.5">
-            <svg class="h-4 w-4 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-            </svg>
-            <span data-ur="خودکار سم ایس ایم ایس یاد دہانی">Automated SIM SMS Reminders</span>
-          </li>
-          <li class="flex items-center gap-2.5">
-            <svg class="h-4 w-4 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-            </svg>
-            <span data-ur="ریموٹ لاک اور فوری آٹو انلاک">Remote Lock &amp; Instant Auto-Unlock</span>
-          </li>
+<section style="padding-top:56px">
+  <div class="wrap">
+    <div class="packs">
+      <div class="pk">
+        <div class="name" data-ur="اسٹارٹر · 30 لاک">Starter · 30 locks</div>
+        <div class="per">Rs 700<small data-ur=" / فون"> /phone</small></div>
+        <div class="tot" data-ur="کل Rs 21,000">Rs 21,000 total</div>
+        <ul>
+          <li><svg class="ico"><use href="#i-tick"/></svg><span data-ur="ایک کاؤنٹر والی دکان کے لیے، یا شروع میں آزمانے کے لیے">For a single-counter shop, or to try it first</span></li>
+          <li><svg class="ico"><use href="#i-tick"/></svg><span data-ur="مکمل ڈیلر ڈیش بورڈ اور کھاتہ">Full dealer dashboard and ledger</span></li>
+          <li><svg class="ico"><use href="#i-tick"/></svg><span data-ur="سم سے یاد دہانی">SIM reminders</span></li>
+          <li><svg class="ico"><use href="#i-tick"/></svg><span data-ur="خودکار لاک اور اَن لاک">Automatic lock &amp; unlock</span></li>
         </ul>
+        <a class="btn" href="https://wa.me/923211144477?text=Salam%2C%20Almas%20SDM%2030%20Locks%20Pack%20chahiye" target="_blank" rel="noopener" data-ur="30 لاک لیں">Get 30 locks</a>
       </div>
-
-      <a href="https://wa.me/923211144477?text=Salam%2C%20Almas%20SDM%2030%20Locks%20Pack%20chahiye" target="_blank" rel="noopener noreferrer" class="mt-8 block w-full py-3 px-4 rounded-xl text-center text-xs font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all shadow-xs" data-ur="۳۰ لاک آرڈر کریں">
-        Order 30 Locks
-      </a>
+      <div class="pk hot">
+        <span class="flag" data-ur="سب سے زیادہ بکنے والا">Best seller</span>
+        <div class="name" data-ur="گروتھ · 50 لاک">Growth · 50 locks</div>
+        <div class="per">Rs 600<small data-ur=" / فون"> /phone</small></div>
+        <div class="tot" data-ur="کل Rs 30,000">Rs 30,000 total</div>
+        <span class="save" data-ur="Rs 10,000 کی بچت">Save Rs 10,000</span>
+        <ul>
+          <li><svg class="ico"><use href="#i-tick"/></svg><span data-ur="بڑھتی ہوئی دکان کے لیے، جہاں مہینے میں کئی قسط والے سودے ہوتے ہیں">For a growing shop closing several financed sales a month</span></li>
+          <li><svg class="ico"><use href="#i-tick"/></svg><span data-ur="کئی کاؤنٹر، عملہ اکاؤنٹس اور آڈٹ">Multi-counter staff accounts and audit</span></li>
+          <li><svg class="ico"><use href="#i-tick"/></svg><span data-ur="80mm تھرمل رسیدیں (اردو اور انگریزی)">80mm thermal receipts (Urdu &amp; English)</span></li>
+          <li><svg class="ico"><use href="#i-tick"/></svg><span data-ur="ترجیحی واٹس ایپ سپورٹ">Priority WhatsApp support</span></li>
+        </ul>
+        <a class="btn btn-ink" href="https://wa.me/923211144477?text=Salam%2C%20Almas%20SDM%2050%20Locks%20Pack%20chahiye" target="_blank" rel="noopener" data-ur="50 لاک لیں">Get 50 locks</a>
+      </div>
+      <div class="pk">
+        <div class="name" data-ur="ڈیلر · 100 لاک">Dealer · 100 locks</div>
+        <div class="per">Rs 500<small data-ur=" / فون"> /phone</small></div>
+        <div class="tot" data-ur="کل Rs 50,000">Rs 50,000 total</div>
+        <span class="save" data-ur="Rs 30,000 کی بچت">Save Rs 30,000</span>
+        <ul>
+          <li><svg class="ico"><use href="#i-tick"/></svg><span data-ur="کئی برانچوں یا ڈسٹری بیوٹرز کے لیے، سب سے کم فی فون قیمت">For multiple branches or distributors — the lowest price per phone</span></li>
+          <li><svg class="ico"><use href="#i-tick"/></svg><span data-ur="تمام برانچیں ایک ڈیش بورڈ پر">All branches on one dashboard</span></li>
+          <li><svg class="ico"><use href="#i-tick"/></svg><span data-ur="دکان کے پورے عملے کی مفت ٹریننگ">Staff onboarding and training included</span></li>
+        </ul>
+        <a class="btn" href="https://wa.me/923211144477?text=Salam%2C%20Almas%20SDM%20100%20Locks%20Pack%20chahiye" target="_blank" rel="noopener" data-ur="100 لاک لیں">Get 100 locks</a>
+      </div>
     </div>
-
-    <!-- Card 2: Growth Pack (Most Popular Featured) -->
-    <div class="flex flex-col justify-between rounded-2xl bg-white border-2 border-emerald-600 pt-9 pb-7 px-7 shadow-xl shadow-emerald-700/10 hover:shadow-2xl hover:shadow-emerald-700/15 relative lg:-translate-y-2.5 transition-all duration-300 ring-4 ring-emerald-500/10">
-      <div class="absolute -top-3.5 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-4 py-1 text-[11px] font-black text-white shadow-md shadow-emerald-600/30 tracking-wider uppercase">
-        <svg class="h-3.5 w-3.5 fill-current" viewBox="0 0 20 20">
-          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-        </svg>
-        <span data-ur="سب سے مقبول">Most Popular</span>
-      </div>
-
-      <div>
-        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 tracking-wide" data-ur="گروتھ پیکٹ">
-          Growth Pack
-        </span>
-        <h3 class="mt-4 text-2xl font-extrabold text-slate-900 tracking-tight" data-ur="۵۰ فون لاکس">
-          50 Lock Credits
-        </h3>
-        <p class="mt-1 text-xs text-slate-500 font-medium" data-ur="بڑھتی ہوئی دکان کے لیے، جہاں مہینے میں کئی قسط والے سودے ہوتے ہیں۔">
-          For a growing shop closing several financed sales a month.
-        </p>
-
-        <div class="mt-5 pb-5 border-b border-slate-100">
-          <div class="flex items-baseline gap-1.5">
-            <span class="text-3xl sm:text-4xl font-black text-emerald-700 tracking-tight font-display">Rs 30,000</span>
-          </div>
-          <div class="mt-1.5 inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-md px-2.5 py-0.5">
-            <span data-ur="Rs 600 فی فون (Rs 10,000 کی بچت)">Rs 600 / handset · Save Rs 10,000</span>
-          </div>
-        </div>
-
-        <ul class="mt-6 space-y-3.5 text-xs text-slate-800 font-medium">
-          <li class="flex items-center gap-2.5">
-            <svg class="h-4 w-4 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-            </svg>
-            <span class="font-bold text-slate-900" data-ur="فی فون Rs 100 کی فوری بچت">Instant Rs 100 savings per handset</span>
-          </li>
-          <li class="flex items-center gap-2.5">
-            <svg class="h-4 w-4 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-            </svg>
-            <span data-ur="ملٹی کاؤنٹر اسٹاف اکاؤنٹس اور آڈٹ لاگ">Multi-Counter Staff Accounts &amp; Audit</span>
-          </li>
-          <li class="flex items-center gap-2.5">
-            <svg class="h-4 w-4 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-            </svg>
-            <span data-ur="80mm تھرمل پرنٹر رسیدیں (اردو اور انگریزی)">80mm Thermal Receipts (Urdu &amp; English)</span>
-          </li>
-          <li class="flex items-center gap-2.5">
-            <svg class="h-4 w-4 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-            </svg>
-            <span data-ur="ترجیحی واٹس ایپ سپورٹ (+92 321 1144477)">Priority WhatsApp Support (+92 321 1144477)</span>
-          </li>
-        </ul>
-      </div>
-
-      <a href="https://wa.me/923211144477?text=Salam%2C%20Almas%20SDM%2050%20Locks%20Pack%20chahiye" target="_blank" rel="noopener noreferrer" class="mt-8 block w-full py-3 px-4 rounded-xl text-center text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-600/30 hover:scale-[1.01] transition-all" data-ur="۵۰ لاک آرڈر کریں">
-        Order 50 Locks
-      </a>
-    </div>
-
-    <!-- Card 3: Retailer Fleet -->
-    <div class="flex flex-col justify-between rounded-2xl bg-white border border-slate-200/90 p-7 shadow-sm hover:shadow-xl hover:border-slate-300 transition-all duration-300">
-      <div>
-        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 tracking-wide" data-ur="ریٹیلر فلیٹ">
-          Retailer Fleet
-        </span>
-        <h3 class="mt-4 text-2xl font-extrabold text-slate-900 tracking-tight" data-ur="۱۰۰ فون لاکس">
-          100 Lock Credits
-        </h3>
-        <p class="mt-1 text-xs text-slate-500 font-medium" data-ur="کئی برانچوں یا ڈسٹری بیوٹرز کے لیے، سب سے کم فی فون قیمت۔">
-          For multiple branches or distributors — the lowest price per phone.
-        </p>
-
-        <div class="mt-5 pb-5 border-b border-slate-100">
-          <div class="flex items-baseline gap-1.5">
-            <span class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight font-display">Rs 50,000</span>
-          </div>
-          <div class="mt-1.5 inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-md px-2.5 py-0.5">
-            <span data-ur="Rs 500 فی فون (Rs 30,000 کی بچت)">Rs 500 / handset · Save Rs 30,000</span>
-          </div>
-        </div>
-
-        <ul class="mt-6 space-y-3.5 text-xs text-slate-700 font-medium">
-          <li class="flex items-center gap-2.5">
-            <svg class="h-4 w-4 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-            </svg>
-            <span class="font-bold text-slate-900" data-ur="سب سے بڑی رعایت (صرف Rs 500 فی فون)">Maximum volume discount (Rs 500/phone)</span>
-          </li>
-          <li class="flex items-center gap-2.5">
-            <svg class="h-4 w-4 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-            </svg>
-            <span data-ur="تمام برانچز کا سنٹرل کنٹرول پینل">Central dashboard for all branch locations</span>
-          </li>
-          <li class="flex items-center gap-2.5">
-            <svg class="h-4 w-4 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-            </svg>
-            <span data-ur="دکان کے پورے عملے کی مفت ٹریننگ">Complimentary staff onboarding &amp; training</span>
-          </li>
-        </ul>
-      </div>
-
-      <a href="https://wa.me/923211144477?text=Salam%2C%20Almas%20SDM%20100%20Locks%20Pack%20chahiye" target="_blank" rel="noopener noreferrer" class="mt-8 block w-full py-3 px-4 rounded-xl text-center text-xs font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all shadow-xs" data-ur="۱۰۰ لاک آرڈر کریں">
-        Order 100 Locks
-      </a>
+    <div class="single">
+      <div><b data-ur="30 سے کم فون؟ Rs 800 فی فون">Fewer than 30 phones? Rs 800 per phone</b><br /><span data-ur="جتنے چاہیں لیں — 1 سے 29 لاک۔ 30 یا زیادہ پر اوپر والی سستی قیمت لگتی ہے۔">Buy any number — 1 to 29 locks. From 30 upwards the cheaper prices above apply.</span></div>
+      <a class="btn btn-sun" href="https://wa.me/923211144477?text=Salam%2C%20Almas%20SDM%20ke%20kuch%20locks%20chahiye" target="_blank" rel="noopener" data-ur="لاک لیں">Get locks</a>
     </div>
   </div>
-  <p class="mt-6 rounded-xl border border-paper-300 bg-paper-50 px-5 py-4 text-body text-ink-700" data-ur="30 سے کم فون؟ جتنے چاہیں لیں — 1 سے 29 لاک، Rs 800 فی فون۔ 30 یا زیادہ پر اوپر والی سستی قیمت لگتی ہے۔">
-    Fewer than 30 phones? Buy any number — 1 to 29 locks at Rs 800 per phone. From 30 upwards the cheaper prices above apply.
-  </p>
 </section>
 
 <!-- The part most pricing pages hide. Saying it loudly is what stops an angry
      phone call three months later. -->
-<section class="border-y border-paper-300 bg-paper-50">
-  <div class="band">
-    <p class="eyebrow reveal" data-ur="پڑھ لیجیے">Read this part</p>
-    <h2 class="reveal reveal-1 mt-2 max-w-2xl font-serif text-section text-ink-900" data-ur="لاک ایک بار خرچ ہوتا ہے اور واپس نہیں آتا۔">
-      A lock is spent once and does not come back.
-    </h2>
-
-    <div class="reveal reveal-2 mt-8 grid gap-6 sm:grid-cols-2">
-      <div>
-        <p class="text-title font-semibold text-ink-900" data-ur="کب خرچ ہوتا ہے">When it is spent</p>
-        <p class="mt-2 text-body text-ink-500" data-ur="جس لمحے فون کیو آر اسکین کر کے مینجمنٹ میں آتا ہے، ایک لاک اُسی فون کے آئی ایم ای آئی پر لگ جاتا ہے۔ اگر سودا ہی نہ ہو، تو کچھ خرچ نہیں ہوتا۔">
-          The moment a handset scans the QR and comes under management, one lock is stamped with
-          that phone's IMEI. A sale that never happens costs you nothing.
-        </p>
+<section style="padding-top:24px">
+  <div class="wrap">
+    <div class="sec-head">
+      <div><span class="kicker"><i></i><span data-ur="پڑھ لیجیے">Read this part</span></span><h2 data-ur="لاک ایک بار خرچ ہوتا ہے اور واپس نہیں آتا۔">A lock is spent once and does not come back.</h2></div>
+    </div>
+    <div class="rules">
+      <div class="rule">
+        <h3 data-ur="کب خرچ ہوتا ہے">When it is spent</h3>
+        <p data-ur="جس لمحے فون کیو آر اسکین کر کے مینجمنٹ میں آتا ہے، ایک لاک اُسی فون کے آئی ایم ای آئی پر لگ جاتا ہے۔ اگر سودا ہی نہ ہو، تو کچھ خرچ نہیں ہوتا۔">The moment a handset scans the QR and comes under management, one lock is stamped with that phone's IMEI. A sale that never happens costs you nothing.</p>
       </div>
-      <div>
-        <p class="text-title font-semibold text-ink-900" data-ur="کب واپس نہیں آتا">When it does not come back</p>
-        <p class="mt-2 text-body text-ink-500" data-ur="قسطیں مکمل ہو جائیں، فون بیچ دیا جائے، یا ریکارڈ سے ہٹا دیا جائے — لاک پھر بھی خرچ شدہ ہی رہتا ہے۔">
-          The plan is paid off, the phone is sold on, the record is removed — the lock stays spent
-          in every case.
-        </p>
+      <div class="rule">
+        <h3 data-ur="کب واپس نہیں آتا">When it does not come back</h3>
+        <p data-ur="قسطیں مکمل ہو جائیں، فون بیچ دیا جائے، یا ریکارڈ سے ہٹا دیا جائے — لاک پھر بھی خرچ شدہ ہی رہتا ہے۔">The plan is paid off, the phone is sold on, the record is removed — the lock stays spent in every case.</p>
       </div>
-      <div>
-        <p class="text-title font-semibold text-ink-900" data-ur="دوبارہ اندراج مفت ہے">Re-enrolling is free</p>
-        <p class="mt-2 text-body text-ink-500" data-ur="اگر وہی فون ری سیٹ ہو کر دوبارہ اندراج کرے، تو وہی پرانا لاک دوبارہ جڑتا ہے۔ ایک فون پر دو لاک کبھی خرچ نہیں ہوتے۔">
-          If the same handset is reset and enrols again, it reattaches the lock it already holds.
-          Two locks are never spent on one phone.
-        </p>
+      <div class="rule">
+        <h3 data-ur="دوبارہ اندراج مفت ہے">Re-enrolling is free</h3>
+        <p data-ur="اگر وہی فون ری سیٹ ہو کر دوبارہ اندراج کرے، تو وہی پرانا لاک دوبارہ جڑتا ہے۔ ایک فون پر دو لاک کبھی خرچ نہیں ہوتے۔">If the same handset is reset and enrols again, it reattaches the lock it already holds. Two locks are never spent on one phone.</p>
       </div>
-      <div>
-        <p class="text-title font-semibold text-ink-900" data-ur="ختم ہو جائیں تو">If you run out</p>
-        <p class="mt-2 text-body text-ink-500" data-ur="نیا قسط والا سودا درج نہیں ہوگا — کاؤنٹر پر ہی رک جائے گا، گاہک کے گھر پہنچنے کے بعد نہیں۔ نیا پیکٹ لیتے ہی وہی کیو آر چل جاتا ہے۔">
-          A new financed sale will not register — you are stopped at the counter, not after the
-          customer has gone home. Buy a pack and the same QR completes.
-        </p>
+      <div class="rule">
+        <h3 data-ur="ختم ہو جائیں تو">If you run out</h3>
+        <p data-ur="نیا قسط والا سودا درج نہیں ہوگا — کاؤنٹر پر ہی رک جائے گا، گاہک کے گھر پہنچنے کے بعد نہیں۔ نیا پیکٹ لیتے ہی وہی کیو آر چل جاتا ہے۔">A new financed sale will not register — you are stopped at the counter, not after the customer has gone home. Buy a pack and the same QR completes.</p>
       </div>
     </div>
   </div>
 </section>
 
-<section class="band">
-  <div class="grid gap-10 lg:grid-cols-2">
-    <div>
-      <h2 class="reveal font-serif text-section text-ink-900" data-ur="لاک کی قیمت میں کیا شامل ہے">What a lock includes</h2>
-      <ul class="mt-5 space-y-3">
-        <li class="flex gap-3">
-          <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent-600"></span>
-          <span class="text-body text-ink-700" data-ur="پورا ڈیش بورڈ: گاہک، قسطیں، ادائیگیاں، رسیدیں، رپورٹس">The whole dashboard: customers, instalments, payments, receipts, reports</span>
-        </li>
-        <li class="flex gap-3">
-          <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent-600"></span>
-          <span class="text-body text-ink-700" data-ur="دو زبانوں میں معاہدہ اور اسکرین پر دستخط">The bilingual contract and on-screen signature</span>
-        </li>
-        <li class="flex gap-3">
-          <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent-600"></span>
-          <span class="text-body text-ink-700" data-ur="آپ کی اپنی سم سے یاد دہانیاں بھیجنے والی ایپ">The relay app that sends reminders from your own SIM</span>
-        </li>
-        <li class="flex gap-3">
-          <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent-600"></span>
-          <span class="text-body text-ink-700" data-ur="عملے کے اکاؤنٹس، کردار کی بنیاد پر اجازتیں، اور مکمل آڈٹ ریکارڈ">Staff accounts, role-based access, and a full audit trail</span>
-        </li>
-      </ul>
-    </div>
-
-    <div>
-      <h2 class="reveal font-serif text-section text-ink-900" data-ur="کیا شامل نہیں">What it does not include</h2>
-      <ul class="mt-5 space-y-3">
-        <li class="flex gap-3">
-          <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-paper-400"></span>
-          <span class="text-body text-ink-700" data-ur="پیمنٹ گیٹ وے — پیسہ آپ کے اپنے اکاؤنٹ میں آتا ہے، ہمارے پاس سے نہیں گزرتا">A payment gateway — money reaches your account directly, never through us</span>
-        </li>
-        <li class="flex gap-3">
-          <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-paper-400"></span>
-          <span class="text-body text-ink-700" data-ur="ایس ایم ایس آپریٹر اکاؤنٹ — ابھی یاد دہانیاں آپ کے اپنے فون کی سم سے جاتی ہیں">An SMS operator account — for now reminders go from your own handset's SIM</span>
-        </li>
-        <li class="flex gap-3">
-          <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-paper-400"></span>
-          <span class="text-body text-ink-700" data-ur="واٹس ایپ پر پیغامات">WhatsApp messaging</span>
-        </li>
-      </ul>
+<section style="padding-top:24px">
+  <div class="wrap incl">
+    <div class="fair">
+      <div class="col">
+        <div class="col-h"><span class="badge">✓</span><h3 style="margin:0" data-ur="لاک کی قیمت میں کیا شامل ہے">What a lock includes</h3></div>
+        <ul>
+          <li><svg class="ico"><use href="#i-check"/></svg><span data-ur="پورا ڈیش بورڈ: گاہک، قسطیں، ادائیگیاں، رسیدیں، رپورٹس">The whole dashboard: customers, instalments, payments, receipts, reports</span></li>
+          <li><svg class="ico"><use href="#i-check"/></svg><span data-ur="دو زبانوں میں معاہدہ اور اسکرین پر دستخط">The bilingual contract and on-screen signature</span></li>
+          <li><svg class="ico"><use href="#i-check"/></svg><span data-ur="آپ کی اپنی سم سے یاد دہانیاں بھیجنے والی ایپ">The relay app that sends reminders from your own SIM</span></li>
+          <li><svg class="ico"><use href="#i-check"/></svg><span data-ur="عملے کے اکاؤنٹس، کردار کی بنیاد پر اجازتیں، اور مکمل آڈٹ ریکارڈ">Staff accounts, role-based access, and a full audit trail</span></li>
+        </ul>
+      </div>
+      <div class="col no">
+        <div class="col-h"><span class="badge">✕</span><h3 style="margin:0" data-ur="کیا شامل نہیں">What it does not include</h3></div>
+        <ul>
+          <li><svg class="ico"><use href="#i-x"/></svg><span data-ur="پیمنٹ گیٹ وے — پیسہ آپ کے اپنے اکاؤنٹ میں آتا ہے، ہمارے پاس سے نہیں گزرتا">A payment gateway — money reaches your account directly, never through us</span></li>
+          <li><svg class="ico"><use href="#i-x"/></svg><span data-ur="ایس ایم ایس آپریٹر اکاؤنٹ — ابھی یاد دہانیاں آپ کے اپنے فون کی سم سے جاتی ہیں">An SMS operator account — for now reminders go from your own handset's SIM</span></li>
+          <li><svg class="ico"><use href="#i-x"/></svg><span data-ur="واٹس ایپ پر پیغامات">WhatsApp messaging</span></li>
+        </ul>
+      </div>
     </div>
   </div>
 </section>
 
-<section class="border-t border-paper-300 bg-accent-950">
-  <div class="band text-center">
-    <h2 class="reveal font-serif text-section text-white" data-ur="پیکٹ لینے کے لیے رابطہ کریں۔">Talk to us about a pack.</h2>
-    <p class="mx-auto mt-3 max-w-xl text-lede text-paper-300" data-ur="ادائیگی کی تصدیق کے بعد لاک آپ کے اکاؤنٹ میں فوراً شامل ہو جاتے ہیں۔">
-      Locks appear in your account as soon as the payment is confirmed.
-    </p>
-    <div class="mt-7 flex flex-wrap items-center justify-center gap-4">
-      <a href="https://wa.me/923211144477?text=Salam%2C%20Almas%20SDM%20Pack%20Order%20karna%20chahta%20hun" target="_blank" rel="noopener noreferrer" class="btn bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold inline-flex items-center gap-2 px-6 py-3 rounded-xl shadow-lg hover:scale-105 transition-all" data-ur="واٹس ایپ پر رابطہ: +92 321 1144477">
-        <svg class="h-4 w-4 fill-current" viewBox="0 0 24 24">
-          <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.861.174.086.275.072.376-.044.102-.115.434-.506.549-.68.116-.173.232-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.043.073.043.42-.101.825zM12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.98-1.306A9.957 9.957 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18.167c-1.637 0-3.153-.497-4.417-1.353l-.317-.215-2.957.776.789-2.883-.232-.369A8.127 8.127 0 013.833 12c0-4.503 3.664-8.167 8.167-8.167 4.502 0 8.167 3.664 8.167 8.167 0 4.503-3.665 8.167-8.167 8.167z"/>
-        </svg>
-        <span>WhatsApp: +92 321 1144477</span>
-      </a>
-      <a href="mailto:hello@almassdm.pro" class="btn bg-paper-50 text-ink-900 hover:bg-paper-200 px-6 py-3 rounded-xl font-bold">hello@almassdm.pro</a>
+<section style="padding-top:24px">
+  <div class="wrap">
+    <div class="final-card">
+      <div><h2 data-ur="پیکٹ لینے کے لیے رابطہ کریں۔">Talk to us about a pack.</h2><p data-ur="ادائیگی کی تصدیق کے بعد لاک آپ کے اکاؤنٹ میں فوراً شامل ہو جاتے ہیں۔">Locks appear in your account as soon as the payment is confirmed.</p></div>
+      <div class="final-actions">
+        <a class="num" href="tel:+923211144477">+92 321 1144477</a>
+        <div class="row">
+          <a class="btn btn-ink" href="https://wa.me/923211144477?text=Salam%2C%20Almas%20SDM%20Pack%20Order%20karna%20chahta%20hun" target="_blank" rel="noopener"><svg class="ico"><use href="#i-wa"/></svg><span data-ur="واٹس ایپ کھولیں">Open WhatsApp</span></a>
+          <a class="btn" href="mailto:hello@almassdm.pro">hello@almassdm.pro</a>
+        </div>
+      </div>
     </div>
   </div>
 </section>
