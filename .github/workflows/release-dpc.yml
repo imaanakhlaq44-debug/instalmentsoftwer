@@ -106,10 +106,23 @@ jobs:
         id: apk
         run: |
           SOURCE=android/dpc/build/outputs/apk/release/dpc-release.apk
-          NAME="almas-sdm-dpc-${GITHUB_REF_NAME#dpc-}.apk"
+          # A hand-run build on a branch like claude/x would otherwise name a
+          # file inside a directory that does not exist.
+          LABEL="${GITHUB_REF_NAME#dpc-}"
+          NAME="almas-sdm-dpc-${LABEL//\//-}.apk"
           cp "$SOURCE" "$NAME"
           echo "path=$NAME" >> "$GITHUB_OUTPUT"
           echo "sha256=$(sha256sum "$NAME" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      # A run by hand (no tag) publishes nothing, but its signed APK is still
+      # needed now and then: Android developer verification proves ownership of
+      # the key by uploading an APK signed with it. Kept as a run artifact.
+      - uses: actions/upload-artifact@v4
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        with:
+          name: dpc-release-apk
+          path: ${{ steps.apk.outputs.path }}
+          retention-days: 7
 
       - uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
